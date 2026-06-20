@@ -1,16 +1,22 @@
 import { defineConfig } from 'vite';
 import ViteYaml from '@modyfi/vite-plugin-yaml';
-import { viteSingleFile } from 'vite-plugin-singlefile';
 
 export default defineConfig({
   root: '.',
-  base: './',
+  base: '/CodeGuardian/',
   publicDir: 'public',
-  plugins: [ViteYaml(), viteSingleFile()],
+  plugins: [ViteYaml()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/prismjs')) return 'prism';
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
     cssCodeSplit: false,
   },
   server: {
