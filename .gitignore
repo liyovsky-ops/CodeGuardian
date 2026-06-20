@@ -1,0 +1,6 @@
+node_modules/
+dist/
+/tmp/cg_data.json
+extract_data.js
+gen_yaml.py
+data_extracted.json

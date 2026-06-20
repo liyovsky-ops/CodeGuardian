@@ -1,0 +1,10 @@
+id: "memory"
+num: 12
+name: "Memory Safety"
+icon: "🧮"
+color: "#e599f7"
+difficulty: "Medium → Hard"
+desc: |
+  Błędy zarządzania pamięcią w językach bez automatycznego GC (C/C++, Rust unsafe, Go z cgo/unsafe). Bufor, wskaźnik, indeks poza granicą = uszkodzenie pamięci, które prowadzi do RCE, eskalacji uprawnień lub wycieku danych. Korzeń klasy CWE Top 25 (Out-of-bounds Write/Read, UAF).
+verdict: |
+  Wzorce wywołań niebezpiecznych (strcpy/gets/sprintf, malloc bez sprawdzenia rozmiaru) łapie SAST. Realny dowód eksploatowalności (UAF, double-free, OOB) wymaga sanitizerów runtime (ASan/UBSan/MSan) i fuzzingu (libFuzzer/AFL++). Static wskazuje podejrzane miejsca; runtime potwierdza.

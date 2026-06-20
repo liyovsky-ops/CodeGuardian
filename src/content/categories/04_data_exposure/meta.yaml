@@ -1,0 +1,10 @@
+id: "data"
+num: 4
+name: "Data Exposure"
+icon: "📤"
+color: "#4dabf7"
+difficulty: "Medium → Hard"
+desc: |
+  Ujawnienie danych wrażliwych przez logi, błędy, odpowiedzi API, repozytoria. Niski „spektakl”, wysoki realny impakt (RODO/GDPR, wyciek poświadczeń).
+verdict: |
+  Sekrety i logowanie znanych pól (password, token) — Easy (regex/entropy/taint do logger). Hard: rozpoznanie co jest PII/wrażliwe w danym kontekście, over-posting. Secret scanning i taint-do-logów: static. Over-posting w realnych odpowiedziach: najlepiej runtime + klasyfikacja danych.

@@ -1,0 +1,1116 @@
+threats:
+  - id: "5.1"
+    name: "XSS — Stored"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-79"
+    desc: |
+      Nieufny input zapisany i później wyrenderowany w HTML bez escapingu — wykonuje się u każdego, kto zobaczy treść.
+    lang: "python"
+    vuln: |
+      # PODATNE — render bez escapingu
+      return "<div>" + comment + "</div>"
+    safe: |
+      # BEZPIECZNE — autoescaping silnika szablonów / sanityzacja HTML (bleach)
+      return render_template("c.html", comment=comment)  # Jinja autoescape ON
+    note: "Critical przy panelach admin / masowej kradzieży sesji."
+  - id: "5.2"
+    name: "XSS — Reflected"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-79"
+    desc: |
+      Input z requestu odbity natychmiast w odpowiedzi bez escapingu (np. komunikat wyszukiwania).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      return f"<p>Brak wyników dla: {request.args['q']}</p>"
+    safe: |
+      # BEZPIECZNE — escapuj kontekstowo / użyj szablonu z autoescape
+      return render_template("search.html", q=request.args['q'])
+    note: "Severity Medium → High zależnie od kontekstu."
+  - id: "5.3"
+    name: "XSS — DOM-based"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-79"
+    desc: |
+      JS na froncie zapisuje nieufne dane do DOM przez niebezpieczny sink (innerHTML, document.write, eval).
+    lang: "javascript"
+    vuln: |
+      // PODATNE
+      el.innerHTML = location.hash.slice(1);
+    safe: |
+      // BEZPIECZNE
+      el.textContent = location.hash.slice(1);
+    note: "Severity Medium → High zależnie od kontekstu."
+  - id: "5.4"
+    name: "Path Traversal"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-22"
+    desc: |
+      Nieufny input w ścieżce pliku z ../ pozwala czytać/zapisać pliki poza katalogiem (np. /etc/passwd, klucze).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      open(os.path.join(BASE, request.args["file"]))
+      # atak: file = "../../etc/passwd"
+    safe: |
+      # BEZPIECZNE — normalizuj i sprawdź, że wynik jest pod BASE
+      import os
+      p = os.path.realpath(os.path.join(BASE, name))
+      if not p.startswith(os.path.realpath(BASE) + os.sep): abort(403)
+    note: "Critical jeśli zapis / RCE przez upload."
+  - id: "5.5"
+    name: "ReDoS (Regular Expression DoS)"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1333"
+      - "CWE-400"
+    desc: |
+      Regex z katastrofalnym backtrackingiem (zagnieżdżone kwantyfikatory) na nieufnym wejściu zawiesza CPU.
+    lang: "python"
+    vuln: |
+      # PODATNE — (a+)+ na długim wejściu
+      import re; re.match(r"^(a+)+$", user_input)
+    safe: |
+      # BEZPIECZNE — przepisz regex (bez zagnieżdżonych kwantyfikatorów),
+      # ogranicz długość wejścia, użyj re2 (liniowy)
+    note: "High jeśli na hot-path bez timeoutu."
+  - id: "5.6"
+    name: "Integer Overflow / Underflow"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-190"
+      - "CWE-191"
+    desc: |
+      Operacje arytmetyczne przekraczają zakres typu (krytyczne w C/C++/Rust unsafe, Go, kontraktach Solidity), prowadząc do złych alokacji, bypassów limitów. W Pythonie int jest nieograniczony, ale ryzyko przy interop/serializacji/buforach.
+    lang: "c"
+    vuln: |
+      // PODATNE (C)
+      short len = a + b;            // overflow
+      char *buf = malloc(len);      // za mały / ujemny -> heap overflow
+    safe: |
+      // BEZPIECZNE — checked arithmetic / sprawdzenie granic przed alokacją
+  - id: "5.7"
+    name: "Type Confusion / niejawne konwersje"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-843"
+      - "CWE-704"
+    desc: |
+      Traktowanie danych jako innego typu niż faktyczny (np. tablica zamiast stringa w parametrze), prowadzące do bypassu walidacji lub błędów logiki. Częste w PHP (loose ==), JS i przy deserializacji.
+    lang: "php"
+    vuln: |
+      // PODATNE (PHP) — loose comparison
+      if ($hash == $user_input) { ... }   // "0e123" == "0e456" -> true (magic hashes)
+    safe: |
+      // BEZPIECZNE — strict + hash_equals
+      if (hash_equals($hash, $user_input)) { ... }
+    note: "Severity Medium → High."
+  - id: "5.8"
+    name: "Brak walidacji rozmiaru / unbounded input (DoS)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Brak limitu rozmiaru body/uploadu/liczby elementów — wyczerpanie pamięci/dysku.
+    lang: "python"
+    vuln: |
+      # PODATNE — brak limitu rozmiaru żądania
+      @app.post("/upload")
+      def upload(): data = request.get_data()  # dowolny rozmiar
+    safe: |
+      # BEZPIECZNE — limit rozmiaru body / uploadu
+      app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB
+  - id: "5.9"
+    name: "Unrestricted File Upload (typ/treść)"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-434"
+    desc: |
+      Brak walidacji typu/zawartości uploadu — wgranie pliku wykonywalnego (.php/.jsp), webshell, lub pliku serwowanego z błędnym Content-Type. Walidacja samego rozszerzenia jest obchodzona.
+    lang: "python"
+    vuln: |
+      # PODATNE — ufa rozszerzeniu, zapis do web-root
+      f.save(os.path.join(WEBROOT, f.filename))   # shell.php
+    safe: |
+      # BEZPIECZNE — sprawdź magic bytes, wymuś allowlist typów,
+      # losowa nazwa, zapis poza web-root, niewykonywalny katalog
+      if magic.from_buffer(f.read(2048), mime=True) not in ALLOWED: abort(415)
+      f.save(os.path.join(STORAGE, secrets.token_hex(16)))
+    note: "Critical przy zapisie do web-root / wykonaniu."
+  - id: "5.10"
+    name: "SVG / polyglot / MIME sniffing XSS"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-79"
+      - "CWE-430"
+    desc: |
+      Plik SVG zawiera <script> i wykonuje się przy wyświetleniu; pliki polyglot (ważny obraz + HTML/JS); brak X-Content-Type-Options pozwala przeglądarce „zgadnąć” typ i wykonać.
+    lang: "python"
+    vuln: |
+      # PODATNE — SVG serwowany inline z domeny aplikacji
+      return send_file(svg, mimetype="image/svg+xml")   # <svg><script>...
+    safe: |
+      # BEZPIECZNE — sanityzuj SVG, serwuj z osobnej domeny/sandbox,
+      # Content-Disposition: attachment, X-Content-Type-Options: nosniff
+  - id: "5.11"
+    name: "Unicode / homoglyph / null byte / normalizacja"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-176"
+      - "CWE-158"
+      - "CWE-180"
+    desc: |
+      Bypass filtrów przez normalizację Unicode (różne reprezentacje tego samego znaku), homoglify (а vs a), null byte (%00) ucinający string, over-long UTF-8. Walidacja przed normalizacją ≠ po.
+    lang: "python"
+    vuln: |
+      # PODATNE — walidacja przed normalizacją + null byte
+      if "../" not in name: open(name)   # "..%c0%af" lub "file.txt\x00.jpg"
+    safe: |
+      # BEZPIECZNE — normalizuj NAJPIERW (NFC), odrzuć null byte, waliduj po
+      name = unicodedata.normalize("NFC", name)
+      if "\x00" in name: abort(400)
+  - id: "5.12"
+    name: "Mutation XSS (mXSS) / niespójna sanityzacja"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-79"
+    desc: |
+      HTML przepuszczony przez sanitizer jest później re-parsowany przez przeglądarkę inaczej (innerHTML round-trip), reaktywując ładunek. Częste przy łączeniu serwerowej sanityzacji z klienckim innerHTML.
+    lang: "javascript"
+    vuln: |
+      // PODATNE — sanityzacja, potem round-trip przez innerHTML
+      el.innerHTML = sanitize(input);
+      el.innerHTML = el.innerHTML;   // mXSS reaktywuje ładunek
+    safe: |
+      // BEZPIECZNE — DOMPurify z konfiguracją, bez ponownego round-tripu,
+      // preferuj textContent / trusted types
+  - id: "5.13"
+    name: "Brak walidacji po stronie serwera (tylko klient)"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-602"
+    desc: |
+      Walidacja wyłącznie w JS/HTML (maxlength, required, regex) — trywialnie omijana (curl/Burp). Serwer musi walidować każdy input niezależnie.
+    lang: "python"
+    vuln: |
+      # PODATNE — serwer ufa, że klient zwalidował
+      @app.post("/age")
+      def age(): save(request.json["age"])   # może być -5 albo "DROP TABLE"
+    safe: |
+      # BEZPIECZNE — walidacja schematem po stronie serwera (pydantic/marshmallow)
+      class AgeIn(BaseModel): age: conint(ge=0, le=150)
+      data = AgeIn(**request.json)
+  - id: "5.14"
+    name: "Buffer Overflow"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-120"
+      - "CWE-787"
+    desc: |
+      Kopiowanie inputu bez sprawdzenia długości nadpisuje pamięć poza buforem (RCE/crash).
+    lang: "c"
+    vuln: |
+      char buf[64];
+      strcpy(buf, input); // brak kontroli długości
+    safe: |
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%s", input); // ograniczona długość
+  - id: "5.15"
+    name: "Code Injection"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-94"
+      - "CWE-95"
+    desc: |
+      Nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji.
+    lang: "python"
+    vuln: |
+      def calc(expr):
+          return eval(expr)  # expr="__import__('os').system('rm -rf /')"
+    safe: |
+      import ast, operator as op
+      OPS={ast.Add:op.add, ast.Sub:op.sub, ast.Mult:op.mul, ast.Div:op.truediv}
+      def calc(expr):
+          def ev(n):
+              if isinstance(n, ast.Constant): return n.value
+              if isinstance(n, ast.BinOp): return OPS[type(n.op)](ev(n.left), ev(n.right))
+              raise ValueError('niedozwolone')
+          return ev(ast.parse(expr, mode='eval').body)
+  - id: "5.16"
+    name: "Command Injection"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-78"
+    desc: |
+      Nieufny input trafia do polecenia powłoki — atakujący wykonuje dowolne komendy.
+    lang: "python"
+    vuln: |
+      import os
+      def ping(host):
+          os.system("ping -c1 " + host)  # host="x; rm -rf /"
+    safe: |
+      import subprocess
+      def ping(host):
+          subprocess.run(["ping", "-c1", host], shell=False, check=True)
+  - id: "5.17"
+    name: "Cross-Site Scripting (XSS)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe: []
+    desc: |
+      Cross-Site Scripting (XSS) — zagrożenie z kategorii Input Validation wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Cross-Site Scripting (XSS)
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Cross-Site Scripting (XSS)
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "5.18"
+    name: "HTTP Parameter Pollution"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-235"
+    desc: |
+      Zduplikowane parametry są różnie interpretowane przez warstwy aplikacji, co pozwala obejść walidację/WAF.
+    lang: "javascript"
+    vuln: |
+      // ?role=user&role=admin — bierze ostatni
+      const role = req.query.role; // może być tablicą lub admin
+    safe: |
+      const raw = req.query.role;
+      const role = Array.isArray(raw) ? raw[0] : raw;
+      if (!['user'].includes(role)) return res.sendStatus(400);
+  - id: "5.19"
+    name: "Null Byte Injection"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-158"
+      - "CWE-176"
+    desc: |
+      Null byte / triki normalizacji Unicode omijają walidację rozszerzeń/ścieżek.
+    lang: "python"
+    vuln: |
+      if name.endswith('.txt'):
+          open(name)  # "evil.php\x00.txt" omija check
+    safe: |
+      import unicodedata, os
+      name = unicodedata.normalize('NFKC', name)
+      if '\x00' in name or not name.endswith('.txt'): raise ValueError()
+      open(os.path.join(BASE, os.path.basename(name)))
+  - id: "5.20"
+    name: "Server-Side Request Forgery (SSRF)"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-918"
+    desc: |
+      Serwer pobiera URL podany przez użytkownika — dostęp do zasobów wewnętrznych/metadata cloud.
+    lang: "python"
+    vuln: |
+      import requests
+      r = requests.get(request.args['url'])  # http://169.254.169.254/...
+    safe: |
+      from urllib.parse import urlparse
+      import ipaddress, socket
+      u=urlparse(request.args['url'])
+      ip=ipaddress.ip_address(socket.gethostbyname(u.hostname))
+      if ip.is_private or ip.is_loopback: abort(400)
+      r=requests.get(u.geturl(), allow_redirects=False)
+  - id: "5.21"
+    name: "SQL Injection"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe: []
+    desc: |
+      SQL Injection — zagrożenie z kategorii Input Validation wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — SQL Injection
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — SQL Injection
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "5.22"
+    name: "Crlf Injection (Log Injection)"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-93"
+      - "CWE-113"
+    desc: |
+      Niezfiltrowane znaki CR/LF (\r\n) w nagłówkach HTTP/SMTP pozwalają wstrzyknąć dodatkowe nagłówki lub rozdzielić odpowiedź.
+    lang: "python"
+    vuln: |
+      # PODATNE — surowy input do nagłówka
+      from flask import request, Response
+      @app.route('/r')
+      def r():
+          url = request.args.get('url')
+          resp = Response('', 302)
+          resp.headers['Location'] = url  # url="x\r\nSet-Cookie: admin=1"
+          return resp
+    safe: |
+      # BEZPIECZNE — walidacja + odrzucenie CR/LF
+      from flask import request, abort, redirect
+      @app.route('/r')
+      def r():
+          url = request.args.get('url', '')
+          if '\r' in url or '\n' in url:
+              abort(400)
+          return redirect(url)  # framework dodatkowo sanitizuje
+  - id: "5.23"
+    name: "Directory Traversal"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-22"
+      - "CWE-98"
+    desc: |
+      Ścieżka/URL z inputu (../, http://) pozwala czytać lub dołączać dowolne pliki.
+    lang: "python"
+    vuln: |
+      def read(name):
+          return open('/data/' + name).read()  # name="../../etc/passwd"
+    safe: |
+      import os
+      BASE='/data'
+      def read(name):
+          p = os.path.realpath(os.path.join(BASE, name))
+          if not p.startswith(BASE + os.sep): raise ValueError()
+          return open(p).read()
+  - id: "5.24"
+    name: "Formula Injection"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1236"
+    desc: |
+      Eksport CSV z polem zaczynającym się od =,+,-,@ wykonuje formułę w arkuszu (CSV injection).
+    lang: "python"
+    vuln: |
+      writer.writerow([user_input])  # "=cmd|'/c calc'!A1"
+    safe: |
+      def esc(v):
+          return "'" + v if v[:1] in ('=','+','-','@') else v
+      writer.writerow([esc(user_input)])
+  - id: "5.25"
+    name: "Host Header Injection"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-601"
+      - "CWE-644"
+    desc: |
+      Niezweryfikowany cel przekierowania / zaufany Host header umożliwia phishing i poisoning.
+    lang: "python"
+    vuln: |
+      return redirect(request.args['next'])  # dowolny URL
+    safe: |
+      from urllib.parse import urlparse
+      nxt = request.args.get('next','/')
+      if urlparse(nxt).netloc: nxt='/'  # tylko ścieżki względne
+      return redirect(nxt)
+  - id: "5.26"
+    name: "HTTP Header Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-93"
+      - "CWE-113"
+    desc: |
+      Niezfiltrowane znaki CR/LF (\r\n) w nagłówkach HTTP/SMTP pozwalają wstrzyknąć dodatkowe nagłówki lub rozdzielić odpowiedź.
+    lang: "python"
+    vuln: |
+      # PODATNE — surowy input do nagłówka
+      from flask import request, Response
+      @app.route('/r')
+      def r():
+          url = request.args.get('url')
+          resp = Response('', 302)
+          resp.headers['Location'] = url  # url="x\r\nSet-Cookie: admin=1"
+          return resp
+    safe: |
+      # BEZPIECZNE — walidacja + odrzucenie CR/LF
+      from flask import request, abort, redirect
+      @app.route('/r')
+      def r():
+          url = request.args.get('url', '')
+          if '\r' in url or '\n' in url:
+              abort(400)
+          return redirect(url)  # framework dodatkowo sanitizuje
+  - id: "5.27"
+    name: "Ldap Injection"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Ldap Injection — zagrożenie z kategorii Input Validation wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Ldap Injection
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Ldap Injection
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "5.28"
+    name: "Local File Inclusion (LFI)"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-22"
+      - "CWE-98"
+    desc: |
+      Ścieżka/URL z inputu (../, http://) pozwala czytać lub dołączać dowolne pliki.
+    lang: "python"
+    vuln: |
+      def read(name):
+          return open('/data/' + name).read()  # name="../../etc/passwd"
+    safe: |
+      import os
+      BASE='/data'
+      def read(name):
+          p = os.path.realpath(os.path.join(BASE, name))
+          if not p.startswith(BASE + os.sep): raise ValueError()
+          return open(p).read()
+  - id: "5.29"
+    name: "Open Redirect"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-601"
+      - "CWE-644"
+    desc: |
+      Niezweryfikowany cel przekierowania / zaufany Host header umożliwia phishing i poisoning.
+    lang: "python"
+    vuln: |
+      return redirect(request.args['next'])  # dowolny URL
+    safe: |
+      from urllib.parse import urlparse
+      nxt = request.args.get('next','/')
+      if urlparse(nxt).netloc: nxt='/'  # tylko ścieżki względne
+      return redirect(nxt)
+  - id: "5.30"
+    name: "Remote File Inclusion (RFI)"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-22"
+      - "CWE-98"
+    desc: |
+      Ścieżka/URL z inputu (../, http://) pozwala czytać lub dołączać dowolne pliki.
+    lang: "python"
+    vuln: |
+      def read(name):
+          return open('/data/' + name).read()  # name="../../etc/passwd"
+    safe: |
+      import os
+      BASE='/data'
+      def read(name):
+          p = os.path.realpath(os.path.join(BASE, name))
+          if not p.startswith(BASE + os.sep): raise ValueError()
+          return open(p).read()
+  - id: "5.31"
+    name: "Server-Side Template Injection (SSTI)"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1336"
+      - "CWE-94"
+    desc: |
+      Nieufny input trafia do silnika szablonów jako część szablonu, nie jako dane — atakujący wykonuje kod po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — render_template_string z user inputem
+      from flask import request, render_template_string
+      @app.route('/hi')
+      def hi():
+          name = request.args.get('name')
+          return render_template_string('Hello ' + name)  # {{7*7}} -> 49, RCE
+    safe: |
+      # BEZPIECZNE — input jako dane, nie jako szablon
+      from flask import request, render_template
+      @app.route('/hi')
+      def hi():
+          name = request.args.get('name')
+          return render_template('hi.html', name=name)  # autoescape, name to dane
+  - id: "5.32"
+    name: "Unicode Normalization Attack"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Unicode Normalization Attack — zagrożenie z kategorii Input Validation wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Unicode Normalization Attack
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Unicode Normalization Attack
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "5.33"
+    name: "Xpath Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-643"
+    desc: |
+      Nieufny input konkatenowany do wyrażenia XPath zmienia jego logikę (np. bypass auth).
+    lang: "python"
+    vuln: |
+      q = "//user[name='" + name + "' and pass='" + pw + "']"
+      tree.xpath(q)  # name="' or '1'='1"
+    safe: |
+      tree.xpath("//user[name=$n and pass=$p]", n=name, p=pw)  # zmienne
+  - id: "cat_5_research01"
+    name: "Xml external entity (xxe)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research02"
+    name: "Format string vulnerability"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Format string vulnerability" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research03"
+    name: "Xml injection (including xxe)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml injection (including xxe)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research04"
+    name: "Insecure deserialization"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure deserialization" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research05"
+    name: "Heap overflow"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Heap overflow" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research06"
+    name: "Url encoding bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Url encoding bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research07"
+    name: "Ocr bypass attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ocr bypass attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research08"
+    name: "Javascript == coercion bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Javascript == coercion bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research09"
+    name: "Input fuzzing edge cases"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Input fuzzing edge cases" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research10"
+    name: "Format string injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Format string injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research11"
+    name: "Latex injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Latex injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research12"
+    name: "Input length bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Input length bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research13"
+    name: "Json schema bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Json schema bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research14"
+    name: "Yaml deserialization attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml deserialization attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research15"
+    name: "Exif metadata injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Exif metadata injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research16"
+    name: "Ruby symbol dos"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ruby symbol dos" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research17"
+    name: "Image steganography bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Image steganography bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research18"
+    name: "Toml injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Toml injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research19"
+    name: "Array injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Array injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research20"
+    name: "Pdf payload hidden input"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pdf payload hidden input" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research21"
+    name: "Cookie injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cookie injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research22"
+    name: "Csv macro injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Csv macro injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research23"
+    name: "Graphql query depth attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Graphql query depth attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research24"
+    name: "Python type coercion bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python type coercion bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research25"
+    name: "Postscript injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Postscript injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research26"
+    name: "Invisible character injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Invisible character injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research27"
+    name: "Dom-based xss"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dom-based xss" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research28"
+    name: "Python ast.literal_eval bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python ast.literal_eval bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research29"
+    name: "Zero-width character bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Zero-width character bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_5_research30"
+    name: "Dom-based cross-site scripting"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dom-based cross-site scripting" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

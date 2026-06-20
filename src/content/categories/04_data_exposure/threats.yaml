@@ -1,0 +1,911 @@
+threats:
+  - id: "4.1"
+    name: "Sekrety zahardkodowane w repo"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-798"
+    desc: |
+      API keys, tokeny, hasła DB, klucze prywatne w kodzie/configu commitowanym do repo. Najczęstsza przyczyna realnych incydentów.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      AWS_SECRET = "AKIA...."; DB_URL = "postgres://user:pass@host/db"
+    safe: |
+      # BEZPIECZNE — env / secret manager + .gitignore + pre-commit scan
+      DB_URL = os.environ["DB_URL"]
+  - id: "4.2"
+    name: "Dane wrażliwe w logach"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-532"
+    desc: |
+      Logowanie haseł, tokenów, numerów kart, PII, całych obiektów request/response. Logi wyciekają, są agregowane i mają szeroki dostęp.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      logger.info(f"Auth attempt: {request.json}")  # zawiera hasło/token
+    safe: |
+      # BEZPIECZNE — maskowanie / allowlist pól
+      logger.info("Auth attempt", extra={"user": user, "ip": ip})
+  - id: "4.3"
+    name: "Verbose error messages / stack traces w produkcji"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-209"
+    desc: |
+      Ujawnianie stack trace, zapytań SQL, ścieżek, wersji frameworka użytkownikowi — pomaga w rozpoznaniu i ataku.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      except Exception as e: return str(e), 500  # leak detali
+    safe: |
+      # BEZPIECZNE
+      except Exception: log.exception("err"); return "Internal error", 500
+  - id: "4.4"
+    name: "Over-posting / nadmiarowe pola w odpowiedzi API"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-213"
+      - "CWE-200"
+    desc: |
+      Serializacja całego obiektu (np. User) zwraca pola wrażliwe (password_hash, is_admin, internal_notes).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      return jsonify(user.__dict__)  # zwraca hash hasła, flagi
+    safe: |
+      # BEZPIECZNE — jawny schemat odpowiedzi (DTO / serializer z allowlistą)
+      return jsonify({"id": user.id, "name": user.name, "email": user.email})
+  - id: "4.5"
+    name: "PII bez maskowania / nadmiarowa retencja"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-359"
+    desc: |
+      Przechowywanie/wyświetlanie pełnych PII (PESEL, karty, e-mail) bez maskowania, szyfrowania at-rest, lub po terminie retencji.
+    lang: "python"
+    vuln: |
+      # PODATNE — pełny PESEL w odpowiedzi/UI
+    safe: |
+      # BEZPIECZNE — maskuj: "*******1234", szyfruj at-rest, egzekwuj retencję
+  - id: "4.6"
+    name: "Cache / autocomplete wrażliwych danych"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-525"
+    desc: |
+      Wrażliwe odpowiedzi cache'owane (CDN/proxy) lub pola formularzy z autocomplete, brak Cache-Control: no-store.
+    lang: "http"
+    vuln: |
+      # PODATNE — brak nagłówka, wrażliwa odpowiedź trafia do cache
+      # (brak) Cache-Control
+    safe: |
+      # BEZPIECZNE
+      Cache-Control: no-store, no-cache, must-revalidate
+      # + autocomplete="off" na wrażliwych polach formularza
+  - id: "4.7"
+    name: "Sekrety w URL / query string / referer"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-598"
+    desc: |
+      Tokeny/hasła/klucze w query stringu trafiają do logów serwera, historii przeglądarki, nagłówka Referer (wyciek do stron trzecich) i cache proxy.
+    lang: "python"
+    vuln: |
+      # PODATNE — token w URL
+      return redirect(f"/dashboard?api_token={token}")
+    safe: |
+      # BEZPIECZNE — sekrety w nagłówku Authorization lub body POST, nigdy w URL
+      resp.headers["Authorization"] = f"Bearer {token}"
+  - id: "4.8"
+    name: "Source maps / pliki .map / kod źródłowy w produkcji"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-540"
+    desc: |
+      Wdrożone source mapy (.js.map) ujawniają oryginalny kod, komentarze, czasem sekrety i wewnętrzne endpointy. Dotyczy też publicznych plików .ts/.scss.
+    lang: "text"
+    vuln: |
+      # PODATNE — app.min.js.map dostępny publicznie
+      GET /static/app.min.js.map -> 200 (pełny kod źródłowy)
+    safe: |
+      # BEZPIECZNE — nie wdrażaj .map do prod (lub chroń auth/wewnętrznie),
+      # wyłącz generowanie source maps w buildzie produkcyjnym
+  - id: "4.9"
+    name: "Backup / pliki tymczasowe / .git / .env wystawione"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-530"
+      - "CWE-538"
+    desc: |
+      Dostępne publicznie: katalog .git/, kopie .bak/.old/~, dump bazy, plik .env, config.php.swp — bezpośredni wyciek kodu i sekretów.
+    lang: "text"
+    vuln: |
+      # PODATNE
+      GET /.git/config        GET /.env
+      GET /backup.sql         GET /config.php.bak
+    safe: |
+      # BEZPIECZNE — blokuj ukryte/backup ścieżki na poziomie serwera,
+      # trzymaj sekrety poza web root, deploy z czystego artefaktu (bez .git)
+  - id: "4.10"
+    name: "Metadata / EXIF / ukryte dane w plikach"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-212"
+    desc: |
+      Uploadowane/udostępniane pliki niosą metadane (geolokalizacja EXIF zdjęć, autor/komentarze w PDF/DOCX, ukryte arkusze, śledzone zmiany).
+    lang: "python"
+    vuln: |
+      # PODATNE — zapis pliku użytkownika bez czyszczenia metadanych
+      save(uploaded_image)   # EXIF z GPS pozostaje
+    safe: |
+      # BEZPIECZNE — strip metadanych przy przetwarzaniu
+      from PIL import Image
+      img = Image.open(uploaded); img.getexif().clear(); img.save(dest)
+  - id: "4.11"
+    name: "Brak szyfrowania danych at-rest"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-311"
+      - "CWE-312"
+    desc: |
+      Wrażliwe dane (PII, tokeny, sekrety, kopie zapasowe) przechowywane jako cleartext w bazie/dysku/buckecie. Wyciek bazy = pełny wyciek danych.
+    lang: "python"
+    vuln: |
+      # PODATNE — numer karty/PII w plaintext w DB
+      db.save(user_id=u, card_number=card)
+    safe: |
+      # BEZPIECZNE — szyfrowanie aplikacyjne pól wrażliwych + TDE na storage
+      db.save(user_id=u, card_enc=AESGCM(k).encrypt(nonce, card, aad))
+  - id: "4.12"
+    name: "Insecure deserialization (odsyłacz)"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Może prowadzić do wycieku danych, ale klasyfikowane jako Business Logic — szczegóły w 8.4.
+    lang: "python"
+    vuln: |
+      # brak przykładu
+    safe: |
+      # brak przykładu
+    ref: "8.4"
+  - id: "4.13"
+    name: "Directory Listing"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-548"
+    desc: |
+      Serwer ujawnia spis plików katalogu — wyciek struktury i wrażliwych plików.
+    lang: "yaml"
+    vuln: |
+      # nginx — listing włączony
+      location /files/ {
+          autoindex on;
+      }
+    safe: |
+      location /files/ {
+          autoindex off;
+      }
+  - id: "4.14"
+    name: "Insecure Direct Object Reference"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-639"
+    desc: |
+      Identyfikator obiektu z requestu używany bez sprawdzenia własności — dostęp do cudzych zasobów.
+    lang: "python"
+    vuln: |
+      @app.route('/invoice/<int:id>')
+      def invoice(id):
+          return Invoice.get(id).pdf()  # brak sprawdzenia właściciela
+    safe: |
+      @app.route('/invoice/<int:id>')
+      def invoice(id):
+          inv = Invoice.get(id)
+          if inv.owner_id != current_user.id: abort(403)
+          return inv.pdf()
+  - id: "4.15"
+    name: "Source Code Disclosure"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-540"
+      - "CWE-530"
+    desc: |
+      Pliki źródłowe/backup/konfiguracji (.git, .env, .bak) dostępne publicznie ujawniają sekrety i logikę.
+    lang: "yaml"
+    vuln: |
+      # brak blokady wrażliwych ścieżek
+      location / { try_files $uri =404; }
+    safe: |
+      location ~ /\.(git|env)|\.(bak|old|sql)$ {
+          deny all; return 404;
+      }
+  - id: "4.16"
+    name: "Backup File Exposure"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-540"
+      - "CWE-530"
+    desc: |
+      Pliki źródłowe/backup/konfiguracji (.git, .env, .bak) dostępne publicznie ujawniają sekrety i logikę.
+    lang: "yaml"
+    vuln: |
+      # brak blokady wrażliwych ścieżek
+      location / { try_files $uri =404; }
+    safe: |
+      location ~ /\.(git|env)|\.(bak|old|sql)$ {
+          deny all; return 404;
+      }
+  - id: "4.17"
+    name: "Cloud Storage Misconfiguration"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-732"
+      - "CWE-311"
+    desc: |
+      Publiczny bucket / brak szyfrowania połączenia/backupu ujawnia dane.
+    lang: "yaml"
+    vuln: |
+      # S3 bucket publiczny
+      AccessControl: PublicRead
+    safe: |
+      AccessControl: Private
+      BucketEncryption: { ServerSideEncryptionConfiguration: [{SSEAlgorithm: aws:kms}] }
+  - id: "4.18"
+    name: "CORS Misconfiguration"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      CORS Misconfiguration — zagrożenie z kategorii Data Exposure wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — CORS Misconfiguration
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — CORS Misconfiguration
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "4.19"
+    name: "Hardcoded Credentials"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Hardcoded Credentials — zagrożenie z kategorii Data Exposure wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Hardcoded Credentials
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Hardcoded Credentials
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "4.20"
+    name: "Sensitive Data in Url"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-598"
+    desc: |
+      Tokeny/sekrety w URL trafiają do logów, historii i nagłówka Referer.
+    lang: "javascript"
+    vuln: |
+      fetch('/api?token=' + secret); // token w query stringu
+    safe: |
+      fetch('/api', { headers: { Authorization: 'Bearer ' + secret } });
+  - id: "4.21"
+    name: "Server-Side Request Forgery (SSRF)"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-918"
+    desc: |
+      Serwer pobiera URL podany przez użytkownika — dostęp do zasobów wewnętrznych/metadata cloud.
+    lang: "python"
+    vuln: |
+      import requests
+      r = requests.get(request.args['url'])  # http://169.254.169.254/...
+    safe: |
+      from urllib.parse import urlparse
+      import ipaddress, socket
+      u=urlparse(request.args['url'])
+      ip=ipaddress.ip_address(socket.gethostbyname(u.hostname))
+      if ip.is_private or ip.is_loopback: abort(400)
+      r=requests.get(u.geturl(), allow_redirects=False)
+  - id: "4.22"
+    name: "SQL Injection"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      SQL Injection — zagrożenie z kategorii Data Exposure wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — SQL Injection
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — SQL Injection
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "4.23"
+    name: "Stack Trace Disclosure"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-540"
+      - "CWE-530"
+    desc: |
+      Pliki źródłowe/backup/konfiguracji (.git, .env, .bak) dostępne publicznie ujawniają sekrety i logikę.
+    lang: "yaml"
+    vuln: |
+      # brak blokady wrażliwych ścieżek
+      location / { try_files $uri =404; }
+    safe: |
+      location ~ /\.(git|env)|\.(bak|old|sql)$ {
+          deny all; return 404;
+      }
+  - id: "4.24"
+    name: "Unencrypted Database"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-732"
+      - "CWE-311"
+    desc: |
+      Publiczny bucket / brak szyfrowania połączenia/backupu ujawnia dane.
+    lang: "yaml"
+    vuln: |
+      # S3 bucket publiczny
+      AccessControl: PublicRead
+    safe: |
+      AccessControl: Private
+      BucketEncryption: { ServerSideEncryptionConfiguration: [{SSEAlgorithm: aws:kms}] }
+  - id: "4.25"
+    name: "Unprotected API Endpoint"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-732"
+      - "CWE-311"
+    desc: |
+      Publiczny bucket / brak szyfrowania połączenia/backupu ujawnia dane.
+    lang: "yaml"
+    vuln: |
+      # S3 bucket publiczny
+      AccessControl: PublicRead
+    safe: |
+      AccessControl: Private
+      BucketEncryption: { ServerSideEncryptionConfiguration: [{SSEAlgorithm: aws:kms}] }
+  - id: "cat_4_research01"
+    name: "Exposed debug endpoints"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Exposed debug endpoints" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research02"
+    name: "Sensitive data in source code"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sensitive data in source code" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research03"
+    name: "Verbose error message disclosure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Verbose error message disclosure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research04"
+    name: "Publicly exposed backup files"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Publicly exposed backup files" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research05"
+    name: "Unencrypted data in transit"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unencrypted data in transit" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research06"
+    name: "Path traversal"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Path traversal" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research07"
+    name: "Browser cache sensitive data"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Browser cache sensitive data" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research08"
+    name: "Mass assignment vulnerability"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Mass assignment vulnerability" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research09"
+    name: "Xml external entity (xxe) injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe) injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research10"
+    name: "Css history sniffing"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Css history sniffing" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research11"
+    name: "Response body sensitive fields"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Response body sensitive fields" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research12"
+    name: "Geolocation data exposure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Geolocation data exposure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research13"
+    name: "Default credentials"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Default credentials" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research14"
+    name: ".git directory disclosure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu ".git directory disclosure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research15"
+    name: "Xml external entity (xxe) attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe) attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research16"
+    name: "Memory dump exposure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Memory dump exposure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research17"
+    name: "Hardcoded secrets in code"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Hardcoded secrets in code" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research18"
+    name: "Browser fingerprinting data"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Browser fingerprinting data" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research19"
+    name: "Pii data leakage"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pii data leakage" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research20"
+    name: "Log file injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Log file injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research21"
+    name: "Debug information leakage"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Debug information leakage" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research22"
+    name: "Weak tls/ssl configuration"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak tls/ssl configuration" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research23"
+    name: "Redis unauthenticated access"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Redis unauthenticated access" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research24"
+    name: "Log file containing secrets"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Log file containing secrets" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research25"
+    name: "Cache poisoning/snooping"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cache poisoning/snooping" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research26"
+    name: "Cleartext password storage"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cleartext password storage" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research27"
+    name: "Client-side sensitive fields"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Client-side sensitive fields" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research28"
+    name: "Indexeddb cross-site leak"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Indexeddb cross-site leak" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research29"
+    name: "Websocket data exposure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Websocket data exposure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_4_research30"
+    name: "Weak encryption algorithm use"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak encryption algorithm use" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

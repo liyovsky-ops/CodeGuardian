@@ -1,0 +1,1040 @@
+threats:
+  - id: "1.1"
+    name: "SQL Injection"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-89"
+    desc: |
+      Nieufny input trafia do zapytania SQL przez konkatenację stringów, pozwalając atakującemu zmienić strukturę zapytania (wyciek, modyfikacja, bypass auth).
+    lang: "python"
+    vuln: |
+      # PODATNE — konkatenacja
+      def get_user(conn, username):
+          q = "SELECT * FROM users WHERE name = '" + username + "'"
+          return conn.execute(q).fetchall()
+      # atak: username = "' OR '1'='1' --"
+    safe: |
+      # BEZPIECZNE — parametryzacja (prepared statement)
+      def get_user(conn, username):
+          q = "SELECT * FROM users WHERE name = %s"
+          return conn.execute(q, (username,)).fetchall()
+    note: "ORMy nie chronią automatycznie — Model.objects.raw(), .extra(), text() w SQLAlchemy, raw fragmenty nadal są podatne."
+  - id: "1.2"
+    name: "NoSQL Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-943"
+    desc: |
+      Wstrzyknięcie operatorów zapytań (np. MongoDB $gt, $ne, $where) gdy input jest deserializowany jako obiekt zapytania. Częste w API przyjmujących JSON.
+    lang: "python"
+    vuln: |
+      # PODATNE — JSON body trafia wprost do filtra
+      user = db.users.find_one({"user": req.json["user"], "pass": req.json["pass"]})
+      # atak: {"user":"admin","pass":{"$ne":null}} -> logowanie bez hasła
+    safe: |
+      # BEZPIECZNE — wymuś typy skalarne
+      username = str(req.json["user"]); password = str(req.json["pass"])
+      user = db.users.find_one({"user": username, "pass": password})
+  - id: "1.3"
+    name: "OS Command Injection"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-78"
+    desc: |
+      Nieufny input trafia do polecenia powłoki, pozwalając na wykonanie dowolnych komend systemowych.
+    lang: "python"
+    vuln: |
+      # PODATNE — shell=True + konkatenacja
+      import os, subprocess
+      os.system("ping -c 1 " + host)
+      subprocess.run("convert " + filename + " out.png", shell=True)
+      # atak: host = "8.8.8.8; rm -rf /"
+    safe: |
+      # BEZPIECZNE — argv list, bez shella
+      subprocess.run(["ping", "-c", "1", host], shell=False)
+  - id: "1.4"
+    name: "LDAP Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-90"
+    desc: |
+      Wstrzyknięcie metaznaków filtra LDAP (*, (, ), \) do zapytania directory, omijając filtry auth.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      flt = "(&(uid=" + user + ")(password=" + pwd + "))"
+      # atak: user = "*)(uid=*))(|(uid=*"
+    safe: |
+      # BEZPIECZNE — escape wg RFC 4515
+      from ldap3.utils.conv import escape_filter_chars
+      flt = "(&(uid=%s)(password=%s))" % (escape_filter_chars(user), escape_filter_chars(pwd))
+  - id: "1.5"
+    name: "XPath Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-643"
+    desc: |
+      Wstrzyknięcie składni XPath do zapytania nad XML, pozwalające ominąć logikę lub wyciągnąć cały dokument.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      expr = "//user[name/text()='" + name + "' and pass/text()='" + pwd + "']"
+      # atak: name = "' or '1'='1"
+    safe: |
+      # BEZPIECZNE — parametryzowane zapytania (np. lxml z variables) lub whitelist
+  - id: "1.6"
+    name: "Template Injection (SSTI)"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1336"
+      - "CWE-94"
+    desc: |
+      Nieufny input trafia jako szablon (nie jako dane szablonu) do silnika (Jinja2, Twig, Freemarker), co prowadzi do RCE przez dostęp do obiektów Pythona.
+    lang: "python"
+    vuln: |
+      # PODATNE — input jako string szablonu
+      from jinja2 import Template
+      Template("Hello " + user_input).render()
+      # atak: user_input = "{{ ''.__class__.__mro__[1].__subclasses__() }}" -> ścieżka do RCE
+    safe: |
+      # BEZPIECZNE — input jako dane, nie szablon
+      Template("Hello {{ name }}").render(name=user_input)
+  - id: "1.7"
+    name: "Log Injection / Log Forging"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-117"
+    desc: |
+      Nieufny input ze znakami nowej linii / sekwencjami ANSI trafia do logów, pozwalając fałszować wpisy, wstrzykiwać do SIEM, lub XSS w logach. Szczególny przypadek: Log4Shell — interpolacja ${jndi:...}.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      logger.info("Login failed for user: " + username)
+      # atak: username = "admin\n2026-01-01 INFO Login OK for user: admin"
+    safe: |
+      # BEZPIECZNE — sanityzuj newline / loguj strukturalnie
+      logger.info("Login failed", extra={"user": username.replace("\n"," ").replace("\r"," ")})
+    note: "Severity rośnie do High jeśli interpolacja typu Log4Shell."
+  - id: "1.8"
+    name: "CRLF / HTTP Response Splitting / Header Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-93"
+      - "CWE-113"
+    desc: |
+      Nieufny input ze znakami \r\n trafia do nagłówka HTTP/odpowiedzi, pozwalając wstrzyknąć dodatkowe nagłówki, ciasteczka lub rozbić odpowiedź (cache poisoning, XSS).
+    lang: "python"
+    vuln: |
+      # PODATNE — input do nagłówka bez sanityzacji
+      resp.headers["Location"] = "/back?to=" + request.args["to"]
+      # atak: to = "x\r\nSet-Cookie: admin=1"
+    safe: |
+      # BEZPIECZNE — odrzuć CR/LF, użyj API kodującego nagłówki
+      v = request.args["to"]
+      if "\r" in v or "\n" in v: abort(400)
+      resp.headers["Location"] = "/back?to=" + quote(v)
+  - id: "1.9"
+    name: "Host Header Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-644"
+    desc: |
+      Aplikacja ufa nagłówkowi Host przy budowie linków (reset hasła) lub routingu — atakujący podstawia własną domenę (password reset poisoning, cache poisoning).
+    lang: "python"
+    vuln: |
+      # PODATNE — link resetu z nagłówka Host
+      link = f"https://{request.headers['Host']}/reset?t={token}"
+      send_email(user, link)   # atak: Host: evil.com -> token leci do atakującego
+    safe: |
+      # BEZPIECZNE — używaj skonfigurowanej zaufanej domeny + allowlist Host
+      link = f"https://{settings.CANONICAL_HOST}/reset?t={token}"
+  - id: "1.10"
+    name: "Email / SMTP Header Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-93"
+    desc: |
+      Wstrzyknięcie nagłówków (Bcc, Cc, To) przez znaki nowej linii w polach formularza — wykorzystanie serwera do spamu/phishingu.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      msg["To"] = request.form["to"]
+      # atak: to = "a@x.com\r\nBcc: spam@evil.com"
+    safe: |
+      # BEZPIECZNE — walidacja adresu + użycie email.message (koduje nagłówki)
+      from email.headerregistry import Address
+      if "\r" in to or "\n" in to: abort(400)
+  - id: "1.11"
+    name: "CSV / Formula Injection"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1236"
+    desc: |
+      Eksport do CSV/XLSX z polami zaczynającymi się od =,+,-,@ — Excel/Sheets wykonuje je jako formuły (exfiltracja danych, wywołanie poleceń DDE).
+    lang: "python"
+    vuln: |
+      # PODATNE — pole użytkownika wprost do CSV
+      writer.writerow([user.name, user.note])
+      # note = "=cmd|'/c calc'!A1"
+    safe: |
+      # BEZPIECZNE — prefiksuj komórki zaczynające się od metaznaków
+      def esc(v):
+          return "'" + v if v and v[0] in "=+-@\t\r" else v
+      writer.writerow([esc(user.name), esc(user.note)])
+  - id: "1.12"
+    name: "ORM Injection / Second-Order SQLi"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-89"
+    desc: |
+      SQLi przez fragmenty raw przekazane do ORM (order_by, filter z raw, annotate) lub second-order: dane zapisane bezpiecznie, ale później użyte w surowym zapytaniu.
+    lang: "python"
+    vuln: |
+      # PODATNE — nazwa kolumny sortowania z requestu
+      User.objects.order_by(request.args["sort"])   # ".extra(where=...)" też podatne
+      qs.extra(where=["name = '%s'" % name])
+    safe: |
+      # BEZPIECZNE — allowlist kolumn, parametry zamiast formatowania
+      ALLOWED = {"name", "created"}
+      col = request.args["sort"]
+      if col not in ALLOWED: abort(400)
+      User.objects.order_by(col)
+  - id: "1.13"
+    name: "GraphQL Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-89"
+      - "CWE-943"
+    desc: |
+      Wstrzyknięcie do resolverów GraphQL, które budują zapytania do backendu (SQL/NoSQL) z argumentów, lub konkatenacja argumentów w zapytaniu.
+    lang: "javascript"
+    vuln: |
+      // PODATNE — argument GraphQL wprost do SQL
+      const user = (args) =>
+        db.query("SELECT * FROM users WHERE name='" + args.name + "'");
+    safe: |
+      // BEZPIECZNE — parametryzacja w resolverze
+      const user = (args) =>
+        db.query("SELECT * FROM users WHERE name = $1", [args.name]);
+  - id: "1.14"
+    name: "SSRF (odsyłacz)"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-918"
+    desc: |
+      Wymieniony w tej kategorii zgodnie ze strukturą raportu, ale szczegółowo omówiony w 9.1 Infrastructure.
+    lang: "python"
+    vuln: |
+      # brak przykładu
+    safe: |
+      # brak przykładu
+    ref: "9.1"
+  - id: "1.15"
+    name: "Crlf Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-93"
+      - "CWE-113"
+    desc: |
+      Niezfiltrowane znaki CR/LF (\r\n) w nagłówkach HTTP/SMTP pozwalają wstrzyknąć dodatkowe nagłówki lub rozdzielić odpowiedź.
+    lang: "python"
+    vuln: |
+      # PODATNE — surowy input do nagłówka
+      from flask import request, Response
+      @app.route('/r')
+      def r():
+          url = request.args.get('url')
+          resp = Response('', 302)
+          resp.headers['Location'] = url  # url="x\r\nSet-Cookie: admin=1"
+          return resp
+    safe: |
+      # BEZPIECZNE — walidacja + odrzucenie CR/LF
+      from flask import request, abort, redirect
+      @app.route('/r')
+      def r():
+          url = request.args.get('url', '')
+          if '\r' in url or '\n' in url:
+              abort(400)
+          return redirect(url)  # framework dodatkowo sanitizuje
+  - id: "1.16"
+    name: "Expression Language Injection"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-917"
+    desc: |
+      Wstrzyknięcie wyrażenia EL/SpEL ewaluowanego przez kontener (np. Spring) prowadzi do wykonania kodu.
+    lang: "java"
+    vuln: |
+      // PODATNE — input ewaluowany jako SpEL
+      ExpressionParser p = new SpelExpressionParser();
+      String in = request.getParameter("q");
+      Object v = p.parseExpression(in).getValue(); // "T(java.lang.Runtime).getRuntime().exec(...)"
+    safe: |
+      // BEZPIECZNE — nie ewaluuj user inputu jako wyrażenia
+      String in = request.getParameter("q");
+      Map<String,Object> safe = lookupAllowed(in); // tylko whitelist kluczy
+  - id: "1.17"
+    name: "Object Graph Navigation Library Injection (OGNL Injection)"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-917"
+    desc: |
+      OGNL injection (np. w Struts) — wyrażenie OGNL z inputu jest wykonywane przez framework, dając RCE.
+    lang: "java"
+    vuln: |
+      // PODATNE — wartość parametru interpretowana jako OGNL (Struts S2)
+      // %{...} w polu name -> wykonanie OGNL
+      stack.findValue(userControlledExpression);
+    safe: |
+      // BEZPIECZNE — aktualny Struts + brak dynamicznej ewaluacji inputu
+      // Wyłącz dynamic method invocation, waliduj parametry do whitelisty
+      String name = sanitizeAllowlist(request.getParameter("name"));
+  - id: "1.18"
+    name: "Server-Side Template Injection"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-1336"
+      - "CWE-94"
+    desc: |
+      Nieufny input trafia do silnika szablonów jako część szablonu, nie jako dane — atakujący wykonuje kod po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — render_template_string z user inputem
+      from flask import request, render_template_string
+      @app.route('/hi')
+      def hi():
+          name = request.args.get('name')
+          return render_template_string('Hello ' + name)  # {{7*7}} -> 49, RCE
+    safe: |
+      # BEZPIECZNE — input jako dane, nie jako szablon
+      from flask import request, render_template
+      @app.route('/hi')
+      def hi():
+          name = request.args.get('name')
+          return render_template('hi.html', name=name)  # autoescape, name to dane
+  - id: "1.19"
+    name: "Xquery Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-652"
+    desc: |
+      Nieufny input konkatenowany do zapytania XQuery zmienia jego strukturę (analogicznie do SQLi dla XML).
+    lang: "java"
+    vuln: |
+      String q = "for $u in //user[name='" + name + "'] return $u";
+      xqueryEngine.execute(q); // name = "' or '1'='1"
+    safe: |
+      // Parametryzowane XQuery (external variables)
+      XQPreparedExpression e = conn.prepareExpression(
+          "declare variable $n external; //user[name=$n]");
+      e.bindString(new QName("n"), name, null);
+  - id: "1.20"
+    name: "Code Injection"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-94"
+      - "CWE-95"
+    desc: |
+      Nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji.
+    lang: "python"
+    vuln: |
+      def calc(expr):
+          return eval(expr)  # expr="__import__('os').system('rm -rf /')"
+    safe: |
+      import ast, operator as op
+      OPS={ast.Add:op.add, ast.Sub:op.sub, ast.Mult:op.mul, ast.Div:op.truediv}
+      def calc(expr):
+          def ev(n):
+              if isinstance(n, ast.Constant): return n.value
+              if isinstance(n, ast.BinOp): return OPS[type(n.op)](ev(n.left), ev(n.right))
+              raise ValueError('niedozwolone')
+          return ev(ast.parse(expr, mode='eval').body)
+  - id: "1.21"
+    name: "Command Injection (OS Commanding)"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-78"
+    desc: |
+      Nieufny input trafia do polecenia powłoki — atakujący wykonuje dowolne komendy.
+    lang: "python"
+    vuln: |
+      import os
+      def ping(host):
+          os.system("ping -c1 " + host)  # host="x; rm -rf /"
+    safe: |
+      import subprocess
+      def ping(host):
+          subprocess.run(["ping", "-c1", host], shell=False, check=True)
+  - id: "1.22"
+    name: "Email Header Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-93"
+      - "CWE-113"
+    desc: |
+      Niezfiltrowane znaki CR/LF (\r\n) w nagłówkach HTTP/SMTP pozwalają wstrzyknąć dodatkowe nagłówki lub rozdzielić odpowiedź.
+    lang: "python"
+    vuln: |
+      # PODATNE — surowy input do nagłówka
+      from flask import request, Response
+      @app.route('/r')
+      def r():
+          url = request.args.get('url')
+          resp = Response('', 302)
+          resp.headers['Location'] = url  # url="x\r\nSet-Cookie: admin=1"
+          return resp
+    safe: |
+      # BEZPIECZNE — walidacja + odrzucenie CR/LF
+      from flask import request, abort, redirect
+      @app.route('/r')
+      def r():
+          url = request.args.get('url', '')
+          if '\r' in url or '\n' in url:
+              abort(400)
+          return redirect(url)  # framework dodatkowo sanitizuje
+  - id: "1.23"
+    name: "Eval Injection"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-94"
+      - "CWE-95"
+    desc: |
+      Nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji.
+    lang: "python"
+    vuln: |
+      def calc(expr):
+          return eval(expr)  # expr="__import__('os').system('rm -rf /')"
+    safe: |
+      import ast, operator as op
+      OPS={ast.Add:op.add, ast.Sub:op.sub, ast.Mult:op.mul, ast.Div:op.truediv}
+      def calc(expr):
+          def ev(n):
+              if isinstance(n, ast.Constant): return n.value
+              if isinstance(n, ast.BinOp): return OPS[type(n.op)](ev(n.left), ev(n.right))
+              raise ValueError('niedozwolone')
+          return ev(ast.parse(expr, mode='eval').body)
+  - id: "1.24"
+    name: "Html Injection"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-79"
+      - "CWE-80"
+    desc: |
+      Nieoczyszczony input wstawiony do HTML pozwala wstrzyknąć znaczniki (np. formularz phishingowy) nawet bez skryptów.
+    lang: "javascript"
+    vuln: |
+      el.innerHTML = "Witaj " + userName; // userName="<form action=//evil>"
+    safe: |
+      el.textContent = "Witaj " + userName; // brak interpretacji HTML
+  - id: "1.25"
+    name: "HTTP Header Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-93"
+      - "CWE-113"
+    desc: |
+      Niezfiltrowane znaki CR/LF (\r\n) w nagłówkach HTTP/SMTP pozwalają wstrzyknąć dodatkowe nagłówki lub rozdzielić odpowiedź.
+    lang: "python"
+    vuln: |
+      # PODATNE — surowy input do nagłówka
+      from flask import request, Response
+      @app.route('/r')
+      def r():
+          url = request.args.get('url')
+          resp = Response('', 302)
+          resp.headers['Location'] = url  # url="x\r\nSet-Cookie: admin=1"
+          return resp
+    safe: |
+      # BEZPIECZNE — walidacja + odrzucenie CR/LF
+      from flask import request, abort, redirect
+      @app.route('/r')
+      def r():
+          url = request.args.get('url', '')
+          if '\r' in url or '\n' in url:
+              abort(400)
+          return redirect(url)  # framework dodatkowo sanitizuje
+  - id: "1.26"
+    name: "HTTP Parameter Pollution"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-235"
+    desc: |
+      Zduplikowane parametry są różnie interpretowane przez warstwy aplikacji, co pozwala obejść walidację/WAF.
+    lang: "javascript"
+    vuln: |
+      // ?role=user&role=admin — bierze ostatni
+      const role = req.query.role; // może być tablicą lub admin
+    safe: |
+      const raw = req.query.role;
+      const role = Array.isArray(raw) ? raw[0] : raw;
+      if (!['user'].includes(role)) return res.sendStatus(400);
+  - id: "1.27"
+    name: "IMAP Injection"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-78"
+    desc: |
+      Nieufny input trafia do polecenia powłoki — atakujący wykonuje dowolne komendy.
+    lang: "python"
+    vuln: |
+      import os
+      def ping(host):
+          os.system("ping -c1 " + host)  # host="x; rm -rf /"
+    safe: |
+      import subprocess
+      def ping(host):
+          subprocess.run(["ping", "-c1", host], shell=False, check=True)
+  - id: "1.28"
+    name: "XML Injection"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-91"
+      - "CWE-611"
+    desc: |
+      Parser XML rozwija encje zewnętrzne/wstrzyknięte (XXE) — odczyt plików, SSRF, DoS.
+    lang: "python"
+    vuln: |
+      import xml.etree.ElementTree as ET
+      def parse(data):
+          return ET.fromstring(data)  # rozwija encje zewnętrzne (XXE)
+    safe: |
+      from lxml import etree
+      def parse(data):
+          p = etree.XMLParser(resolve_entities=False, no_network=True)
+          return etree.fromstring(data, parser=p)
+  - id: "cat_1_research01"
+    name: "Client-side template injection (csti)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Client-side template injection (csti)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research02"
+    name: "Xslt injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xslt injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research03"
+    name: "Prompt injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Prompt injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research04"
+    name: "Dom-based xss"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dom-based xss" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research05"
+    name: "Yaml injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research06"
+    name: "Json injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Json injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research07"
+    name: "Reflected xss"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Reflected xss" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research08"
+    name: "Argument injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Argument injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research09"
+    name: "Stored xss"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stored xss" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research10"
+    name: "Jndi injection (java naming and directory interface)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Jndi injection (java naming and directory interface)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research11"
+    name: "Xml external entity (xxe) injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe) injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research12"
+    name: "Cross-site scripting (xss)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cross-site scripting (xss)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research13"
+    name: "Path traversal / directory traversal"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Path traversal / directory traversal" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research14"
+    name: "Svg injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Svg injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research15"
+    name: "Formula injection (csv)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Formula injection (csv)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research16"
+    name: "Regex injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Regex injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research17"
+    name: "Xsl injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xsl injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research18"
+    name: "Prototype pollution"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Prototype pollution" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research19"
+    name: "Header injection (http)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Header injection (http)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research20"
+    name: "Integer overflow injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Integer overflow injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research21"
+    name: "Http parameter injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Http parameter injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research22"
+    name: "Perl open() injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Perl open() injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research23"
+    name: "Smtp injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Smtp injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research24"
+    name: "Zip slip injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Zip slip injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research25"
+    name: "Null byte injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Null byte injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research26"
+    name: "Mutation xss (mxss)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Mutation xss (mxss)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research27"
+    name: "Sparql injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sparql injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research28"
+    name: "Pdf injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pdf injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research29"
+    name: "Odata injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Odata injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_1_research30"
+    name: "Freemarker ssti"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Freemarker ssti" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

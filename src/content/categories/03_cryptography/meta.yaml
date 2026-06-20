@@ -1,0 +1,10 @@
+id: "crypto"
+num: 3
+name: "Cryptography"
+icon: "🔐"
+color: "#9775fa"
+difficulty: "Easy → Medium"
+desc: |
+  Błędy kryptograficzne rzadko są spektakularne w demie, ale podkopują cały model bezpieczeństwa. Reguła: nie wymyślaj własnej kryptografii, używaj wysokopoziomowych bibliotek (libsodium, cryptography Fernet/AEAD).
+verdict: |
+  Łatwe: wykrycie wywołań słabych algorytmów (MD5/DES/ECB), verify=False, random do tokenów, == na sekretach, hardcoded keys. Trudniejsze: nonce reuse (czy nonce jest stały/reużywany), poprawność parametrów KDF. Static wystarcza dla niemal wszystkiego.

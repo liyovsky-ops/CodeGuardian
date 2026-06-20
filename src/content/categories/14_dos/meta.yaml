@@ -1,0 +1,10 @@
+id: "dos"
+num: 14
+name: "DoS / Resource Exhaustion"
+icon: "💥"
+color: "#ff6b6b"
+difficulty: "Medium → Hard"
+desc: |
+  Atakujący nakłania aplikację do zużycia nieproporcjonalnej ilości CPU, pamięci, dysku lub połączeń małym wejściem (asymmetric/amplification DoS). Korzeń: brak limitów na rozmiar, złożoność i koszt operacji na nieufnym wejściu.
+verdict: |
+  Część wykrywalna wzorcowo: katastrofalne regexy (analiza wzorca), extractall bez walidacji, parser XML z DTD, brak MAX_CONTENT_LENGTH/timeoutów. Realny próg DoS (ile wejścia wystarczy) potwierdza najlepiej runtime/load test i fuzzing. Static wskazuje brak limitu; runtime mierzy podatność.

@@ -1,0 +1,10 @@
+id: "injection"
+num: 1
+name: "Injection"
+icon: "💉"
+color: "#ff5470"
+difficulty: "Easy → Medium"
+desc: |
+  Wstrzyknięcie nieufnych danych do interpretera (SQL, shell, parser, silnik szablonów), który traktuje je jako kod zamiast jako dane. Korzeń problemu: brak rozdzielenia kodu od danych (brak parametryzacji).
+verdict: |
+  SAST bardzo dobrze radzi sobie z taint analysis (źródło → sink) dla SQL/Command/LDAP — to wzorce. Trudniejsze: SSTI (odróżnić „input jako dane” od „input jako szablon”) i NoSQL (sink to obiekt, nie string). Static wystarcza dla większości; runtime potwierdza eksploatowalność.

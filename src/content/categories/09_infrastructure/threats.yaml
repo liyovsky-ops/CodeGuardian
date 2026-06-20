@@ -1,0 +1,1054 @@
+threats:
+  - id: "9.1"
+    name: "SSRF (Server-Side Request Forgery)"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-918"
+    desc: |
+      Serwer wykonuje żądanie HTTP/sieciowe pod URL kontrolowany przez użytkownika — dostęp do zasobów wewnętrznych (metadata cloud 169.254.169.254 → kradzież credków IAM, wewnętrzne API, skan portów).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      requests.get(request.json["url"])
+      # atak: url = http://169.254.169.254/latest/meta-data/iam/...
+    safe: |
+      # BEZPIECZNE — allowlist domen/schematów, blokada IP prywatnych/link-local,
+      # rozwiązanie DNS + walidacja IP, brak follow-redirect do prywatnych
+  - id: "9.2"
+    name: "XXE (XML External Entity)"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-611"
+    desc: |
+      Parser XML z włączonymi encjami zewnętrznymi czyta lokalne pliki (file://), robi SSRF lub DoS (billion laughs).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      import xml.etree.ElementTree as ET; ET.fromstring(data)  # zależnie od parsera
+      from lxml import etree; etree.parse(src)                  # encje domyślnie
+      # atak: <!DOCTYPE x [<!ENTITY e SYSTEM "file:///etc/passwd">]> ...&e;
+    safe: |
+      # BEZPIECZNE — wyłącz DTD/encje
+      p = etree.XMLParser(resolve_entities=False, no_network=True, dtd_validation=False)
+      # lub użyj defusedxml
+    note: "Critical przy odczycie plików / SSRF."
+  - id: "9.3"
+    name: "Prototype Pollution (JS)"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1321"
+    desc: |
+      Manipulacja __proto__/constructor.prototype przez nieufny merge/clone — wstrzyknięcie właściwości do wszystkich obiektów, prowadzące do DoS, bypassu auth, czasem RCE.
+    lang: "javascript"
+    vuln: |
+      // PODATNE — głęboki merge bez ochrony klucza
+      function merge(t, s){ for (const k in s){ if (typeof s[k]==='object') merge(t[k]||(t[k]={}), s[k]); else t[k]=s[k]; } }
+      merge({}, JSON.parse(userInput));   // {"__proto__":{"isAdmin":true}}
+    safe: |
+      // BEZPIECZNE — odrzuć __proto__/constructor/prototype, Object.create(null), Map
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+  - id: "9.4"
+    name: "Memory Corruption (C/C++/unsafe)"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-787"
+      - "CWE-125"
+      - "CWE-416"
+      - "CWE-120"
+    desc: |
+      Buffer overflow, use-after-free, double-free, OOB read/write — prowadzą do RCE lub wycieku pamięci. Domena języków bez zarządzania pamięcią.
+    lang: "c"
+    vuln: |
+      // PODATNE
+      char buf[64]; strcpy(buf, user_input);   // brak granicy -> overflow
+    safe: |
+      // BEZPIECZNE — strlcpy/snprintf z rozmiarem, bounds checking,
+      // języki bezpieczne pamięciowo
+  - id: "9.5"
+    name: "Niebezpieczne eval / dynamiczne wykonanie kodu"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-95"
+      - "CWE-94"
+    desc: |
+      Wykonanie kodu z nieufnego stringa (eval, exec, Function(), setTimeout(string)) → RCE.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      result = eval(request.args["expr"])
+    safe: |
+      # BEZPIECZNE — parser bez wykonania (ast.literal_eval), DSL z whitelistą
+      import ast; result = ast.literal_eval(request.args["expr"])
+  - id: "9.6"
+    name: "Zip Slip / Archive extraction traversal"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-22"
+    desc: |
+      Rozpakowanie archiwum, gdzie wpis ma ścieżkę ../ — zapis poza katalogiem docelowym (nadpisanie binarek/konfigów).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      zip.extractall(dest)   # wpisy mogą zawierać ../
+    safe: |
+      # BEZPIECZNE — waliduj każdą ścieżkę, że po join leży pod dest (zob. 5.4)
+      for m in zip.namelist():
+          p = os.path.realpath(os.path.join(dest, m))
+          if not p.startswith(os.path.realpath(dest) + os.sep): abort(403)
+  - id: "9.7"
+    name: "Server-Side Request via PDF/SVG/Image rendererów"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-918"
+      - "CWE-611"
+    desc: |
+      Generatory PDF/obrazów (np. z HTML) mogą pobierać zasoby zewnętrzne → SSRF/LFI.
+    lang: "python"
+    vuln: |
+      # PODATNE — renderer HTML→PDF pobiera zewnętrzne zasoby z treści użytkownika
+      pdf = render_pdf(user_html)   # <img src="http://169.254.169.254/...">
+    safe: |
+      # BEZPIECZNE — wyłącz dostęp sieciowy renderera / allowlist zasobów,
+      # sanityzuj HTML, blokuj URL wewnętrzne
+  - id: "9.8"
+    name: "DNS Rebinding / TOCTOU w walidacji SSRF"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-918"
+      - "CWE-367"
+    desc: |
+      Walidacja URL rozwiązuje DNS na bezpieczny IP, ale faktyczne żądanie rozwiązuje ponownie na IP wewnętrzny (rebinding) — obejście ochrony SSRF opartej tylko na sprawdzeniu nazwy/IP raz.
+    lang: "python"
+    vuln: |
+      # PODATNE — sprawdza host, potem osobno łączy (DNS może się zmienić)
+      if resolve(host) not in PRIVATE: requests.get(url)   # rebinding
+    safe: |
+      # BEZPIECZNE — rozwiąż DNS raz, waliduj IP, łącz po tym samym IP (pin),
+      # brak follow-redirect do prywatnych, allowlist
+  - id: "9.9"
+    name: "Insecure temporary files / przewidywalne ścieżki"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-377"
+      - "CWE-379"
+    desc: |
+      Tworzenie plików tymczasowych o przewidywalnej nazwie w katalogu współdzielonym (/tmp) bez O_EXCL — race/symlink attack, podmiana zawartości, wyciek danych wrażliwych.
+    lang: "python"
+    vuln: |
+      # PODATNE — przewidywalna nazwa w /tmp
+      path = "/tmp/app_" + str(os.getpid())
+      open(path, "w").write(secret)
+    safe: |
+      # BEZPIECZNE — tempfile (O_EXCL, 0600, losowa nazwa)
+      import tempfile
+      fd, path = tempfile.mkstemp(); os.write(fd, secret)
+  - id: "9.10"
+    name: "Resource leak / exhaustion (handles, połączenia, wątki)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+      - "CWE-772"
+    desc: |
+      Niezamykane połączenia DB/pliki/sockety/wątki, brak puli i timeoutów → wyczerpanie deskryptorów/pamięci, DoS. Częste przy obsłudze błędów bez finally/context manager.
+    lang: "python"
+    vuln: |
+      # PODATNE — brak zamknięcia przy wyjątku, brak timeoutu
+      conn = pool.get(); conn.execute(q)   # wyjątek -> wyciek połączenia
+    safe: |
+      # BEZPIECZNE — context manager + timeouty + limity puli
+      with pool.connection() as conn:
+          conn.execute(q, timeout=5)
+  - id: "9.11"
+    name: "Regex / format string injection"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-134"
+      - "CWE-625"
+    desc: |
+      Nieufny input jako wzorzec regex (ReDoS, zmiana semantyki dopasowania) lub jako format string (%-format/.format z dostępem do atrybutów obiektów → wyciek/awaria).
+    lang: "python"
+    vuln: |
+      # PODATNE — input jako format/regex
+      "{0.__class__}".format(obj)            # wyciek przez format
+      re.compile(request.args["pattern"])    # ReDoS / semantyka
+    safe: |
+      # BEZPIECZNE — nigdy nie używaj inputu jako szablonu/wzorca; escape/whitelist
+      re.compile(re.escape(user_text))
+  - id: "9.12"
+    name: "Container escape / nadmiarowy dostęp do hosta"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-250"
+      - "CWE-269"
+    desc: |
+      Kontener z --privileged, zamontowanym docker.sock, hostPath, CAP_SYS_ADMIN lub współdzielonym namespace hosta → ucieczka z kontenera i przejęcie node'a.
+    lang: "yaml"
+    vuln: |
+      # PODATNE — privileged + docker.sock
+      securityContext: { privileged: true }
+      volumes: [{hostPath: {path: /var/run/docker.sock}}]
+    safe: |
+      # BEZPIECZNE — bez privileged, drop capabilities, readOnlyRootFilesystem,
+      # runAsNonRoot, seccomp/AppArmor, brak docker.sock
+      securityContext: { privileged: false, runAsNonRoot: true, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
+  - id: "9.13"
+    name: "Command Injection"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-78"
+    desc: |
+      Nieufny input trafia do polecenia powłoki — atakujący wykonuje dowolne komendy.
+    lang: "python"
+    vuln: |
+      import os
+      def ping(host):
+          os.system("ping -c1 " + host)  # host="x; rm -rf /"
+    safe: |
+      import subprocess
+      def ping(host):
+          subprocess.run(["ping", "-c1", host], shell=False, check=True)
+  - id: "9.14"
+    name: "Hardcoded Secrets"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-798"
+    desc: |
+      Sekrety (klucze API, hasła) zaszyte w kodzie źródłowym.
+    lang: "python"
+    vuln: |
+      API_KEY = "sk_live_abc123"  # w repo
+    safe: |
+      import os
+      API_KEY = os.environ['API_KEY']  # z secret managera
+  - id: "9.15"
+    name: "Insecure Deserialization"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych (pickle/yaml) wykonuje gadget chain — RCE.
+    lang: "python"
+    vuln: |
+      import pickle
+      obj = pickle.loads(data)  # data od użytkownika -> RCE
+    safe: |
+      import json
+      obj = json.loads(data)  # bezpieczny format danych
+  - id: "9.16"
+    name: "Path Traversal"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-22"
+      - "CWE-98"
+    desc: |
+      Ścieżka/URL z inputu (../, http://) pozwala czytać lub dołączać dowolne pliki.
+    lang: "python"
+    vuln: |
+      def read(name):
+          return open('/data/' + name).read()  # name="../../etc/passwd"
+    safe: |
+      import os
+      BASE='/data'
+      def read(name):
+          p = os.path.realpath(os.path.join(BASE, name))
+          if not p.startswith(BASE + os.sep): raise ValueError()
+          return open(p).read()
+  - id: "9.17"
+    name: "Remote Code Execution (RCE)"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "9.18"
+    name: "Broken Authentication"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-287"
+    desc: |
+      Wadliwe uwierzytelnianie/zarządzanie sesją pozwala podszyć się pod użytkownika.
+    lang: "python"
+    vuln: |
+      if user.password == request.form['pw']:  # plaintext compare
+          session['uid'] = user.id
+    safe: |
+      import bcrypt
+      if bcrypt.checkpw(request.form['pw'].encode(), user.pw_hash):
+          session.clear(); session['uid'] = user.id
+  - id: "9.19"
+    name: "Code Injection"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-94"
+      - "CWE-95"
+    desc: |
+      Nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji.
+    lang: "python"
+    vuln: |
+      def calc(expr):
+          return eval(expr)  # expr="__import__('os').system('rm -rf /')"
+    safe: |
+      import ast, operator as op
+      OPS={ast.Add:op.add, ast.Sub:op.sub, ast.Mult:op.mul, ast.Div:op.truediv}
+      def calc(expr):
+          def ev(n):
+              if isinstance(n, ast.Constant): return n.value
+              if isinstance(n, ast.BinOp): return OPS[type(n.op)](ev(n.left), ev(n.right))
+              raise ValueError('niedozwolone')
+          return ev(ast.parse(expr, mode='eval').body)
+  - id: "9.20"
+    name: "Cross-Site Request Forgery (CSRF)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Cross-Site Request Forgery (CSRF) — zagrożenie z kategorii Infrastructure & Code wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Cross-Site Request Forgery (CSRF)
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Cross-Site Request Forgery (CSRF)
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "9.21"
+    name: "Cross-Site Scripting (XSS)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Cross-Site Scripting (XSS) — zagrożenie z kategorii Infrastructure & Code wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Cross-Site Scripting (XSS)
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Cross-Site Scripting (XSS)
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "9.22"
+    name: "Dependency Confusion Attacks"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1357"
+      - "CWE-829"
+    desc: |
+      Atakujący publikuje paczkę o nazwie wewnętrznej w publicznym rejestrze — instalowana zamiast prywatnej.
+    lang: "yaml"
+    vuln: |
+      # brak scope/registry — npm bierze public z wyższą wersją
+      dependencies:
+        internal-utils: "*"
+    safe: |
+      # scoped + prywatny registry + pinned
+      "@mycorp/internal-utils": "1.2.3"
+      # .npmrc: @mycorp:registry=https://npm.internal
+  - id: "9.23"
+    name: "Exposed Admin Interface"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-749"
+    desc: |
+      Panel administracyjny dostępny publicznie bez ograniczeń sieciowych.
+    lang: "yaml"
+    vuln: |
+      location /admin { proxy_pass http://app; }  # dostępne z internetu
+    safe: |
+      location /admin {
+        allow 10.0.0.0/8; deny all;  # tylko sieć wewnętrzna/VPN
+        proxy_pass http://app;
+      }
+  - id: "9.24"
+    name: "File Inclusion (LFI/RFI)"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-22"
+      - "CWE-98"
+    desc: |
+      Ścieżka/URL z inputu (../, http://) pozwala czytać lub dołączać dowolne pliki.
+    lang: "python"
+    vuln: |
+      def read(name):
+          return open('/data/' + name).read()  # name="../../etc/passwd"
+    safe: |
+      import os
+      BASE='/data'
+      def read(name):
+          p = os.path.realpath(os.path.join(BASE, name))
+          if not p.startswith(BASE + os.sep): raise ValueError()
+          return open(p).read()
+  - id: "9.25"
+    name: "Insecure Direct Object Reference"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-639"
+    desc: |
+      Identyfikator obiektu z requestu używany bez sprawdzenia własności — dostęp do cudzych zasobów.
+    lang: "python"
+    vuln: |
+      @app.route('/invoice/<int:id>')
+      def invoice(id):
+          return Invoice.get(id).pdf()  # brak sprawdzenia właściciela
+    safe: |
+      @app.route('/invoice/<int:id>')
+      def invoice(id):
+          inv = Invoice.get(id)
+          if inv.owner_id != current_user.id: abort(403)
+          return inv.pdf()
+  - id: "9.26"
+    name: "Security Misconfiguration"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-16"
+    desc: |
+      Niebezpieczne ustawienia domyślne lub nadmiarowe uprawnienia w konfiguracji aplikacji/infrastruktury.
+    lang: "yaml"
+    vuln: |
+      debug: true
+      admin_panel: { exposed: true, auth: none }
+    safe: |
+      debug: false
+      admin_panel: { exposed: false, auth: required }
+  - id: "9.27"
+    name: "Server-Side Template Injection"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1336"
+      - "CWE-94"
+    desc: |
+      Nieufny input trafia do silnika szablonów jako część szablonu, nie jako dane — atakujący wykonuje kod po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — render_template_string z user inputem
+      from flask import request, render_template_string
+      @app.route('/hi')
+      def hi():
+          name = request.args.get('name')
+          return render_template_string('Hello ' + name)  # {{7*7}} -> 49, RCE
+    safe: |
+      # BEZPIECZNE — input jako dane, nie jako szablon
+      from flask import request, render_template
+      @app.route('/hi')
+      def hi():
+          name = request.args.get('name')
+          return render_template('hi.html', name=name)  # autoescape, name to dane
+  - id: "9.28"
+    name: "SQL Injection"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      SQL Injection — zagrożenie z kategorii Infrastructure & Code wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — SQL Injection
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — SQL Injection
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "9.29"
+    name: "Supply Chain Compromise"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1357"
+      - "CWE-829"
+    desc: |
+      Atakujący publikuje paczkę o nazwie wewnętrznej w publicznym rejestrze — instalowana zamiast prywatnej.
+    lang: "yaml"
+    vuln: |
+      # brak scope/registry — npm bierze public z wyższą wersją
+      dependencies:
+        internal-utils: "*"
+    safe: |
+      # scoped + prywatny registry + pinned
+      "@mycorp/internal-utils": "1.2.3"
+      # .npmrc: @mycorp:registry=https://npm.internal
+  - id: "9.30"
+    name: "Unrestricted File Upload"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-434"
+    desc: |
+      Brak walidacji typu/rozszerzenia uploadu pozwala wgrać webshell.
+    lang: "python"
+    vuln: |
+      f = request.files['file']
+      f.save('/var/www/' + f.filename)  # shell.php
+    safe: |
+      import os, secrets
+      ALLOWED={'png','jpg','pdf'}
+      ext=f.filename.rsplit('.',1)[-1].lower()
+      if ext not in ALLOWED: abort(400)
+      f.save(os.path.join('/var/uploads', secrets.token_hex(16)+'.'+ext))
+  - id: "9.31"
+    name: "XML External Entity (XXE) Injection"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      XML External Entity (XXE) Injection — zagrożenie z kategorii Infrastructure & Code wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — XML External Entity (XXE) Injection
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — XML External Entity (XXE) Injection
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "cat_9_research01"
+    name: "Ldap injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ldap injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research02"
+    name: "Vulnerable and outdated components"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Vulnerable and outdated components" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research03"
+    name: "Broken access control"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Broken access control" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research04"
+    name: "Insecure file uploads"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure file uploads" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research05"
+    name: "Weak or broken cryptography"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak or broken cryptography" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research06"
+    name: "Fpga bitstream tampering"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Fpga bitstream tampering" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research07"
+    name: "Insecure default configurations"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure default configurations" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research08"
+    name: "Vm escape attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Vm escape attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research09"
+    name: "Container image vulnerabilities"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Container image vulnerabilities" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research10"
+    name: "Ssti to rce"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ssti to rce" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research11"
+    name: "Python pickle rce"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python pickle rce" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research12"
+    name: "Struts2 ognl injection rce"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Struts2 ognl injection rce" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research13"
+    name: "Ci/cd infrastructure compromise"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ci/cd infrastructure compromise" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research14"
+    name: "Ld_preload injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ld_preload injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research15"
+    name: "Exposed administrative interfaces"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Exposed administrative interfaces" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research16"
+    name: "Insecure cryptography implementation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure cryptography implementation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research17"
+    name: "Race conditions (toctou)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Race conditions (toctou)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research18"
+    name: "Docker escape to host"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Docker escape to host" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research19"
+    name: "Infrastructure as code vulnerability"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Infrastructure as code vulnerability" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research20"
+    name: "Unpatched infrastructure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unpatched infrastructure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research21"
+    name: "Cgroups escape"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cgroups escape" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research22"
+    name: "Hypervisor escape"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Hypervisor escape" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research23"
+    name: "Ci/cd pipeline compromise"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ci/cd pipeline compromise" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research24"
+    name: "Privileged container abuse"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Privileged container abuse" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research25"
+    name: "Namespace escape"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Namespace escape" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research26"
+    name: "Terraform provider injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Terraform provider injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research27"
+    name: "Network tap injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Network tap injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research28"
+    name: "Sensitive data exposure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sensitive data exposure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research29"
+    name: "Node.js vm module escape"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Node.js vm module escape" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_9_research30"
+    name: "Php unserialize rce"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Php unserialize rce" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

@@ -1,0 +1,10 @@
+id: "supply"
+num: 6
+name: "Dependency & Supply Chain"
+icon: "📦"
+color: "#f783ac"
+difficulty: "Easy (CVE) → Hard (malware)"
+desc: |
+  Zagrożenia z zależności i procesu budowania — coraz częstszy wektor (SolarWinds, event-stream, xz). Twój kod może być idealny, a i tak skompromitowany przez paczkę.
+verdict: |
+  Znane CVE: trywialne — porównanie wersji z bazą (SCA: osv-scanner, Dependabot, Trivy). Typosquatting/dependency confusion: Medium (heurystyki nazw). Świeży złośliwy kod (0-day w paczce): Very Hard — wymaga analizy behawioralnej / reputacji / sandboxa.

@@ -1,0 +1,71 @@
+matrix:
+  - cells:
+    - "1. Injection"
+    - "Easy–Medium"
+    - "Zwykle tak"
+    - "SAST taint analysis (+ DAST do potwierdzenia)"
+  - cells:
+    - "2. AuthN/AuthZ"
+    - "Hard–Very Hard"
+    - "Nie"
+    - "Threat modeling + runtime (testy międzykontowe)"
+  - cells:
+    - "3. Cryptography"
+    - "Easy–Medium"
+    - "Tak"
+    - "SAST (wybór API + przepływ stałych) + secret scan"
+  - cells:
+    - "4. Data Exposure"
+    - "Medium–Hard"
+    - "Częściowo"
+    - "Secret scan + taint do logów + runtime na response"
+  - cells:
+    - "5. Input Validation"
+    - "Medium"
+    - "Częściowo"
+    - "SAST (sinki) + DAST (DOM XSS, ReDoS)"
+  - cells:
+    - "6. Supply Chain"
+    - "Easy (CVE)–Hard (malware)"
+    - "Tak dla CVE"
+    - "SCA + reputacja/sandbox dla malware"
+  - cells:
+    - "7. Configuration"
+    - "Easy–Medium"
+    - "Tak (repo)"
+    - "SAST/IaC scan + skan produkcji"
+  - cells:
+    - "8. Business Logic"
+    - "Very Hard"
+    - "Nie"
+    - "Threat modeling + manual + testy współbieżności"
+  - cells:
+    - "9. Infra & Code"
+    - "Medium–Hard"
+    - "Częściowo"
+    - "SAST sinki + fuzzing/sanitizery (memory)"
+  - cells:
+    - "10. API Security"
+    - "Medium–Very Hard"
+    - "Nie dla authz"
+    - "SAST wzorce + DAST/discovery"
+  - cells:
+    - "11. AI / LLM Security"
+    - "Hard–Very Hard"
+    - "Nie"
+    - "Guardraile + red teaming + sandbox narzędzi"
+  - cells:
+    - "12. Memory Safety"
+    - "Medium–Hard"
+    - "Częściowo"
+    - "SAST (niebezpieczne API) + sanitizery (ASan/UBSan) + fuzzing"
+  - cells:
+    - "13. Insecure Deserialization"
+    - "Easy–Hard"
+    - "Tak (sink)"
+    - "SAST taint do sinków + manualna analiza gadget chains"
+  - cells:
+    - "14. DoS / Resource Exhaustion"
+    - "Medium–Hard"
+    - "Częściowo"
+    - "SAST (regex/limity) + load test/fuzzing dla progu DoS"

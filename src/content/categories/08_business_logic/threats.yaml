@@ -1,0 +1,819 @@
+threats:
+  - id: "8.1"
+    name: "Race Conditions"
+    severity: "High"
+    difficulty: "Very Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-362"
+    desc: |
+      Współbieżne operacje na współdzielonym stanie bez synchronizacji dają niespójny wynik — np. podwójne wykorzystanie kuponu, ujemne saldo, double-spend.
+    lang: "python"
+    vuln: |
+      # PODATNE — read-modify-write bez atomowości
+      bal = account.balance
+      if bal >= amount:
+          account.balance = bal - amount   # dwa równoległe żądania -> overdraft
+    safe: |
+      # BEZPIECZNE — atomowy UPDATE z warunkiem / blokada / SELECT FOR UPDATE
+      UPDATE accounts SET balance = balance - :amt WHERE id=:id AND balance >= :amt
+  - id: "8.2"
+    name: "TOCTOU (Time-of-Check to Time-of-Use)"
+    severity: "High"
+    difficulty: "Very Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-367"
+    desc: |
+      Stan zmienia się między sprawdzeniem a użyciem (klasycznie pliki, ale też auth/limity).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      if os.access(path, os.W_OK):   # check
+          open(path, "w")            # use — plik mógł zostać podmieniony (symlink)
+    safe: |
+      # BEZPIECZNE — operuj atomowo (open + obsługa wyjątku), O_NOFOLLOW, fd-based
+  - id: "8.3"
+    name: "Mass Assignment / Auto-binding"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-915"
+    desc: |
+      Framework automatycznie mapuje pola requestu na atrybuty modelu — atakujący ustawia pola, których nie powinien (is_admin, balance, verified).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      user = User(**request.json)        # ustawia dowolne pola
+      User.objects.create(**request.POST)
+    safe: |
+      # BEZPIECZNE — allowlist pól (DTO / serializer fields / strong params)
+      user = User(name=data["name"], email=data["email"])
+  - id: "8.4"
+    name: "Insecure Deserialization"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych formatem pozwalającym na instancjonowanie obiektów / wykonanie kodu (pickle, Java serialization, YAML load, PHP unserialize).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      import pickle; obj = pickle.loads(request.data)        # RCE
+      import yaml; cfg = yaml.load(data)                      # bez SafeLoader -> RCE
+    safe: |
+      # BEZPIECZNE
+      import json; obj = json.loads(request.data)
+      cfg = yaml.safe_load(data)
+  - id: "8.5"
+    name: "Obejście kroków / workflow bypass"
+    severity: "High"
+    difficulty: "Very Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-840"
+    desc: |
+      Pominięcie wymaganego etapu procesu (płatność → wysyłka, weryfikacja → aktywacja) przez bezpośrednie wywołanie późniejszego endpointu.
+    lang: "python"
+    vuln: |
+      # PODATNE — /order/confirm dostępny bez sprawdzenia statusu płatności
+    safe: |
+      # BEZPIECZNE — serwerowa maszyna stanów; każdy krok waliduje poprzedni
+      if order.state != "PAID": abort(409)
+  - id: "8.6"
+    name: "Negatywne / ekstremalne wartości i manipulacja ceny/ilości"
+    severity: "High"
+    difficulty: "Very Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-20"
+      - "CWE-840"
+    desc: |
+      Brak walidacji zakresu: ujemna ilość → ujemna cena → „zarobek”; ekstremalne liczby → overflow/DoS; manipulacja ceną po stronie klienta.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      total = price * request.json["qty"]   # qty = -5 -> ujemny total -> zwrot
+    safe: |
+      # BEZPIECZNE — waliduj zakres; cena tylko z serwera, nigdy z klienta
+      qty = max(1, int(request.json["qty"]))
+  - id: "8.7"
+    name: "Niespójne / brakujące limity (abuse)"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-799"
+    desc: |
+      Brak limitów na akcje kosztowne/wrażliwe (wysyłka SMS, kody promo, rejestracje) → nadużycie finansowe/zasobowe.
+    lang: "python"
+    vuln: |
+      # PODATNE — wysyłka SMS bez limitu na konto/IP
+      @app.post("/send-sms")
+      def send_sms(): provider.send(to, code)
+    safe: |
+      # BEZPIECZNE — limit częstotliwości na konto/IP + backoff
+      @limiter.limit("3/hour")
+      @app.post("/send-sms")
+      def send_sms(): provider.send(to, code)
+    note: "Severity Medium → High."
+  - id: "8.8"
+    name: "Replay attack / brak idempotencji"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-294"
+    desc: |
+      Ponowne odtworzenie ważnego żądania (płatność, transfer, głos, webhook) bez nonce/timestamp/idempotency-key → podwójne obciążenie, duplikaty.
+    lang: "python"
+    vuln: |
+      # PODATNE — brak ochrony przed powtórzeniem
+      @app.post("/charge")
+      def charge(): payment.execute(req.json)   # replay = podwójna płatność
+    safe: |
+      # BEZPIECZNE — Idempotency-Key + zapis wykonanych + okno czasowe
+      key = request.headers["Idempotency-Key"]
+      if seen(key): return cached(key)
+      result = payment.execute(req.json); store(key, result)
+  - id: "8.9"
+    name: "Manipulacja czasem / brak walidacji dat"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-367"
+      - "CWE-840"
+    desc: |
+      Logika ufa czasowi/datom z klienta (data ważności kuponu, data zamówienia, harmonogram), albo nie obsługuje granic (wstecz/naprzód) — nadużycie promocji, ominięcie okien.
+    lang: "python"
+    vuln: |
+      # PODATNE — data ważności z requestu
+      if request.json["now"] < coupon.expires: apply(coupon)
+    safe: |
+      # BEZPIECZNE — czas tylko z serwera, walidacja zakresu
+      if server_now() < coupon.expires: apply(coupon)
+  - id: "8.10"
+    name: "Coupon / referral / promo abuse"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-840"
+      - "CWE-799"
+    desc: |
+      Wielokrotne wykorzystanie kodu jednorazowego, łączenie promocji, self-referral, tworzenie wielu kont dla bonusu powitalnego — straty finansowe bez technicznej „luki”.
+    lang: "python"
+    vuln: |
+      # PODATNE — brak limitu użycia na użytkownika, brak atomowości
+      if coupon.uses_left > 0: apply(coupon); coupon.uses_left -= 1
+    safe: |
+      # BEZPIECZNE — limit per user, atomowy decrement, detekcja multikont
+      UPDATE coupons SET uses_left=uses_left-1 WHERE id=:id AND uses_left>0
+      # + unikalność (coupon_id, user_id)
+  - id: "8.11"
+    name: "Rounding / currency / precyzja finansowa"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-682"
+      - "CWE-1339"
+    desc: |
+      Użycie float do pieniędzy, błędy zaokrąglania, niespójność walut/kursów, salami slicing (ułamki groszy). Drobne, ale kumulatywne straty/wyciek wartości.
+    lang: "python"
+    vuln: |
+      # PODATNE — float do pieniędzy
+      total = 0.1 + 0.2          # 0.30000000000000004
+      price = qty * 19.99        # błędy zaokrąglania
+    safe: |
+      # BEZPIECZNE — Decimal / liczby całkowite (grosze), jawne zaokrąglanie
+      from decimal import Decimal, ROUND_HALF_UP
+      total = (Decimal("19.99")*qty).quantize(Decimal("0.01"), ROUND_HALF_UP)
+  - id: "8.12"
+    name: "CAPTCHA / anti-automation bypass"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-804"
+    desc: |
+      CAPTCHA weryfikowana po stronie klienta, reużywalny token, brak powiązania z akcją, lub można pominąć krok — automatyzacja rejestracji/spamu/scrapingu.
+    lang: "python"
+    vuln: |
+      # PODATNE — token captcha nie jest weryfikowany serwerowo / reużywalny
+      if request.json.get("captcha_ok"): register()
+    safe: |
+      # BEZPIECZNE — weryfikuj token u dostawcy serwerowo, single-use, powiąż z akcją
+      r = verify_captcha(token, remote_ip); if not r.success: abort(400)
+  - id: "8.13"
+    name: "Approval Workflow Bypass"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe: []
+    desc: |
+      Approval Workflow Bypass — zagrożenie z kategorii Business Logic wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Approval Workflow Bypass
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Approval Workflow Bypass
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "8.14"
+    name: "Parameter Tampering"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-472"
+    desc: |
+      Klient kontroluje wartości (cena, ilość) ufane przez serwer — manipulacja transakcją.
+    lang: "python"
+    vuln: |
+      total = request.form['price']  # cena z klienta
+      charge(total)
+    safe: |
+      item = Product.get(request.form['id'])
+      total = item.price * int(request.form['qty'])  # cena z serwera
+      charge(total)
+  - id: "8.15"
+    name: "Price Manipulation"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-472"
+    desc: |
+      Klient kontroluje wartości (cena, ilość) ufane przez serwer — manipulacja transakcją.
+    lang: "python"
+    vuln: |
+      total = request.form['price']  # cena z klienta
+      charge(total)
+    safe: |
+      item = Product.get(request.form['id'])
+      total = item.price * int(request.form['qty'])  # cena z serwera
+      charge(total)
+  - id: "8.16"
+    name: "Forced Browsing"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-862"
+      - "CWE-285"
+    desc: |
+      Brak kontroli autoryzacji na funkcji/endpoincie — użytkownik wywołuje akcje administracyjne.
+    lang: "python"
+    vuln: |
+      @app.route('/admin/delete/<id>')
+      def delete(id):
+          User.delete(id)  # brak sprawdzenia roli
+    safe: |
+      @app.route('/admin/delete/<id>')
+      @require_role('admin')
+      def delete(id):
+          User.delete(id)
+  - id: "8.17"
+    name: "Insecure Direct Object Reference (IDOR)"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-639"
+    desc: |
+      Identyfikator obiektu z requestu używany bez sprawdzenia własności — dostęp do cudzych zasobów.
+    lang: "python"
+    vuln: |
+      @app.route('/invoice/<int:id>')
+      def invoice(id):
+          return Invoice.get(id).pdf()  # brak sprawdzenia właściciela
+    safe: |
+      @app.route('/invoice/<int:id>')
+      def invoice(id):
+          inv = Invoice.get(id)
+          if inv.owner_id != current_user.id: abort(403)
+          return inv.pdf()
+  - id: "8.18"
+    name: "Mass Assignment Vulnerabilities"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-915"
+    desc: |
+      Bezpośrednie bindowanie inputu do modelu pozwala ustawić pola, których użytkownik nie powinien (np. is_admin).
+    lang: "python"
+    vuln: |
+      user = User(**request.json)  # is_admin=true z body
+    safe: |
+      ALLOWED = {'name','email'}
+      data = {k:v for k,v in request.json.items() if k in ALLOWED}
+      user = User(**data)
+  - id: "8.19"
+    name: "Step Skipping"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-841"
+    desc: |
+      Pominięcie wymaganych kroków/przejście wprost do akcji końcowej omija kontrole procesu.
+    lang: "python"
+    vuln: |
+      @app.route('/checkout/confirm')
+      def confirm():
+          place_order()  # brak sprawdzenia, czy płatność/koszyk OK
+    safe: |
+      @app.route('/checkout/confirm')
+      def confirm():
+          if session.get('step') != 'payment_done': abort(409)
+          place_order()
+  - id: "cat_8_research01"
+    name: "Excessive data exposure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Excessive data exposure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research02"
+    name: "Coupon or discount abuse"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Coupon or discount abuse" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research03"
+    name: "Missing function-level access control"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing function-level access control" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research04"
+    name: "Business logic rate limiting bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Business logic rate limiting bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research05"
+    name: "Referral fraud"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Referral fraud" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research06"
+    name: "Insecure password reset logic"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure password reset logic" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research07"
+    name: "Loyalty point fraud"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Loyalty point fraud" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research08"
+    name: "Business logic denial of service"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Business logic denial of service" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research09"
+    name: "Bidding system manipulation (e.g., last-second sniping)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Bidding system manipulation (e.g., last-second sniping)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research10"
+    name: "State confusion"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "State confusion" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research11"
+    name: "Business logic bypass via workflow manipulation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Business logic bypass via workflow manipulation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research12"
+    name: "Role confusion attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Role confusion attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research13"
+    name: "Multi-step process bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Multi-step process bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research14"
+    name: "Fake order attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Fake order attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research15"
+    name: "Insufficient flow control"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficient flow control" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research16"
+    name: "Email verification bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Email verification bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research17"
+    name: "Time-of-check time-of-use (toctou)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Time-of-check time-of-use (toctou)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research18"
+    name: "Mev sandwich attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Mev sandwich attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research19"
+    name: "Double spending"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Double spending" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research20"
+    name: "Cqrs command injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cqrs command injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research21"
+    name: "User enumeration via error messages"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "User enumeration via error messages" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research22"
+    name: "Business logic information leakage"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Business logic information leakage" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research23"
+    name: "Insufficient workflow validation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficient workflow validation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research24"
+    name: "Quota enforcement bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Quota enforcement bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research25"
+    name: "Hidden parameter manipulation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Hidden parameter manipulation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research26"
+    name: "Payment bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Payment bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research27"
+    name: "Unauthorized state transition"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unauthorized state transition" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research28"
+    name: "Async process race condition"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Async process race condition" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research29"
+    name: "Dark pattern exploitation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dark pattern exploitation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_8_research30"
+    name: "Feature usage limit abuse"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Feature usage limit abuse" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

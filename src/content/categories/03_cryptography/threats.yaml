@@ -1,0 +1,966 @@
+threats:
+  - id: "3.1"
+    name: "Słabe / przestarzałe algorytmy"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-327"
+      - "CWE-328"
+    desc: |
+      MD5/SHA1 do podpisów lub haseł, DES/3DES/RC4 do szyfrowania. Złamane lub trywialne do brute-force.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      import hashlib; hashlib.md5(password.encode()).hexdigest()  # hasło
+    safe: |
+      # BEZPIECZNE — KDF do haseł
+      import bcrypt; bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+      # lub argon2id / scrypt / PBKDF2 z dużą liczbą iteracji
+  - id: "3.2"
+    name: "Hasła hashowane szybkim hashem (bez KDF)"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-916"
+    desc: |
+      Użycie SHA-256 (nawet z solą) do haseł — szybki hash umożliwia masowy brute-force na GPU. Hasła wymagają wolnego KDF.
+    lang: "python"
+    vuln: |
+      # PODATNE — szybki hash, nawet z solą
+      hashlib.sha256(salt + password).hexdigest()
+    safe: |
+      # BEZPIECZNE — argon2id (preferowane) / bcrypt / scrypt
+  - id: "3.3"
+    name: "Tryb ECB"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-327"
+    desc: |
+      ECB szyfruje identyczne bloki tak samo — ujawnia wzorce w danych (słynny „pingwin ECB”). Brak semantycznego bezpieczeństwa.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      Cipher(algorithms.AES(key), modes.ECB())
+    safe: |
+      # BEZPIECZNE — AEAD z losowym nonce
+      AESGCM(key).encrypt(os.urandom(12), data, aad)
+  - id: "3.4"
+    name: "Statyczny / przewidywalny / reużywany IV/nonce"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-329"
+      - "CWE-330"
+    desc: |
+      Reużycie nonce w GCM/CTR jest katastrofalne (ujawnia plaintext, łamie autentyczność). Stały IV w CBC = wyciek równości plaintextów.
+    lang: "python"
+    vuln: |
+      # PODATNE — stały nonce
+      NONCE = b"000000000000"; AESGCM(key).encrypt(NONCE, data, None)
+    safe: |
+      # BEZPIECZNE — losowy unikalny nonce per wiadomość
+      AESGCM(key).encrypt(os.urandom(12), data, None)
+    note: "Critical dla GCM/CTR reuse, High dla CBC."
+  - id: "3.5"
+    name: "Hardcoded keys / sekrety w kodzie"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-798"
+      - "CWE-321"
+    desc: |
+      Klucz szyfrujący/HMAC/API zaszyty w źródle lub repo. Dostępny każdemu z dostępem do kodu, niemożliwy do rotacji bez deployu.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      SECRET_KEY = "s3cr3t-prod-key-2026"
+    safe: |
+      # BEZPIECZNE — z env / secret managera (Vault, KMS, SOPS)
+      SECRET_KEY = os.environ["SECRET_KEY"]
+  - id: "3.6"
+    name: "Słaby RNG do celów bezpieczeństwa"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-338"
+      - "CWE-330"
+    desc: |
+      Użycie random / Math.random() (PRNG, nie kryptograficzny) do tokenów, sesji, resetów haseł — przewidywalne.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      import random; token = str(random.randint(0, 10**9))
+    safe: |
+      # BEZPIECZNE
+      import secrets; token = secrets.token_urlsafe(32)
+  - id: "3.7"
+    name: "Timing attacks (porównania niestałoczasowe)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-208"
+    desc: |
+      Porównanie sekretów (token, HMAC, hasło) zwykłym == przerywa się przy pierwszej różnicy — wyciek bajt po bajcie przez pomiar czasu.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      if user_token == real_token: ...
+    safe: |
+      # BEZPIECZNE
+      import hmac; hmac.compare_digest(user_token, real_token)
+    note: "Severity rośnie do High dla zdalnych HMAC w niektórych warunkach."
+  - id: "3.8"
+    name: "Brak / niewłaściwa weryfikacja certyfikatów TLS"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-295"
+    desc: |
+      Wyłączona weryfikacja certyfikatu (verify=False) otwiera MITM.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      requests.get(url, verify=False)
+    safe: |
+      # BEZPIECZNE — domyślnie verify=True; pinning gdzie potrzeba
+      requests.get(url)
+  - id: "3.9"
+    name: "Padding Oracle / brak AEAD (encrypt bez MAC)"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-347"
+      - "CWE-696"
+    desc: |
+      CBC bez uwierzytelnienia + komunikaty/zachowanie różne dla błędnego paddingu → atakujący odszyfrowuje/podrabia. Ogólnie: szyfrowanie bez weryfikacji integralności (encrypt-then-MAC lub AEAD).
+    lang: "python"
+    vuln: |
+      # PODATNE — CBC bez MAC, błąd paddingu rozróżnialny
+      pt = unpad(AES_CBC(key, iv).decrypt(ct))  # padding error -> oracle
+    safe: |
+      # BEZPIECZNE — AEAD (autentyczność wbudowana)
+      AESGCM(key).decrypt(nonce, ct, aad)   # InvalidTag = jednolity błąd
+  - id: "3.10"
+    name: "Słabe parametry KDF / brak soli / brak HKDF"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-916"
+      - "CWE-759"
+      - "CWE-760"
+    desc: |
+      PBKDF2 ze zbyt małą liczbą iteracji, brak unikalnej soli (rainbow tables), klucz wyprowadzany z hasła bez KDF, używanie surowego sekretu jako klucza bez HKDF.
+    lang: "python"
+    vuln: |
+      # PODATNE — mało iteracji, stała sól
+      PBKDF2(pwd, salt=b"static", iterations=1000)
+    safe: |
+      # BEZPIECZNE — argon2id / scrypt lub PBKDF2 z dużą liczbą iteracji + losowa sól
+      from argon2 import PasswordHasher; PasswordHasher().hash(pwd)
+      # do kluczy: HKDF(master, salt=os.urandom(16), info=context)
+  - id: "3.11"
+    name: "Słabe podpisy / weak RSA padding / krótkie klucze"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-326"
+      - "CWE-780"
+    desc: |
+      RSA < 2048 bitów, RSA z PKCS#1 v1.5 (Bleichenbacher) zamiast OAEP/PSS, klucze symetryczne < 128 bit, krzywe spoza standardu.
+    lang: "python"
+    vuln: |
+      # PODATNE — RSA 1024 + PKCS#1 v1.5
+      key = rsa.generate_private_key(public_exponent=65537, key_size=1024)
+      ciphertext = pub.encrypt(data, padding.PKCS1v15())
+    safe: |
+      # BEZPIECZNE — RSA >=2048/3072 + OAEP do szyfrowania, PSS do podpisu
+      key = rsa.generate_private_key(public_exponent=65537, key_size=3072)
+      pub.encrypt(data, padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
+  - id: "3.12"
+    name: "Pominięta / błędna weryfikacja podpisu"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-347"
+    desc: |
+      Weryfikacja podpisu pominięta, obsługa błędu połykana (verify w try/except bez reakcji), lub porównanie podpisu zwykłym == zamiast verify. Dotyczy webhooków, aktualizacji, tokenów.
+    lang: "python"
+    vuln: |
+      # PODATNE — wynik weryfikacji ignorowany
+      try: verify(sig, data, pub)
+      except Exception: pass   # i tak przetwarza
+    safe: |
+      # BEZPIECZNE — błąd weryfikacji = twardy odrzut
+      if not verify(sig, data, pub): abort(401)
+  - id: "3.13"
+    name: "Reużycie klucza między kontekstami / brak rotacji"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-323"
+      - "CWE-320"
+    desc: |
+      Ten sam klucz do szyfrowania i HMAC, jeden klucz dla wszystkich środowisk/tenantów, brak rotacji i wersjonowania kluczy (rotacja niemożliwa bez ponownego szyfrowania).
+    lang: "python"
+    vuln: |
+      # PODATNE — jeden KEY do enc i mac, brak wersji
+      mac = hmac.new(KEY, ct).digest(); ct = enc(KEY, pt)
+    safe: |
+      # BEZPIECZNE — osobne klucze (HKDF z różnym info), key id w danych, rotacja
+      k_enc = hkdf(master, info=b"enc"); k_mac = hkdf(master, info=b"mac")
+      store({"kid": current_kid, "ct": ct})
+  - id: "3.14"
+    name: "Cache-Timing Attacks"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-208"
+      - "CWE-385"
+    desc: |
+      Porównania zależne od danych (czas/cache/zużycie energii) wyciekają sekrety bit po bicie.
+    lang: "python"
+    vuln: |
+      def check(sig, expected):
+          return sig == expected  # early-exit, niestałoczasowe
+    safe: |
+      import hmac
+      def check(sig, expected):
+          return hmac.compare_digest(sig, expected)  # constant time
+  - id: "3.15"
+    name: "Fault Injection Attack"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-208"
+      - "CWE-385"
+    desc: |
+      Porównania zależne od danych (czas/cache/zużycie energii) wyciekają sekrety bit po bicie.
+    lang: "python"
+    vuln: |
+      def check(sig, expected):
+          return sig == expected  # early-exit, niestałoczasowe
+    safe: |
+      import hmac
+      def check(sig, expected):
+          return hmac.compare_digest(sig, expected)  # constant time
+  - id: "3.16"
+    name: "Padding Oracle Attacks"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-696"
+      - "CWE-347"
+    desc: |
+      Rozróżnialne błędy paddingu (CBC bez MAC) pozwalają odszyfrować/zmienić ciphertext bez klucza.
+    lang: "python"
+    vuln: |
+      # AES-CBC bez uwierzytelnienia, różne błędy paddingu
+      pt = unpad(cipher.decrypt(ct))  # ujawnia padding error
+    safe: |
+      # AEAD — AES-GCM, uwierzytelnia ciphertext
+      from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+      pt = AESGCM(key).decrypt(nonce, ct, aad)  # InvalidTag, nie padding oracle
+  - id: "3.17"
+    name: "Power Analysis Attack"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe: []
+    desc: |
+      Power Analysis Attack — zagrożenie z kategorii Cryptography wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Power Analysis Attack
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Power Analysis Attack
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "3.18"
+    name: "Timing Side-Channel Attack"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-208"
+      - "CWE-385"
+    desc: |
+      Porównania zależne od danych (czas/cache/zużycie energii) wyciekają sekrety bit po bicie.
+    lang: "python"
+    vuln: |
+      def check(sig, expected):
+          return sig == expected  # early-exit, niestałoczasowe
+    safe: |
+      import hmac
+      def check(sig, expected):
+          return hmac.compare_digest(sig, expected)  # constant time
+  - id: "3.19"
+    name: "Weak Key Generation"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-326"
+      - "CWE-331"
+    desc: |
+      Klucze generowane ze słabego źródła entropii lub o niewystarczającej długości są łatwe do złamania.
+    lang: "python"
+    vuln: |
+      import random
+      key = bytes(random.randint(0,255) for _ in range(16))  # nie-CSPRNG
+    safe: |
+      import secrets
+      key = secrets.token_bytes(32)  # 256-bit, CSPRNG
+  - id: "3.20"
+    name: "ECB Mode Encryption"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-327"
+    desc: |
+      Tryb ECB szyfruje identyczne bloki tak samo — ujawnia wzorce w danych.
+    lang: "python"
+    vuln: |
+      from Crypto.Cipher import AES
+      c = AES.new(key, AES.MODE_ECB)
+    safe: |
+      from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+      ct = AESGCM(key).encrypt(nonce, pt, None)  # AEAD zamiast ECB
+  - id: "3.21"
+    name: "Hardcoded Cryptographic Keys"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-321"
+      - "CWE-798"
+    desc: |
+      Klucz kryptograficzny zaszyty w kodzie lub trzymany jawnie — kompromitacja repo = kompromitacja szyfrowania.
+    lang: "python"
+    vuln: |
+      KEY = b'0123456789abcdef'  # hardcoded w repo
+    safe: |
+      import os
+      KEY = bytes.fromhex(os.environ['ENC_KEY'])  # z KMS/secret store
+  - id: "3.22"
+    name: "Hash Collision Attacks"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-328"
+    desc: |
+      MAC oparty na MD5/SHA1(secret||msg) podatny na length extension; słabe hashe na kolizje.
+    lang: "python"
+    vuln: |
+      import hashlib
+      def mac(msg): return hashlib.sha1(SECRET + msg).hexdigest()  # length extension
+    safe: |
+      import hmac, hashlib
+      def mac(msg): return hmac.new(SECRET, msg, hashlib.sha256).hexdigest()
+  - id: "3.23"
+    name: "Improper Certificate Validation"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-295"
+      - "CWE-300"
+    desc: |
+      Wyłączona/niepoprawna weryfikacja certyfikatu TLS pozwala na atak MITM.
+    lang: "python"
+    vuln: |
+      import requests
+      requests.get(url, verify=False)  # akceptuje dowolny cert
+    safe: |
+      import requests
+      requests.get(url, verify='/etc/ssl/certs/ca.pem')  # weryfikuje łańcuch
+  - id: "3.24"
+    name: "Insecure Key Storage"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-321"
+      - "CWE-798"
+    desc: |
+      Klucz kryptograficzny zaszyty w kodzie lub trzymany jawnie — kompromitacja repo = kompromitacja szyfrowania.
+    lang: "python"
+    vuln: |
+      KEY = b'0123456789abcdef'  # hardcoded w repo
+    safe: |
+      import os
+      KEY = bytes.fromhex(os.environ['ENC_KEY'])  # z KMS/secret store
+  - id: "3.25"
+    name: "Insufficient Key Length"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-326"
+      - "CWE-331"
+    desc: |
+      Klucze generowane ze słabego źródła entropii lub o niewystarczającej długości są łatwe do złamania.
+    lang: "python"
+    vuln: |
+      import random
+      key = bytes(random.randint(0,255) for _ in range(16))  # nie-CSPRNG
+    safe: |
+      import secrets
+      key = secrets.token_bytes(32)  # 256-bit, CSPRNG
+  - id: "3.26"
+    name: "Length Extension Attack"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Length Extension Attack — zagrożenie z kategorii Cryptography wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Length Extension Attack
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Length Extension Attack
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "3.27"
+    name: "Man-in-the-Middle (MITM)"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-295"
+      - "CWE-300"
+    desc: |
+      Wyłączona/niepoprawna weryfikacja certyfikatu TLS pozwala na atak MITM.
+    lang: "python"
+    vuln: |
+      import requests
+      requests.get(url, verify=False)  # akceptuje dowolny cert
+    safe: |
+      import requests
+      requests.get(url, verify='/etc/ssl/certs/ca.pem')  # weryfikuje łańcuch
+  - id: "3.28"
+    name: "Replay Attack"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Replay Attack — zagrożenie z kategorii Cryptography wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Replay Attack
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Replay Attack
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "cat_3_research01"
+    name: "Weak cipher algorithm (e.g., des, rc4)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak cipher algorithm (e.g., des, rc4)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research02"
+    name: "Insufficiently random values"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficiently random values" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research03"
+    name: "Predictable random numbers"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Predictable random numbers" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research04"
+    name: "Protocol downgrade attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Protocol downgrade attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research05"
+    name: "Nonce reuse in stream ciphers"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Nonce reuse in stream ciphers" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research06"
+    name: "Key reuse across sessions"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Key reuse across sessions" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research07"
+    name: "Known plaintext attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Known plaintext attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research08"
+    name: "Chosen ciphertext attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Chosen ciphertext attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research09"
+    name: "Robot attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Robot attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research10"
+    name: "Ciphertext-only attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ciphertext-only attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research11"
+    name: "Key reuse attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Key reuse attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research12"
+    name: "Poodle attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Poodle attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research13"
+    name: "Python pycryptodome misuse"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python pycryptodome misuse" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research14"
+    name: "Md5 hash collision"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Md5 hash collision" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research15"
+    name: "Openssl renegotiation attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Openssl renegotiation attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research16"
+    name: "Format string crypto bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Format string crypto bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research17"
+    name: "Short key length"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Short key length" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research18"
+    name: "Insecure key exchange"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure key exchange" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research19"
+    name: "Crime attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Crime attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research20"
+    name: "Post-quantum migration failure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Post-quantum migration failure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research21"
+    name: "Aes-cbc iv predictable"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Aes-cbc iv predictable" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research22"
+    name: "Ruby openssl misconfiguration"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ruby openssl misconfiguration" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research23"
+    name: "Go crypto/tls misconfiguration"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Go crypto/tls misconfiguration" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research24"
+    name: "Private key disclosure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Private key disclosure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research25"
+    name: "Missing certificate validation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing certificate validation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research26"
+    name: "Static iv usage"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Static iv usage" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research27"
+    name: "Missing salt for passwords"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing salt for passwords" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research28"
+    name: "Certificate transparency bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Certificate transparency bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research29"
+    name: "Missing message authentication code"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing message authentication code" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_3_research30"
+    name: "Insecure random number"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure random number" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

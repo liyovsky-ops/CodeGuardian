@@ -1,0 +1,890 @@
+threats:
+  - id: "13.1"
+    name: "Python Pickle RCE"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      pickle.loads na nieufnych danych wykonuje dowolny kod przez metodę __reduce__ obiektu. Każdy pickle z zewnątrz = potencjalne RCE.
+    lang: "python"
+    vuln: |
+      # PODATNE — deserializacja danych z sieci/cookie
+      import pickle
+      obj = pickle.loads(request.get_data())   # __reduce__ -> os.system(...)
+    safe: |
+      # BEZPIECZNE — format danych, nie kodu
+      import json
+      obj = json.loads(request.get_data())
+      # gdy konieczny pickle: tylko zaufane źródło + HMAC integralności
+  - id: "13.2"
+    name: "YAML unsafe load"
+    severity: "Critical"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      yaml.load (PyYAML bez SafeLoader) interpretuje tagi typu !!python/object/apply, co pozwala konstruować dowolne obiekty i wywołać kod → RCE.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      import yaml
+      cfg = yaml.load(user_yaml)               # !!python/object/apply:os.system ["id"]
+      cfg = yaml.load(user_yaml, Loader=yaml.Loader)  # też niebezpieczne
+    safe: |
+      # BEZPIECZNE — SafeLoader (tylko proste typy)
+      import yaml
+      cfg = yaml.safe_load(user_yaml)
+  - id: "13.3"
+    name: "Java Object Deserialization (gadget chains)"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      ObjectInputStream.readObject na nieufnym strumieniu uruchamia łańcuchy gadżetów (ysoserial: CommonsCollections, Spring) podczas deserializacji → RCE. Historyczny wektor wielu krytycznych CVE.
+    lang: "java"
+    vuln: |
+      // PODATNE — readObject na danych od klienta
+      ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+      Object o = ois.readObject();          // gadget chain -> RCE
+    safe: |
+      // BEZPIECZNE — nie deserializuj natywnie nieufnych danych; użyj JSON
+      // lub whitelist klas przez ObjectInputFilter (JEP 290)
+      ois.setObjectInputFilter(ObjectInputFilter.Config.createFilter(
+          "com.myapp.dto.*;java.lang.*;!*"));
+  - id: "13.4"
+    name: "PHP Object Injection (unserialize)"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-502"
+    desc: |
+      unserialize na nieufnym wejściu instancjonuje obiekty; magiczne metody (__wakeup, __destruct) tworzą POP chain → RCE/LFI/SQLi.
+    lang: "php"
+    vuln: |
+      // PODATNE — unserialize danych z cookie/parametru
+      $obj = unserialize($_COOKIE['data']);   // POP chain przez __wakeup/__destruct
+    safe: |
+      // BEZPIECZNE — JSON zamiast unserialize, lub allowed_classes=false
+      $obj = json_decode($_COOKIE['data'], true);
+      // gdy wymuszone: unserialize($d, ['allowed_classes' => false]);
+  - id: "13.5"
+    name: "XML Deserialization (XMLDecoder / XStream)"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+      - "CWE-611"
+    desc: |
+      Deserializatory XML mapujące XML na obiekty (Java XMLDecoder, XStream bez whitelisty, .NET BinaryFormatter/LosFormatter) wykonują kod z tagów typu <object class=...> → RCE.
+    lang: "java"
+    vuln: |
+      // PODATNE — XMLDecoder wykonuje konstrukcje z XML
+      XMLDecoder d = new XMLDecoder(request.getInputStream());
+      Object o = d.readObject();            // <object class="java.lang.Runtime">... -> RCE
+    safe: |
+      // BEZPIECZNE — nie używaj XMLDecoder do nieufnego XML;
+      // XStream z jawną whitelistą typów (allowTypes), albo prosty parser DTO
+      xstream.addPermission(NoTypePermission.NONE);
+      xstream.allowTypes(new Class[]{Dto.class});
+  - id: "13.6"
+    name: "Ruby Marshal / YAML.load RCE"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Marshal.load i YAML.load (Psych) w Ruby na nieufnych danych instancjonują dowolne klasy → gadget chain i RCE. Historycznie wektor podatności w Rails.
+    lang: "ruby"
+    vuln: |
+      # PODATNE
+      obj = Marshal.load(params[:data])        # dowolne obiekty -> RCE
+      obj = YAML.load(params[:cfg])            # Psych -> instancjonowanie klas
+    safe: |
+      # BEZPIECZNE — JSON, albo YAML.safe_load z ograniczonymi typami
+      require 'json'
+      obj = JSON.parse(params[:data])
+      cfg = YAML.safe_load(params[:cfg], permitted_classes: [Symbol])
+  - id: "13.7"
+    name: ".NET BinaryFormatter / TypeNameHandling"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      BinaryFormatter/SoapFormatter/NetDataContractSerializer oraz Json.NET z TypeNameHandling.All osadzają nazwy typów .NET — atakujący wskazuje typ-gadżet (ObjectDataProvider) → RCE.
+    lang: "csharp"
+    vuln: |
+      // PODATNE — BinaryFormatter / Json.NET z type handling
+      var obj = new BinaryFormatter().Deserialize(stream);
+      JsonConvert.DeserializeObject(json,
+          new JsonSerializerSettings{ TypeNameHandling = TypeNameHandling.All });
+    safe: |
+      // BEZPIECZNE — BinaryFormatter jest deprecjonowany; użyj System.Text.Json
+      var dto = System.Text.Json.JsonSerializer.Deserialize<MyDto>(json);
+      // Json.NET: TypeNameHandling.None (domyślne)
+  - id: "13.8"
+    name: "JavaScript / Node deserializacja (node-serialize, eval)"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+      - "CWE-95"
+    desc: |
+      Biblioteki jak node-serialize deserializują funkcje z IIFE (_$$ND_FUNC$$_) i je wykonują; ogólnie deserializacja przez eval/Function nieufnego JSON → RCE.
+    lang: "javascript"
+    vuln: |
+      // PODATNE — node-serialize.unserialize wykonuje osadzone funkcje
+      const s = require('node-serialize');
+      const obj = s.unserialize(req.cookies.profile);   // _$$ND_FUNC$$_ -> RCE
+    safe: |
+      // BEZPIECZNE — JSON.parse (nie wykonuje kodu), walidacja schematu
+      const obj = JSON.parse(req.cookies.profile);
+      // + walidacja (np. zod/ajv) zanim użyjesz pól
+  - id: "13.9"
+    name: "Deserialization → SSRF / DoS gadgets"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+      - "CWE-918"
+    desc: |
+      Nawet bez RCE, gadżety deserializacji wywołują efekty uboczne: URLDNS (SSRF/wyciek DNS), gadżety hashujące/rekurencyjne (DoS), odczyt plików. Niższy próg eksploatacji niż pełne RCE.
+    lang: "java"
+    vuln: |
+      // PODATNE — readObject z gadżetem URLDNS (java.net.URL w HashMap)
+      // deserializacja wykonuje URL.hashCode() -> rozwiązanie DNS atakującego
+      Object o = ois.readObject();          // SSRF / DNS exfiltration
+    safe: |
+      // BEZPIECZNE — ObjectInputFilter z whitelistą + limity (maxdepth, maxrefs)
+      ois.setObjectInputFilter(ObjectInputFilter.Config.createFilter(
+          "maxdepth=5;maxrefs=100;com.myapp.*;!*"));
+  - id: "13.10"
+    name: "Brak weryfikacji integralności serializowanych danych"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+      - "CWE-345"
+    desc: |
+      Serializowany stan (sesja, cookie, token) przekazywany klientowi bez podpisu — atakujący modyfikuje pola lub podstawia własny obiekt. Nawet bezpieczny format wymaga MAC, jeśli round-trip przez klienta.
+    lang: "python"
+    vuln: |
+      # PODATNE — stan w cookie bez podpisu, ufamy po stronie serwera
+      state = json.loads(base64.b64decode(request.cookies["state"]))
+      if state["role"] == "admin": ...      # klient mógł zmienić role
+    safe: |
+      # BEZPIECZNE — HMAC nad serializowanymi danymi, weryfikacja stałoczasowa
+      raw, sig = cookie.rsplit(".", 1)
+      exp = hmac.new(KEY, raw.encode(), hashlib.sha256).hexdigest()
+      if not hmac.compare_digest(sig, exp): abort(400)
+      state = json.loads(base64.b64decode(raw))
+  - id: "13.11"
+    name: "Java Deserialization RCE"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnego strumienia uruchamia gadget chain (np. Commons Collections) — RCE.
+    lang: "java"
+    vuln: |
+      ObjectInputStream in = new ObjectInputStream(req.getInputStream());
+      Object o = in.readObject();  // gadget chain -> RCE
+    safe: |
+      // Użyj formatu danych (JSON) lub whitelisty klas
+      ObjectInputStream in = new ValidatingObjectInputStream(req.getInputStream());
+      in.accept(Allowed.class);  // tylko dozwolone typy
+  - id: "13.12"
+    name: "Apache Commons Collections Gadget"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnego strumienia uruchamia gadget chain (np. Commons Collections) — RCE.
+    lang: "java"
+    vuln: |
+      ObjectInputStream in = new ObjectInputStream(req.getInputStream());
+      Object o = in.readObject();  // gadget chain -> RCE
+    safe: |
+      // Użyj formatu danych (JSON) lub whitelisty klas
+      ObjectInputStream in = new ValidatingObjectInputStream(req.getInputStream());
+      in.accept(Allowed.class);  // tylko dozwolone typy
+  - id: "13.13"
+    name: "Authentication Bypass"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "13.14"
+    name: "Data Tampering"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "13.15"
+    name: "Denial of Service"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "13.16"
+    name: "Deserialization of Untrusted Data"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "13.17"
+    name: "Gadget Chain Exploitation"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnego strumienia uruchamia gadget chain (np. Commons Collections) — RCE.
+    lang: "java"
+    vuln: |
+      ObjectInputStream in = new ObjectInputStream(req.getInputStream());
+      Object o = in.readObject();  // gadget chain -> RCE
+    safe: |
+      // Użyj formatu danych (JSON) lub whitelisty klas
+      ObjectInputStream in = new ValidatingObjectInputStream(req.getInputStream());
+      in.accept(Allowed.class);  // tylko dozwolone typy
+  - id: "13.18"
+    name: "Information Disclosure"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "13.19"
+    name: "Magic Method Abuse (PHP)"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnego strumienia uruchamia gadget chain (np. Commons Collections) — RCE.
+    lang: "java"
+    vuln: |
+      ObjectInputStream in = new ObjectInputStream(req.getInputStream());
+      Object o = in.readObject();  // gadget chain -> RCE
+    safe: |
+      // Użyj formatu danych (JSON) lub whitelisty klas
+      ObjectInputStream in = new ValidatingObjectInputStream(req.getInputStream());
+      in.accept(Allowed.class);  // tylko dozwolone typy
+  - id: "13.20"
+    name: "Object Injection Leading to Sqli"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "13.21"
+    name: "Privilege Escalation"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "13.22"
+    name: "Remote Code Execution"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "13.23"
+    name: "SQL Injection via Deserialization"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "13.24"
+    name: "Type Confusion Attacks"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "cat_13_research01"
+    name: "Arbitrary file read"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Arbitrary file read" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research02"
+    name: "Property-oriented programming (pop) chains"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Property-oriented programming (pop) chains" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research03"
+    name: "Arbitrary file write"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Arbitrary file write" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research04"
+    name: "Xml deserialization xxe"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml deserialization xxe" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research05"
+    name: "Python pickle exploitation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python pickle exploitation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research06"
+    name: "Billion laughs attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Billion laughs attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research07"
+    name: "Server-side request forgery (ssrf)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Server-side request forgery (ssrf)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research08"
+    name: "Spring rce via deserialization"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Spring rce via deserialization" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research09"
+    name: "Kryo deserialization payload"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Kryo deserialization payload" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research10"
+    name: "Ruby erb template via marshal"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ruby erb template via marshal" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research11"
+    name: "Deserialization of signed data (no verify)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Deserialization of signed data (no verify)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research12"
+    name: "Resource exhaustion dos"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Resource exhaustion dos" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research13"
+    name: "Yaml deserialization attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml deserialization attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research14"
+    name: "Ruby marshal load attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ruby marshal load attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research15"
+    name: "`__reduce__`/`__getstate__` exploitation (python)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "`__reduce__`/`__getstate__` exploitation (python)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research16"
+    name: "Yaml deserialization code execution"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml deserialization code execution" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research17"
+    name: "Untrusted deserialization rce"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Untrusted deserialization rce" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research18"
+    name: "Xml external entity (xxe)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research19"
+    name: "Java objectinputstream exploit"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Java objectinputstream exploit" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research20"
+    name: "Node.js serialize exploit"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Node.js serialize exploit" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research21"
+    name: "Cookie deserialization tampering"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cookie deserialization tampering" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research22"
+    name: "Session deserialization exploit"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Session deserialization exploit" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research23"
+    name: "Jackson gadget chain exploit"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Jackson gadget chain exploit" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research24"
+    name: "Deserialization filter bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Deserialization filter bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research25"
+    name: "Insecure object deserialization"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure object deserialization" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research26"
+    name: "Access control bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Access control bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research27"
+    name: "Json deserialization attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Json deserialization attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research28"
+    name: "Xml deserialization rce"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml deserialization rce" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research29"
+    name: "Object state manipulation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Object state manipulation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_13_research30"
+    name: "Coldfusion deserialization attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Coldfusion deserialization attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

@@ -1,0 +1,10 @@
+id: "logic"
+num: 8
+name: "Business Logic"
+icon: "🧠"
+color: "#ff8787"
+difficulty: "Very Hard"
+desc: |
+  Błędy w samej logice aplikacji — najtrudniejsze, bo nie ma „złego API”. Kod jest poprawny składniowo i działa, ale logika pozwala na nadużycie.
+verdict: |
+  Najtrudniejsza kategoria. Wyjątek: insecure deserialization (Easy — pickle.loads/yaml.load to wzorzec) i mass assignment (Medium). Reszta wymaga zrozumienia intencji systemu. Race condition jest niewidoczna w pojedynczej ścieżce kodu. To główny obszar przewagi agenta LLM nad SAST.

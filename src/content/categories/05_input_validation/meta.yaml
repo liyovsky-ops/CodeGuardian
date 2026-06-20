@@ -1,0 +1,10 @@
+id: "input"
+num: 5
+name: "Input Validation"
+icon: "🛂"
+color: "#20c997"
+difficulty: "Medium"
+desc: |
+  Brak walidacji/sanityzacji wejścia na granicy zaufania. Korzeń XSS, path traversal, ReDoS i wielu innych.
+verdict: |
+  XSS (taint źródło→sink HTML), path traversal (taint do open/fs), ReDoS (analiza wzorca regex) — wszystkie mają rozpoznawalne sinki, więc SAST radzi sobie dobrze. Trudniejsze: DOM XSS, type confusion, kontekst escapingu. DOM XSS i ReDoS — lepiej runtime/DAST.

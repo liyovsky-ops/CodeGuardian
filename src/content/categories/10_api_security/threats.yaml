@@ -1,0 +1,1003 @@
+threats:
+  - id: "10.1"
+    name: "Brak / słaby rate limiting & resource limits"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-770"
+      - "CWE-799"
+    desc: |
+      Brak limitu żądań umożliwia brute force, credential stuffing, scraping, DoS i abuse kosztowy. OWASP API #4 (Unrestricted Resource Consumption).
+    lang: "python"
+    vuln: |
+      # PODATNE — endpoint logowania bez limitu
+      @app.post("/login")
+      def login(): ...
+    safe: |
+      # BEZPIECZNE — limit per IP/konto + backoff + CAPTCHA na anomalie
+      @limiter.limit("5/minute")
+      @app.post("/login")
+      def login(): ...
+  - id: "10.2"
+    name: "GraphQL — introspekcja i brak limitu głębokości/kosztu"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-200"
+      - "CWE-770"
+    desc: |
+      Włączona introspekcja w produkcji ujawnia cały schemat; brak limitu głębokości/złożoności pozwala na DoS zagnieżdżonymi zapytaniami; batching omija rate limity.
+    lang: "text"
+    vuln: |
+      # PODATNE — introspection ON w prod, brak depth/complexity limit
+    safe: |
+      # BEZPIECZNE — wyłącz introspekcję w prod, depth limit, cost analysis,
+      # persisted queries, limit aliasów/batcha
+    note: "Medium (introspekcja) → High (query bomb DoS)."
+  - id: "10.3"
+    name: "Webhook bez weryfikacji podpisu"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-345"
+    desc: |
+      Endpoint webhooka (np. od Stripe/GitHub) ufa payloadowi bez weryfikacji HMAC/podpisu — atakujący podszywa się i fałszuje zdarzenia (np. „płatność OK”).
+    lang: "python"
+    vuln: |
+      # PODATNE
+      data = request.json; process_payment(data)
+    safe: |
+      # BEZPIECZNE — weryfikuj podpis (stałoczasowo) + timestamp anti-replay
+      sig = request.headers["X-Signature"]
+      expected = hmac.new(secret, request.data, hashlib.sha256).hexdigest()
+      if not hmac.compare_digest(sig, expected): abort(401)
+  - id: "10.4"
+    name: "Excessive Data Exposure (over-fetching)"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-213"
+    desc: |
+      API zwraca więcej pól niż klient potrzebuje, licząc na filtrowanie po stronie klienta. OWASP API #3 (pokrywa się z 4.4).
+    lang: "python"
+    vuln: |
+      # PODATNE — zwraca cały obiekt, filtrowanie po stronie klienta
+      return jsonify(user.__dict__)
+    safe: |
+      # BEZPIECZNE — jawny DTO z allowlistą pól
+      return jsonify({"id": user.id, "name": user.name})
+    ref: "4.4"
+  - id: "10.5"
+    name: "BOLA / BFLA (object & function level authz)"
+    severity: "High"
+    difficulty: "Very Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-639"
+      - "CWE-862"
+    desc: |
+      OWASP API #1 i #5 — szczegółowo w sekcji 2 (IDOR 2.2, missing function authz 2.6). Najczęstsze realne podatności API.
+    lang: "python"
+    vuln: |
+      # brak przykładu
+    safe: |
+      # brak przykładu
+    ref: "2.2"
+    note: "Severity High → Critical."
+  - id: "10.6"
+    name: "Versioning / exposure starych endpointów"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1059"
+    desc: |
+      Nieużywane/stare wersje API (/v1/) pozostają aktywne bez łatek — „shadow/zombie API”. OWASP API #9 (Improper Inventory Management).
+    lang: "text"
+    vuln: |
+      # PODATNE — stara wersja API aktywna bez łatek
+      GET /v1/users   # zombie endpoint
+    safe: |
+      # BEZPIECZNE — inwentaryzacja API, wyłączanie/deprekacja starych wersji,
+      # jeden punkt łatania
+    note: "Severity Medium → High."
+  - id: "10.7"
+    name: "SSRF via API"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-918"
+    desc: |
+      OWASP API #7 — API przyjmujące URL od klienta. Szczegóły w 9.1.
+    lang: "python"
+    vuln: |
+      # brak przykładu
+    safe: |
+      # brak przykładu
+    ref: "9.1"
+  - id: "10.8"
+    name: "Mass Assignment via API"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-915"
+    desc: |
+      OWASP API #6 (Mass Assignment / property-level authz). Szczegóły w 8.3.
+    lang: "python"
+    vuln: |
+      # brak przykładu
+    safe: |
+      # brak przykładu
+    ref: "8.3"
+  - id: "10.9"
+    name: "Brak Content-Type/method enforcement, CSRF"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-352"
+    desc: |
+      Endpointy zmieniające stan akceptujące GET lub bez ochrony CSRF (gdy używane cookies) → CSRF.
+    lang: "python"
+    vuln: |
+      # PODATNE — mutacja przez GET, brak tokenu CSRF
+      @app.route("/account/delete", methods=["GET"])
+      def delete(): ...
+    safe: |
+      # BEZPIECZNE — tylko POST/DELETE + token CSRF + SameSite cookies
+      @app.route("/account/delete", methods=["POST"])
+      @csrf_protect
+      def delete(): ...
+    note: "Severity Medium → High."
+  - id: "10.10"
+    name: "Server-Side Parameter Pollution / mass batching"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-235"
+      - "CWE-770"
+    desc: |
+      API przekazuje parametry klienta do wewnętrznego API bez sanityzacji (HPP — duplikaty parametrów interpretowane różnie), lub akceptuje nieograniczone batche/aliasy omijające limity.
+    lang: "python"
+    vuln: |
+      # PODATNE — surowe przekazanie query stringu do internal API
+      requests.get(INTERNAL + "/u?" + request.query_string.decode())
+      # ?id=1&id=2 -> niejednoznaczna interpretacja
+    safe: |
+      # BEZPIECZNE — jawne, walidowane parametry; nie forwarduj surowego query
+      requests.get(INTERNAL + "/u", params={"id": int(request.args["id"])})
+  - id: "10.11"
+    name: "Improper Inventory / shadow & undocumented API"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1059"
+    desc: |
+      OWASP API #9 — endpointy debugowe, wewnętrzne, beta lub niedokumentowane wystawione publicznie; brak inwentaryzacji co działa i z jakimi danymi. (Rozszerza 10.6.)
+    lang: "text"
+    vuln: |
+      # PODATNE — niedokumentowane/debug endpointy w prod
+      GET /internal/debug/users   GET /api/_admin   GET /test/seed
+    safe: |
+      # BEZPIECZNE — pełna inwentaryzacja API (gateway/OpenAPI), usuń debug w prod,
+      # segmentacja środowisk, wymuszony auth na wszystkich trasach
+    note: "Severity Medium → High."
+  - id: "10.12"
+    name: "Unsafe Consumption of 3rd-party APIs"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-20"
+      - "CWE-918"
+    desc: |
+      OWASP API #10 — ślepe zaufanie danym z zewnętrznego API (brak walidacji odpowiedzi, follow-redirect do dowolnych URL, brak TLS/timeoutów) → injection/SSRF z odpowiedzi partnera.
+    lang: "python"
+    vuln: |
+      # PODATNE — odpowiedź zewnętrznego API wprost do DB/HTML
+      r = requests.get(partner_url)        # bez timeout, follow dowolne redirecty
+      render(r.json()["html"])             # ufa treści
+    safe: |
+      # BEZPIECZNE — waliduj schemat odpowiedzi, timeouty, ogranicz redirecty,
+      # traktuj dane partnera jak nieufny input (escape/sanitize)
+  - id: "10.13"
+    name: "Broken Function Level Authorization"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-862"
+      - "CWE-285"
+    desc: |
+      Brak kontroli autoryzacji na funkcji/endpoincie — użytkownik wywołuje akcje administracyjne.
+    lang: "python"
+    vuln: |
+      @app.route('/admin/delete/<id>')
+      def delete(id):
+          User.delete(id)  # brak sprawdzenia roli
+    safe: |
+      @app.route('/admin/delete/<id>')
+      @require_role('admin')
+      def delete(id):
+          User.delete(id)
+  - id: "10.14"
+    name: "Broken Object Level Authorization"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-862"
+      - "CWE-285"
+    desc: |
+      Brak kontroli autoryzacji na funkcji/endpoincie — użytkownik wywołuje akcje administracyjne.
+    lang: "python"
+    vuln: |
+      @app.route('/admin/delete/<id>')
+      def delete(id):
+          User.delete(id)  # brak sprawdzenia roli
+    safe: |
+      @app.route('/admin/delete/<id>')
+      @require_role('admin')
+      def delete(id):
+          User.delete(id)
+  - id: "10.15"
+    name: "Mass Assignment Vulnerability"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-915"
+    desc: |
+      Bezpośrednie bindowanie inputu do modelu pozwala ustawić pola, których użytkownik nie powinien (np. is_admin).
+    lang: "python"
+    vuln: |
+      user = User(**request.json)  # is_admin=true z body
+    safe: |
+      ALLOWED = {'name','email'}
+      data = {k:v for k,v in request.json.items() if k in ALLOWED}
+      user = User(**data)
+  - id: "10.16"
+    name: "Replay Attack"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe: []
+    desc: |
+      Replay Attack — zagrożenie z kategorii API Security wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Replay Attack
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Replay Attack
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "10.17"
+    name: "Broken User Authentication"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-287"
+    desc: |
+      Wadliwe uwierzytelnianie/zarządzanie sesją pozwala podszyć się pod użytkownika.
+    lang: "python"
+    vuln: |
+      if user.password == request.form['pw']:  # plaintext compare
+          session['uid'] = user.id
+    safe: |
+      import bcrypt
+      if bcrypt.checkpw(request.form['pw'].encode(), user.pw_hash):
+          session.clear(); session['uid'] = user.id
+  - id: "10.18"
+    name: "Cross-Site Request Forgery (CSRF)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Cross-Site Request Forgery (CSRF) — zagrożenie z kategorii API Security wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Cross-Site Request Forgery (CSRF)
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Cross-Site Request Forgery (CSRF)
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "10.19"
+    name: "Cross-Site Scripting (XSS)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Cross-Site Scripting (XSS) — zagrożenie z kategorii API Security wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Cross-Site Scripting (XSS)
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Cross-Site Scripting (XSS)
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "10.20"
+    name: "Improper Asset Management"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1059"
+    desc: |
+      Stare/niezdokumentowane wersje API (v1, /beta) pozostają dostępne bez łatek.
+    lang: "yaml"
+    vuln: |
+      routes:
+        - /api/v1/users  # przestarzała, podatna, wciąż aktywna
+        - /api/v2/users
+    safe: |
+      routes:
+        - /api/v2/users  # v1 wyłączona, inwentarz API utrzymywany
+  - id: "10.21"
+    name: "Insecure Deserialization"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych (pickle/yaml) wykonuje gadget chain — RCE.
+    lang: "python"
+    vuln: |
+      import pickle
+      obj = pickle.loads(data)  # data od użytkownika -> RCE
+    safe: |
+      import json
+      obj = json.loads(data)  # bezpieczny format danych
+  - id: "10.22"
+    name: "Insecure Direct Object Reference"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-639"
+    desc: |
+      Identyfikator obiektu z requestu używany bez sprawdzenia własności — dostęp do cudzych zasobów.
+    lang: "python"
+    vuln: |
+      @app.route('/invoice/<int:id>')
+      def invoice(id):
+          return Invoice.get(id).pdf()  # brak sprawdzenia właściciela
+    safe: |
+      @app.route('/invoice/<int:id>')
+      def invoice(id):
+          inv = Invoice.get(id)
+          if inv.owner_id != current_user.id: abort(403)
+          return inv.pdf()
+  - id: "10.23"
+    name: "Insufficient Logging & Monitoring"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-778"
+    desc: |
+      Brak logowania zdarzeń bezpieczeństwa uniemożliwia wykrycie i analizę ataku.
+    lang: "python"
+    vuln: |
+      def login(u,p):
+          return verify(u,p)  # brak logu prób/niepowodzeń
+    safe: |
+      def login(u,p):
+          ok=verify(u,p)
+          log.info('auth attempt user=%s ok=%s ip=%s', u, ok, ip)
+          return ok
+  - id: "10.24"
+    name: "Lack of Rate Limiting"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-770"
+    desc: |
+      Brak limitu zapytań/rozmiaru pozwala wyczerpać zasoby API.
+    lang: "python"
+    vuln: |
+      @app.route('/search')
+      def search():
+          return Item.query.all()  # brak paginacji i rate limit
+    safe: |
+      @app.route('/search')
+      @rate_limit('60/minute')
+      def search():
+          page=int(request.args.get('page',1))
+          return Item.query.paginate(page, 50)
+  - id: "10.25"
+    name: "Man-in-the-Middle (MITM) Attack"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-295"
+      - "CWE-300"
+    desc: |
+      Wyłączona/niepoprawna weryfikacja certyfikatu TLS pozwala na atak MITM.
+    lang: "python"
+    vuln: |
+      import requests
+      requests.get(url, verify=False)  # akceptuje dowolny cert
+    safe: |
+      import requests
+      requests.get(url, verify='/etc/ssl/certs/ca.pem')  # weryfikuje łańcuch
+  - id: "10.26"
+    name: "Security Misconfiguration"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-16"
+    desc: |
+      Niebezpieczne ustawienia domyślne lub nadmiarowe uprawnienia w konfiguracji aplikacji/infrastruktury.
+    lang: "yaml"
+    vuln: |
+      debug: true
+      admin_panel: { exposed: true, auth: none }
+    safe: |
+      debug: false
+      admin_panel: { exposed: false, auth: required }
+  - id: "10.27"
+    name: "Server-Side Request Forgery"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-918"
+    desc: |
+      Serwer pobiera URL podany przez użytkownika — dostęp do zasobów wewnętrznych/metadata cloud.
+    lang: "python"
+    vuln: |
+      import requests
+      r = requests.get(request.args['url'])  # http://169.254.169.254/...
+    safe: |
+      from urllib.parse import urlparse
+      import ipaddress, socket
+      u=urlparse(request.args['url'])
+      ip=ipaddress.ip_address(socket.gethostbyname(u.hostname))
+      if ip.is_private or ip.is_loopback: abort(400)
+      r=requests.get(u.geturl(), allow_redirects=False)
+  - id: "10.28"
+    name: "Unrestricted Resource Consumption"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-770"
+    desc: |
+      Brak limitu zapytań/rozmiaru pozwala wyczerpać zasoby API.
+    lang: "python"
+    vuln: |
+      @app.route('/search')
+      def search():
+          return Item.query.all()  # brak paginacji i rate limit
+    safe: |
+      @app.route('/search')
+      @rate_limit('60/minute')
+      def search():
+          page=int(request.args.get('page',1))
+          return Item.query.paginate(page, 50)
+  - id: "10.29"
+    name: "XML External Entity (XXE) Injection"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      XML External Entity (XXE) Injection — zagrożenie z kategorii API Security wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — XML External Entity (XXE) Injection
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — XML External Entity (XXE) Injection
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "cat_10_research01"
+    name: "Api key leakage"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api key leakage" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research02"
+    name: "Lack of resources & rate limiting"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Lack of resources & rate limiting" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research03"
+    name: "Injection (sql, nosql, ldap, os command)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Injection (sql, nosql, ldap, os command)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research04"
+    name: "Injection flaws (sql, nosql, etc.)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Injection flaws (sql, nosql, etc.)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research05"
+    name: "Credential stuffing"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Credential stuffing" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research06"
+    name: "Unvalidated redirects & forwards"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unvalidated redirects & forwards" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research07"
+    name: "Insufficient logging and monitoring"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficient logging and monitoring" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research08"
+    name: "Insecure jwt implementation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure jwt implementation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research09"
+    name: "Broken authentication api"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Broken authentication api" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research10"
+    name: "Xml external entity injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research11"
+    name: "Bola (idor in api)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Bola (idor in api)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research12"
+    name: "Insecure api key storage"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure api key storage" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research13"
+    name: "Deserialization attacks"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Deserialization attacks" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research14"
+    name: "Leaked api keys or secrets"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Leaked api keys or secrets" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research15"
+    name: "Service mesh api bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Service mesh api bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research16"
+    name: "Api abuse (bots, scraping)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api abuse (bots, scraping)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research17"
+    name: "Session token in url"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Session token in url" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research18"
+    name: "Insecure transport layer (no tls)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure transport layer (no tls)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research19"
+    name: "Long polling api dos"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Long polling api dos" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research20"
+    name: "Man-in-the-middle (unencrypted)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Man-in-the-middle (unencrypted)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research21"
+    name: "Insecure default configuration"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure default configuration" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research22"
+    name: "Protobuf injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Protobuf injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research23"
+    name: "Weak or missing tls/ssl"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak or missing tls/ssl" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research24"
+    name: "Api key rotation failure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api key rotation failure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research25"
+    name: "Parameter tampering"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Parameter tampering" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research26"
+    name: "Api key in url"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api key in url" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research27"
+    name: "Hardcoded secrets in client"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Hardcoded secrets in client" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research28"
+    name: "Api key exposure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api key exposure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research29"
+    name: "Accept header injection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Accept header injection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_10_research30"
+    name: "Django rest framework permission"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Django rest framework permission" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

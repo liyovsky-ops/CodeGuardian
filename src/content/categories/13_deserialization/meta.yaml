@@ -1,0 +1,10 @@
+id: "deserialize"
+num: 13
+name: "Insecure Deserialization"
+icon: "📥"
+color: "#ff922b"
+difficulty: "Easy → Hard"
+desc: |
+  Deserializacja nieufnych danych formatem zdolnym do instancjonowania obiektów lub wywołania kodu (pickle, Java serialization, PHP unserialize, YAML, XML). OWASP Top 10 A08:2021. Atakujący buduje 'gadget chain' z dostępnych klas → RCE, LFI, SSRF lub DoS.
+verdict: |
+  Wywołania sinków (pickle.loads, yaml.load, ObjectInputStream.readObject, unserialize, Marshal.load) wykrywa SAST taint analysis — to wzorzec. Trudniejsza jest ocena dostępności realnego gadget chain w classpath, co bywa pracą manualną. Static wskazuje sink; potwierdzenie eksploatu często ręczne.

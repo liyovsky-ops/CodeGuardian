@@ -1,0 +1,1072 @@
+threats:
+  - id: "2.1"
+    name: "Broken Authentication"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-287"
+      - "CWE-307"
+    desc: |
+      Wadliwy mechanizm logowania: brak rate-limitu (brute force), przewidywalne resety hasła, akceptowanie pustych/domyślnych haseł, brak weryfikacji starego hasła przy zmianie.
+    lang: "python"
+    vuln: |
+      # PODATNE — brak limitu prób, porównanie w plaintext
+      if user.password == request.form["password"]: login(user)
+    safe: |
+      # BEZPIECZNE — hash o stałym czasie + rate limit + lockout
+      import bcrypt
+      if rate_limiter.allow(ip) and bcrypt.checkpw(pwd.encode(), user.pw_hash):
+          login(user)
+  - id: "2.2"
+    name: "IDOR (Insecure Direct Object Reference)"
+    severity: "High"
+    difficulty: "Very Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-639"
+      - "CWE-284"
+    desc: |
+      Aplikacja używa identyfikatora dostarczonego przez użytkownika do dostępu do obiektu BEZ sprawdzenia, czy ten użytkownik ma do niego prawo. Klasyk „Broken Object Level Authorization” (BOLA, OWASP API #1).
+    lang: "python"
+    vuln: |
+      # PODATNE — pobiera po id z URL, brak sprawdzenia własności
+      @app.get("/invoice/<int:id>")
+      def invoice(id):
+          return Invoice.query.get(id).to_json()
+      # atak: /invoice/1, /invoice/2, ... -> cudze faktury
+    safe: |
+      # BEZPIECZNE — scope do zalogowanego użytkownika
+      @app.get("/invoice/<int:id>")
+      def invoice(id):
+          inv = Invoice.query.filter_by(id=id, owner_id=current_user.id).first_or_404()
+          return inv.to_json()
+    note: "Severity rośnie do Critical jeśli dane wrażliwe / masowy enumerator."
+  - id: "2.3"
+    name: "Privilege Escalation"
+    severity: "Critical"
+    difficulty: "Very Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-269"
+    desc: |
+      Użytkownik uzyskuje uprawnienia ponad swój poziom — pionowa (user→admin) lub pozioma (user A → zasoby user B). Często przez ufanie polu roli z requestu lub brak re-walidacji uprawnień przy akcji.
+    lang: "python"
+    vuln: |
+      # PODATNE — rola brana z body requestu
+      user.role = request.json.get("role", "user")  # atak: {"role":"admin"}
+    safe: |
+      # BEZPIECZNE — rola tylko z trusted source, zmiana roli za osobnym authz
+      if current_user.is_admin: target.role = validated_role
+  - id: "2.4"
+    name: "JWT Issues"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-347"
+    desc: |
+      Wadliwa obsługa tokenów: akceptowanie alg:none, confusion RS256↔HS256 (klucz publiczny użyty jako sekret HMAC), brak weryfikacji exp/aud/iss, sekret słaby/hardcoded, brak rewokacji.
+    lang: "python"
+    vuln: |
+      # PODATNE — brak wymuszenia algorytmu, brak weryfikacji
+      jwt.decode(token, key, options={"verify_signature": False})
+      jwt.decode(token, key)  # przyjmie alg z nagłówka -> alg confusion / none
+    safe: |
+      # BEZPIECZNE — przypnij algorytm i waliduj claims
+      jwt.decode(token, key, algorithms=["RS256"], audience="my-api", issuer="my-iss")
+  - id: "2.5"
+    name: "Session Management"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-384"
+      - "CWE-613"
+      - "CWE-1004"
+    desc: |
+      Słabe ID sesji (przewidywalne), brak rotacji po logowaniu (session fixation), brak invalidacji po wylogowaniu, cookie bez HttpOnly/Secure/SameSite, zbyt długi TTL.
+    lang: "python"
+    vuln: |
+      # PODATNE
+      resp.set_cookie("sid", session_id)  # brak flag, brak rotacji po loginie
+    safe: |
+      # BEZPIECZNE
+      session.regenerate_id()  # po udanym logowaniu (anty-fixation)
+      resp.set_cookie("sid", sid, httponly=True, secure=True, samesite="Lax", max_age=3600)
+  - id: "2.6"
+    name: "Missing Function-Level Authorization"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-862"
+    desc: |
+      Endpoint administracyjny chroniony tylko ukryciem w UI („security by obscurity”), ale dostępny bezpośrednio. OWASP API #5 (BFLA).
+    lang: "python"
+    vuln: |
+      # PODATNE — brak dekoratora authz na akcji admina
+      @app.post("/admin/delete-user")
+      def delete_user(): ...
+    safe: |
+      # BEZPIECZNE
+      @app.post("/admin/delete-user")
+      @require_role("admin")
+      def delete_user(): ...
+  - id: "2.7"
+    name: "Account Enumeration"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-203"
+      - "CWE-204"
+    desc: |
+      Różne komunikaty/czasy odpowiedzi dla istniejącego vs nieistniejącego konta (login, reset, rejestracja) pozwalają zbudować listę ważnych użytkowników.
+    lang: "python"
+    vuln: |
+      # PODATNE — różne komunikaty
+      if not user: return "Nie ma takiego użytkownika"
+      if not check(pwd): return "Złe hasło"
+    safe: |
+      # BEZPIECZNE — jednolity komunikat + stały czas (hash zawsze liczony)
+      ok = user and bcrypt.checkpw(pwd, user.hash or DUMMY_HASH)
+      if not ok: return "Nieprawidłowy login lub hasło"
+  - id: "2.8"
+    name: "Password Reset Poisoning / słaby reset"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-640"
+    desc: |
+      Token resetu przewidywalny, bez wygaśnięcia, wielokrotnego użycia, lub link budowany z nagłówka Host (zob. 1.9) — przejęcie konta.
+    lang: "python"
+    vuln: |
+      # PODATNE — token z PRNG, bez TTL, link z Host
+      token = str(random.randint(0,10**6))
+      link = f"https://{request.headers['Host']}/reset?t={token}"
+    safe: |
+      # BEZPIECZNE — kryptograficzny token, krótki TTL, single-use, kanoniczny host
+      token = secrets.token_urlsafe(32)
+      store(token, user, ttl=900, used=False)
+  - id: "2.9"
+    name: "MFA Bypass / słaba 2FA"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-287"
+      - "CWE-308"
+    desc: |
+      Pominięcie kroku MFA (bezpośrednie wywołanie kolejnego endpointu), brak rate-limitu na kod OTP (brute 6 cyfr), kod bez powiązania z sesją, akceptacja po wygaśnięciu.
+    lang: "python"
+    vuln: |
+      # PODATNE — brak limitu, kod globalny, brak powiązania z sesją
+      if request.form["otp"] == cached_otp: grant_full_access()
+    safe: |
+      # BEZPIECZNE — limit prób, TOTP stałoczasowo, kod związany z user+czasem
+      if rate_limiter.allow(user) and pyotp.TOTP(user.secret).verify(otp, valid_window=1):
+          grant_full_access()
+  - id: "2.10"
+    name: "OAuth / OIDC flaws"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-352"
+      - "CWE-601"
+    desc: |
+      Brak/słaba walidacja state (CSRF na callbacku), brak PKCE w klientach publicznych, luźny redirect_uri (open redirect → kradzież code/token), brak weryfikacji aud/iss w ID tokenie, mieszanie implicit flow.
+    lang: "python"
+    vuln: |
+      # PODATNE — brak walidacji state, redirect_uri z parametru
+      return redirect(idp_url + "&redirect_uri=" + request.args["ru"])
+      # callback nie sprawdza state -> CSRF / przejęcie code
+    safe: |
+      # BEZPIECZNE — losowy state w sesji + PKCE + dokładny redirect_uri
+      state = secrets.token_urlsafe(16); session["oauth_state"]=state
+      # na callbacku: assert request.args["state"] == session.pop("oauth_state")
+  - id: "2.11"
+    name: "JWT 'kid' / JWK injection"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-347"
+      - "CWE-345"
+    desc: |
+      Nagłówek JWT (kid, jku, x5u) sterowany przez atakującego — kid path traversal/SQLi do wyboru klucza, jku wskazujące na klucz atakującego, osadzony jwk akceptowany jako zaufany.
+    lang: "python"
+    vuln: |
+      # PODATNE — klucz wybierany po kid z tokena, jku zaufane
+      hdr = jwt.get_unverified_header(token)
+      key = open("keys/" + hdr["kid"]).read()   # kid traversal
+      jwt.decode(token, key)
+    safe: |
+      # BEZPIECZNE — kid tylko jako klucz mapy zaufanych kluczy, ignoruj jku/x5u
+      key = TRUSTED_KEYS.get(hdr["kid"]) or abort(401)
+      jwt.decode(token, key, algorithms=["RS256"])
+  - id: "2.12"
+    name: "Credential Stuffing / brak ochrony przed reuse haseł"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-307"
+      - "CWE-799"
+    desc: |
+      Brak detekcji masowych logowań skradzionymi parami login:hasło (z wycieków). Wymaga limitów, anomalii, sprawdzania haseł w bazach wycieków (k-anonimity HIBP).
+    lang: "python"
+    vuln: |
+      # PODATNE — login bez limitu na konto/IP, akceptuje znane wyciekłe hasła
+      def login(u,p): return check(u,p)
+    safe: |
+      # BEZPIECZNE — rate limit + device fingerprint + odrzuć hasła z wycieków
+      if pwned_count(p) > 0: reject("hasło w znanych wyciekach")
+      if anomaly_detector.suspicious(ip,u): require_captcha()
+  - id: "2.13"
+    name: "Logout / brak invalidacji tokenów (rewokacja)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-613"
+    desc: |
+      JWT/sesje pozostają ważne po wylogowaniu lub zmianie hasła — brak listy unieważnień / krótkiego TTL + refresh. Skradziony token działa do exp.
+    lang: "python"
+    vuln: |
+      # PODATNE — JWT 24h bez rewokacji, logout tylko czyści cookie
+      def logout(): resp.delete_cookie("jwt")   # token nadal ważny
+    safe: |
+      # BEZPIECZNE — krótki access token + refresh w bazie z rewokacją / denylist jti
+      revoked.add(claims["jti"], ttl=token_remaining)
+    note: "High dla długożyjących JWT bez rewokacji."
+  - id: "2.14"
+    name: "Brute Force Attacks"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-307"
+      - "CWE-799"
+    desc: |
+      Brak limitu prób / lockoutu pozwala na masowe próby logowania (brute force, credential stuffing, password spraying).
+    lang: "python"
+    vuln: |
+      @app.route('/login', methods=['POST'])
+      def login():
+          return ok() if verify(u, p) else fail()  # brak rate limit
+    safe: |
+      from limits import RateLimiter
+      @app.route('/login', methods=['POST'])
+      @rate_limit('5/minute', key='ip+username')
+      def login():
+          return ok() if verify(u, p) else fail()
+  - id: "2.15"
+    name: "Cross-Site Request Forgery (CSRF)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe: []
+    desc: |
+      Cross-Site Request Forgery (CSRF) — zagrożenie z kategorii Authentication & Authorization wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Cross-Site Request Forgery (CSRF)
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Cross-Site Request Forgery (CSRF)
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "2.16"
+    name: "CSRF"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-352"
+    desc: |
+      Brak tokena anty-CSRF pozwala stronie trzeciej wymusić akcję w imieniu zalogowanego użytkownika.
+    lang: "python"
+    vuln: |
+      @app.route('/transfer', methods=['POST'])
+      def transfer():
+          do_transfer(request.form['to'], request.form['amt'])  # brak CSRF token
+    safe: |
+      from flask_wtf.csrf import CSRFProtect
+      csrf = CSRFProtect(app)
+      @app.route('/transfer', methods=['POST'])
+      def transfer():
+          do_transfer(request.form['to'], request.form['amt'])  # token weryfikowany
+  - id: "2.17"
+    name: "Password Spraying"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-307"
+      - "CWE-799"
+    desc: |
+      Brak limitu prób / lockoutu pozwala na masowe próby logowania (brute force, credential stuffing, password spraying).
+    lang: "python"
+    vuln: |
+      @app.route('/login', methods=['POST'])
+      def login():
+          return ok() if verify(u, p) else fail()  # brak rate limit
+    safe: |
+      from limits import RateLimiter
+      @app.route('/login', methods=['POST'])
+      @rate_limit('5/minute', key='ip+username')
+      def login():
+          return ok() if verify(u, p) else fail()
+  - id: "2.18"
+    name: "Session Fixation"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-384"
+    desc: |
+      Brak regeneracji identyfikatora sesji po zalogowaniu pozwala napastnikowi utrwalić znany mu session ID (fixation) lub przejąć sesję.
+    lang: "python"
+    vuln: |
+      @app.route('/login', methods=['POST'])
+      def login():
+          if check(request.form):
+              session['uid'] = uid  # ten sam session id sprzed logowania
+    safe: |
+      @app.route('/login', methods=['POST'])
+      def login():
+          if check(request.form):
+              session.clear()
+              app.session_interface.regenerate(session)  # nowy id
+              session['uid'] = uid
+  - id: "2.19"
+    name: "Session Hijacking"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-384"
+    desc: |
+      Brak regeneracji identyfikatora sesji po zalogowaniu pozwala napastnikowi utrwalić znany mu session ID (fixation) lub przejąć sesję.
+    lang: "python"
+    vuln: |
+      @app.route('/login', methods=['POST'])
+      def login():
+          if check(request.form):
+              session['uid'] = uid  # ten sam session id sprzed logowania
+    safe: |
+      @app.route('/login', methods=['POST'])
+      def login():
+          if check(request.form):
+              session.clear()
+              app.session_interface.regenerate(session)  # nowy id
+              session['uid'] = uid
+  - id: "2.20"
+    name: "Weak Password Policy"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-521"
+      - "CWE-1392"
+    desc: |
+      Zbyt słabe wymagania hasła lub domyślne poświadczenia ułatwiają zgadnięcie/przełamanie konta.
+    lang: "python"
+    vuln: |
+      def set_password(pw):
+          if len(pw) >= 4:  # za słabo, brak innych reguł
+              user.pw = hash(pw)
+    safe: |
+      import re
+      def set_password(pw):
+          if len(pw) < 12 or pw.lower() in COMMON_PW:
+              raise ValueError('za słabe hasło')
+          user.pw = bcrypt.hash(pw)
+  - id: "2.21"
+    name: "Authentication Bypass"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "2.22"
+    name: "Broken Access Control"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Broken Access Control — zagrożenie z kategorii Authentication & Authorization wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Broken Access Control
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Broken Access Control
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "2.23"
+    name: "Broken Function Level Authorization"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-862"
+      - "CWE-285"
+    desc: |
+      Brak kontroli autoryzacji na funkcji/endpoincie — użytkownik wywołuje akcje administracyjne.
+    lang: "python"
+    vuln: |
+      @app.route('/admin/delete/<id>')
+      def delete(id):
+          User.delete(id)  # brak sprawdzenia roli
+    safe: |
+      @app.route('/admin/delete/<id>')
+      @require_role('admin')
+      def delete(id):
+          User.delete(id)
+  - id: "2.24"
+    name: "Default Credentials"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1392"
+      - "CWE-798"
+    desc: |
+      Domyślne konta/hasła (admin/admin) pozostawione w produkcji.
+    lang: "yaml"
+    vuln: |
+      admin:
+        user: admin
+        password: admin
+    safe: |
+      admin:
+        user: admin
+        password: ${ADMIN_PW}  # wymuszona zmiana przy pierwszym logowaniu
+  - id: "2.25"
+    name: "Forced Browsing"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-862"
+      - "CWE-285"
+    desc: |
+      Brak kontroli autoryzacji na funkcji/endpoincie — użytkownik wywołuje akcje administracyjne.
+    lang: "python"
+    vuln: |
+      @app.route('/admin/delete/<id>')
+      def delete(id):
+          User.delete(id)  # brak sprawdzenia roli
+    safe: |
+      @app.route('/admin/delete/<id>')
+      @require_role('admin')
+      def delete(id):
+          User.delete(id)
+  - id: "2.26"
+    name: "Insecure Password Reset"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-640"
+    desc: |
+      Przewidywalny/niewygasający token resetu lub host header poisoning pozwala przejąć konto.
+    lang: "python"
+    vuln: |
+      token = str(user.id) + str(int(time.time()))  # przewidywalny
+      send_reset(user.email, token)
+    safe: |
+      import secrets
+      token = secrets.token_urlsafe(32)
+      store_reset(user.id, token, ttl=900)  # losowy, jednorazowy, TTL
+  - id: "2.27"
+    name: "JWT None Algorithm"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-347"
+    desc: |
+      Akceptowanie algorytmu "none" lub brak wymuszenia algorytmu pozwala sfałszować token JWT.
+    lang: "python"
+    vuln: |
+      import jwt
+      claims = jwt.decode(token, verify=False)  # alg=none akceptowany
+    safe: |
+      import jwt
+      claims = jwt.decode(token, KEY, algorithms=['RS256'])  # alg wymuszony
+  - id: "2.28"
+    name: "Missing Function Level Access Control"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Missing Function Level Access Control — zagrożenie z kategorii Authentication & Authorization wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Missing Function Level Access Control
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Missing Function Level Access Control
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "2.29"
+    name: "Oauth Misconfiguration"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-601"
+      - "CWE-347"
+    desc: |
+      Niezweryfikowany redirect_uri / luźny scope / brak walidacji podpisu SAML umożliwia przejęcie tokenu lub eskalację.
+    lang: "python"
+    vuln: |
+      # redirect_uri przyjmowany bez walidacji
+      return redirect(request.args['redirect_uri'] + '?code=' + code)
+    safe: |
+      ALLOWED = {'https://app.example.com/cb'}
+      ru = request.args['redirect_uri']
+      if ru not in ALLOWED: abort(400)
+      return redirect(ru + '?code=' + code)
+  - id: "2.30"
+    name: "Replay Attack"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      Replay Attack — zagrożenie z kategorii Authentication & Authorization wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    lang: "python"
+    vuln: |
+      # PODATNE — Replay Attack
+      # brak walidacji / kontroli (przykład poglądowy)
+      result = handle(untrusted_input)
+    safe: |
+      # BEZPIECZNE — Replay Attack
+      # waliduj wejście, stosuj allowlistę i least privilege
+      if not is_valid(untrusted_input):
+          raise ValueError('odrzucone')
+      result = handle(untrusted_input)
+  - id: "2.31"
+    name: "SAML Signature Wrapping"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-601"
+      - "CWE-347"
+    desc: |
+      Niezweryfikowany redirect_uri / luźny scope / brak walidacji podpisu SAML umożliwia przejęcie tokenu lub eskalację.
+    lang: "python"
+    vuln: |
+      # redirect_uri przyjmowany bez walidacji
+      return redirect(request.args['redirect_uri'] + '?code=' + code)
+    safe: |
+      ALLOWED = {'https://app.example.com/cb'}
+      ru = request.args['redirect_uri']
+      if ru not in ALLOWED: abort(400)
+      return redirect(ru + '?code=' + code)
+  - id: "cat_2_research01"
+    name: "Brute force login"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Brute force login" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research02"
+    name: "Hardcoded credentials"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Hardcoded credentials" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research03"
+    name: "Weak password policies"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak password policies" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research04"
+    name: "Insecure credential storage"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure credential storage" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research05"
+    name: "Oauth authorization code interception"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Oauth authorization code interception" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research06"
+    name: "Openid misconfiguration"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Openid misconfiguration" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research07"
+    name: "Insufficient session invalidation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficient session invalidation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research08"
+    name: "Path traversal auth bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Path traversal auth bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research09"
+    name: "Passkey bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Passkey bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research10"
+    name: "Leaked jwt in url"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Leaked jwt in url" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research11"
+    name: "Sql injection in login endpoint"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sql injection in login endpoint" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research12"
+    name: "Cross-tenant authorization bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cross-tenant authorization bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research13"
+    name: "Man-in-the-middle (mitm) on auth"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Man-in-the-middle (mitm) on auth" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research14"
+    name: "Phishing and spear phishing"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Phishing and spear phishing" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research15"
+    name: "Account pre-hijacking"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Account pre-hijacking" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research16"
+    name: "Blockchain wallet impersonation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Blockchain wallet impersonation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research17"
+    name: "Subdomain takeover auth bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Subdomain takeover auth bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research18"
+    name: "Insecure token storage"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure token storage" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research19"
+    name: "Deepfake face id bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Deepfake face id bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research20"
+    name: "Oauth token theft"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Oauth token theft" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research21"
+    name: "Ghost account exploitation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ghost account exploitation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research22"
+    name: "Biometric spoofing"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Biometric spoofing" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research23"
+    name: "Oauth pkce bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Oauth pkce bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research24"
+    name: "Sim swapping"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sim swapping" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research25"
+    name: "Jwt algorithm confusion"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Jwt algorithm confusion" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research26"
+    name: "Csp bypass auth"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Csp bypass auth" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research27"
+    name: "Missing account lockout policies"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing account lockout policies" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research28"
+    name: "Tenant isolation failure"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Tenant isolation failure" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research29"
+    name: "Browser extension auth bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Browser extension auth bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_2_research30"
+    name: "Saml assertion/xml signature wrapping"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Saml assertion/xml signature wrapping" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

@@ -1,0 +1,1039 @@
+threats:
+  - id: "14.1"
+    name: "ReDoS (Regular Expression DoS)"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1333"
+      - "CWE-400"
+    desc: |
+      Regex z katastrofalnym backtrackingiem (zagnieżdżone/nakładające się kwantyfikatory) na spreparowanym wejściu rośnie wykładniczo w czasie — jeden request blokuje wątek/proces.
+    lang: "javascript"
+    vuln: |
+      // PODATNE — nakładające się kwantyfikatory
+      const re = /^(a+)+$/;
+      re.test("aaaaaaaaaaaaaaaaaaaaaaaa!");   // wykładnicze backtracking -> zawis
+    safe: |
+      // BEZPIECZNE — regex bez zagnieżdżeń, limit długości, silnik liniowy (RE2)
+      const re = /^a+$/;                     // równoważne, liniowe
+      if (input.length > 256) reject();     // + ogranicz wejście
+  - id: "14.2"
+    name: "Zip Bomb / Decompression Bomb"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-409"
+      - "CWE-400"
+    desc: |
+      Małe archiwum (np. 42 KB) rozpakowuje się do terabajtów (zagnieżdżone/zduplikowane warstwy) — wyczerpanie dysku/pamięci. Dotyczy ZIP, gzip, brotli, obrazów (PNG/zlib).
+    lang: "python"
+    vuln: |
+      # PODATNE — rozpakowanie bez limitu rozmiaru
+      import zipfile
+      with zipfile.ZipFile(uploaded) as z:
+          z.extractall(dest)               # 42.zip -> 4.5 PB
+    safe: |
+      # BEZPIECZNE — limit rozmiaru i liczby plików, sprawdzaj file_size z nagłówka
+      MAX = 100 * 1024 * 1024
+      total = 0
+      with zipfile.ZipFile(uploaded) as z:
+          for info in z.infolist():
+              total += info.file_size
+              if total > MAX or info.file_size > MAX: abort(413)
+          z.extractall(dest)
+  - id: "14.3"
+    name: "Billion Laughs / XML Entity Expansion"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-776"
+      - "CWE-400"
+    desc: |
+      Rekurencyjne encje XML (lub parametryczne) rozwijają się wykładniczo (kilka KB → gigabajty w pamięci) → DoS. Wariant: encje zewnętrzne (zob. też XXE).
+    lang: "python"
+    vuln: |
+      # PODATNE — parser z włączoną ekspansją encji
+      import xml.etree.ElementTree as ET
+      ET.fromstring(data)
+      # <!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;...">... -> miliardy "lol"
+    safe: |
+      # BEZPIECZNE — defusedxml blokuje bomby encji i DTD
+      from defusedxml.ElementTree import fromstring
+      fromstring(data)                     # rzuca EntitiesForbidden
+  - id: "14.4"
+    name: "Brak rate limiting (flood / brute / abuse)"
+    severity: "High"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-770"
+      - "CWE-799"
+    desc: |
+      Endpoint bez limitu liczby żądań pozwala na flood (DoS), brute force, scraping i abuse kosztowy (SMS, e-mail, LLM). OWASP API #4.
+    lang: "python"
+    vuln: |
+      # PODATNE — kosztowny endpoint bez limitu
+      @app.post("/search")
+      def search(): return expensive_full_scan(request.json["q"])
+    safe: |
+      # BEZPIECZNE — limit per IP/konto + backoff
+      from flask_limiter import Limiter
+      @limiter.limit("10/minute")
+      @app.post("/search")
+      def search(): return expensive_full_scan(request.json["q"])
+  - id: "14.5"
+    name: "Unbounded input / brak limitu rozmiaru body"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-770"
+      - "CWE-400"
+    desc: |
+      Brak limitu rozmiaru żądania/uploadu/liczby pól pozwala wysłać gigabajtowe body i wyczerpać pamięć lub dysk jednym requestem.
+    lang: "python"
+    vuln: |
+      # PODATNE — czyta całe body do pamięci bez limitu
+      @app.post("/upload")
+      def upload():
+          data = request.get_data()        # dowolny rozmiar -> OOM
+          return process(data)
+    safe: |
+      # BEZPIECZNE — twardy limit rozmiaru body na poziomie frameworka
+      app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024   # 8 MB, request -> 413
+  - id: "14.6"
+    name: "Memory exhaustion (nieograniczone struktury w pamięci)"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-789"
+      - "CWE-400"
+    desc: |
+      Alokacja struktury o rozmiarze sterowanym wejściem (lista o długości z requestu, cache bez eviction, akumulacja w pamięci) → OOM i ubicie procesu.
+    lang: "python"
+    vuln: |
+      # PODATNE — rozmiar alokacji z wejścia, cache bez limitu
+      rows = [Row() for _ in range(request.json["count"])]   # count=10**9 -> OOM
+      CACHE[key] = big_value                                  # rośnie bez końca
+    safe: |
+      # BEZPIECZNE — limit rozmiaru + cache z eviction (LRU)
+      count = min(int(request.json["count"]), 10_000)
+      rows = [Row() for _ in range(count)]
+      from functools import lru_cache         # ograniczony rozmiar
+  - id: "14.7"
+    name: "Algorithmic Complexity Attack (hash flooding, quadratic)"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-407"
+      - "CWE-400"
+    desc: |
+      Spreparowane wejście wymusza najgorszy przypadek algorytmu: kolizje hashy (O(n) lookup → O(n²) na całości), sortowanie quadratic, parsery o złej złożoności.
+    lang: "python"
+    vuln: |
+      # PODATNE — wiele wartości kolidujących w jednym kuble hash
+      # atakujący wysyła N kluczy o tym samym hashu -> insert/lookup O(n^2)
+      for k in attacker_keys: d[k] = 1     # degeneracja do listy
+    safe: |
+      # BEZPIECZNE — randomizacja seedu hash (Python: PYTHONHASHSEED domyślnie ON),
+      # limit liczby pól, struktury odporne (drzewa) na granicy zaufania
+      if len(attacker_keys) > MAX_FIELDS: abort(400)
+  - id: "14.8"
+    name: "CPU exhaustion przez kosztowne operacje na wejściu"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+      - "CWE-1176"
+    desc: |
+      Operacja kosztowna obliczeniowo (KDF z parametrem od klienta, rozdzielczość obrazu, zapytanie analityczne, pętla zależna od wejścia) bez limitu/timeoutu pożera CPU.
+    lang: "python"
+    vuln: |
+      # PODATNE — liczba iteracji KDF / rozmiar obrazu z requestu
+      bcrypt.hashpw(pwd, bcrypt.gensalt(rounds=request.json["cost"]))  # cost=31
+      Image.open(f).resize((req.w, req.h))   # 100000x100000 -> CPU/MEM bomb
+    safe: |
+      # BEZPIECZNE — stałe/ograniczone parametry kosztu + timeout + limity wymiarów
+      cost = 12                              # serwer ustala, nie klient
+      if req.w * req.h > 25_000_000: abort(400)
+  - id: "14.9"
+    name: "Slowloris / wolne połączenia wyczerpujące pulę"
+    severity: "Medium"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+      - "CWE-1088"
+    desc: |
+      Atakujący otwiera wiele połączeń i wysyła dane bardzo wolno (niedokończone nagłówki/body), utrzymując zajęte wątki/workery serwera → brak miejsca dla legalnych klientów.
+    lang: "text"
+    vuln: |
+      # PODATNE — serwer bez timeoutów na czytanie nagłówków/body,
+      # blokujący model thread-per-connection bez limitu czasu
+    safe: |
+      # BEZPIECZNE — timeouty (header/body/idle), reverse proxy buforujący (nginx),
+      # limit połączeń per IP, model asynchroniczny/event-driven
+      # nginx: client_header_timeout 10s; client_body_timeout 10s;
+  - id: "14.10"
+    name: "Amplification przez nieograniczone zapytania (GraphQL/N+1)"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-770"
+      - "CWE-405"
+    desc: |
+      Jedno żądanie wyzwala nieproporcjonalnie dużo pracy: głębokie/zagnieżdżone zapytanie GraphQL, batching aliasów, lub wzorzec N+1 — mały request, ogromne obciążenie backendu/DB.
+    lang: "graphql"
+    vuln: |
+      # PODATNE — głębokie zagnieżdżenie bez limitu (query bomb)
+      query { user { friends { friends { friends { friends { name }}}}}}
+    safe: |
+      # BEZPIECZNE — limit głębokości i kosztu, paginacja, dataloader (anty N+1)
+      # depthLimit(7), costAnalysis(maxCost), persisted queries
+  - id: "14.11"
+    name: "Connection Pool Exhaustion"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Wyciek deskryptorów/połączeń wyczerpuje pulę zasobów.
+    lang: "python"
+    vuln: |
+      def handle():
+          conn = pool.get()  # brak zwrotu do puli
+          return conn.query()
+    safe: |
+      def handle():
+          with pool.get() as conn:  # zwracane do puli
+              return conn.query()
+  - id: "14.12"
+    name: "File Descriptor Exhaustion"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Wyciek deskryptorów/połączeń wyczerpuje pulę zasobów.
+    lang: "python"
+    vuln: |
+      def handle():
+          conn = pool.get()  # brak zwrotu do puli
+          return conn.query()
+    safe: |
+      def handle():
+          with pool.get() as conn:  # zwracane do puli
+              return conn.query()
+  - id: "14.13"
+    name: "HTTP Flood"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Floody (SYN/UDP/ICMP/HTTP/Slowloris) wyczerpują połączenia/przepustowość serwera.
+    lang: "yaml"
+    vuln: |
+      # brak limitów połączeń i timeoutów
+      worker_connections 100000;
+    safe: |
+      # limity + timeouty + SYN cookies + rate limiting (WAF/CDN)
+      client_body_timeout 10s; client_header_timeout 10s;
+      limit_conn addr 20; limit_req zone=req burst=20;
+  - id: "14.14"
+    name: "Icmp Flood (Ping Flood)"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Floody (SYN/UDP/ICMP/HTTP/Slowloris) wyczerpują połączenia/przepustowość serwera.
+    lang: "yaml"
+    vuln: |
+      # brak limitów połączeń i timeoutów
+      worker_connections 100000;
+    safe: |
+      # limity + timeouty + SYN cookies + rate limiting (WAF/CDN)
+      client_body_timeout 10s; client_header_timeout 10s;
+      limit_conn addr 20; limit_req zone=req burst=20;
+  - id: "14.15"
+    name: "Memcached Amplification Attack"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-406"
+    desc: |
+      Atak wzmacniający (amplification) wykorzystuje otwarte usługi UDP do zalania ofiary.
+    lang: "yaml"
+    vuln: |
+      # otwarty rekursywny resolver / memcached na UDP publicznie
+      bind 0.0.0.0; udp on
+    safe: |
+      # wyłącz UDP publiczne, ogranicz rekursję, BCP38 anti-spoofing
+      bind 127.0.0.1; disable-recursion external
+  - id: "14.16"
+    name: "Ntp Amplification Attack"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-406"
+    desc: |
+      Atak wzmacniający (amplification) wykorzystuje otwarte usługi UDP do zalania ofiary.
+    lang: "yaml"
+    vuln: |
+      # otwarty rekursywny resolver / memcached na UDP publicznie
+      bind 0.0.0.0; udp on
+    safe: |
+      # wyłącz UDP publiczne, ogranicz rekursję, BCP38 anti-spoofing
+      bind 127.0.0.1; disable-recursion external
+  - id: "14.17"
+    name: "Slowloris Attack"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Floody (SYN/UDP/ICMP/HTTP/Slowloris) wyczerpują połączenia/przepustowość serwera.
+    lang: "yaml"
+    vuln: |
+      # brak limitów połączeń i timeoutów
+      worker_connections 100000;
+    safe: |
+      # limity + timeouty + SYN cookies + rate limiting (WAF/CDN)
+      client_body_timeout 10s; client_header_timeout 10s;
+      limit_conn addr 20; limit_req zone=req burst=20;
+  - id: "14.18"
+    name: "Syn Flood"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Floody (SYN/UDP/ICMP/HTTP/Slowloris) wyczerpują połączenia/przepustowość serwera.
+    lang: "yaml"
+    vuln: |
+      # brak limitów połączeń i timeoutów
+      worker_connections 100000;
+    safe: |
+      # limity + timeouty + SYN cookies + rate limiting (WAF/CDN)
+      client_body_timeout 10s; client_header_timeout 10s;
+      limit_conn addr 20; limit_req zone=req burst=20;
+  - id: "14.19"
+    name: "Udp Flood Attack"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Floody (SYN/UDP/ICMP/HTTP/Slowloris) wyczerpują połączenia/przepustowość serwera.
+    lang: "yaml"
+    vuln: |
+      # brak limitów połączeń i timeoutów
+      worker_connections 100000;
+    safe: |
+      # limity + timeouty + SYN cookies + rate limiting (WAF/CDN)
+      client_body_timeout 10s; client_header_timeout 10s;
+      limit_conn addr 20; limit_req zone=req burst=20;
+  - id: "14.20"
+    name: "Cpu Exhaustion Attack"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Wyciek deskryptorów/połączeń wyczerpuje pulę zasobów.
+    lang: "python"
+    vuln: |
+      def handle():
+          conn = pool.get()  # brak zwrotu do puli
+          return conn.query()
+    safe: |
+      def handle():
+          with pool.get() as conn:  # zwracane do puli
+              return conn.query()
+  - id: "14.21"
+    name: "Database Connection Exhaustion"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Wyciek deskryptorów/połączeń wyczerpuje pulę zasobów.
+    lang: "python"
+    vuln: |
+      def handle():
+          conn = pool.get()  # brak zwrotu do puli
+          return conn.query()
+    safe: |
+      def handle():
+          with pool.get() as conn:  # zwracane do puli
+              return conn.query()
+  - id: "14.22"
+    name: "Decompression Bomb (Zip Bomb)"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-409"
+    desc: |
+      Mały skompresowany plik rozpakowuje się do ogromnego rozmiaru — wyczerpanie pamięci/dysku.
+    lang: "python"
+    vuln: |
+      import zipfile
+      zipfile.ZipFile(f).extractall('/tmp')  # brak limitu
+    safe: |
+      z=zipfile.ZipFile(f); total=0
+      for i in z.infolist():
+          total+=i.file_size
+          if total>100*1024*1024 or i.file_size>i.compress_size*1000: raise ValueError('zip bomb')
+  - id: "14.23"
+    name: "Dns Amplification Attack"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-406"
+    desc: |
+      Atak wzmacniający (amplification) wykorzystuje otwarte usługi UDP do zalania ofiary.
+    lang: "yaml"
+    vuln: |
+      # otwarty rekursywny resolver / memcached na UDP publicznie
+      bind 0.0.0.0; udp on
+    safe: |
+      # wyłącz UDP publiczne, ogranicz rekursję, BCP38 anti-spoofing
+      bind 127.0.0.1; disable-recursion external
+  - id: "14.24"
+    name: "Hash Collision DOS"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-407"
+    desc: |
+      Wiele kluczy z tym samym hashem degraduje hash table do O(n^2) (hash flooding).
+    lang: "python"
+    vuln: |
+      d = {}
+      for k in user_keys: d[k] = 1  # bez randomizacji hash
+    safe: |
+      # Włącz hash randomization (PYTHONHASHSEED) i limit liczby pól
+      if len(user_keys) > MAX_FIELDS: abort(413)
+  - id: "14.25"
+    name: "HTTP/2 Rapid Reset Attack"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+    desc: |
+      Szybkie otwieranie i resetowanie strumieni HTTP/2 (CVE-2023-44487) wyczerpuje serwer.
+    lang: "yaml"
+    vuln: |
+      http2: { max_concurrent_streams: unlimited }
+    safe: |
+      http2:
+        max_concurrent_streams: 100
+        rapid_reset_protection: on  # limit RST_STREAM/sec
+  - id: "14.26"
+    name: "Regular Expression DOS (Redos)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1333"
+    desc: |
+      Patologiczny regex (catastrophic backtracking) wiesza CPU na małym wejściu (ReDoS).
+    lang: "javascript"
+    vuln: |
+      /^(a+)+$/.test(input);  // wykładnicze backtracking
+    safe: |
+      // regex bez zagnieżdżonych kwantyfikatorów + timeout/RE2
+      import RE2 from 're2';
+      new RE2('^a+$').test(input);
+  - id: "14.27"
+    name: "Ssdp Amplification Attack"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-406"
+    desc: |
+      Atak wzmacniający (amplification) wykorzystuje otwarte usługi UDP do zalania ofiary.
+    lang: "yaml"
+    vuln: |
+      # otwarty rekursywny resolver / memcached na UDP publicznie
+      bind 0.0.0.0; udp on
+    safe: |
+      # wyłącz UDP publiczne, ogranicz rekursję, BCP38 anti-spoofing
+      bind 127.0.0.1; disable-recursion external
+  - id: "14.28"
+    name: "Ssl/Tls Renegotiation DOS"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+    desc: |
+      Wielokrotna renegocjacja TLS przez klienta obciąża CPU serwera.
+    lang: "yaml"
+    vuln: |
+      ssl_renegotiation: client_initiated_allowed
+    safe: |
+      ssl_renegotiation: off  # wyłącz client-initiated renegotiation
+  - id: "14.29"
+    name: "Volumetric Ddos Attack"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+      - "CWE-770"
+    desc: |
+      Floody (SYN/UDP/ICMP/HTTP/Slowloris) wyczerpują połączenia/przepustowość serwera.
+    lang: "yaml"
+    vuln: |
+      # brak limitów połączeń i timeoutów
+      worker_connections 100000;
+    safe: |
+      # limity + timeouty + SYN cookies + rate limiting (WAF/CDN)
+      client_body_timeout 10s; client_header_timeout 10s;
+      limit_conn addr 20; limit_req zone=req burst=20;
+  - id: "14.30"
+    name: "XML Billion Laughs Attack"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-776"
+    desc: |
+      Zagnieżdżone encje XML (billion laughs) rozwijają się wykładniczo — wyczerpanie pamięci.
+    lang: "python"
+    vuln: |
+      import xml.etree.ElementTree as ET
+      ET.fromstring(data)  # rozwija encje
+    safe: |
+      from defusedxml.ElementTree import fromstring
+      fromstring(data)  # blokuje entity expansion
+  - id: "14.31"
+    name: "XML Bomb (Billion Laughs)"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-776"
+    desc: |
+      Zagnieżdżone encje XML (billion laughs) rozwijają się wykładniczo — wyczerpanie pamięci.
+    lang: "python"
+    vuln: |
+      import xml.etree.ElementTree as ET
+      ET.fromstring(data)  # rozwija encje
+    safe: |
+      from defusedxml.ElementTree import fromstring
+      fromstring(data)  # blokuje entity expansion
+  - id: "cat_14_research01"
+    name: "Disk space exhaustion"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Disk space exhaustion" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research02"
+    name: "Slow read attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Slow read attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research03"
+    name: "R.u.d.y. attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "R.u.d.y. attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research04"
+    name: "Asymmetric resource consumption"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Asymmetric resource consumption" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research05"
+    name: "Memory bandwidth exhaustion"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Memory bandwidth exhaustion" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research06"
+    name: "Smurf attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Smurf attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research07"
+    name: "Snmp amplification attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Snmp amplification attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research08"
+    name: "Uncontrolled memory allocation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Uncontrolled memory allocation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research09"
+    name: "Amplified dns reflection"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Amplified dns reflection" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research10"
+    name: "Tcp state-exhaustion attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Tcp state-exhaustion attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research11"
+    name: "Grpc streaming dos"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Grpc streaming dos" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research12"
+    name: "Yaml billion laughs"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml billion laughs" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research13"
+    name: "Log file exhaustion"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Log file exhaustion" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research14"
+    name: "Slow http post (rudy)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Slow http post (rudy)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research15"
+    name: "Memory exhaustion attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Memory exhaustion attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research16"
+    name: "Node.js prototype pollution dos"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Node.js prototype pollution dos" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research17"
+    name: "Cdn cache poisoning dos"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cdn cache poisoning dos" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research18"
+    name: "Tls handshake exhaustion"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Tls handshake exhaustion" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research19"
+    name: "Python redos regex"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python redos regex" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research20"
+    name: "Image processing dos"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Image processing dos" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research21"
+    name: "Xml external entity (xxe) dos"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe) dos" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research22"
+    name: "Network flood (syn, udp, icmp)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Network flood (syn, udp, icmp)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research23"
+    name: "Cache exhaustion"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cache exhaustion" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research24"
+    name: "Node.js event loop blocking"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Node.js event loop blocking" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research25"
+    name: "Garbage collector thrash"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Garbage collector thrash" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research26"
+    name: "Thread pool starvation"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Thread pool starvation" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research27"
+    name: "Pdf processing dos"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pdf processing dos" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research28"
+    name: "Ssl/tls handshake flood"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ssl/tls handshake flood" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research29"
+    name: "Sse connection flood"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sse connection flood" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_14_research30"
+    name: "Disk fill attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Disk fill attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

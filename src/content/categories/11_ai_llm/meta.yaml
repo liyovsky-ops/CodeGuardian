@@ -1,0 +1,10 @@
+id: "ai"
+num: 11
+name: "AI / LLM Security"
+icon: "🤖"
+color: "#b197fc"
+difficulty: "Hard → Very Hard"
+desc: |
+  Zagrożenia specyficzne dla aplikacji integrujących modele językowe (LLM), agentów i RAG. Wyrównane do OWASP Top 10 for LLM Applications (2025). Nowa, szybko rosnąca klasa — klasyczny SAST jej nie zna.
+verdict: |
+  Najnowsza i najtrudniejsza do wykrycia statycznie klasa. Wzorcowe: brak sanityzacji outputu LLM przed sinkiem (eval/HTML/SQL), nadmiarowe uprawnienia narzędzi agenta, sekrety w promptach — Medium. Prompt injection (direct/indirect) i nadużycia agentowe — Very Hard, wymagają testów adwersarialnych (red teaming) i guardraili runtime.

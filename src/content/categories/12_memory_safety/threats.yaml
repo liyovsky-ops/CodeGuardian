@@ -1,0 +1,1036 @@
+threats:
+  - id: "12.1"
+    name: "Stack Buffer Overflow"
+    severity: "Critical"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-121"
+      - "CWE-787"
+    desc: |
+      Zapis poza koniec bufora na stosie (strcpy/gets/sprintf bez limitu) nadpisuje zapisany adres powrotu / ramki sąsiednie → przejęcie przepływu wykonania, RCE.
+    lang: "c"
+    vuln: |
+      // PODATNE — brak kontroli długości
+      void greet(const char *name) {
+          char buf[32];
+          strcpy(buf, name);        // name dłuższe niż 32 -> nadpisuje return address
+          printf("Hi %s\n", buf);
+      }
+    safe: |
+      // BEZPIECZNE — ograniczony zapis + terminacja
+      void greet(const char *name) {
+          char buf[32];
+          snprintf(buf, sizeof(buf), "%s", name);   // nigdy nie przekroczy bufora
+          printf("Hi %s\n", buf);
+      }
+  - id: "12.2"
+    name: "Heap Buffer Overflow"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-122"
+      - "CWE-787"
+    desc: |
+      Zapis poza obszar alokacji na stercie nadpisuje metadane alokatora lub sąsiednie obiekty (np. wskaźniki funkcji) → korupcja sterty i RCE.
+    lang: "c"
+    vuln: |
+      // PODATNE — alokacja bez miejsca na NUL + memcpy bez granicy
+      char *p = malloc(len);              // brak +1 na terminator
+      memcpy(p, src, len + 1);           // zapis 1 bajt poza blok
+    safe: |
+      // BEZPIECZNE — alokuj dokładnie, kopiuj tyle ile zaalokowano
+      char *p = malloc(len + 1);
+      if (!p) return -1;
+      memcpy(p, src, len);
+      p[len] = '\0';
+  - id: "12.3"
+    name: "Use-After-Free"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-416"
+    desc: |
+      Użycie wskaźnika po zwolnieniu pamięci. Atakujący realokuje zwolniony blok kontrolowaną zawartością i przejmuje obiekt (często wskaźnik na funkcję/vtable) → RCE.
+    lang: "c"
+    vuln: |
+      // PODATNE — dereferencja po free, dangling pointer
+      user_t *u = get_user();
+      free(u);
+      // ... później ...
+      printf("%s\n", u->name);          // UAF — blok mógł zostać przejęty
+    safe: |
+      // BEZPIECZNE — wyzeruj wskaźnik po free, jasna własność
+      user_t *u = get_user();
+      free(u);
+      u = NULL;                          // dereferencja NULL = czysty crash, nie exploit
+      if (u) printf("%s\n", u->name);
+  - id: "12.4"
+    name: "Double Free"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-415"
+    desc: |
+      Dwukrotne zwolnienie tego samego bloku psuje struktury wolnych chunków alokatora (free list), umożliwiając write-what-where i RCE.
+    lang: "c"
+    vuln: |
+      // PODATNE — free na obu ścieżkach
+      char *p = malloc(64);
+      if (error) { free(p); }            // ścieżka błędu
+      process(p);
+      free(p);                           // znowu free -> double free
+    safe: |
+      // BEZPIECZNE — pojedyncza ścieżka zwalniania + wyzerowanie
+      char *p = malloc(64);
+      if (!p) return -1;
+      if (error) goto cleanup;
+      process(p);
+      cleanup:
+          free(p);
+          p = NULL;
+  - id: "12.5"
+    name: "Out-of-Bounds Read"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-125"
+    desc: |
+      Odczyt poza granicą tablicy/bufora ujawnia sąsiednią pamięć (klucze, wskaźniki — jak Heartbleed) lub powoduje crash. Często przez brak walidacji indeksu/długości z wejścia.
+    lang: "c"
+    vuln: |
+      // PODATNE — długość z atakującego, brak walidacji (à la Heartbleed)
+      memcpy(out, buf + offset, attacker_len);   // czyta poza buf -> wyciek pamięci
+    safe: |
+      // BEZPIECZNE — waliduj offset+len względem rzeczywistego rozmiaru
+      if (offset > buf_len || attacker_len > buf_len - offset) return -1;
+      memcpy(out, buf + offset, attacker_len);
+  - id: "12.6"
+    name: "Integer Overflow → Buffer Overflow"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-190"
+      - "CWE-680"
+    desc: |
+      Przepełnienie arytmetyczne przy obliczaniu rozmiaru alokacji daje za mały bufor; następny zapis przepełnia stertę. Klasyczny łańcuch integer overflow → heap overflow.
+    lang: "c"
+    vuln: |
+      // PODATNE — count*size może się zawinąć
+      size_t n = count * size;           // overflow -> mała wartość
+      char *buf = malloc(n);
+      for (size_t i = 0; i < count; i++) buf[i*size] = ...;   // OOB write
+    safe: |
+      // BEZPIECZNE — wykrycie overflow przed alokacją (lub calloc)
+      if (size != 0 && count > SIZE_MAX / size) return -1;   // overflow check
+      char *buf = calloc(count, size);    // calloc sam sprawdza mnożenie
+  - id: "12.7"
+    name: "Stack Overflow przez niekontrolowaną rekurencję"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-674"
+    desc: |
+      Rekurencja sterowana wejściem bez limitu głębokości wyczerpuje stos → crash (DoS), a w niektórych środowiskach nadpisanie poza stronę guard. Dotyczy też parserów rekurencyjnych.
+    lang: "c"
+    vuln: |
+      // PODATNE — głębokość zależna od wejścia, brak limitu
+      int parse(node_t *n) {
+          if (!n) return 0;
+          return 1 + parse(n->child);    // wejście może wymusić miliony ramek
+      }
+    safe: |
+      // BEZPIECZNE — limit głębokości lub iteracja z jawnym stosem
+      int parse(node_t *n, int depth) {
+          if (!n) return 0;
+          if (depth > MAX_DEPTH) { errno = ELOOP; return -1; }
+          return 1 + parse(n->child, depth + 1);
+      }
+  - id: "12.8"
+    name: "Uninitialized Memory / niezainicjowane zmienne"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-457"
+      - "CWE-908"
+    desc: |
+      Użycie pamięci przed inicjalizacją zwraca wartości resztkowe (poprzednia zawartość sterty/stosu) — wyciek wrażliwych danych lub niedeterministyczne błędy bezpieczeństwa.
+    lang: "c"
+    vuln: |
+      // PODATNE — wysyłka struktury z paddingiem/niewypełnionymi polami
+      struct msg m;
+      m.type = 1;                         // m.flags i padding niezainicjowane
+      send(fd, &m, sizeof(m), 0);        // wyciek resztek pamięci
+    safe: |
+      // BEZPIECZNE — wyzeruj cały obszar przed użyciem
+      struct msg m;
+      memset(&m, 0, sizeof(m));
+      m.type = 1;
+      send(fd, &m, sizeof(m), 0);
+  - id: "12.9"
+    name: "Use-After-Free w Rust (unsafe / FFI)"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-416"
+      - "CWE-825"
+    desc: |
+      Bezpieczeństwo pamięci Rusta gwarantuje borrow checker, ale bloki unsafe i FFI mogą je złamać — surowe wskaźniki przeżywające właściciela, Vec realokowany podczas trzymania wskaźnika.
+    lang: "rust"
+    vuln: |
+      // PODATNE — surowy wskaźnik staje się dangling po realokacji
+      let mut v = vec![1, 2, 3];
+      let p = v.as_ptr();
+      v.push(4);                          // realokacja -> p dangling
+      let _x = unsafe { *p };             // UAF
+    safe: |
+      // BEZPIECZNE — używaj indeksów/slice'ów, nie surowych wskaźników przez realokację
+      let mut v = vec![1, 2, 3];
+      v.push(4);
+      let x = v[0];                       // borrow checker pilnuje ważności
+  - id: "12.10"
+    name: "Data Race przez unsafe współdzielenie (Go/Rust/C)"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-362"
+      - "CWE-366"
+    desc: |
+      Współbieżny dostęp do tej samej pamięci bez synchronizacji powoduje rozdarte odczyty/zapisy, korupcję map (Go: fatal concurrent map write) i niezdefiniowane zachowanie. W C/C++ to UB prowadzące do korupcji.
+    lang: "go"
+    vuln: |
+      // PODATNE — współbieżny zapis do mapy bez locka
+      m := map[string]int{}
+      for i := 0; i < 100; i++ {
+          go func() { m["k"]++ }()        // fatal error: concurrent map writes
+      }
+    safe: |
+      // BEZPIECZNE — synchronizacja (mutex) lub sync.Map
+      var mu sync.Mutex
+      m := map[string]int{}
+      for i := 0; i < 100; i++ {
+          go func() { mu.Lock(); m["k"]++; mu.Unlock() }()
+      }
+  - id: "12.11"
+    name: "Dangling Pointer"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-416"
+      - "CWE-825"
+    desc: |
+      Użycie wskaźnika po zwolnieniu/do niezainicjowanej pamięci (use-after-free / wild pointer).
+    lang: "c"
+    vuln: |
+      free(p);
+      use(p);  // dangling pointer
+    safe: |
+      free(p);
+      p = NULL;  // zapobiega ponownemu użyciu
+      if (p) use(p);
+  - id: "12.12"
+    name: "Format String Vulnerability"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-134"
+    desc: |
+      Nieufny input jako format string pozwala czytać/zapisywać pamięć (%n).
+    lang: "c"
+    vuln: |
+      printf(user_input);  // user_input="%x%x%n"
+    safe: |
+      printf("%s", user_input);  // input jako argument
+  - id: "12.13"
+    name: "Integer Overflow Memory"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-190"
+      - "CWE-191"
+      - "CWE-193"
+    desc: |
+      Przepełnienie/niedopełnienie liczby całkowitej daje za mały bufor lub błędny indeks -> korupcja pamięci.
+    lang: "c"
+    vuln: |
+      int size = a * b;        // overflow
+      char *buf = malloc(size); // za mały
+    safe: |
+      if (b != 0 && a > SIZE_MAX / b) return -1;  // detekcja overflow
+      size_t size = (size_t)a * b;
+      char *buf = malloc(size);
+  - id: "12.14"
+    name: "Integer Underflow"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-190"
+      - "CWE-191"
+      - "CWE-193"
+    desc: |
+      Przepełnienie/niedopełnienie liczby całkowitej daje za mały bufor lub błędny indeks -> korupcja pamięci.
+    lang: "c"
+    vuln: |
+      int size = a * b;        // overflow
+      char *buf = malloc(size); // za mały
+    safe: |
+      if (b != 0 && a > SIZE_MAX / b) return -1;  // detekcja overflow
+      size_t size = (size_t)a * b;
+      char *buf = malloc(size);
+  - id: "12.15"
+    name: "Memory Corruption"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-120"
+      - "CWE-787"
+    desc: |
+      Kopiowanie inputu bez sprawdzenia długości nadpisuje pamięć poza buforem (RCE/crash).
+    lang: "c"
+    vuln: |
+      char buf[64];
+      strcpy(buf, input); // brak kontroli długości
+    safe: |
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%s", input); // ograniczona długość
+  - id: "12.16"
+    name: "Memory Leak"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-401"
+    desc: |
+      Brak zwolnienia pamięci stopniowo wyczerpuje zasoby (DoS).
+    lang: "c"
+    vuln: |
+      while (1) { char *b = malloc(1024); process(b); }  // brak free
+    safe: |
+      while (1) { char *b = malloc(1024); process(b); free(b); }
+  - id: "12.17"
+    name: "Null Pointer Dereference"
+    severity: "Medium"
+    difficulty: "Easy"
+    confidence: "IRON"
+    cwe:
+      - "CWE-476"
+    desc: |
+      Dereferencja wskaźnika NULL powoduje crash (potencjalnie DoS).
+    lang: "c"
+    vuln: |
+      char *p = malloc(n);
+      p[0] = 'x';  // brak sprawdzenia NULL
+    safe: |
+      char *p = malloc(n);
+      if (!p) return -1;
+      p[0] = 'x';
+  - id: "12.18"
+    name: "Off-By-One Error"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-190"
+      - "CWE-191"
+      - "CWE-193"
+    desc: |
+      Przepełnienie/niedopełnienie liczby całkowitej daje za mały bufor lub błędny indeks -> korupcja pamięci.
+    lang: "c"
+    vuln: |
+      int size = a * b;        // overflow
+      char *buf = malloc(size); // za mały
+    safe: |
+      if (b != 0 && a > SIZE_MAX / b) return -1;  // detekcja overflow
+      size_t size = (size_t)a * b;
+      char *buf = malloc(size);
+  - id: "12.19"
+    name: "Type Confusion"
+    severity: "High"
+    difficulty: "Medium"
+    confidence: "IRON"
+    cwe:
+      - "CWE-502"
+    desc: |
+      Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    lang: "php"
+    vuln: |
+      $obj = unserialize($_COOKIE['data']);  // object injection
+    safe: |
+      $obj = json_decode($_COOKIE['data'], true);  // dane, nie obiekty
+      // lub unserialize($d, ['allowed_classes' => [Safe::class]])
+  - id: "12.20"
+    name: "Wild Pointer"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "IRON"
+    cwe:
+      - "CWE-416"
+      - "CWE-825"
+    desc: |
+      Użycie wskaźnika po zwolnieniu/do niezainicjowanej pamięci (use-after-free / wild pointer).
+    lang: "c"
+    vuln: |
+      free(p);
+      use(p);  // dangling pointer
+    safe: |
+      free(p);
+      p = NULL;  // zapobiega ponownemu użyciu
+      if (p) use(p);
+  - id: "12.21"
+    name: "Integer Overflow / Underflow"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-190"
+      - "CWE-191"
+      - "CWE-193"
+    desc: |
+      Przepełnienie/niedopełnienie liczby całkowitej daje za mały bufor lub błędny indeks -> korupcja pamięci.
+    lang: "c"
+    vuln: |
+      int size = a * b;        // overflow
+      char *buf = malloc(size); // za mały
+    safe: |
+      if (b != 0 && a > SIZE_MAX / b) return -1;  // detekcja overflow
+      size_t size = (size_t)a * b;
+      char *buf = malloc(size);
+  - id: "12.22"
+    name: "Javascript Arraybuffer Overflow"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-120"
+      - "CWE-787"
+    desc: |
+      Kopiowanie inputu bez sprawdzenia długości nadpisuje pamięć poza buforem (RCE/crash).
+    lang: "c"
+    vuln: |
+      char buf[64];
+      strcpy(buf, input); // brak kontroli długości
+    safe: |
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%s", input); // ograniczona długość
+  - id: "12.23"
+    name: "Jump-Oriented Programming"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-733"
+    desc: |
+      Łączenie istniejących fragmentów kodu (gadgets) omija DEP/NX do wykonania kodu.
+    lang: "c"
+    vuln: |
+      // brak ASLR/stack canary -> stabilne adresy gadgetów
+      // kompilacja bez zabezpieczeń
+    safe: |
+      // -fstack-protector-strong -D_FORTIFY_SOURCE=2 -pie, ASLR/CFI włączone
+  - id: "12.24"
+    name: "Node.Js Buffer Overflow"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-120"
+      - "CWE-787"
+    desc: |
+      Kopiowanie inputu bez sprawdzenia długości nadpisuje pamięć poza buforem (RCE/crash).
+    lang: "c"
+    vuln: |
+      char buf[64];
+      strcpy(buf, input); // brak kontroli długości
+    safe: |
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%s", input); // ograniczona długość
+  - id: "12.25"
+    name: "Out-of-Bounds Write"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-120"
+      - "CWE-787"
+    desc: |
+      Kopiowanie inputu bez sprawdzenia długości nadpisuje pamięć poza buforem (RCE/crash).
+    lang: "c"
+    vuln: |
+      char buf[64];
+      strcpy(buf, input); // brak kontroli długości
+    safe: |
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%s", input); // ograniczona długość
+  - id: "12.26"
+    name: "Return-Oriented Programming (Rop)"
+    severity: "High"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-733"
+    desc: |
+      Łączenie istniejących fragmentów kodu (gadgets) omija DEP/NX do wykonania kodu.
+    lang: "c"
+    vuln: |
+      // brak ASLR/stack canary -> stabilne adresy gadgetów
+      // kompilacja bez zabezpieczeń
+    safe: |
+      // -fstack-protector-strong -D_FORTIFY_SOURCE=2 -pie, ASLR/CFI włączone
+  - id: "12.27"
+    name: "Ruby C Extension Buffer Overflow"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-120"
+      - "CWE-787"
+    desc: |
+      Kopiowanie inputu bez sprawdzenia długości nadpisuje pamięć poza buforem (RCE/crash).
+    lang: "c"
+    vuln: |
+      char buf[64];
+      strcpy(buf, input); // brak kontroli długości
+    safe: |
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%s", input); // ograniczona długość
+  - id: "12.28"
+    name: "Stack Overflow (Recursion)"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-674"
+    desc: |
+      Nieograniczona rekurencja wyczerpuje stos (crash/DoS).
+    lang: "c"
+    vuln: |
+      int f(int n){ return f(n+1); }  // brak warunku stopu
+    safe: |
+      int f(int n){ if (n > LIMIT) return 0; return f(n+1); }
+  - id: "12.29"
+    name: "Static Buffer Overflow"
+    severity: "Critical"
+    difficulty: "Hard"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-120"
+      - "CWE-787"
+    desc: |
+      Kopiowanie inputu bez sprawdzenia długości nadpisuje pamięć poza buforem (RCE/crash).
+    lang: "c"
+    vuln: |
+      char buf[64];
+      strcpy(buf, input); // brak kontroli długości
+    safe: |
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%s", input); // ograniczona długość
+  - id: "12.30"
+    name: "Uninitialized Memory Read"
+    severity: "Medium"
+    difficulty: "Medium"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-457"
+    desc: |
+      Odczyt niezainicjowanej pamięci ujawnia stare dane lub powoduje niezdefiniowane zachowanie.
+    lang: "c"
+    vuln: |
+      int x;
+      printf("%d", x);  // x niezainicjowane
+    safe: |
+      int x = 0;
+      printf("%d", x);
+  - id: "cat_12_research01"
+    name: "Heap overflow"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Heap overflow" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research02"
+    name: "Heap metadata corruption"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Heap metadata corruption" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research03"
+    name: "Aslr bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Aslr bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research04"
+    name: "Gc heap grooming"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Gc heap grooming" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research05"
+    name: "Stack exhaustion"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stack exhaustion" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research06"
+    name: "Stack clash"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stack clash" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research07"
+    name: "Uninitialized memory access"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Uninitialized memory access" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research08"
+    name: "Invalid free"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Invalid free" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research09"
+    name: "Vtable hijacking"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Vtable hijacking" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research10"
+    name: "Cfi bypass (control flow)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cfi bypass (control flow)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research11"
+    name: "Race condition on memory (toctou)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Race condition on memory (toctou)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research12"
+    name: "Shadow stack bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Shadow stack bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research13"
+    name: "Ridl microarchitectural data"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ridl microarchitectural data" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research14"
+    name: "Format string vulnerabilities"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Format string vulnerabilities" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research15"
+    name: "Mds attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Mds attack" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research16"
+    name: "Use of uninitialized memory"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Use of uninitialized memory" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research17"
+    name: "Spectre (side-channel)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Spectre (side-channel)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research18"
+    name: "Pie bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pie bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research19"
+    name: "Swift unsafe pointer flaw"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Swift unsafe pointer flaw" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research20"
+    name: "Objective-c retain cycle"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Objective-c retain cycle" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research21"
+    name: "Valgrind bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Valgrind bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research22"
+    name: "Spatial memory safety flaw"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Spatial memory safety flaw" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research23"
+    name: "Fallout side channel"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Fallout side channel" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research24"
+    name: "Stack canary bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stack canary bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research25"
+    name: "Wild copy (excessive memory copy)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Wild copy (excessive memory copy)" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research26"
+    name: "Memorysanitizer bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Memorysanitizer bypass" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research27"
+    name: "Stack underflow"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stack underflow" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research28"
+    name: "Buffer over-read"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Buffer over-read" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research29"
+    name: "Perl xs memory flaw"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Perl xs memory flaw" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład
+  - id: "cat_12_research30"
+    name: "Unconstrained union access"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "RESEARCH"
+    cwe: []
+    desc: |
+      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unconstrained union access" wskazane w analizie arena.
+    lang: "unknown"
+    vuln: |
+      # Wymaga weryfikacji — brak przykładu kodu
+      # To zagrożenie pojawił się tylko u jednego modelu AI
+      # Potrzebny dalszy research przed dodaniem przykładu
+    safe: |
+      # Brak zweryfikowanego przykładu bezpiecznego kodu
+      # Po weryfikacji zagrożenia zostanie dodany przykład

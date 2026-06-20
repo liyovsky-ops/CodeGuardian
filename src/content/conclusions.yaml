@@ -1,0 +1,22 @@
+conclusions:
+  - title: "Podziel zagrożenia wg natury, nie tylko wg kategorii OWASP"
+    body: |
+      Są dwa fundamentalnie różne typy. <strong>Wzorcowe</strong> (pattern-based): injection, crypto API, eval, hardcoded secrets, config, deserializacja, znane CVE — tu klasyczny SAST/SCA jest mocny. <strong>Logiczne</strong> (semantic): authz/IDOR/BOLA, business logic, race/TOCTOU, workflow bypass, manipulacja wartości — tu klasyczne narzędzia zawodzą i potrzebny jest agent rozumiejący intencję kodu.
+  - title: "Łańcuchuj kontekst"
+    body: |
+      IDOR/mass assignment/authz są niewidoczne bez modelu danych i mapy „kto woła, jakie sprawdzenie poprzedza dostęp”. Agent powinien budować ten kontekst (graf wywołań + model uprawnień), zanim oceni zagrożenie.
+  - title: "Static-first, runtime-confirm"
+    body: |
+      Większość kategorii wykrywaj statycznie, ale projektuj hooki na potwierdzenie runtime (DAST/testy międzykontowe) tam, gdzie static daje dużo false-positive: XSS kontekstowy, SSRF, BOLA, race.
+  - title: "Severity zależy od kontekstu, nie od typu"
+    body: |
+      Ten sam IDOR jest Low (publiczny katalog) lub Critical (dane medyczne). Trzeba klasyfikować wrażliwość danych/zasobu, nie tylko rozpoznawać wzorzec.
+  - title: "Najwięcej realnych incydentów"
+    body: |
+      pochodzi z: hardcoded secrets, vulnerable deps, broken authz (IDOR/BOLA), misconfiguration, injection. Priorytetyzuj te pięć — dają najlepszy stosunek pokrycia do impaktu.
+  - title: "Nowy front: łańcuch dostaw i AI"
+    body: |
+      Dwie najszybciej rosnące klasy to <strong>supply chain</strong> (CI/CD, złośliwe Actions, slopsquatting paczek halucynowanych przez AI) oraz <strong>AI/LLM</strong> (prompt injection direct/indirect, insecure output handling, excessive agency). Klasyczny SAST ich nie zna — wymagają SCA z provenance oraz guardraili i red teamingu agentów.
+  - title: "Trzy klasy wskazane niezależnie przez audyt (Claude, Gemini, DeepSeek)"
+    body: |
+      Trzy zespoły AI niezależnie uznały za kluczowe wydzielenie: <strong>Memory Safety</strong> (buffer/heap overflow, use-after-free, integer overflow → overflow, stack overflow — fundament CWE Top 25 dla C/C++/Rust/Go; wymaga sanitizerów i fuzzingu, nie tylko SAST); <strong>Insecure Deserialization</strong> (OWASP A08 — pickle/YAML/Java/PHP/.NET gadget chains; sink łatwy wzorcowo, ale eksploatowalność zależy od dostępnych gadżetów); <strong>DoS / Resource Exhaustion</strong> (ReDoS, zip/decompression bomb, billion laughs, hash flooding, brak rate limiting — asymetryczne ataki, gdzie małe wejście pochłania nieproporcjonalne zasoby).

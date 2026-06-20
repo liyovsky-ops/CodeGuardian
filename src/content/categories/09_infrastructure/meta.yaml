@@ -1,0 +1,10 @@
+id: "infra"
+num: 9
+name: "Infrastructure & Code"
+icon: "🏗️"
+color: "#63e6be"
+difficulty: "Medium → Hard"
+desc: |
+  Zagrożenia na styku kodu z infrastrukturą i parserami niskiego poziomu.
+verdict: |
+  Wzorce sinków (eval/exec, requests.get(user_url), parser XML, extractall) → SAST łapie nieźle. Prototype pollution wymaga analizy przepływu JS. Memory corruption → Hard: najlepsze wyniki dają sanitizery i fuzzing. Memory corruption realnie wymaga runtime (ASan/UBSan/Valgrind + fuzzing).

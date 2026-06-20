@@ -1,0 +1,10 @@
+id: "config"
+num: 7
+name: "Configuration"
+icon: "⚙️"
+color: "#ffd43b"
+difficulty: "Easy → Medium"
+desc: |
+  Bezpieczny kod z niebezpieczną konfiguracją = niebezpieczna aplikacja. Klasyk „Security Misconfiguration” (OWASP A05).
+verdict: |
+  Wiele wykrywalne wzorcowo: debug=True, Allow-Origin:* + credentials, brak nagłówków, redirect(request.args...). IaC scanning (Checkov, tfsec, kube-bench) łapie nadmiarowe uprawnienia. Static/IaC dla configu w repo; runtime dla faktycznych nagłówków produkcji.
