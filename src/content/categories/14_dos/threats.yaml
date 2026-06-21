@@ -9,6 +9,7 @@ threats:
       - "CWE-400"
     desc: |
       Regex z katastrofalnym backtrackingiem (zagnieżdżone/nakładające się kwantyfikatory) na spreparowanym wejściu rośnie wykładniczo w czasie — jeden request blokuje wątek/proces.
+    desc_en: "ReDoS (Regular Expression Denial of Service): regex with exponential backtracking (nested quantifiers) causes catastrophic slowdown on crafted input."
     lang: "javascript"
     vuln: |
       // PODATNE — nakładające się kwantyfikatory
@@ -28,6 +29,7 @@ threats:
       - "CWE-400"
     desc: |
       Małe archiwum (np. 42 KB) rozpakowuje się do terabajtów (zagnieżdżone/zduplikowane warstwy) — wyczerpanie dysku/pamięci. Dotyczy ZIP, gzip, brotli, obrazów (PNG/zlib).
+    desc_en: "Billion laughs / XML bomb: XML with deeply nested entity expansion — exponential memory/CPU consumption during parsing."
     lang: "python"
     vuln: |
       # PODATNE — rozpakowanie bez limitu rozmiaru
@@ -53,6 +55,7 @@ threats:
       - "CWE-400"
     desc: |
       Rekurencyjne encje XML (lub parametryczne) rozwijają się wykładniczo (kilka KB → gigabajty w pamięci) → DoS. Wariant: encje zewnętrzne (zob. też XXE).
+    desc_en: "Zip/decompression bomb: small compressed archive expands to terabytes — disk or memory exhaustion."
     lang: "python"
     vuln: |
       # PODATNE — parser z włączoną ekspansją encji
@@ -73,6 +76,7 @@ threats:
       - "CWE-799"
     desc: |
       Endpoint bez limitu liczby żądań pozwala na flood (DoS), brute force, scraping i abuse kosztowy (SMS, e-mail, LLM). OWASP API #4.
+    desc_en: "Hash flooding / HashDoS: crafted keys with identical hash values cause O(n²) hash table collisions — CPU exhaustion with a small payload."
     lang: "python"
     vuln: |
       # PODATNE — kosztowny endpoint bez limitu
@@ -94,6 +98,7 @@ threats:
       - "CWE-400"
     desc: |
       Brak limitu rozmiaru żądania/uploadu/liczby pól pozwala wysłać gigabajtowe body i wyczerpać pamięć lub dysk jednym requestem.
+    desc_en: "Missing upload size limit: attacker uploads gigabytes of data — disk exhaustion, OOM, server unavailability."
     lang: "python"
     vuln: |
       # PODATNE — czyta całe body do pamięci bez limitu
@@ -114,6 +119,7 @@ threats:
       - "CWE-400"
     desc: |
       Alokacja struktury o rozmiarze sterowanym wejściem (lista o długości z requestu, cache bez eviction, akumulacja w pamięci) → OOM i ubicie procesu.
+    desc_en: "Algorithmic complexity attack: attacker crafts input triggering worst-case behavior of a sorting/searching algorithm (e.g., O(n²) sort with reverse-sorted input)."
     lang: "python"
     vuln: |
       # PODATNE — rozmiar alokacji z wejścia, cache bez limitu
@@ -134,6 +140,7 @@ threats:
       - "CWE-400"
     desc: |
       Spreparowane wejście wymusza najgorszy przypadek algorytmu: kolizje hashy (O(n) lookup → O(n²) na całości), sortowanie quadratic, parsery o złej złożoności.
+    desc_en: "Memory leak leading to DoS: application allocates memory without freeing it — OOM after sustained load."
     lang: "python"
     vuln: |
       # PODATNE — wiele wartości kolidujących w jednym kuble hash
@@ -153,6 +160,7 @@ threats:
       - "CWE-1176"
     desc: |
       Operacja kosztowna obliczeniowo (KDF z parametrem od klienta, rozdzielczość obrazu, zapytanie analityczne, pętla zależna od wejścia) bez limitu/timeoutu pożera CPU.
+    desc_en: "Missing DB query limit/pagination: query without LIMIT processes millions of rows — CPU+memory exhaustion on the DB."
     lang: "python"
     vuln: |
       # PODATNE — liczba iteracji KDF / rozmiar obrazu z requestu
@@ -172,6 +180,7 @@ threats:
       - "CWE-1088"
     desc: |
       Atakujący otwiera wiele połączeń i wysyła dane bardzo wolno (niedokończone nagłówki/body), utrzymując zajęte wątki/workery serwera → brak miejsca dla legalnych klientów.
+    desc_en: "Amplification attack: small request triggers a disproportionately large response or third-party request (DNS amplification, GraphQL N+1, recursive email notifications)."
     lang: "text"
     vuln: |
       # PODATNE — serwer bez timeoutów na czytanie nagłówków/body,
@@ -190,6 +199,7 @@ threats:
       - "CWE-405"
     desc: |
       Jedno żądanie wyzwala nieproporcjonalnie dużo pracy: głębokie/zagnieżdżone zapytanie GraphQL, batching aliasów, lub wzorzec N+1 — mały request, ogromne obciążenie backendu/DB.
+    desc_en: "Slowloris / slow HTTP: attacker keeps connections open by sending data extremely slowly — exhausts the server's connection pool."
     lang: "graphql"
     vuln: |
       # PODATNE — głębokie zagnieżdżenie bez limitu (query bomb)
@@ -207,6 +217,7 @@ threats:
       - "CWE-770"
     desc: |
       Wyciek deskryptorów/połączeń wyczerpuje pulę zasobów.
+    desc_en: "Missing rate limiting: no throttle on API calls — DDoS, credential stuffing, resource exhaustion."
     lang: "python"
     vuln: |
       def handle():
@@ -226,6 +237,7 @@ threats:
       - "CWE-770"
     desc: |
       Wyciek deskryptorów/połączeń wyczerpuje pulę zasobów.
+    desc_en: "CPU-intensive operation (bcrypt, proof-of-work, video transcoding) triggered without authentication or rate limiting — DoS with a single request."
     lang: "python"
     vuln: |
       def handle():
@@ -245,6 +257,7 @@ threats:
       - "CWE-770"
     desc: |
       Floody (SYN/UDP/ICMP/HTTP/Slowloris) wyczerpują połączenia/przepustowość serwera.
+    desc_en: "Connection pool exhaustion: DB/HTTP connection pool fully occupied by slow or hung requests — new requests fail with connection error."
     lang: "yaml"
     vuln: |
       # brak limitów połączeń i timeoutów
@@ -263,6 +276,7 @@ threats:
       - "CWE-770"
     desc: |
       Floody (SYN/UDP/ICMP/HTTP/Slowloris) wyczerpują połączenia/przepustowość serwera.
+    desc_en: "Infinite loop triggered by crafted input: parser enters an infinite loop on a specific byte pattern — 100% CPU on a single core."
     lang: "yaml"
     vuln: |
       # brak limitów połączeń i timeoutów
@@ -280,6 +294,7 @@ threats:
       - "CWE-406"
     desc: |
       Atak wzmacniający (amplification) wykorzystuje otwarte usługi UDP do zalania ofiary.
+    desc_en: "Missing timeout on external HTTP calls: request to a slow third-party service hangs indefinitely — thread pool exhaustion."
     lang: "yaml"
     vuln: |
       # otwarty rekursywny resolver / memcached na UDP publicznie
@@ -565,6 +580,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Disk space exhaustion" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -581,6 +597,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Slow read attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -597,6 +614,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "R.u.d.y. attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -613,6 +631,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Asymmetric resource consumption" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -629,6 +648,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Memory bandwidth exhaustion" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -645,6 +665,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Smurf attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -661,6 +682,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Snmp amplification attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -677,6 +699,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Uncontrolled memory allocation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -693,6 +716,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Amplified dns reflection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -709,6 +733,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Tcp state-exhaustion attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -725,6 +750,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Grpc streaming dos" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -741,6 +767,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml billion laughs" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -757,6 +784,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Log file exhaustion" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -773,6 +801,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Slow http post (rudy)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -789,6 +818,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Memory exhaustion attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -805,6 +835,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Node.js prototype pollution dos" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -821,6 +852,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cdn cache poisoning dos" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -837,6 +869,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Tls handshake exhaustion" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -853,6 +886,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python redos regex" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -869,6 +903,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Image processing dos" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -885,6 +920,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe) dos" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -901,6 +937,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Network flood (syn, udp, icmp)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -917,6 +954,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cache exhaustion" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -933,6 +971,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Node.js event loop blocking" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -949,6 +988,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Garbage collector thrash" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -965,6 +1005,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Thread pool starvation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -981,6 +1022,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pdf processing dos" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -997,6 +1039,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ssl/tls handshake flood" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1013,6 +1056,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sse connection flood" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1029,6 +1073,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Disk fill attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

@@ -6,5 +6,9 @@ color: "#20c997"
 difficulty: "Medium"
 desc: |
   Brak walidacji/sanityzacji wejścia na granicy zaufania. Korzeń XSS, path traversal, ReDoS i wielu innych.
+desc_en: |
+  Missing validation or sanitization of input at the trust boundary. Root cause of XSS, path traversal, ReDoS, and many others.
 verdict: |
   XSS (taint źródło→sink HTML), path traversal (taint do open/fs), ReDoS (analiza wzorca regex) — wszystkie mają rozpoznawalne sinki, więc SAST radzi sobie dobrze. Trudniejsze: DOM XSS, type confusion, kontekst escapingu. DOM XSS i ReDoS — lepiej runtime/DAST.
+verdict_en: |
+  XSS (taint source→HTML sink), path traversal (taint to open/fs), ReDoS (regex pattern analysis) — all have recognizable sinks, so SAST performs well. Harder: DOM XSS, type confusion, escaping context. DOM XSS and ReDoS are better caught with runtime/DAST.

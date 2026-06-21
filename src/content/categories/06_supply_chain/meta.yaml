@@ -6,5 +6,9 @@ color: "#f783ac"
 difficulty: "Easy (CVE) → Hard (malware)"
 desc: |
   Zagrożenia z zależności i procesu budowania — coraz częstszy wektor (SolarWinds, event-stream, xz). Twój kod może być idealny, a i tak skompromitowany przez paczkę.
+desc_en: |
+  Threats from dependencies and the build process — an increasingly common attack vector (SolarWinds, event-stream, xz). Your code can be perfect and still be compromised through a package.
 verdict: |
   Znane CVE: trywialne — porównanie wersji z bazą (SCA: osv-scanner, Dependabot, Trivy). Typosquatting/dependency confusion: Medium (heurystyki nazw). Świeży złośliwy kod (0-day w paczce): Very Hard — wymaga analizy behawioralnej / reputacji / sandboxa.
+verdict_en: |
+  Known CVEs: trivial — version comparison against a database (SCA: osv-scanner, Dependabot, Trivy). Typosquatting/dependency confusion: Medium (name heuristics). Fresh malicious code (0-day in a package): Very Hard — requires behavioral analysis / reputation / sandbox.

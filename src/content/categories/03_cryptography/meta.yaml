@@ -6,5 +6,9 @@ color: "#9775fa"
 difficulty: "Easy → Medium"
 desc: |
   Błędy kryptograficzne rzadko są spektakularne w demie, ale podkopują cały model bezpieczeństwa. Reguła: nie wymyślaj własnej kryptografii, używaj wysokopoziomowych bibliotek (libsodium, cryptography Fernet/AEAD).
+desc_en: |
+  Cryptographic flaws are rarely spectacular in a demo, but they undermine the entire security model. Rule: don't roll your own crypto — use high-level libraries (libsodium, cryptography Fernet/AEAD).
 verdict: |
   Łatwe: wykrycie wywołań słabych algorytmów (MD5/DES/ECB), verify=False, random do tokenów, == na sekretach, hardcoded keys. Trudniejsze: nonce reuse (czy nonce jest stały/reużywany), poprawność parametrów KDF. Static wystarcza dla niemal wszystkiego.
+verdict_en: |
+  Easy: detecting weak algorithm calls (MD5/DES/ECB), verify=False, random for tokens, == on secrets, hardcoded keys. Harder: nonce reuse (is the nonce fixed or reused?), correctness of KDF parameters. Static analysis suffices for almost everything.

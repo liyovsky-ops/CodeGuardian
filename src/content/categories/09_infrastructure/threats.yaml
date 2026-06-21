@@ -8,6 +8,7 @@ threats:
       - "CWE-918"
     desc: |
       Serwer wykonuje żądanie HTTP/sieciowe pod URL kontrolowany przez użytkownika — dostęp do zasobów wewnętrznych (metadata cloud 169.254.169.254 → kradzież credków IAM, wewnętrzne API, skan portów).
+    desc_en: "SSRF — the application fetches a URL provided by the user without validating the destination: internal services (metadata service, Redis, Elasticsearch), cloud metadata API (169.254.169.254), file:// protocol."
     lang: "python"
     vuln: |
       # PODATNE
@@ -25,6 +26,7 @@ threats:
       - "CWE-611"
     desc: |
       Parser XML z włączonymi encjami zewnętrznymi czyta lokalne pliki (file://), robi SSRF lub DoS (billion laughs).
+    desc_en: "eval() / exec() / Function() with user input — arbitrary JS/Python/Ruby code execution on the server."
     lang: "python"
     vuln: |
       # PODATNE
@@ -45,6 +47,7 @@ threats:
       - "CWE-1321"
     desc: |
       Manipulacja __proto__/constructor.prototype przez nieufny merge/clone — wstrzyknięcie właściwości do wszystkich obiektów, prowadzące do DoS, bypassu auth, czasem RCE.
+    desc_en: "XXE — XML parser expands external entities defined in the DTD: file read (/etc/passwd), SSRF, DoS (billion laughs)."
     lang: "javascript"
     vuln: |
       // PODATNE — głęboki merge bez ochrony klucza
@@ -65,6 +68,7 @@ threats:
       - "CWE-120"
     desc: |
       Buffer overflow, use-after-free, double-free, OOB read/write — prowadzą do RCE lub wycieku pamięci. Domena języków bez zarządzania pamięcią.
+    desc_en: "Path traversal — `../` sequences in a filename reach files outside the intended directory: source code read, configuration file access."
     lang: "c"
     vuln: |
       // PODATNE
@@ -82,6 +86,7 @@ threats:
       - "CWE-94"
     desc: |
       Wykonanie kodu z nieufnego stringa (eval, exec, Function(), setTimeout(string)) → RCE.
+    desc_en: "Prototype pollution in JavaScript — merge/assign of an attacker-controlled object modifies Object.prototype: property injection into all objects, potential RCE via gadget chains."
     lang: "python"
     vuln: |
       # PODATNE
@@ -98,6 +103,7 @@ threats:
       - "CWE-22"
     desc: |
       Rozpakowanie archiwum, gdzie wpis ma ścieżkę ../ — zapis poza katalogiem docelowym (nadpisanie binarek/konfigów).
+    desc_en: "Zip Slip — extracting an archive with `../` paths in entry names: files written outside the target directory, potential overwrite of config/code."
     lang: "python"
     vuln: |
       # PODATNE
@@ -117,6 +123,7 @@ threats:
       - "CWE-611"
     desc: |
       Generatory PDF/obrazów (np. z HTML) mogą pobierać zasoby zewnętrzne → SSRF/LFI.
+    desc_en: "Malicious file upload used as a web shell: server executes the uploaded file (.php, .aspx, .jsp) — full RCE."
     lang: "python"
     vuln: |
       # PODATNE — renderer HTML→PDF pobiera zewnętrzne zasoby z treści użytkownika
@@ -134,6 +141,7 @@ threats:
       - "CWE-367"
     desc: |
       Walidacja URL rozwiązuje DNS na bezpieczny IP, ale faktyczne żądanie rozwiązuje ponownie na IP wewnętrzny (rebinding) — obejście ochrony SSRF opartej tylko na sprawdzeniu nazwy/IP raz.
+    desc_en: "Insecure subprocess: shell=True with user-controlled argument — command injection."
     lang: "python"
     vuln: |
       # PODATNE — sprawdza host, potem osobno łączy (DNS może się zmienić)
@@ -151,6 +159,7 @@ threats:
       - "CWE-379"
     desc: |
       Tworzenie plików tymczasowych o przewidywalnej nazwie w katalogu współdzielonym (/tmp) bez O_EXCL — race/symlink attack, podmiana zawartości, wyciek danych wrażliwych.
+    desc_en: "Deserialization of untrusted data (pickle.loads, yaml.load, ObjectInputStream) without integrity verification — arbitrary code execution via gadget chains."
     lang: "python"
     vuln: |
       # PODATNE — przewidywalna nazwa w /tmp
@@ -170,6 +179,7 @@ threats:
       - "CWE-772"
     desc: |
       Niezamykane połączenia DB/pliki/sockety/wątki, brak puli i timeoutów → wyczerpanie deskryptorów/pamięci, DoS. Częste przy obsłudze błędów bez finally/context manager.
+    desc_en: "IaC (Terraform/CloudFormation/Helm) with misconfigured permissions: overly permissive IAM, open S3 bucket, unauthenticated public endpoint."
     lang: "python"
     vuln: |
       # PODATNE — brak zamknięcia przy wyjątku, brak timeoutu
@@ -188,6 +198,7 @@ threats:
       - "CWE-625"
     desc: |
       Nieufny input jako wzorzec regex (ReDoS, zmiana semantyki dopasowania) lub jako format string (%-format/.format z dostępem do atrybutów obiektów → wyciek/awaria).
+    desc_en: "Server-side request forgery via DNS rebinding: the DNS resolution of a user-supplied URL changes after the check — bypasses same-origin policy."
     lang: "python"
     vuln: |
       # PODATNE — input jako format/regex
@@ -206,6 +217,7 @@ threats:
       - "CWE-269"
     desc: |
       Kontener z --privileged, zamontowanym docker.sock, hostPath, CAP_SYS_ADMIN lub współdzielonym namespace hosta → ucieczka z kontenera i przejęcie node'a.
+    desc_en: "SSTI in infrastructure context: template engine processes user input as a template — RCE via access to internal objects ({{config}}, ${7*7})."
     lang: "yaml"
     vuln: |
       # PODATNE — privileged + docker.sock
@@ -580,6 +592,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ldap injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -596,6 +609,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Vulnerable and outdated components" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -612,6 +626,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Broken access control" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -628,6 +643,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure file uploads" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -644,6 +660,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak or broken cryptography" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -660,6 +677,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Fpga bitstream tampering" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -676,6 +694,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure default configurations" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -692,6 +711,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Vm escape attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -708,6 +728,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Container image vulnerabilities" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -724,6 +745,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ssti to rce" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -740,6 +762,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python pickle rce" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -756,6 +779,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Struts2 ognl injection rce" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -772,6 +796,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ci/cd infrastructure compromise" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -788,6 +813,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ld_preload injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -804,6 +830,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Exposed administrative interfaces" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -820,6 +847,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure cryptography implementation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -836,6 +864,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Race conditions (toctou)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -852,6 +881,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Docker escape to host" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -868,6 +898,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Infrastructure as code vulnerability" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -884,6 +915,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unpatched infrastructure" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -900,6 +932,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cgroups escape" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -916,6 +949,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Hypervisor escape" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -932,6 +966,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ci/cd pipeline compromise" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -948,6 +983,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Privileged container abuse" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -964,6 +1000,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Namespace escape" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -980,6 +1017,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Terraform provider injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -996,6 +1034,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Network tap injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1012,6 +1051,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sensitive data exposure" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1028,6 +1068,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Node.js vm module escape" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1044,6 +1085,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Php unserialize rce" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

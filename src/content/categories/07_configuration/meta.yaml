@@ -6,5 +6,9 @@ color: "#ffd43b"
 difficulty: "Easy → Medium"
 desc: |
   Bezpieczny kod z niebezpieczną konfiguracją = niebezpieczna aplikacja. Klasyk „Security Misconfiguration” (OWASP A05).
+desc_en: |
+  Secure code with an insecure configuration = an insecure application. The classic “Security Misconfiguration” (OWASP A05).
 verdict: |
   Wiele wykrywalne wzorcowo: debug=True, Allow-Origin:* + credentials, brak nagłówków, redirect(request.args...). IaC scanning (Checkov, tfsec, kube-bench) łapie nadmiarowe uprawnienia. Static/IaC dla configu w repo; runtime dla faktycznych nagłówków produkcji.
+verdict_en: |
+  Many detectable by pattern: debug=True, Allow-Origin:* + credentials, missing headers, redirect(request.args...). IaC scanning (Checkov, tfsec, kube-bench) catches excessive permissions. Static/IaC for config in repo; runtime for actual production headers.

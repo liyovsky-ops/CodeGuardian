@@ -90,9 +90,23 @@ function openAnchor() {
   }
 }
 
-export function initInteractions(categories) {
+export function wireDynamicInteractions() {
   wireCollapsible();
   wireTabs();
+  // Re-attach side-link close handlers (sidebar nav is rebuilt)
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  if (sidebar && overlay) {
+    const close = () => {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+    };
+    document.querySelectorAll('.side-link').forEach((l) => l.addEventListener('click', close));
+  }
+}
+
+export function initInteractions(categories) {
+  wireDynamicInteractions();
   wireMobileMenu();
   wireScroll(categories);
 

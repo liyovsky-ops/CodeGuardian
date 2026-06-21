@@ -6,5 +6,9 @@ color: "#74c0fc"
 difficulty: "Medium → Very Hard"
 desc: |
   Specyfika API (REST/GraphQL/webhooks). Pokrywa się z OWASP API Security Top 10. Wiele to authz (zob. sekcja 2) plus problemy charakterystyczne dla API.
+desc_en: |
+  API-specific threats (REST/GraphQL/webhooks). Aligned with the OWASP API Security Top 10. Many overlap with authz (see section 2) plus issues specific to API design.
 verdict: |
   Wzorcowe rzeczy: brak weryfikacji webhooka (brak HMAC), introspekcja GraphQL ON, brak dekoratora rate-limit, GET na mutacji — Medium. Authz w API (BOLA/BFLA), over-fetching i workflow — Very Hard. Runtime/DAST nieodzowny dla BOLA/BFLA (testy międzykontowe).
+verdict_en: |
+  Pattern-based: missing webhook signature (no HMAC), GraphQL introspection ON, missing rate-limit decorator, GET on mutation — Medium. API authz (BOLA/BFLA), over-fetching, and workflow — Very Hard. Runtime/DAST is essential for BOLA/BFLA (cross-account tests).

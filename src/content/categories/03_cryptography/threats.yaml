@@ -9,6 +9,7 @@ threats:
       - "CWE-328"
     desc: |
       MD5/SHA1 do podpisów lub haseł, DES/3DES/RC4 do szyfrowania. Złamane lub trywialne do brute-force.
+    desc_en: "Passwords stored as MD5/SHA1/SHA256 hashes without salting — rainbow tables or GPU attacks crack them in minutes."
     lang: "python"
     vuln: |
       # PODATNE
@@ -26,6 +27,7 @@ threats:
       - "CWE-916"
     desc: |
       Użycie SHA-256 (nawet z solą) do haseł — szybki hash umożliwia masowy brute-force na GPU. Hasła wymagają wolnego KDF.
+    desc_en: "Using deprecated/broken cryptographic algorithms: MD5, SHA1, DES, 3DES, RC4, ECB mode — known to be broken against modern attacks."
     lang: "python"
     vuln: |
       # PODATNE — szybki hash, nawet z solą
@@ -41,6 +43,7 @@ threats:
       - "CWE-327"
     desc: |
       ECB szyfruje identyczne bloki tak samo — ujawnia wzorce w danych (słynny „pingwin ECB”). Brak semantycznego bezpieczeństwa.
+    desc_en: "AES-ECB mode: identical plaintext blocks produce identical ciphertext — reveals data patterns and enables block rearrangement without the key."
     lang: "python"
     vuln: |
       # PODATNE
@@ -58,6 +61,7 @@ threats:
       - "CWE-330"
     desc: |
       Reużycie nonce w GCM/CTR jest katastrofalne (ujawnia plaintext, łamie autentyczność). Stały IV w CBC = wyciek równości plaintextów.
+    desc_en: "Reusing a nonce in stream cipher or AES-CTR/GCM — XOR of two ciphertexts encrypted with the same key+nonce reveals the plaintext."
     lang: "python"
     vuln: |
       # PODATNE — stały nonce
@@ -76,6 +80,7 @@ threats:
       - "CWE-321"
     desc: |
       Klucz szyfrujący/HMAC/API zaszyty w źródle lub repo. Dostępny każdemu z dostępem do kodu, niemożliwy do rotacji bez deployu.
+    desc_en: "Using random/Math.random (PRNG) instead of os.urandom/secrets (CSPRNG) for tokens, session IDs, or cryptographic keys — output is predictable."
     lang: "python"
     vuln: |
       # PODATNE
@@ -93,6 +98,7 @@ threats:
       - "CWE-330"
     desc: |
       Użycie random / Math.random() (PRNG, nie kryptograficzny) do tokenów, sesji, resetów haseł — przewidywalne.
+    desc_en: "TLS certificate verification disabled (verify=False, InsecureSkipVerify=True) — enables MITM attack: an attacker can intercept and modify encrypted traffic."
     lang: "python"
     vuln: |
       # PODATNE
@@ -109,6 +115,7 @@ threats:
       - "CWE-208"
     desc: |
       Porównanie sekretów (token, HMAC, hasło) zwykłym == przerywa się przy pierwszej różnicy — wyciek bajt po bajcie przez pomiar czasu.
+    desc_en: "String comparison with `==` for MACs, tokens, or password hashes — vulnerable to timing attacks (different execution time based on match length, enabling secret recovery)."
     lang: "python"
     vuln: |
       # PODATNE
@@ -126,6 +133,7 @@ threats:
       - "CWE-295"
     desc: |
       Wyłączona weryfikacja certyfikatu (verify=False) otwiera MITM.
+    desc_en: "Cryptographic key or secret hardcoded in source code or config file — rotated by reading the code, not by rotating the key."
     lang: "python"
     vuln: |
       # PODATNE
@@ -143,6 +151,7 @@ threats:
       - "CWE-696"
     desc: |
       CBC bez uwierzytelnienia + komunikaty/zachowanie różne dla błędnego paddingu → atakujący odszyfrowuje/podrabia. Ogólnie: szyfrowanie bez weryfikacji integralności (encrypt-then-MAC lub AEAD).
+    desc_en: "Password-based encryption with a weak KDF (MD5/SHA1 without iterations) instead of bcrypt/Argon2/scrypt — dictionary attacks run at full GPU speed."
     lang: "python"
     vuln: |
       # PODATNE — CBC bez MAC, błąd paddingu rozróżnialny
@@ -161,6 +170,7 @@ threats:
       - "CWE-760"
     desc: |
       PBKDF2 ze zbyt małą liczbą iteracji, brak unikalnej soli (rainbow tables), klucz wyprowadzany z hasła bez KDF, używanie surowego sekretu jako klucza bez HKDF.
+    desc_en: "TLS 1.0/1.1 enabled; support for weak cipher suites (RC4, NULL, EXPORT, DES, 3DES, MD5 MACs) — susceptible to BEAST, POODLE, FREAK, DROWN, SLOTH."
     lang: "python"
     vuln: |
       # PODATNE — mało iteracji, stała sól
@@ -179,6 +189,7 @@ threats:
       - "CWE-780"
     desc: |
       RSA < 2048 bitów, RSA z PKCS#1 v1.5 (Bleichenbacher) zamiast OAEP/PSS, klucze symetryczne < 128 bit, krzywe spoza standardu.
+    desc_en: "Encryption that is reversible (DES, AES-ECB with key in code) instead of a one-way hash (bcrypt/Argon2) for password storage — key compromise reveals all passwords."
     lang: "python"
     vuln: |
       # PODATNE — RSA 1024 + PKCS#1 v1.5
@@ -197,6 +208,7 @@ threats:
       - "CWE-347"
     desc: |
       Weryfikacja podpisu pominięta, obsługa błędu połykana (verify w try/except bez reakcji), lub porównanie podpisu zwykłym == zamiast verify. Dotyczy webhooków, aktualizacji, tokenów.
+    desc_en: "RSA without OAEP padding (raw RSA, PKCS#1 v1.5) — Bleichenbacher/padding oracle attack enables decryption or signature forgery."
     lang: "python"
     vuln: |
       # PODATNE — wynik weryfikacji ignorowany
@@ -215,6 +227,7 @@ threats:
       - "CWE-320"
     desc: |
       Ten sam klucz do szyfrowania i HMAC, jeden klucz dla wszystkich środowisk/tenantów, brak rotacji i wersjonowania kluczy (rotacja niemożliwa bez ponownego szyfrowania).
+    desc_en: "Static/deterministic IV in AES-CBC — identical plaintexts produce identical ciphertexts; CBC with known IV enables chosen-plaintext attack."
     lang: "python"
     vuln: |
       # PODATNE — jeden KEY do enc i mac, brak wersji
@@ -233,6 +246,7 @@ threats:
       - "CWE-385"
     desc: |
       Porównania zależne od danych (czas/cache/zużycie energii) wyciekają sekrety bit po bicie.
+    desc_en: "GCM tag truncated (e.g., 32 bits instead of 128) — attacker can forge messages with 2^32 attempts instead of 2^128."
     lang: "python"
     vuln: |
       def check(sig, expected):
@@ -251,6 +265,7 @@ threats:
       - "CWE-385"
     desc: |
       Porównania zależne od danych (czas/cache/zużycie energii) wyciekają sekrety bit po bicie.
+    desc_en: "Missing HSTS header or short max-age — browser allows plain HTTP connection; MITM possible on first visit (SSL stripping)."
     lang: "python"
     vuln: |
       def check(sig, expected):
@@ -269,6 +284,7 @@ threats:
       - "CWE-347"
     desc: |
       Rozróżnialne błędy paddingu (CBC bez MAC) pozwalają odszyfrować/zmienić ciphertext bez klucza.
+    desc_en: "JWT signed with a symmetric secret (HS256) shared between services — compromise of one service enables forging tokens for all others."
     lang: "python"
     vuln: |
       # AES-CBC bez uwierzytelnienia, różne błędy paddingu
@@ -285,6 +301,7 @@ threats:
     cwe: []
     desc: |
       Power Analysis Attack — zagrożenie z kategorii Cryptography wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    desc_en: "Self-signed TLS certificate that can be generated by anyone and accepted by the client without pinning — enables MITM."
     lang: "python"
     vuln: |
       # PODATNE — Power Analysis Attack
@@ -306,6 +323,7 @@ threats:
       - "CWE-385"
     desc: |
       Porównania zależne od danych (czas/cache/zużycie energii) wyciekają sekrety bit po bicie.
+    desc_en: "Too-short RSA/DSA/DH key (< 2048 bits) — factorizable within reach of modern hardware or a nation-state actor."
     lang: "python"
     vuln: |
       def check(sig, expected):
@@ -324,6 +342,7 @@ threats:
       - "CWE-331"
     desc: |
       Klucze generowane ze słabego źródła entropii lub o niewystarczającej długości są łatwe do złamania.
+    desc_en: "Cryptographic key stored unencrypted in the database, configuration file, or source code — full compromise if the storage is breached."
     lang: "python"
     vuln: |
       import random
@@ -340,6 +359,7 @@ threats:
       - "CWE-327"
     desc: |
       Tryb ECB szyfruje identyczne bloki tak samo — ujawnia wzorce w danych.
+    desc_en: "Outdated TLS protocol (TLS 1.0/1.1) or weak cipher suites enabled — susceptible to known protocol-level attacks."
     lang: "python"
     vuln: |
       from Crypto.Cipher import AES
@@ -492,6 +512,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak cipher algorithm (e.g., des, rc4)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -508,6 +529,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficiently random values" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -524,6 +546,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Predictable random numbers" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -540,6 +563,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Protocol downgrade attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -556,6 +580,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Nonce reuse in stream ciphers" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -572,6 +597,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Key reuse across sessions" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -588,6 +614,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Known plaintext attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -604,6 +631,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Chosen ciphertext attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -620,6 +648,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Robot attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -636,6 +665,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ciphertext-only attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -652,6 +682,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Key reuse attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -668,6 +699,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Poodle attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -684,6 +716,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python pycryptodome misuse" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -700,6 +733,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Md5 hash collision" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -716,6 +750,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Openssl renegotiation attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -732,6 +767,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Format string crypto bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -748,6 +784,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Short key length" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -764,6 +801,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure key exchange" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -780,6 +818,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Crime attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -796,6 +835,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Post-quantum migration failure" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -812,6 +852,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Aes-cbc iv predictable" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -828,6 +869,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ruby openssl misconfiguration" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -844,6 +886,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Go crypto/tls misconfiguration" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -860,6 +903,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Private key disclosure" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -876,6 +920,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing certificate validation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -892,6 +937,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Static iv usage" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -908,6 +954,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing salt for passwords" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -924,6 +971,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Certificate transparency bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -940,6 +988,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing message authentication code" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -956,6 +1005,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure random number" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -25,13 +25,16 @@
       <span>Code <span class="grad">Guardian</span></span>
     </span>
     <span class="topbar-spacer"></span>
-    <a class="icon-btn" href="#matrix" title="Macierz wykrywalności" aria-label="Macierz">
+    <a class="icon-btn" href="#matrix" title="Detectability matrix" aria-label="Detectability matrix">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
     </a>
-    <a class="icon-btn" href="#conclusions" title="Wnioski" aria-label="Wnioski">
+    <a class="icon-btn" href="#conclusions" title="Conclusions" aria-label="Conclusions">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
     </a>
-    <button id="theme-toggle" class="icon-btn" aria-label="Przełącz motyw"></button>
+    <button id="lang-toggle" class="lang-btn" aria-label="Switch language">
+      <span id="lang-current">EN</span>
+    </button>
+    <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme"></button>
   </header>
 
   <div id="overlay"></div>
@@ -39,7 +42,7 @@
   <div class="layout">
     <!-- Sidebar -->
     <aside id="sidebar">
-      <div class="sidebar-title">Kategorie zagrożeń</div>
+      <div class="sidebar-title" id="sidebar-title">Threat categories</div>
       <nav id="sidebar-nav"></nav>
     </aside>
 
@@ -48,78 +51,76 @@
       <!-- Hero -->
       <section class="hero">
         <div class="hero-inner">
-          <span class="hero-eyebrow">Atlas bezpieczeństwa kodu · OWASP aligned</span>
-          <h1>Poznaj <span class="grad">zagrożenia</span><br />zanim znajdzie je atakujący</h1>
-          <p class="hero-sub">
-            Kompletny, praktyczny przewodnik po podatnościach w kodzie — od injection po
-            business logic. Każde zagrożenie z przykładem podatnego i bezpiecznego kodu,
-            oceną severity, trudnością wykrycia i odnośnikiem CWE.
+          <span class="hero-eyebrow" id="hero-eyebrow">Security code atlas · OWASP aligned</span>
+          <h1 id="hero-h1">Know the <span class="grad">threats</span><br/>before attackers do</h1>
+          <p class="hero-sub" id="hero-sub">
+            A complete, practical guide to code vulnerabilities — from injection to business logic. Every threat with vulnerable and secure code examples, severity rating, detection difficulty, and CWE reference.
           </p>
           <div class="hero-stats">
-            <div class="stat"><div class="stat-num" id="stat-cats">14</div><div class="stat-label">Kategorii</div></div>
-            <div class="stat"><div class="stat-num" id="stat-threats">789+</div><div class="stat-label">Zagrożeń</div></div>
-            <div class="stat"><div class="stat-num" id="stat-crit">0</div><div class="stat-label">Critical</div></div>
+            <div class="stat"><div class="stat-num" id="stat-cats">14</div><div class="stat-label" id="stat-label-cats">Categories</div></div>
+            <div class="stat"><div class="stat-num" id="stat-threats">789+</div><div class="stat-label" id="stat-label-threats">Threats</div></div>
+            <div class="stat"><div class="stat-num" id="stat-crit">0</div><div class="stat-label" id="stat-label-crit">Critical</div></div>
           </div>
           <div class="hero-search-wrap">
             <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>
-            <input id="hero-search" type="search" placeholder="Szukaj zagrożenia… (np. SQL, XSS, JWT, SSRF)" />
+            <input id="hero-search" type="search" placeholder="Search threats… (e.g. SQL, XSS, JWT, SSRF)" />
           </div>
-          <p class="hero-hint">Kliknij kategorię poniżej albo zacznij pisać, aby przefiltrować wszystkie zagrożenia.</p>
+          <p class="hero-hint" id="hero-hint">Click a category below or start typing to filter all threats.</p>
         </div>
       </section>
 
       <div class="section-wrap">
         <!-- Category cards -->
-        <h2 class="section-title">Przeglądaj wg kategorii</h2>
-        <p class="section-lead">Czternaście obszarów obejmujących pełny krajobraz zagrożeń aplikacji.</p>
+        <h2 class="section-title" id="section-browse-title">Browse by category</h2>
+        <p class="section-lead" id="section-browse-lead">Fourteen areas covering the full threat landscape of applications.</p>
         <div id="hero-cards"></div>
 
         <!-- Filter bar -->
         <div id="filter-bar">
           <div class="search-field">
             <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>
-            <input id="search" type="search" placeholder="Filtruj po nazwie zagrożenia…" />
+            <input id="search" type="search" placeholder="Filter by threat name…" />
           </div>
-          <select id="filter-sev" class="select-field" aria-label="Filtruj po severity">
-            <option value="">Wszystkie severity</option>
+          <select id="filter-sev" class="select-field" aria-label="Filter by severity">
+            <option value="" id="filter-sev-all">All severities</option>
             <option value="Critical">Critical</option>
             <option value="High">High</option>
             <option value="Medium">Medium</option>
             <option value="Low">Low</option>
           </select>
-          <select id="filter-diff" class="select-field" aria-label="Filtruj po trudności wykrycia">
-            <option value="">Każda trudność</option>
+          <select id="filter-diff" class="select-field" aria-label="Filter by detection difficulty">
+            <option value="" id="filter-diff-all">All difficulties</option>
             <option value="Easy">Easy</option>
             <option value="Medium">Medium</option>
             <option value="Hard">Hard</option>
             <option value="Very Hard">Very Hard</option>
           </select>
-          <button id="toggle-research" class="toggle-research-btn active" title="Zagrożenia wymagające weryfikacji">
+          <button id="toggle-research" class="toggle-research-btn active" title="Threats requiring verification">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-            Do weryfikacji
+            <span id="research-btn-label">Needs research</span>
             <span id="research-count"></span>
           </button>
-          <button id="clear-filters">Wyczyść</button>
+          <button id="clear-filters" id="clear-filters-btn">Clear</button>
         </div>
-        <div id="no-results" class="hidden" aria-live="polite">Brak zagrożeń pasujących do filtrów.</div>
+        <div id="no-results" class="hidden" aria-live="polite">No threats match the filters.</div>
 
         <!-- Categories (rendered by JS) -->
         <div id="categories"></div>
 
         <!-- Matrix -->
         <section id="matrix">
-          <h2 class="section-title">Macierz wykrywalności</h2>
-          <p class="section-lead">
-            Podsumowanie: jak trudno wykryć każdą kategorię i czy sama analiza statyczna wystarcza.
+          <h2 class="section-title" id="matrix-title">Detectability matrix</h2>
+          <p class="section-lead" id="matrix-lead">
+            Summary: how hard each category is to detect and whether static analysis alone is enough.
           </p>
           <div class="table-scroll">
             <table class="matrix">
               <thead>
                 <tr>
-                  <th>Kategoria</th>
-                  <th>Trudność wykrycia</th>
-                  <th>Sam static wystarczy?</th>
-                  <th>Główna metoda</th>
+                  <th id="matrix-h1">Category</th>
+                  <th id="matrix-h2">Detection difficulty</th>
+                  <th id="matrix-h3">Static analysis alone?</th>
+                  <th id="matrix-h4">Primary method</th>
                 </tr>
               </thead>
               <tbody id="matrix-body"></tbody>
@@ -129,8 +130,8 @@
 
         <!-- Conclusions -->
         <section id="conclusions">
-          <h2 class="section-title">Wnioski dla developerów</h2>
-          <p class="section-lead">Pięć zasad porządkujących myślenie o wykrywaniu i priorytetyzacji zagrożeń.</p>
+          <h2 class="section-title" id="conclusions-title">Conclusions for developers</h2>
+          <p class="section-lead" id="conclusions-lead">Five principles for thinking about threat detection and prioritization.</p>
           <div id="conclusions-list"></div>
         </section>
       </div>
@@ -138,9 +139,9 @@
       <footer class="footer">
         <div class="footer-brand">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <strong>Code Guardian</strong> — atlas zagrożeń bezpieczeństwa kodu. Źródło wiedzy: SECURITY_THREATS.md.
+          <strong>Code Guardian</strong> — <span id="footer-text">security threat atlas. Knowledge source: SECURITY_THREATS.md.</span>
         </div>
-        <div class="disclaimer">Wszystkie przykłady „PODATNE" są wyłącznie ilustracyjne — nie używać w produkcji.</div>
+        <div class="disclaimer" id="disclaimer">All "VULNERABLE" examples are illustrative only — do not use in production.</div>
       </footer>
     </main>
   </div>

@@ -6,5 +6,9 @@ color: "#63e6be"
 difficulty: "Medium → Hard"
 desc: |
   Zagrożenia na styku kodu z infrastrukturą i parserami niskiego poziomu.
+desc_en: |
+  Threats at the intersection of code with infrastructure and low-level parsers.
 verdict: |
   Wzorce sinków (eval/exec, requests.get(user_url), parser XML, extractall) → SAST łapie nieźle. Prototype pollution wymaga analizy przepływu JS. Memory corruption → Hard: najlepsze wyniki dają sanitizery i fuzzing. Memory corruption realnie wymaga runtime (ASan/UBSan/Valgrind + fuzzing).
+verdict_en: |
+  Sink patterns (eval/exec, requests.get(user_url), XML parser, extractall) → SAST catches them well. Prototype pollution requires JS flow analysis. Memory corruption → Hard: sanitizers and fuzzing yield the best results. Memory corruption realistically requires runtime (ASan/UBSan/Valgrind + fuzzing).

@@ -9,6 +9,7 @@ threats:
       - "CWE-307"
     desc: |
       Wadliwy mechanizm logowania: brak rate-limitu (brute force), przewidywalne resety hasła, akceptowanie pustych/domyślnych haseł, brak weryfikacji starego hasła przy zmianie.
+    desc_en: "Flawed login mechanism: missing rate limit (brute force), predictable password resets, accepting empty/default passwords, missing old-password verification on change."
     lang: "python"
     vuln: |
       # PODATNE — brak limitu prób, porównanie w plaintext
@@ -28,6 +29,7 @@ threats:
       - "CWE-284"
     desc: |
       Aplikacja używa identyfikatora dostarczonego przez użytkownika do dostępu do obiektu BEZ sprawdzenia, czy ten użytkownik ma do niego prawo. Klasyk „Broken Object Level Authorization” (BOLA, OWASP API #1).
+    desc_en: "The application uses a user-supplied identifier to access an object WITHOUT verifying that this user is authorized. Classic Broken Object Level Authorization (BOLA, OWASP API #1)."
     lang: "python"
     vuln: |
       # PODATNE — pobiera po id z URL, brak sprawdzenia własności
@@ -42,6 +44,7 @@ threats:
           inv = Invoice.query.filter_by(id=id, owner_id=current_user.id).first_or_404()
           return inv.to_json()
     note: "Severity rośnie do Critical jeśli dane wrażliwe / masowy enumerator."
+    note_en: "Severity escalates to Critical for sensitive data or mass enumerators."
   - id: "2.3"
     name: "Privilege Escalation"
     severity: "Critical"
@@ -51,6 +54,7 @@ threats:
       - "CWE-269"
     desc: |
       Użytkownik uzyskuje uprawnienia ponad swój poziom — pionowa (user→admin) lub pozioma (user A → zasoby user B). Często przez ufanie polu roli z requestu lub brak re-walidacji uprawnień przy akcji.
+    desc_en: "A user gains permissions beyond their level — vertically (user→admin) or horizontally (user A → resources of user B). Often caused by trusting a role field from the request or missing re-validation of permissions at action time."
     lang: "python"
     vuln: |
       # PODATNE — rola brana z body requestu
@@ -67,6 +71,7 @@ threats:
       - "CWE-347"
     desc: |
       Wadliwa obsługa tokenów: akceptowanie alg:none, confusion RS256↔HS256 (klucz publiczny użyty jako sekret HMAC), brak weryfikacji exp/aud/iss, sekret słaby/hardcoded, brak rewokacji.
+    desc_en: "Broken Function Level Authorization (BFLA) — a lower-privileged user can call admin-level endpoints by guessing URLs or using a captured admin request."
     lang: "python"
     vuln: |
       # PODATNE — brak wymuszenia algorytmu, brak weryfikacji
@@ -86,6 +91,7 @@ threats:
       - "CWE-1004"
     desc: |
       Słabe ID sesji (przewidywalne), brak rotacji po logowaniu (session fixation), brak invalidacji po wylogowaniu, cookie bez HttpOnly/Secure/SameSite, zbyt długi TTL.
+    desc_en: "JWT `alg` field is controlled by the attacker: `alg: none` bypasses signature; RS256→HS256 swap uses the public key as an HMAC secret to forge tokens."
     lang: "python"
     vuln: |
       # PODATNE
@@ -103,6 +109,7 @@ threats:
       - "CWE-862"
     desc: |
       Endpoint administracyjny chroniony tylko ukryciem w UI („security by obscurity”), ale dostępny bezpośrednio. OWASP API #5 (BFLA).
+    desc_en: "A short or guessable JWT secret can be brute-forced offline (e.g., hashcat dictionary attack), allowing forgery of any token."
     lang: "python"
     vuln: |
       # PODATNE — brak dekoratora authz na akcji admina
@@ -123,6 +130,7 @@ threats:
       - "CWE-204"
     desc: |
       Różne komunikaty/czasy odpowiedzi dla istniejącego vs nieistniejącego konta (login, reset, rejestracja) pozwalają zbudować listę ważnych użytkowników.
+    desc_en: "Insecure HTTP cookies: missing Secure flag (transmitted over HTTP), missing HttpOnly (accessible via JS), missing SameSite (CSRF), no expiry, overly broad Path/Domain."
     lang: "python"
     vuln: |
       # PODATNE — różne komunikaty
@@ -141,6 +149,7 @@ threats:
       - "CWE-640"
     desc: |
       Token resetu przewidywalny, bez wygaśnięcia, wielokrotnego użycia, lub link budowany z nagłówka Host (zob. 1.9) — przejęcie konta.
+    desc_en: "Session token generated with a PRNG (random/Math.random) instead of a CSPRNG — predictable, allowing session prediction."
     lang: "python"
     vuln: |
       # PODATNE — token z PRNG, bez TTL, link z Host
@@ -160,6 +169,7 @@ threats:
       - "CWE-308"
     desc: |
       Pominięcie kroku MFA (bezpośrednie wywołanie kolejnego endpointu), brak rate-limitu na kod OTP (brute 6 cyfr), kod bez powiązania z sesją, akceptacja po wygaśnięciu.
+    desc_en: "API key or token stored in client-side code (JS, mobile app), public GitHub repo, or environment variable exposed in logs/env dump."
     lang: "python"
     vuln: |
       # PODATNE — brak limitu, kod globalny, brak powiązania z sesją
@@ -178,6 +188,7 @@ threats:
       - "CWE-601"
     desc: |
       Brak/słaba walidacja state (CSRF na callbacku), brak PKCE w klientach publicznych, luźny redirect_uri (open redirect → kradzież code/token), brak weryfikacji aud/iss w ID tokenie, mieszanie implicit flow.
+    desc_en: "Password reset link or token is reused after use, does not expire, or is sent over HTTP — allowing token theft and account takeover."
     lang: "python"
     vuln: |
       # PODATNE — brak walidacji state, redirect_uri z parametru
@@ -197,6 +208,7 @@ threats:
       - "CWE-345"
     desc: |
       Nagłówek JWT (kid, jku, x5u) sterowany przez atakującego — kid path traversal/SQLi do wyboru klucza, jku wskazujące na klucz atakującego, osadzony jwk akceptowany jako zaufany.
+    desc_en: "Mass assignment: the framework maps all request fields onto the model, allowing setting of privileged fields (role, is_admin, price) not intended for user input."
     lang: "python"
     vuln: |
       # PODATNE — klucz wybierany po kid z tokena, jku zaufane
@@ -217,6 +229,7 @@ threats:
       - "CWE-799"
     desc: |
       Brak detekcji masowych logowań skradzionymi parami login:hasło (z wycieków). Wymaga limitów, anomalii, sprawdzania haseł w bazach wycieków (k-anonimity HIBP).
+    desc_en: "Missing or misconfigured MFA: easily bypassed OTP (length, no rate limit), recovery codes stored in plaintext, MFA optional on admin accounts."
     lang: "python"
     vuln: |
       # PODATNE — login bez limitu na konto/IP, akceptuje znane wyciekłe hasła
@@ -234,6 +247,7 @@ threats:
       - "CWE-613"
     desc: |
       JWT/sesje pozostają ważne po wylogowaniu lub zmianie hasła — brak listy unieważnień / krótkiego TTL + refresh. Skradziony token działa do exp.
+    desc_en: "JWT payload or header contains sensitive information (email, role, internal IDs) readable without the private key — the payload is only base64-encoded, not encrypted."
     lang: "python"
     vuln: |
       # PODATNE — JWT 24h bez rewokacji, logout tylko czyści cookie
@@ -252,6 +266,7 @@ threats:
       - "CWE-799"
     desc: |
       Brak limitu prób / lockoutu pozwala na masowe próby logowania (brute force, credential stuffing, password spraying).
+    desc_en: "After logout, the JWT or session token is not invalidated on the server — an attacker who captured it can continue using it."
     lang: "python"
     vuln: |
       @app.route('/login', methods=['POST'])
@@ -271,6 +286,7 @@ threats:
     cwe: []
     desc: |
       Cross-Site Request Forgery (CSRF) — zagrożenie z kategorii Authentication & Authorization wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+    desc_en: "Authentication bypass via SQL injection or logical condition in login form — e.g., `' OR '1'='1` in the username bypasses password check."
     lang: "python"
     vuln: |
       # PODATNE — Cross-Site Request Forgery (CSRF)
@@ -291,6 +307,7 @@ threats:
       - "CWE-352"
     desc: |
       Brak tokena anty-CSRF pozwala stronie trzeciej wymusić akcję w imieniu zalogowanego użytkownika.
+    desc_en: "OAuth: using `state` parameter without CSRF protection, using `code` flow without PKCE, redirect_uri validation bypass, token leakage via Referer header."
     lang: "python"
     vuln: |
       @app.route('/transfer', methods=['POST'])
@@ -312,6 +329,7 @@ threats:
       - "CWE-799"
     desc: |
       Brak limitu prób / lockoutu pozwala na masowe próby logowania (brute force, credential stuffing, password spraying).
+    desc_en: "SAML: XML Signature Wrapping — modifying the assertion around the verified element, or `verify_signature=False` disabling verification."
     lang: "python"
     vuln: |
       @app.route('/login', methods=['POST'])
@@ -332,6 +350,7 @@ threats:
       - "CWE-384"
     desc: |
       Brak regeneracji identyfikatora sesji po zalogowaniu pozwala napastnikowi utrwalić znany mu session ID (fixation) lub przejąć sesję.
+    desc_en: "The application uses user-controlled input (role field in body, URL param) to determine permissions instead of trusting a signed, server-controlled session."
     lang: "python"
     vuln: |
       @app.route('/login', methods=['POST'])
@@ -598,6 +617,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Brute force login" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -614,6 +634,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Hardcoded credentials" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -630,6 +651,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak password policies" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -646,6 +668,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure credential storage" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -662,6 +685,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Oauth authorization code interception" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -678,6 +702,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Openid misconfiguration" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -694,6 +719,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficient session invalidation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -710,6 +736,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Path traversal auth bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -726,6 +753,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Passkey bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -742,6 +770,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Leaked jwt in url" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -758,6 +787,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sql injection in login endpoint" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -774,6 +804,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cross-tenant authorization bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -790,6 +821,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Man-in-the-middle (mitm) on auth" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -806,6 +838,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Phishing and spear phishing" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -822,6 +855,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Account pre-hijacking" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -838,6 +872,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Blockchain wallet impersonation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -854,6 +889,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Subdomain takeover auth bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -870,6 +906,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure token storage" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -886,6 +923,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Deepfake face id bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -902,6 +940,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Oauth token theft" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -918,6 +957,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ghost account exploitation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -934,6 +974,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Biometric spoofing" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -950,6 +991,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Oauth pkce bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -966,6 +1008,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sim swapping" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -982,6 +1025,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Jwt algorithm confusion" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -998,6 +1042,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Csp bypass auth" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1014,6 +1059,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing account lockout policies" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1030,6 +1076,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Tenant isolation failure" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1046,6 +1093,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Browser extension auth bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1062,6 +1110,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Saml assertion/xml signature wrapping" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

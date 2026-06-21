@@ -8,6 +8,7 @@ threats:
       - "CWE-502"
     desc: |
       pickle.loads na nieufnych danych wykonuje dowolny kod przez metodę __reduce__ obiektu. Każdy pickle z zewnątrz = potencjalne RCE.
+    desc_en: "Python pickle.loads() on untrusted data: `__reduce__` method allows arbitrary code execution during deserialization."
     lang: "python"
     vuln: |
       # PODATNE — deserializacja danych z sieci/cookie
@@ -27,6 +28,7 @@ threats:
       - "CWE-502"
     desc: |
       yaml.load (PyYAML bez SafeLoader) interpretuje tagi typu !!python/object/apply, co pozwala konstruować dowolne obiekty i wywołać kod → RCE.
+    desc_en: "Java ObjectInputStream.readObject() on untrusted data: gadget chains from available classes (Apache Commons Collections, Spring, etc.) enable RCE."
     lang: "python"
     vuln: |
       # PODATNE
@@ -46,6 +48,7 @@ threats:
       - "CWE-502"
     desc: |
       ObjectInputStream.readObject na nieufnym strumieniu uruchamia łańcuchy gadżetów (ysoserial: CommonsCollections, Spring) podczas deserializacji → RCE. Historyczny wektor wielu krytycznych CVE.
+    desc_en: "PHP unserialize() on untrusted data: magic methods (__wakeup, __destruct, __toString) form a gadget chain leading to RCE, LFI, or SSRF."
     lang: "java"
     vuln: |
       // PODATNE — readObject na danych od klienta
@@ -65,6 +68,7 @@ threats:
       - "CWE-502"
     desc: |
       unserialize na nieufnym wejściu instancjonuje obiekty; magiczne metody (__wakeup, __destruct) tworzą POP chain → RCE/LFI/SQLi.
+    desc_en: "YAML.load() (PyYAML/Ruby) on untrusted data: YAML allows Python/Ruby objects — !!python/object/apply:os.system executes OS commands."
     lang: "php"
     vuln: |
       // PODATNE — unserialize danych z cookie/parametru
@@ -83,6 +87,7 @@ threats:
       - "CWE-611"
     desc: |
       Deserializatory XML mapujące XML na obiekty (Java XMLDecoder, XStream bez whitelisty, .NET BinaryFormatter/LosFormatter) wykonują kod z tagów typu <object class=...> → RCE.
+    desc_en: "Ruby Marshal.load() on untrusted data: arbitrary object instantiation during deserialization — RCE via gadget chains."
     lang: "java"
     vuln: |
       // PODATNE — XMLDecoder wykonuje konstrukcje z XML
@@ -102,6 +107,7 @@ threats:
       - "CWE-502"
     desc: |
       Marshal.load i YAML.load (Psych) w Ruby na nieufnych danych instancjonują dowolne klasy → gadget chain i RCE. Historycznie wektor podatności w Rails.
+    desc_en: ".NET BinaryFormatter/NetDataContractSerializer on untrusted data: gadget chains from available types enable RCE."
     lang: "ruby"
     vuln: |
       # PODATNE
@@ -121,6 +127,7 @@ threats:
       - "CWE-502"
     desc: |
       BinaryFormatter/SoapFormatter/NetDataContractSerializer oraz Json.NET z TypeNameHandling.All osadzają nazwy typów .NET — atakujący wskazuje typ-gadżet (ObjectDataProvider) → RCE.
+    desc_en: "JSON deserialization with polymorphic type information (Jackson `@class`, Gson with RuntimeTypeAdapterFactory) — attacker controls the target class, enabling gadget chain."
     lang: "csharp"
     vuln: |
       // PODATNE — BinaryFormatter / Json.NET z type handling
@@ -141,6 +148,7 @@ threats:
       - "CWE-95"
     desc: |
       Biblioteki jak node-serialize deserializują funkcje z IIFE (_$$ND_FUNC$$_) i je wykonują; ogólnie deserializacja przez eval/Function nieufnego JSON → RCE.
+    desc_en: "XML deserialization (XStream, XMLDecoder) on untrusted data: gadget chains in available Java classes enable RCE."
     lang: "javascript"
     vuln: |
       // PODATNE — node-serialize.unserialize wykonuje osadzone funkcje
@@ -160,6 +168,7 @@ threats:
       - "CWE-918"
     desc: |
       Nawet bez RCE, gadżety deserializacji wywołują efekty uboczne: URLDNS (SSRF/wyciek DNS), gadżety hashujące/rekurencyjne (DoS), odczyt plików. Niższy próg eksploatacji niż pełne RCE.
+    desc_en: "MessagePack/Avro/Thrift deserialization without schema validation — untrusted binary data exploits type confusion."
     lang: "java"
     vuln: |
       // PODATNE — readObject z gadżetem URLDNS (java.net.URL w HashMap)
@@ -179,6 +188,7 @@ threats:
       - "CWE-345"
     desc: |
       Serializowany stan (sesja, cookie, token) przekazywany klientowi bez podpisu — atakujący modyfikuje pola lub podstawia własny obiekt. Nawet bezpieczny format wymaga MAC, jeśli round-trip przez klienta.
+    desc_en: "Node.js serialize/unserialize (node-serialize) or vm.runInContext() on untrusted JSON — IIFE pattern in JSON enables RCE."
     lang: "python"
     vuln: |
       # PODATNE — stan w cookie bez podpisu, ufamy po stronie serwera
@@ -402,6 +412,7 @@ threats:
       - "CWE-502"
     desc: |
       Deserializacja nieufnych danych pozwala wstrzyknąć obiekty (object injection) -> RCE/SQLi/eskalacja.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "php"
     vuln: |
       $obj = unserialize($_COOKIE['data']);  // object injection
@@ -416,6 +427,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Arbitrary file read" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -432,6 +444,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Property-oriented programming (pop) chains" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -448,6 +461,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Arbitrary file write" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -464,6 +478,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml deserialization xxe" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -480,6 +495,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python pickle exploitation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -496,6 +512,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Billion laughs attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -512,6 +529,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Server-side request forgery (ssrf)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -528,6 +546,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Spring rce via deserialization" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -544,6 +563,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Kryo deserialization payload" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -560,6 +580,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ruby erb template via marshal" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -576,6 +597,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Deserialization of signed data (no verify)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -592,6 +614,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Resource exhaustion dos" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -608,6 +631,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml deserialization attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -624,6 +648,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ruby marshal load attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -640,6 +665,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "`__reduce__`/`__getstate__` exploitation (python)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -656,6 +682,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml deserialization code execution" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -672,6 +699,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Untrusted deserialization rce" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -688,6 +716,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -704,6 +733,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Java objectinputstream exploit" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -720,6 +750,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Node.js serialize exploit" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -736,6 +767,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cookie deserialization tampering" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -752,6 +784,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Session deserialization exploit" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -768,6 +801,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Jackson gadget chain exploit" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -784,6 +818,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Deserialization filter bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -800,6 +835,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure object deserialization" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -816,6 +852,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Access control bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -832,6 +869,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Json deserialization attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -848,6 +886,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml deserialization rce" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -864,6 +903,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Object state manipulation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -880,6 +920,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Coldfusion deserialization attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

@@ -6,5 +6,9 @@ color: "#ff922b"
 difficulty: "Easy → Hard"
 desc: |
   Deserializacja nieufnych danych formatem zdolnym do instancjonowania obiektów lub wywołania kodu (pickle, Java serialization, PHP unserialize, YAML, XML). OWASP Top 10 A08:2021. Atakujący buduje 'gadget chain' z dostępnych klas → RCE, LFI, SSRF lub DoS.
+desc_en: |
+  Deserialization of untrusted data using a format capable of instantiating objects or executing code (pickle, Java serialization, PHP unserialize, YAML, XML). OWASP Top 10 A08:2021. An attacker constructs a gadget chain from available classes → RCE, LFI, SSRF, or DoS.
 verdict: |
   Wywołania sinków (pickle.loads, yaml.load, ObjectInputStream.readObject, unserialize, Marshal.load) wykrywa SAST taint analysis — to wzorzec. Trudniejsza jest ocena dostępności realnego gadget chain w classpath, co bywa pracą manualną. Static wskazuje sink; potwierdzenie eksploatu często ręczne.
+verdict_en: |
+  Sink calls (pickle.loads, yaml.load, ObjectInputStream.readObject, unserialize, Marshal.load) are detected by SAST taint analysis — they are a pattern. Harder is assessing whether a real gadget chain is available in the classpath, which often requires manual work. Static identifies the sink; exploit confirmation is often manual.

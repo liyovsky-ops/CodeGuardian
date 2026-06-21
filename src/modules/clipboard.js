@@ -1,5 +1,7 @@
 import { $, $$ } from './dom.js';
 import { COPY_FEEDBACK_MS } from '../config.js';
+import { getLang } from '../i18n/index.js';
+import { UI } from '../i18n/ui.js';
 
 function fallbackCopy(text, cb) {
   const ta = document.createElement('textarea');
@@ -18,8 +20,9 @@ export function initClipboard() {
       e.stopPropagation();
       const code = $('code', btn.parentElement).textContent;
       const done = () => {
+        const lang = getLang();
         const old = btn.textContent;
-        btn.textContent = 'Skopiowano';
+        btn.textContent = UI.copiedBtn[lang];
         btn.classList.add('copied');
         setTimeout(() => {
           btn.textContent = old;

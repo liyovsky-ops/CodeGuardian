@@ -9,6 +9,7 @@ threats:
       - "CWE-787"
     desc: |
       Zapis poza koniec bufora na stosie (strcpy/gets/sprintf bez limitu) nadpisuje zapisany adres powrotu / ramki sąsiednie → przejęcie przepływu wykonania, RCE.
+    desc_en: "Stack/heap buffer overflow: writing beyond an array boundary overwrites adjacent memory — RCE via return address overwrite or heap metadata corruption."
     lang: "c"
     vuln: |
       // PODATNE — brak kontroli długości
@@ -34,6 +35,7 @@ threats:
       - "CWE-787"
     desc: |
       Zapis poza obszar alokacji na stercie nadpisuje metadane alokatora lub sąsiednie obiekty (np. wskaźniki funkcji) → korupcja sterty i RCE.
+    desc_en: "Use-After-Free: memory is freed but a pointer to it is still used — attacker controls the reallocated memory and achieves RCE or privilege escalation."
     lang: "c"
     vuln: |
       // PODATNE — alokacja bez miejsca na NUL + memcpy bez granicy
@@ -54,6 +56,7 @@ threats:
       - "CWE-416"
     desc: |
       Użycie wskaźnika po zwolnieniu pamięci. Atakujący realokuje zwolniony blok kontrolowaną zawartością i przejmuje obiekt (często wskaźnik na funkcję/vtable) → RCE.
+    desc_en: "Integer overflow: arithmetic exceeds the type's range — result wraps around, causing under-allocation or boundary check bypass, leading to buffer overflow."
     lang: "c"
     vuln: |
       // PODATNE — dereferencja po free, dangling pointer
@@ -76,6 +79,7 @@ threats:
       - "CWE-415"
     desc: |
       Dwukrotne zwolnienie tego samego bloku psuje struktury wolnych chunków alokatora (free list), umożliwiając write-what-where i RCE.
+    desc_en: "Format string: user-controlled `printf(user_input)` — attacker reads/writes arbitrary memory via `%x`, `%n` format specifiers."
     lang: "c"
     vuln: |
       // PODATNE — free na obu ścieżkach
@@ -101,6 +105,7 @@ threats:
       - "CWE-125"
     desc: |
       Odczyt poza granicą tablicy/bufora ujawnia sąsiednią pamięć (klucze, wskaźniki — jak Heartbleed) lub powoduje crash. Często przez brak walidacji indeksu/długości z wejścia.
+    desc_en: "Double free: `free()` called twice on the same pointer — heap metadata corruption, potential RCE via heap exploitation."
     lang: "c"
     vuln: |
       // PODATNE — długość z atakującego, brak walidacji (à la Heartbleed)
@@ -119,6 +124,7 @@ threats:
       - "CWE-680"
     desc: |
       Przepełnienie arytmetyczne przy obliczaniu rozmiaru alokacji daje za mały bufor; następny zapis przepełnia stertę. Klasyczny łańcuch integer overflow → heap overflow.
+    desc_en: "Null pointer dereference: accessing memory at address 0 — crash (DoS); on some systems a mapped null page enables local privilege escalation."
     lang: "c"
     vuln: |
       // PODATNE — count*size może się zawinąć
@@ -138,6 +144,7 @@ threats:
       - "CWE-674"
     desc: |
       Rekurencja sterowana wejściem bez limitu głębokości wyczerpuje stos → crash (DoS), a w niektórych środowiskach nadpisanie poza stronę guard. Dotyczy też parserów rekurencyjnych.
+    desc_en: "Memory leak: allocated memory never freed — process exhausts available memory, leading to DoS or sensitive data in memory."
     lang: "c"
     vuln: |
       // PODATNE — głębokość zależna od wejścia, brak limitu
@@ -162,6 +169,7 @@ threats:
       - "CWE-908"
     desc: |
       Użycie pamięci przed inicjalizacją zwraca wartości resztkowe (poprzednia zawartość sterty/stosu) — wyciek wrażliwych danych lub niedeterministyczne błędy bezpieczeństwa.
+    desc_en: "Uninitialized memory: variable used without initialization — leaks stack/heap values (info disclosure), undefined behavior, potential RCE."
     lang: "c"
     vuln: |
       // PODATNE — wysyłka struktury z paddingiem/niewypełnionymi polami
@@ -184,6 +192,7 @@ threats:
       - "CWE-825"
     desc: |
       Bezpieczeństwo pamięci Rusta gwarantuje borrow checker, ale bloki unsafe i FFI mogą je złamać — surowe wskaźniki przeżywające właściciela, Vec realokowany podczas trzymania wskaźnika.
+    desc_en: "Unsafe Rust: `unsafe` block with pointer arithmetic without bounds checking — loses Rust's memory safety guarantees."
     lang: "rust"
     vuln: |
       // PODATNE — surowy wskaźnik staje się dangling po realokacji
@@ -206,6 +215,7 @@ threats:
       - "CWE-366"
     desc: |
       Współbieżny dostęp do tej samej pamięci bez synchronizacji powoduje rozdarte odczyty/zapisy, korupcję map (Go: fatal concurrent map write) i niezdefiniowane zachowanie. W C/C++ to UB prowadzące do korupcji.
+    desc_en: "Out-of-bounds read: reading beyond an array boundary — info disclosure (adjacent memory values, stack canary, heap addresses), enabling ASLR bypass."
     lang: "go"
     vuln: |
       // PODATNE — współbieżny zapis do mapy bez locka
@@ -230,6 +240,7 @@ threats:
       - "CWE-825"
     desc: |
       Użycie wskaźnika po zwolnieniu/do niezainicjowanej pamięci (use-after-free / wild pointer).
+    desc_en: "Stack overflow: deep or infinite recursion exhausts the stack — crash (DoS)."
     lang: "c"
     vuln: |
       free(p);
@@ -247,6 +258,7 @@ threats:
       - "CWE-134"
     desc: |
       Nieufny input jako format string pozwala czytać/zapisywać pamięć (%n).
+    desc_en: "Heap overflow: writing beyond a heap-allocated buffer — overwrites adjacent heap chunks' metadata, enabling heap exploitation."
     lang: "c"
     vuln: |
       printf(user_input);  // user_input="%x%x%n"
@@ -263,6 +275,7 @@ threats:
       - "CWE-193"
     desc: |
       Przepełnienie/niedopełnienie liczby całkowitej daje za mały bufor lub błędny indeks -> korupcja pamięci.
+    desc_en: "Type confusion: casting a pointer to an incompatible type — reads/writes memory with an incorrect layout, leading to info disclosure or RCE."
     lang: "c"
     vuln: |
       int size = a * b;        // overflow
@@ -282,6 +295,7 @@ threats:
       - "CWE-193"
     desc: |
       Przepełnienie/niedopełnienie liczby całkowitej daje za mały bufor lub błędny indeks -> korupcja pamięci.
+    desc_en: "Off-by-one error: boundary check uses `<` instead of `<=` or vice versa — off-by-one buffer overflow, potential heap/stack exploitation."
     lang: "c"
     vuln: |
       int size = a * b;        // overflow
@@ -300,6 +314,7 @@ threats:
       - "CWE-787"
     desc: |
       Kopiowanie inputu bez sprawdzenia długości nadpisuje pamięć poza buforem (RCE/crash).
+    desc_en: "Race condition in concurrent memory access (data race): two threads write to the same object without synchronization — undefined behavior, potential corruption."
     lang: "c"
     vuln: |
       char buf[64];
@@ -562,6 +577,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Heap overflow" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -578,6 +594,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Heap metadata corruption" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -594,6 +611,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Aslr bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -610,6 +628,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Gc heap grooming" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -626,6 +645,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stack exhaustion" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -642,6 +662,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stack clash" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -658,6 +679,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Uninitialized memory access" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -674,6 +696,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Invalid free" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -690,6 +713,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Vtable hijacking" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -706,6 +730,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cfi bypass (control flow)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -722,6 +747,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Race condition on memory (toctou)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -738,6 +764,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Shadow stack bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -754,6 +781,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ridl microarchitectural data" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -770,6 +798,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Format string vulnerabilities" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -786,6 +815,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Mds attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -802,6 +832,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Use of uninitialized memory" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -818,6 +849,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Spectre (side-channel)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -834,6 +866,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pie bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -850,6 +883,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Swift unsafe pointer flaw" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -866,6 +900,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Objective-c retain cycle" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -882,6 +917,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Valgrind bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -898,6 +934,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Spatial memory safety flaw" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -914,6 +951,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Fallout side channel" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -930,6 +968,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stack canary bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -946,6 +985,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Wild copy (excessive memory copy)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -962,6 +1002,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Memorysanitizer bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -978,6 +1019,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stack underflow" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -994,6 +1036,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Buffer over-read" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1010,6 +1053,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Perl xs memory flaw" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1026,6 +1070,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unconstrained union access" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

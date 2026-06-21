@@ -8,6 +8,7 @@ threats:
       - "CWE-362"
     desc: |
       Współbieżne operacje na współdzielonym stanie bez synchronizacji dają niespójny wynik — np. podwójne wykorzystanie kuponu, ujemne saldo, double-spend.
+    desc_en: "Race condition (TOCTOU — Time-of-Check to Time-of-Use): state changes between the check and the use — double spending, inventory oversell, double withdrawal."
     lang: "python"
     vuln: |
       # PODATNE — read-modify-write bez atomowości
@@ -26,6 +27,7 @@ threats:
       - "CWE-367"
     desc: |
       Stan zmienia się między sprawdzeniem a użyciem (klasycznie pliki, ale też auth/limity).
+    desc_en: "Negative number or value not validated — negative price for a payment, negative quantity in an order reverses the transaction direction."
     lang: "python"
     vuln: |
       # PODATNE
@@ -42,6 +44,7 @@ threats:
       - "CWE-915"
     desc: |
       Framework automatycznie mapuje pola requestu na atrybuty modelu — atakujący ustawia pola, których nie powinien (is_admin, balance, verified).
+    desc_en: "Insecure direct object reference in business logic: user knows the order ID and changes its status or price by sending a crafted request."
     lang: "python"
     vuln: |
       # PODATNE
@@ -59,6 +62,7 @@ threats:
       - "CWE-502"
     desc: |
       Deserializacja nieufnych danych formatem pozwalającym na instancjonowanie obiektów / wykonanie kodu (pickle, Java serialization, YAML load, PHP unserialize).
+    desc_en: "Coupon/promo code can be applied multiple times, combined in unintended ways, or shared across users — business loss."
     lang: "python"
     vuln: |
       # PODATNE
@@ -77,6 +81,7 @@ threats:
       - "CWE-840"
     desc: |
       Pominięcie wymaganego etapu procesu (płatność → wysyłka, weryfikacja → aktywacja) przez bezpośrednie wywołanie późniejszego endpointu.
+    desc_en: "Unauthorized function call: API endpoint that should only be accessible to admins is accessible to regular users due to missing authorization check."
     lang: "python"
     vuln: |
       # PODATNE — /order/confirm dostępny bez sprawdzenia statusu płatności
@@ -93,6 +98,7 @@ threats:
       - "CWE-840"
     desc: |
       Brak walidacji zakresu: ujemna ilość → ujemna cena → „zarobek”; ekstremalne liczby → overflow/DoS; manipulacja ceną po stronie klienta.
+    desc_en: "Workflow bypass: multi-step process (cart → payment → confirm) can be skipped by going directly to a later step — goods obtained without payment."
     lang: "python"
     vuln: |
       # PODATNE
@@ -109,6 +115,7 @@ threats:
       - "CWE-799"
     desc: |
       Brak limitów na akcje kosztowne/wrażliwe (wysyłka SMS, kody promo, rejestracje) → nadużycie finansowe/zasobowe.
+    desc_en: "Price or total manipulated client-side (in JS, hidden form field) and accepted server-side without re-validation — goods purchased at an attacker-controlled price."
     lang: "python"
     vuln: |
       # PODATNE — wysyłka SMS bez limitu na konto/IP
@@ -129,6 +136,7 @@ threats:
       - "CWE-294"
     desc: |
       Ponowne odtworzenie ważnego żądania (płatność, transfer, głos, webhook) bez nonce/timestamp/idempotency-key → podwójne obciążenie, duplikaty.
+    desc_en: "Account enumeration via login/registration/password reset responses that differ for existing vs non-existing accounts — enables targeted attacks."
     lang: "python"
     vuln: |
       # PODATNE — brak ochrony przed powtórzeniem
@@ -149,6 +157,7 @@ threats:
       - "CWE-840"
     desc: |
       Logika ufa czasowi/datom z klienta (data ważności kuponu, data zamówienia, harmonogram), albo nie obsługuje granic (wstecz/naprzód) — nadużycie promocji, ominięcie okien.
+    desc_en: "Insecure password reset: predictable token (username + timestamp), no expiry, token reuse, or reset link sent to an unverified email."
     lang: "python"
     vuln: |
       # PODATNE — data ważności z requestu
@@ -166,6 +175,7 @@ threats:
       - "CWE-799"
     desc: |
       Wielokrotne wykorzystanie kodu jednorazowego, łączenie promocji, self-referral, tworzenie wielu kont dla bonusu powitalnego — straty finansowe bez technicznej „luki”.
+    desc_en: "Email or phone not verified before activating account features — attacker registers with a victim's email and gains unauthorized access."
     lang: "python"
     vuln: |
       # PODATNE — brak limitu użycia na użytkownika, brak atomowości
@@ -184,6 +194,7 @@ threats:
       - "CWE-1339"
     desc: |
       Użycie float do pieniędzy, błędy zaokrąglania, niespójność walut/kursów, salami slicing (ułamki groszy). Drobne, ale kumulatywne straty/wyciek wartości.
+    desc_en: "Rate limiting missing: no throttle on login, OTP, API, or resource-intensive endpoint — brute force, credential stuffing, resource exhaustion."
     lang: "python"
     vuln: |
       # PODATNE — float do pieniędzy
@@ -202,6 +213,7 @@ threats:
       - "CWE-804"
     desc: |
       CAPTCHA weryfikowana po stronie klienta, reużywalny token, brak powiązania z akcją, lub można pominąć krok — automatyzacja rejestracji/spamu/scrapingu.
+    desc_en: "Inconsistent trust levels: frontend performs a security check that the backend does not — disabling JS or sending raw HTTP requests bypasses the control."
     lang: "python"
     vuln: |
       # PODATNE — token captcha nie jest weryfikowany serwerowo / reużywalny
@@ -345,6 +357,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Excessive data exposure" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -361,6 +374,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Coupon or discount abuse" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -377,6 +391,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing function-level access control" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -393,6 +408,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Business logic rate limiting bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -409,6 +425,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Referral fraud" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -425,6 +442,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure password reset logic" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -441,6 +459,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Loyalty point fraud" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -457,6 +476,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Business logic denial of service" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -473,6 +493,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Bidding system manipulation (e.g., last-second sniping)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -489,6 +510,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "State confusion" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -505,6 +527,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Business logic bypass via workflow manipulation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -521,6 +544,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Role confusion attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -537,6 +561,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Multi-step process bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -553,6 +578,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Fake order attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -569,6 +595,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficient flow control" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -585,6 +612,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Email verification bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -601,6 +629,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Time-of-check time-of-use (toctou)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -617,6 +646,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Mev sandwich attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -633,6 +663,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Double spending" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -649,6 +680,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cqrs command injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -665,6 +697,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "User enumeration via error messages" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -681,6 +714,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Business logic information leakage" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -697,6 +731,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficient workflow validation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -713,6 +748,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Quota enforcement bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -729,6 +765,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Hidden parameter manipulation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -745,6 +782,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Payment bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -761,6 +799,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unauthorized state transition" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -777,6 +816,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Async process race condition" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -793,6 +833,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dark pattern exploitation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -809,6 +850,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Feature usage limit abuse" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

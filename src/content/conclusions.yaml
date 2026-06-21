@@ -1,22 +1,43 @@
 conclusions:
   - title: "Podziel zagrożenia wg natury, nie tylko wg kategorii OWASP"
+    title_en: "Classify threats by nature, not just by OWASP category"
     body: |
       Są dwa fundamentalnie różne typy. <strong>Wzorcowe</strong> (pattern-based): injection, crypto API, eval, hardcoded secrets, config, deserializacja, znane CVE — tu klasyczny SAST/SCA jest mocny. <strong>Logiczne</strong> (semantic): authz/IDOR/BOLA, business logic, race/TOCTOU, workflow bypass, manipulacja wartości — tu klasyczne narzędzia zawodzą i potrzebny jest agent rozumiejący intencję kodu.
+    body_en: |
+      There are two fundamentally different types. <strong>Pattern-based</strong>: injection, crypto API, eval, hardcoded secrets, config, deserialization, known CVEs — classic SAST/SCA is strong here. <strong>Semantic/logic</strong>: authz/IDOR/BOLA, business logic, race/TOCTOU, workflow bypass, value manipulation — classic tools fail here; an agent that understands code intent is required.
   - title: "Łańcuchuj kontekst"
+    title_en: "Chain context"
     body: |
-      IDOR/mass assignment/authz są niewidoczne bez modelu danych i mapy „kto woła, jakie sprawdzenie poprzedza dostęp”. Agent powinien budować ten kontekst (graf wywołań + model uprawnień), zanim oceni zagrożenie.
+      IDOR/mass assignment/authz są niewidoczne bez modelu danych i mapy „kto woła, jakie sprawdzenie poprzedza dostęp". Agent powinien budować ten kontekst (graf wywołań + model uprawnień), zanim oceni zagrożenie.
+    body_en: |
+      IDOR/mass assignment/authz are invisible without a data model and a map of "who calls what, what check precedes access". An agent should build this context (call graph + permission model) before assessing a threat.
   - title: "Static-first, runtime-confirm"
+    title_en: "Static-first, runtime-confirm"
     body: |
       Większość kategorii wykrywaj statycznie, ale projektuj hooki na potwierdzenie runtime (DAST/testy międzykontowe) tam, gdzie static daje dużo false-positive: XSS kontekstowy, SSRF, BOLA, race.
+    body_en: |
+      Detect most categories statically, but design runtime confirmation hooks (DAST/cross-account tests) where static produces many false positives: contextual XSS, SSRF, BOLA, race conditions.
   - title: "Severity zależy od kontekstu, nie od typu"
+    title_en: "Severity depends on context, not type"
     body: |
       Ten sam IDOR jest Low (publiczny katalog) lub Critical (dane medyczne). Trzeba klasyfikować wrażliwość danych/zasobu, nie tylko rozpoznawać wzorzec.
+    body_en: |
+      The same IDOR is Low (public directory) or Critical (medical data). You must classify the sensitivity of the data/resource, not just recognize the pattern.
   - title: "Najwięcej realnych incydentów"
+    title_en: "Most real-world incidents"
     body: |
       pochodzi z: hardcoded secrets, vulnerable deps, broken authz (IDOR/BOLA), misconfiguration, injection. Priorytetyzuj te pięć — dają najlepszy stosunek pokrycia do impaktu.
+    body_en: |
+      come from: hardcoded secrets, vulnerable deps, broken authz (IDOR/BOLA), misconfiguration, injection. Prioritize these five — they yield the best coverage-to-impact ratio.
   - title: "Nowy front: łańcuch dostaw i AI"
+    title_en: "New frontier: supply chain and AI"
     body: |
       Dwie najszybciej rosnące klasy to <strong>supply chain</strong> (CI/CD, złośliwe Actions, slopsquatting paczek halucynowanych przez AI) oraz <strong>AI/LLM</strong> (prompt injection direct/indirect, insecure output handling, excessive agency). Klasyczny SAST ich nie zna — wymagają SCA z provenance oraz guardraili i red teamingu agentów.
+    body_en: |
+      The two fastest-growing classes are <strong>supply chain</strong> (CI/CD, malicious Actions, slopsquatting of AI-hallucinated packages) and <strong>AI/LLM</strong> (direct/indirect prompt injection, insecure output handling, excessive agency). Classic SAST does not recognize them — they require SCA with provenance, plus agent guardrails and red teaming.
   - title: "Trzy klasy wskazane niezależnie przez audyt (Claude, Gemini, DeepSeek)"
+    title_en: "Three classes independently identified by the AI audit (Claude, Gemini, DeepSeek)"
     body: |
       Trzy zespoły AI niezależnie uznały za kluczowe wydzielenie: <strong>Memory Safety</strong> (buffer/heap overflow, use-after-free, integer overflow → overflow, stack overflow — fundament CWE Top 25 dla C/C++/Rust/Go; wymaga sanitizerów i fuzzingu, nie tylko SAST); <strong>Insecure Deserialization</strong> (OWASP A08 — pickle/YAML/Java/PHP/.NET gadget chains; sink łatwy wzorcowo, ale eksploatowalność zależy od dostępnych gadżetów); <strong>DoS / Resource Exhaustion</strong> (ReDoS, zip/decompression bomb, billion laughs, hash flooding, brak rate limiting — asymetryczne ataki, gdzie małe wejście pochłania nieproporcjonalne zasoby).
+    body_en: |
+      Three AI teams independently identified as critical: <strong>Memory Safety</strong> (buffer/heap overflow, use-after-free, integer overflow, stack overflow — the foundation of CWE Top 25 for C/C++/Rust/Go; requires sanitizers and fuzzing, not just SAST); <strong>Insecure Deserialization</strong> (OWASP A08 — pickle/YAML/Java/PHP/.NET gadget chains; sink is easy to pattern-match, but exploitability depends on available gadgets); <strong>DoS / Resource Exhaustion</strong> (ReDoS, zip/decompression bomb, billion laughs, hash flooding, missing rate limiting — asymmetric attacks where small input consumes disproportionate resources).

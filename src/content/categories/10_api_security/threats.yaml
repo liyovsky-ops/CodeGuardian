@@ -9,6 +9,7 @@ threats:
       - "CWE-799"
     desc: |
       Brak limitu żądań umożliwia brute force, credential stuffing, scraping, DoS i abuse kosztowy. OWASP API #4 (Unrestricted Resource Consumption).
+    desc_en: "BOLA (Broken Object Level Authorization, OWASP API #1): the API accesses an object by user-provided ID without checking ownership — attacker reads/modifies other users' data."
     lang: "python"
     vuln: |
       # PODATNE — endpoint logowania bez limitu
@@ -29,6 +30,7 @@ threats:
       - "CWE-770"
     desc: |
       Włączona introspekcja w produkcji ujawnia cały schemat; brak limitu głębokości/złożoności pozwala na DoS zagnieżdżonymi zapytaniami; batching omija rate limity.
+    desc_en: "BFLA (Broken Function Level Authorization, OWASP API #5): regular user calls an admin-level API function — access not based on role, only on knowing the URL."
     lang: "text"
     vuln: |
       # PODATNE — introspection ON w prod, brak depth/complexity limit
@@ -45,6 +47,7 @@ threats:
       - "CWE-345"
     desc: |
       Endpoint webhooka (np. od Stripe/GitHub) ufa payloadowi bez weryfikacji HMAC/podpisu — atakujący podszywa się i fałszuje zdarzenia (np. „płatność OK”).
+    desc_en: "Excessive Data Exposure (OWASP API #3): API returns the full object (including password_hash, internal IDs, PII) leaving filtering to the client."
     lang: "python"
     vuln: |
       # PODATNE
@@ -63,6 +66,7 @@ threats:
       - "CWE-213"
     desc: |
       API zwraca więcej pól niż klient potrzebuje, licząc na filtrowanie po stronie klienta. OWASP API #3 (pokrywa się z 4.4).
+    desc_en: "Missing rate limiting on API endpoints — credential stuffing, brute force OTP, resource exhaustion via expensive queries."
     lang: "python"
     vuln: |
       # PODATNE — zwraca cały obiekt, filtrowanie po stronie klienta
@@ -81,6 +85,7 @@ threats:
       - "CWE-862"
     desc: |
       OWASP API #1 i #5 — szczegółowo w sekcji 2 (IDOR 2.2, missing function authz 2.6). Najczęstsze realne podatności API.
+    desc_en: "Unauthenticated GraphQL introspection in production — attacker maps the entire schema (types, mutations, queries), facilitating targeted attacks."
     lang: "python"
     vuln: |
       # brak przykładu
@@ -97,6 +102,7 @@ threats:
       - "CWE-1059"
     desc: |
       Nieużywane/stare wersje API (/v1/) pozostają aktywne bez łatek — „shadow/zombie API”. OWASP API #9 (Improper Inventory Management).
+    desc_en: "Missing or improperly implemented webhook signature verification — attacker sends forged webhooks triggering authorized actions."
     lang: "text"
     vuln: |
       # PODATNE — stara wersja API aktywna bez łatek
@@ -114,6 +120,7 @@ threats:
       - "CWE-918"
     desc: |
       OWASP API #7 — API przyjmujące URL od klienta. Szczegóły w 9.1.
+    desc_en: "Unsafe HTTP method used for state-changing operations: GET/HEAD modifies data — CSRF, URL-based replay, caching issues."
     lang: "python"
     vuln: |
       # brak przykładu
@@ -129,6 +136,7 @@ threats:
       - "CWE-915"
     desc: |
       OWASP API #6 (Mass Assignment / property-level authz). Szczegóły w 8.3.
+    desc_en: "API version without security controls: v1 endpoints lack authentication/authorization added in v2 — shadow API."
     lang: "python"
     vuln: |
       # brak przykładu
@@ -144,6 +152,7 @@ threats:
       - "CWE-352"
     desc: |
       Endpointy zmieniające stan akceptujące GET lub bez ochrony CSRF (gdy używane cookies) → CSRF.
+    desc_en: "GraphQL without depth/complexity limits — deeply nested query causes exponential resolver calls, crashing the server."
     lang: "python"
     vuln: |
       # PODATNE — mutacja przez GET, brak tokenu CSRF
@@ -165,6 +174,7 @@ threats:
       - "CWE-770"
     desc: |
       API przekazuje parametry klienta do wewnętrznego API bez sanityzacji (HPP — duplikaty parametrów interpretowane różnie), lub akceptuje nieograniczone batche/aliasy omijające limity.
+    desc_en: "API Mass Assignment: framework binds all JSON fields to the model — attacker sets `is_admin: true` or `balance: 9999`."
     lang: "python"
     vuln: |
       # PODATNE — surowe przekazanie query stringu do internal API
@@ -182,6 +192,7 @@ threats:
       - "CWE-1059"
     desc: |
       OWASP API #9 — endpointy debugowe, wewnętrzne, beta lub niedokumentowane wystawione publicznie; brak inwentaryzacji co działa i z jakimi danymi. (Rozszerza 10.6.)
+    desc_en: "Missing JWT validation on API: no signature verification, trusting `alg: none`, or not verifying `aud`/`iss` — forged token accepted."
     lang: "text"
     vuln: |
       # PODATNE — niedokumentowane/debug endpointy w prod
@@ -200,6 +211,7 @@ threats:
       - "CWE-918"
     desc: |
       OWASP API #10 — ślepe zaufanie danym z zewnętrznego API (brak walidacji odpowiedzi, follow-redirect do dowolnych URL, brak TLS/timeoutów) → injection/SSRF z odpowiedzi partnera.
+    desc_en: "Server-Side Request Forgery via API parameter: user-controlled URL triggers internal requests — access to cloud metadata, internal services."
     lang: "python"
     vuln: |
       # PODATNE — odpowiedź zewnętrznego API wprost do DB/HTML
@@ -218,6 +230,7 @@ threats:
       - "CWE-285"
     desc: |
       Brak kontroli autoryzacji na funkcji/endpoincie — użytkownik wywołuje akcje administracyjne.
+    desc_en: "Bot-scalping API: buying limited goods in bulk through rapid automated requests — missing CAPTCHA/rate limiting/token binding."
     lang: "python"
     vuln: |
       @app.route('/admin/delete/<id>')
@@ -238,6 +251,7 @@ threats:
       - "CWE-285"
     desc: |
       Brak kontroli autoryzacji na funkcji/endpoincie — użytkownik wywołuje akcje administracyjne.
+    desc_en: "Predictable resource ID (sequential integer, short UUID) enables enumeration of all objects — paired with BOLA for mass data exfiltration."
     lang: "python"
     vuln: |
       @app.route('/admin/delete/<id>')
@@ -529,6 +543,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api key leakage" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -545,6 +560,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Lack of resources & rate limiting" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -561,6 +577,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Injection (sql, nosql, ldap, os command)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -577,6 +594,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Injection flaws (sql, nosql, etc.)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -593,6 +611,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Credential stuffing" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -609,6 +628,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unvalidated redirects & forwards" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -625,6 +645,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficient logging and monitoring" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -641,6 +662,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure jwt implementation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -657,6 +679,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Broken authentication api" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -673,6 +696,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -689,6 +713,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Bola (idor in api)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -705,6 +730,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure api key storage" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -721,6 +747,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Deserialization attacks" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -737,6 +764,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Leaked api keys or secrets" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -753,6 +781,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Service mesh api bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -769,6 +798,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api abuse (bots, scraping)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -785,6 +815,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Session token in url" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -801,6 +832,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure transport layer (no tls)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -817,6 +849,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Long polling api dos" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -833,6 +866,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Man-in-the-middle (unencrypted)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -849,6 +883,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure default configuration" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -865,6 +900,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Protobuf injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -881,6 +917,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak or missing tls/ssl" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -897,6 +934,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api key rotation failure" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -913,6 +951,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Parameter tampering" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -929,6 +968,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api key in url" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -945,6 +985,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Hardcoded secrets in client" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -961,6 +1002,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api key exposure" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -977,6 +1019,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Accept header injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -993,6 +1036,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Django rest framework permission" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

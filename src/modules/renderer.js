@@ -2,11 +2,38 @@ import DOMPurify from 'dompurify';
 import { confidenceBadge, SEV, DIFF, PRISM_LANG } from './badges.js';
 import { $, $$ } from './dom.js';
 import { highlightElement } from './highlight.js';
+import { getLang } from '../i18n/index.js';
+import { UI } from '../i18n/ui.js';
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
+
+function catName(cat) {
+  const lang = getLang();
+  return lang === 'en' ? (cat.name_en || cat.name) : cat.name;
+}
+
+function catDesc(cat) {
+  const lang = getLang();
+  return lang === 'en' ? (cat.desc_en || cat.desc) : cat.desc;
+}
+
+function catVerdict(cat) {
+  const lang = getLang();
+  return lang === 'en' ? (cat.verdict_en || cat.verdict) : cat.verdict;
+}
+
+function threatDesc(t) {
+  const lang = getLang();
+  return lang === 'en' ? (t.desc_en || t.desc) : t.desc;
+}
+
+function threatNote(t) {
+  const lang = getLang();
+  return lang === 'en' ? (t.note_en || t.note) : t.note;
+}
 
 function severityBreakdown(threats) {
   const c = threats.filter((t) => t.severity === 'Critical').length;
@@ -26,15 +53,17 @@ function diffBreakdown(threats) {
 }
 
 export function buildSidebar(CATEGORIES) {
+  const lang = getLang();
   const nav = $('#sidebar-nav');
   nav.innerHTML = CATEGORIES.map((c) => {
     const counts = severityBreakdown(c.threats);
+    const threatCountLabel = UI.threatCount[lang](c.threats.length);
     return `
       <a class="side-link" href="#cat-${c.id}" data-cat="${c.id}" style="--accent:${c.color}">
         <span class="side-icon">${c.icon}</span>
         <span class="side-text">
-          <span class="side-name">${esc(c.name)}</span>
-          <span class="side-meta">${c.threats.length} zagrożeń</span>
+          <span class="side-name">${esc(catName(c))}</span>
+          <span class="side-meta">${esc(threatCountLabel)}</span>
         </span>
         <span class="side-count" title="Critical/High/Medium">${counts}</span>
       </a>`;
@@ -42,19 +71,25 @@ export function buildSidebar(CATEGORIES) {
 }
 
 export function buildHeroCards(CATEGORIES) {
+  const lang = getLang();
   const wrap = $('#hero-cards');
   wrap.innerHTML = CATEGORIES.map(
-    (c) => `
+    (c) => {
+      const catNumLabel = UI.catNum[lang](c.num);
+      const threatCountLabel = UI.threatCount[lang](c.threats.length);
+      return `
     <a class="cat-card" href="#cat-${c.id}" style="--accent:${c.color}">
       <span class="cat-card-icon">${c.icon}</span>
-      <span class="cat-card-num">Kategoria ${c.num}</span>
-      <span class="cat-card-name">${esc(c.name)}</span>
-      <span class="cat-card-count">${c.threats.length} zagrożeń · ${esc(c.difficulty)}</span>
-    </a>`
+      <span class="cat-card-num">${esc(catNumLabel)}</span>
+      <span class="cat-card-name">${esc(catName(c))}</span>
+      <span class="cat-card-count">${esc(threatCountLabel)} · ${esc(c.difficulty)}</span>
+    </a>`;
+    }
   ).join('');
 }
 
 export function threatCard(t, cat) {
+  const lang = getLang();
   const sev = SEV[t.severity] || SEV.Medium;
   const diffCls = DIFF[t.difficulty] || 'medium';
   const cweBadges = (t.cwe || [])
@@ -67,27 +102,32 @@ export function threatCard(t, cat) {
 
   const hasCode = t.vuln || t.safe;
   const refNote = t.ref
-    ? `<div class="ref-note">Szczegóły w sekcji <a href="#threat-${t.ref}" class="ref-link">${esc(t.ref)}</a></div>`
+    ? `<div class="ref-note">${lang === 'en' ? 'Details in section' : 'Szczegóły w sekcji'} <a href="#threat-${t.ref}" class="ref-link">${esc(t.ref)}</a></div>`
     : '';
-  const extraNote = t.note ? `<div class="threat-note">${esc(t.note)}</div>` : '';
+  const desc = threatDesc(t);
+  const note = threatNote(t);
+  const extraNote = note ? `<div class="threat-note">${esc(note)}</div>` : '';
 
   let codeBlock = '';
   if (hasCode) {
     const vlang = PRISM_LANG[t.lang] || 'none';
+    const vulnLabel = lang === 'en' ? 'Vulnerable code' : 'Podatny kod';
+    const safeLabel = lang === 'en' ? 'Secure code' : 'Bezpieczny kod';
+    const copyLabel = UI.copyBtn[lang];
     codeBlock = `
       <div class="code-area">
         <div class="tabs" role="tablist">
-          <button class="tab active" data-tab="vuln" role="tab">Podatny kod</button>
-          ${t.safe ? `<button class="tab" data-tab="safe" role="tab">Bezpieczny kod</button>` : ''}
+          <button class="tab active" data-tab="vuln" role="tab">${vulnLabel}</button>
+          ${t.safe ? `<button class="tab" data-tab="safe" role="tab">${safeLabel}</button>` : ''}
         </div>
         <div class="tab-panel active" data-panel="vuln">
-          <button class="copy-btn" title="Skopiuj przykład podatnego kodu">Kopiuj</button>
+          <button class="copy-btn" title="${lang === 'en' ? 'Copy vulnerable code example' : 'Skopiuj przykład podatnego kodu'}">${copyLabel}</button>
           <pre class="line-numbers"><code class="language-${vlang}">${esc(t.vuln)}</code></pre>
         </div>
         ${
           t.safe
             ? `<div class="tab-panel" data-panel="safe">
-                 <button class="copy-btn" title="Skopiuj bezpieczny kod">Kopiuj</button>
+                 <button class="copy-btn" title="${lang === 'en' ? 'Copy secure code example' : 'Skopiuj bezpieczny kod'}">${copyLabel}</button>
                  <pre class="line-numbers"><code class="language-${vlang}">${esc(t.safe)}</code></pre>
                </div>`
             : ''
@@ -112,7 +152,7 @@ export function threatCard(t, cat) {
         </span>
       </header>
       <div class="threat-body">
-        <p class="threat-desc">${esc(t.desc)}</p>
+        <p class="threat-desc">${esc(desc)}</p>
         ${extraNote}
         <div class="cwe-row">${cweBadges}</div>
         ${codeBlock}
@@ -122,20 +162,24 @@ export function threatCard(t, cat) {
 }
 
 export function buildCategories(CATEGORIES) {
+  const lang = getLang();
   const main = $('#categories');
   main.innerHTML = CATEGORIES.map((cat) => {
     const diffSummary = diffBreakdown(cat.threats);
+    const threatCountLabel = UI.threatCount[lang](cat.threats.length);
+    const detectionLabel = UI.detectionDiff[lang];
+    const verdictLabel = UI.staticRuntime[lang];
     return `
     <section class="category" id="cat-${cat.id}" style="--accent:${cat.color}">
       <div class="cat-header">
         <div class="cat-title-row">
           <span class="cat-icon">${cat.icon}</span>
-          <h2>${cat.num}. ${esc(cat.name)}</h2>
-          <span class="cat-pill">${cat.threats.length} zagrożeń</span>
+          <h2>${cat.num}. ${esc(catName(cat))}</h2>
+          <span class="cat-pill">${esc(threatCountLabel)}</span>
         </div>
-        <p class="cat-desc">${esc(cat.desc)}</p>
+        <p class="cat-desc">${esc(catDesc(cat))}</p>
         <div class="cat-meta">
-          <span class="cat-difficulty">Trudność wykrycia: <strong>${esc(cat.difficulty)}</strong></span>
+          <span class="cat-difficulty">${esc(detectionLabel)}: <strong>${esc(cat.difficulty)}</strong></span>
           <span class="cat-diffsummary">${diffSummary}</span>
         </div>
       </div>
@@ -143,8 +187,8 @@ export function buildCategories(CATEGORIES) {
         ${cat.threats.map((t) => threatCard(t, cat)).join('')}
       </div>
       <div class="cat-verdict">
-        <span class="verdict-label">Static vs runtime</span>
-        <p>${esc(cat.verdict)}</p>
+        <span class="verdict-label">${esc(verdictLabel)}</span>
+        <p>${esc(catVerdict(cat))}</p>
       </div>
     </section>`;
   }).join('');

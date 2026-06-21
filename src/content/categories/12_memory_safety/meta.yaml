@@ -6,5 +6,9 @@ color: "#e599f7"
 difficulty: "Medium → Hard"
 desc: |
   Błędy zarządzania pamięcią w językach bez automatycznego GC (C/C++, Rust unsafe, Go z cgo/unsafe). Bufor, wskaźnik, indeks poza granicą = uszkodzenie pamięci, które prowadzi do RCE, eskalacji uprawnień lub wycieku danych. Korzeń klasy CWE Top 25 (Out-of-bounds Write/Read, UAF).
+desc_en: |
+  Memory management flaws in languages without automatic GC (C/C++, Rust unsafe, Go with cgo/unsafe). Buffer, pointer, or out-of-bounds index = memory corruption leading to RCE, privilege escalation, or data leakage. Root of the CWE Top 25 class (Out-of-bounds Write/Read, UAF).
 verdict: |
   Wzorce wywołań niebezpiecznych (strcpy/gets/sprintf, malloc bez sprawdzenia rozmiaru) łapie SAST. Realny dowód eksploatowalności (UAF, double-free, OOB) wymaga sanitizerów runtime (ASan/UBSan/MSan) i fuzzingu (libFuzzer/AFL++). Static wskazuje podejrzane miejsca; runtime potwierdza.
+verdict_en: |
+  Patterns of unsafe calls (strcpy/gets/sprintf, malloc without size check) are caught by SAST. Real proof of exploitability (UAF, double-free, OOB) requires runtime sanitizers (ASan/UBSan/MSan) and fuzzing (libFuzzer/AFL++). Static identifies suspicious spots; runtime confirms.

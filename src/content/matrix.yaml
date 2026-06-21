@@ -4,68 +4,138 @@ matrix:
     - "Easy–Medium"
     - "Zwykle tak"
     - "SAST taint analysis (+ DAST do potwierdzenia)"
+    cells_en:
+    - "1. Injection"
+    - "Easy–Medium"
+    - "Usually yes"
+    - "SAST taint analysis (+ DAST to confirm)"
   - cells:
     - "2. AuthN/AuthZ"
     - "Hard–Very Hard"
     - "Nie"
     - "Threat modeling + runtime (testy międzykontowe)"
+    cells_en:
+    - "2. AuthN/AuthZ"
+    - "Hard–Very Hard"
+    - "No"
+    - "Threat modeling + runtime (cross-account tests)"
   - cells:
     - "3. Cryptography"
     - "Easy–Medium"
     - "Tak"
     - "SAST (wybór API + przepływ stałych) + secret scan"
+    cells_en:
+    - "3. Cryptography"
+    - "Easy–Medium"
+    - "Yes"
+    - "SAST (API choice + constant flow) + secret scan"
   - cells:
     - "4. Data Exposure"
     - "Medium–Hard"
     - "Częściowo"
     - "Secret scan + taint do logów + runtime na response"
+    cells_en:
+    - "4. Data Exposure"
+    - "Medium–Hard"
+    - "Partially"
+    - "Secret scan + taint to logs + runtime on response"
   - cells:
     - "5. Input Validation"
     - "Medium"
     - "Częściowo"
     - "SAST (sinki) + DAST (DOM XSS, ReDoS)"
+    cells_en:
+    - "5. Input Validation"
+    - "Medium"
+    - "Partially"
+    - "SAST (sinks) + DAST (DOM XSS, ReDoS)"
   - cells:
     - "6. Supply Chain"
     - "Easy (CVE)–Hard (malware)"
     - "Tak dla CVE"
     - "SCA + reputacja/sandbox dla malware"
+    cells_en:
+    - "6. Supply Chain"
+    - "Easy (CVE)–Hard (malware)"
+    - "Yes for CVE"
+    - "SCA + reputation/sandbox for malware"
   - cells:
     - "7. Configuration"
     - "Easy–Medium"
     - "Tak (repo)"
     - "SAST/IaC scan + skan produkcji"
+    cells_en:
+    - "7. Configuration"
+    - "Easy–Medium"
+    - "Yes (repo)"
+    - "SAST/IaC scan + production scan"
   - cells:
     - "8. Business Logic"
     - "Very Hard"
     - "Nie"
     - "Threat modeling + manual + testy współbieżności"
+    cells_en:
+    - "8. Business Logic"
+    - "Very Hard"
+    - "No"
+    - "Threat modeling + manual review + concurrency tests"
   - cells:
     - "9. Infra & Code"
     - "Medium–Hard"
     - "Częściowo"
     - "SAST sinki + fuzzing/sanitizery (memory)"
+    cells_en:
+    - "9. Infra & Code"
+    - "Medium–Hard"
+    - "Partially"
+    - "SAST sinks + fuzzing/sanitizers (memory)"
   - cells:
     - "10. API Security"
     - "Medium–Very Hard"
     - "Nie dla authz"
     - "SAST wzorce + DAST/discovery"
+    cells_en:
+    - "10. API Security"
+    - "Medium–Very Hard"
+    - "No for authz"
+    - "SAST patterns + DAST/discovery"
   - cells:
     - "11. AI / LLM Security"
     - "Hard–Very Hard"
     - "Nie"
     - "Guardraile + red teaming + sandbox narzędzi"
+    cells_en:
+    - "11. AI / LLM Security"
+    - "Hard–Very Hard"
+    - "No"
+    - "Guardrails + red teaming + tool sandbox"
   - cells:
     - "12. Memory Safety"
     - "Medium–Hard"
     - "Częściowo"
     - "SAST (niebezpieczne API) + sanitizery (ASan/UBSan) + fuzzing"
+    cells_en:
+    - "12. Memory Safety"
+    - "Medium–Hard"
+    - "Partially"
+    - "SAST (unsafe API) + sanitizers (ASan/UBSan) + fuzzing"
   - cells:
     - "13. Insecure Deserialization"
     - "Easy–Hard"
     - "Tak (sink)"
     - "SAST taint do sinków + manualna analiza gadget chains"
+    cells_en:
+    - "13. Insecure Deserialization"
+    - "Easy–Hard"
+    - "Yes (sink)"
+    - "SAST taint to sinks + manual gadget chain analysis"
   - cells:
     - "14. DoS / Resource Exhaustion"
     - "Medium–Hard"
     - "Częściowo"
     - "SAST (regex/limity) + load test/fuzzing dla progu DoS"
+    cells_en:
+    - "14. DoS / Resource Exhaustion"
+    - "Medium–Hard"
+    - "Partially"
+    - "SAST (regex/limits) + load test/fuzzing for DoS threshold"

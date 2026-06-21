@@ -9,6 +9,7 @@ threats:
       - "CWE-1427"
     desc: |
       OWASP LLM01. Użytkownik wstrzykuje instrukcje, które nadpisują system prompt („ignore previous instructions”), wyciągają system prompt, omijają guardraile lub zmieniają zachowanie agenta.
+    desc_en: "Direct prompt injection: user input overrides or modifies LLM instructions — the model ignores system rules, reveals internal prompts, or executes unauthorized actions."
     lang: "python"
     vuln: |
       # PODATNE — input użytkownika sklejony z instrukcją systemową, brak separacji
@@ -28,6 +29,7 @@ threats:
       - "CWE-829"
     desc: |
       OWASP LLM01. Złośliwe instrukcje ukryte w treści zewnętrznej (strona WWW, PDF, e-mail, dokument RAG), którą model przetwarza — model wykonuje je jak polecenia (exfiltracja danych, wywołanie narzędzi).
+    desc_en: "Indirect prompt injection: malicious instructions embedded in data retrieved by the LLM (web page, email, document) — agent reads the content and executes attacker instructions."
     lang: "python"
     vuln: |
       # PODATNE — pobrana treść trafia do modelu z dostępem do narzędzi
@@ -46,6 +48,7 @@ threats:
       - "CWE-94"
     desc: |
       OWASP LLM05. Wyjście modelu (potencjalnie sterowane przez atakującego) trafia do niebezpiecznego sinka bez walidacji: innerHTML (XSS), eval/exec (RCE), zapytanie SQL (SQLi), polecenie shell.
+    desc_en: "Insecure LLM output handling: LLM output placed in a sink (innerHTML, eval(), SQL) without sanitization — XSS, SQLi, or RCE from LLM response."
     lang: "javascript"
     vuln: |
       // PODATNE — odpowiedź LLM wprost do DOM / eval
@@ -65,6 +68,7 @@ threats:
       - "CWE-862"
     desc: |
       OWASP LLM06. Agent ma narzędzia/uprawnienia szersze niż potrzeba (kasowanie danych, wysyłka pieniędzy, dostęp do całej bazy) i działa autonomicznie — prompt injection zamienia się w realne szkody.
+    desc_en: "LLM agent with excessive permissions: tool can delete files, send emails, call external APIs without human confirmation — prompt injection leads to data loss or exfiltration."
     lang: "python"
     vuln: |
       # PODATNE — agent z pełnym dostępem, akcje bez potwierdzenia
@@ -84,6 +88,7 @@ threats:
       - "CWE-201"
     desc: |
       OWASP LLM02. Model ujawnia dane z system promptu, kontekstu RAG innego tenanta, danych treningowych lub sekretów wstrzykniętych do promptu. Brak izolacji danych między użytkownikami.
+    desc_en: "Training data poisoning: adversarial examples injected into the training set — model learns incorrect behaviors or contains backdoors triggered by specific inputs."
     lang: "python"
     vuln: |
       # PODATNE — sekrety i dane innych w kontekście, brak filtrowania wyjścia
@@ -102,6 +107,7 @@ threats:
       - "CWE-345"
     desc: |
       OWASP LLM03/LLM04. Atakujący wprowadza złośliwe/fałszywe dane do zbioru treningowego, fine-tuningu lub bazy wektorowej RAG — model uczy się backdoorów, biasu lub serwuje zatrute odpowiedzi.
+    desc_en: "Model Denial of Service: sending crafted inputs that maximize token consumption or cause recursive processing — excessive API costs or availability degradation."
     lang: "python"
     vuln: |
       # PODATNE — indeksowanie treści z nieufnych źródeł bez weryfikacji
@@ -119,6 +125,7 @@ threats:
       - "CWE-770"
     desc: |
       OWASP LLM10. Brak limitów na długość/liczbę zapytań i koszt tokenów — DoS portfela (kosztowne wywołania), zapętlenie agenta, ekstrakcja modelu przez masowe odpytywanie.
+    desc_en: "Sensitive data in prompt: system prompt contains API keys, internal URLs, credentials, or PII — retrievable via prompt injection or model extraction."
     lang: "python"
     vuln: |
       # PODATNE — brak limitu tokenów/żądań/iteracji agenta
@@ -137,6 +144,7 @@ threats:
       - "CWE-862"
     desc: |
       OWASP LLM07. Narzędzia/pluginy agenta przyjmują parametry sterowane przez model bez walidacji (free-text do shell/SQL/HTTP), brak authz w samym narzędziu — prompt injection przechodzi prosto w injection klasyczne.
+    desc_en: "Supply chain in AI/ML: using an untrusted model from HuggingFace Hub or a malicious pickle of model weights — malicious code in the deserialization step."
     lang: "python"
     vuln: |
       # PODATNE — narzędzie wykonuje surowy string od modelu
@@ -156,6 +164,7 @@ threats:
       - "CWE-200"
     desc: |
       Klucz do dostawcy LLM zaszyty w kodzie frontendu/mobile lub wystawiony przez nieograniczony proxy — kradzież klucza, generowanie kosztów na cudzy rachunek.
+    desc_en: "Insufficient sandboxing of LLM-generated code: model generates Python/JS/shell code that is immediately executed without isolation — arbitrary code execution."
     lang: "javascript"
     vuln: |
       // PODATNE — klucz w kodzie klienta
@@ -173,6 +182,7 @@ threats:
       - "CWE-1395"
     desc: |
       Zatrucie danych treningowych (backdoor/bias) wpływa na zachowanie modelu.
+    desc_en: "Jailbreak: crafted prompts bypass the model's safety guardrails — generation of prohibited content, model behavior inconsistent with intended use."
     lang: "python"
     vuln: |
       data = scrape_web(urls)  # bez kuracji
@@ -191,6 +201,7 @@ threats:
       - "CWE-250"
     desc: |
       Agent LLM ma zbyt szerokie uprawnienia/narzędzia — może wykonać szkodliwe akcje.
+    desc_en: "RAG (Retrieval-Augmented Generation) data poisoning: malicious document injected into the knowledge base — influences LLM responses from the retrieval context."
     lang: "python"
     vuln: |
       agent = Agent(tools=[shell, delete_db, send_email, transfer_money])
@@ -206,6 +217,7 @@ threats:
       - "CWE-1426"
     desc: |
       Ślepe zaufanie wyjściu LLM (kod/fakty) prowadzi do błędów lub eksploatacji halucynacji (np. slopsquatting paczek).
+    desc_en: "LLM hallucination leading to insecure code: model generates vulnerable code (eval, concatenation, weak crypto) presented as correct — developer uses it without review."
     lang: "python"
     vuln: |
       pkg = llm('jaką paczkę zainstalować?')
@@ -395,6 +407,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Context window overflow" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -411,6 +424,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Training data extraction" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -427,6 +441,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Supply chain vulnerabilities" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -443,6 +458,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Prompt leaking" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -459,6 +475,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Jailbreaking via adversarial prompts" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -475,6 +492,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Side-channel extraction" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -491,6 +509,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Llamaindex rag poisoning" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -507,6 +526,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Resource exhaustion attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -523,6 +543,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Backdoor attacks in models" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -539,6 +560,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Model stealing" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -555,6 +577,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ssrf via llm tools" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -571,6 +594,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Backdooring ai models" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -587,6 +611,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Model extraction attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -603,6 +628,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sandboxed tool bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -619,6 +645,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Embedding space manipulation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -635,6 +662,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Multimodal trojan attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -651,6 +679,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Role play jailbreak" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -667,6 +696,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Vector embedding manipulation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -683,6 +713,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Agent orchestration bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -699,6 +730,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Memory store poisoning" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -715,6 +747,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Llm plugin xss" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -731,6 +764,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Api abuse via llm" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -747,6 +781,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Tool call injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -763,6 +798,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sleeper agent activation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -779,6 +815,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Rlhf poisoning" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -795,6 +832,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Multimodal injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -811,6 +849,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Multi-agent collusion" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -827,6 +866,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Constitutional ai bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -843,6 +883,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Context window manipulation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -859,6 +900,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Token manipulation" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

@@ -8,6 +8,7 @@ threats:
       - "CWE-79"
     desc: |
       Nieufny input zapisany i później wyrenderowany w HTML bez escapingu — wykonuje się u każdego, kto zobaczy treść.
+    desc_en: "Reflected XSS: unsanitized user input returned in an HTTP response is executed as JavaScript in the victim's browser. Stored XSS: persistent in DB, executes for each visitor."
     lang: "python"
     vuln: |
       # PODATNE — render bez escapingu
@@ -25,6 +26,7 @@ threats:
       - "CWE-79"
     desc: |
       Input z requestu odbity natychmiast w odpowiedzi bez escapingu (np. komunikat wyszukiwania).
+    desc_en: "Path traversal: `../` sequences in file paths allow reading files outside the intended directory (e.g., /etc/passwd, source code)."
     lang: "python"
     vuln: |
       # PODATNE
@@ -42,6 +44,7 @@ threats:
       - "CWE-79"
     desc: |
       JS na froncie zapisuje nieufne dane do DOM przez niebezpieczny sink (innerHTML, document.write, eval).
+    desc_en: "ReDoS: a regex with exponential backtracking (nested quantifiers) causes the engine to hang on crafted input — CPU DoS with a small string."
     lang: "javascript"
     vuln: |
       // PODATNE
@@ -59,6 +62,7 @@ threats:
       - "CWE-22"
     desc: |
       Nieufny input w ścieżce pliku z ../ pozwala czytać/zapisać pliki poza katalogiem (np. /etc/passwd, klucze).
+    desc_en: "DOM-based XSS: data flows from a DOM source (location.search, document.referrer) to a sink (innerHTML, eval) without server involvement — harder to detect with DAST."
     lang: "python"
     vuln: |
       # PODATNE
@@ -80,6 +84,7 @@ threats:
       - "CWE-400"
     desc: |
       Regex z katastrofalnym backtrackingiem (zagnieżdżone kwantyfikatory) na nieufnym wejściu zawiesza CPU.
+    desc_en: "File upload without validation of content (MIME sniff, magic bytes) and extension — attacker uploads a web shell (.php, .aspx) and executes it."
     lang: "python"
     vuln: |
       # PODATNE — (a+)+ na długim wejściu
@@ -98,6 +103,7 @@ threats:
       - "CWE-191"
     desc: |
       Operacje arytmetyczne przekraczają zakres typu (krytyczne w C/C++/Rust unsafe, Go, kontraktach Solidity), prowadząc do złych alokacji, bypassów limitów. W Pythonie int jest nieograniczony, ale ryzyko przy interop/serializacji/buforach.
+    desc_en: "Open redirect: `url`, `next`, `redirect` parameter used without validation redirects to an attacker's domain — phishing, OAuth token theft."
     lang: "c"
     vuln: |
       // PODATNE (C)
@@ -115,6 +121,7 @@ threats:
       - "CWE-704"
     desc: |
       Traktowanie danych jako innego typu niż faktyczny (np. tablica zamiast stringa w parametrze), prowadzące do bypassu walidacji lub błędów logiki. Częste w PHP (loose ==), JS i przy deserializacji.
+    desc_en: "Clickjacking: the page can be embedded in an iframe on an attacker's site — user clicks a button that actually performs an action on the legitimate site."
     lang: "php"
     vuln: |
       // PODATNE (PHP) — loose comparison
@@ -133,6 +140,7 @@ threats:
       - "CWE-770"
     desc: |
       Brak limitu rozmiaru body/uploadu/liczby elementów — wyczerpanie pamięci/dysku.
+    desc_en: "Type coercion: PHP `==` (loose comparison) or JavaScript `==` converts types before comparing — `'0' == false`, `'1e0' == 1`, `md5('240610708') == '0'` bypass auth checks."
     lang: "python"
     vuln: |
       # PODATNE — brak limitu rozmiaru żądania
@@ -150,6 +158,7 @@ threats:
       - "CWE-434"
     desc: |
       Brak walidacji typu/zawartości uploadu — wgranie pliku wykonywalnego (.php/.jsp), webshell, lub pliku serwowanego z błędnym Content-Type. Walidacja samego rozszerzenia jest obchodzona.
+    desc_en: "Unicode normalization: two visually identical strings (e.g., café vs cafe\\u0301) compare differently — bypass of allowlist filters or duplicate-key attacks."
     lang: "python"
     vuln: |
       # PODATNE — ufa rozszerzeniu, zapis do web-root
@@ -170,6 +179,7 @@ threats:
       - "CWE-430"
     desc: |
       Plik SVG zawiera <script> i wykonuje się przy wyświetleniu; pliki polyglot (ważny obraz + HTML/JS); brak X-Content-Type-Options pozwala przeglądarce „zgadnąć” typ i wykonać.
+    desc_en: "Mass assignment: binding all request fields to a model object allows setting privileged fields (is_admin, price, balance) not intended for user control."
     lang: "python"
     vuln: |
       # PODATNE — SVG serwowany inline z domeny aplikacji
@@ -188,6 +198,7 @@ threats:
       - "CWE-180"
     desc: |
       Bypass filtrów przez normalizację Unicode (różne reprezentacje tego samego znaku), homoglify (а vs a), null byte (%00) ucinający string, over-long UTF-8. Walidacja przed normalizacją ≠ po.
+    desc_en: "XML External Entity: the parser expands XXE entities declared in the DTD — reads local files, performs SSRF, or causes DoS (billion laughs)."
     lang: "python"
     vuln: |
       # PODATNE — walidacja przed normalizacją + null byte
@@ -205,6 +216,7 @@ threats:
       - "CWE-79"
     desc: |
       HTML przepuszczony przez sanitizer jest później re-parsowany przez przeglądarkę inaczej (innerHTML round-trip), reaktywując ładunek. Częste przy łączeniu serwerowej sanityzacji z klienckim innerHTML.
+    desc_en: "Integer overflow: arithmetic exceeds the type's capacity — in C/Java int (32-bit) `2147483647 + 1 = -2147483648`; in Python 3 it's safe (arbitrary precision), but Rust/C/Go are at risk."
     lang: "javascript"
     vuln: |
       // PODATNE — sanityzacja, potem round-trip przez innerHTML
@@ -222,6 +234,7 @@ threats:
       - "CWE-602"
     desc: |
       Walidacja wyłącznie w JS/HTML (maxlength, required, regex) — trywialnie omijana (curl/Burp). Serwer musi walidować każdy input niezależnie.
+    desc_en: "Large or nested JSON/XML causes quadratic or exponential processing — zip bomb, billion laughs, deeply nested objects crash the parser."
     lang: "python"
     vuln: |
       # PODATNE — serwer ufa, że klient zwalidował
@@ -241,6 +254,7 @@ threats:
       - "CWE-787"
     desc: |
       Kopiowanie inputu bez sprawdzenia długości nadpisuje pamięć poza buforem (RCE/crash).
+    desc_en: "Overly permissive CORS: Access-Control-Allow-Origin: * or trusting any Origin header — allows a malicious site to read responses from APIs."
     lang: "c"
     vuln: |
       char buf[64];
@@ -258,6 +272,7 @@ threats:
       - "CWE-95"
     desc: |
       Nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji.
+    desc_en: "Server-Side Request Forgery in input validation context: file URL or internal IP in a `url` parameter causes the server to fetch internal resources."
     lang: "python"
     vuln: |
       def calc(expr):
@@ -280,6 +295,7 @@ threats:
       - "CWE-78"
     desc: |
       Nieufny input trafia do polecenia powłoki — atakujący wykonuje dowolne komendy.
+    desc_en: "CSRF: a malicious site forges a request to an authenticated API — cookie is automatically attached, the action is executed on behalf of the victim."
     lang: "python"
     vuln: |
       import os
@@ -628,6 +644,7 @@ threats:
       - "CWE-643"
     desc: |
       Nieufny input konkatenowany do wyrażenia XPath zmienia jego logikę (np. bypass auth).
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "python"
     vuln: |
       q = "//user[name='" + name + "' and pass='" + pw + "']"
@@ -642,6 +659,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -658,6 +676,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Format string vulnerability" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -674,6 +693,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml injection (including xxe)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -690,6 +710,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure deserialization" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -706,6 +727,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Heap overflow" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -722,6 +744,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Url encoding bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -738,6 +761,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ocr bypass attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -754,6 +778,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Javascript == coercion bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -770,6 +795,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Input fuzzing edge cases" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -786,6 +812,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Format string injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -802,6 +829,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Latex injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -818,6 +846,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Input length bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -834,6 +863,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Json schema bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -850,6 +880,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml deserialization attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -866,6 +897,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Exif metadata injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -882,6 +914,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ruby symbol dos" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -898,6 +931,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Image steganography bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -914,6 +948,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Toml injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -930,6 +965,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Array injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -946,6 +982,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pdf payload hidden input" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -962,6 +999,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cookie injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -978,6 +1016,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Csv macro injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -994,6 +1033,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Graphql query depth attack" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1010,6 +1050,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python type coercion bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1026,6 +1067,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Postscript injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1042,6 +1084,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Invisible character injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1058,6 +1101,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dom-based xss" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1074,6 +1118,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python ast.literal_eval bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1090,6 +1135,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Zero-width character bypass" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1106,6 +1152,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dom-based cross-site scripting" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

@@ -89,4 +89,6 @@ export function initFilters(CATEGORIES) {
 
   // Initial apply to hide RESEARCH by default
   apply();
+
+  return apply;
 }

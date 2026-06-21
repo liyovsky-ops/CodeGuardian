@@ -6,5 +6,9 @@ color: "#b197fc"
 difficulty: "Hard → Very Hard"
 desc: |
   Zagrożenia specyficzne dla aplikacji integrujących modele językowe (LLM), agentów i RAG. Wyrównane do OWASP Top 10 for LLM Applications (2025). Nowa, szybko rosnąca klasa — klasyczny SAST jej nie zna.
+desc_en: |
+  Threats specific to applications integrating large language models (LLMs), agents, and RAG. Aligned to the OWASP Top 10 for LLM Applications (2025). A new, rapidly growing class — classic SAST does not recognize it.
 verdict: |
   Najnowsza i najtrudniejsza do wykrycia statycznie klasa. Wzorcowe: brak sanityzacji outputu LLM przed sinkiem (eval/HTML/SQL), nadmiarowe uprawnienia narzędzi agenta, sekrety w promptach — Medium. Prompt injection (direct/indirect) i nadużycia agentowe — Very Hard, wymagają testów adwersarialnych (red teaming) i guardraili runtime.
+verdict_en: |
+  The newest and hardest class to detect statically. Pattern-based: missing LLM output sanitization before a sink (eval/HTML/SQL), excessive agent tool permissions, secrets in prompts — Medium. Prompt injection (direct/indirect) and agent abuse — Very Hard, requiring adversarial testing (red teaming) and runtime guardrails.

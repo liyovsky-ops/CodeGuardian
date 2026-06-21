@@ -6,5 +6,9 @@ color: "#ff8787"
 difficulty: "Very Hard"
 desc: |
   Błędy w samej logice aplikacji — najtrudniejsze, bo nie ma „złego API”. Kod jest poprawny składniowo i działa, ale logika pozwala na nadużycie.
+desc_en: |
+  Flaws in the application logic itself — the hardest to detect because there is no “bad API”. The code is syntactically correct and works, but the logic allows for abuse.
 verdict: |
   Najtrudniejsza kategoria. Wyjątek: insecure deserialization (Easy — pickle.loads/yaml.load to wzorzec) i mass assignment (Medium). Reszta wymaga zrozumienia intencji systemu. Race condition jest niewidoczna w pojedynczej ścieżce kodu. To główny obszar przewagi agenta LLM nad SAST.
+verdict_en: |
+  The hardest category. Exceptions: insecure deserialization (Easy — pickle.loads/yaml.load are patterns) and mass assignment (Medium). The rest requires understanding the system's intent. Race conditions are invisible in a single code path. This is the primary area where an LLM agent outperforms SAST.

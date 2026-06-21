@@ -6,5 +6,9 @@ color: "#4dabf7"
 difficulty: "Medium → Hard"
 desc: |
   Ujawnienie danych wrażliwych przez logi, błędy, odpowiedzi API, repozytoria. Niski „spektakl”, wysoki realny impakt (RODO/GDPR, wyciek poświadczeń).
+desc_en: |
+  Exposure of sensitive data through logs, errors, API responses, and repositories. Low “spectacle”, high real-world impact (GDPR, credential leakage).
 verdict: |
   Sekrety i logowanie znanych pól (password, token) — Easy (regex/entropy/taint do logger). Hard: rozpoznanie co jest PII/wrażliwe w danym kontekście, over-posting. Secret scanning i taint-do-logów: static. Over-posting w realnych odpowiedziach: najlepiej runtime + klasyfikacja danych.
+verdict_en: |
+  Secrets and logging of known fields (password, token) — Easy (regex/entropy/taint to logger). Hard: recognizing what is PII/sensitive in context, over-posting. Secret scanning and taint-to-logs: static. Over-posting in real responses: best with runtime + data classification.

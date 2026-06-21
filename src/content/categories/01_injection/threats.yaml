@@ -8,6 +8,7 @@ threats:
       - "CWE-89"
     desc: |
       Nieufny input trafia do zapytania SQL przez konkatenację stringów, pozwalając atakującemu zmienić strukturę zapytania (wyciek, modyfikacja, bypass auth).
+    desc_en: "Untrusted input is concatenated into a SQL query, allowing an attacker to alter the query structure (data leak, modification, auth bypass)."
     lang: "python"
     vuln: |
       # PODATNE — konkatenacja
@@ -21,6 +22,7 @@ threats:
           q = "SELECT * FROM users WHERE name = %s"
           return conn.execute(q, (username,)).fetchall()
     note: "ORMy nie chronią automatycznie — Model.objects.raw(), .extra(), text() w SQLAlchemy, raw fragmenty nadal są podatne."
+    note_en: "ORMs do not protect automatically — Model.objects.raw(), .extra(), text() in SQLAlchemy, and raw fragments are still vulnerable."
   - id: "1.2"
     name: "NoSQL Injection"
     severity: "High"
@@ -30,6 +32,7 @@ threats:
       - "CWE-943"
     desc: |
       Wstrzyknięcie operatorów zapytań (np. MongoDB $gt, $ne, $where) gdy input jest deserializowany jako obiekt zapytania. Częste w API przyjmujących JSON.
+    desc_en: "Injection of query operators (e.g., MongoDB $gt, $ne, $where) when input is deserialized as a query object. Common in APIs accepting JSON."
     lang: "python"
     vuln: |
       # PODATNE — JSON body trafia wprost do filtra
@@ -48,6 +51,7 @@ threats:
       - "CWE-78"
     desc: |
       Nieufny input trafia do polecenia powłoki, pozwalając na wykonanie dowolnych komend systemowych.
+    desc_en: "Untrusted input reaches a shell command, allowing an attacker to execute arbitrary OS commands."
     lang: "python"
     vuln: |
       # PODATNE — shell=True + konkatenacja
@@ -67,6 +71,7 @@ threats:
       - "CWE-90"
     desc: |
       Wstrzyknięcie metaznaków filtra LDAP (*, (, ), \) do zapytania directory, omijając filtry auth.
+    desc_en: "Injection of LDAP filter metacharacters (*, (, ), \\) into a directory query, bypassing authentication filters."
     lang: "python"
     vuln: |
       # PODATNE
@@ -85,6 +90,7 @@ threats:
       - "CWE-643"
     desc: |
       Wstrzyknięcie składni XPath do zapytania nad XML, pozwalające ominąć logikę lub wyciągnąć cały dokument.
+    desc_en: "Injection of XPath syntax into an XML query, allowing auth bypass or extraction of the entire document."
     lang: "python"
     vuln: |
       # PODATNE
@@ -102,6 +108,7 @@ threats:
       - "CWE-94"
     desc: |
       Nieufny input trafia jako szablon (nie jako dane szablonu) do silnika (Jinja2, Twig, Freemarker), co prowadzi do RCE przez dostęp do obiektów Pythona.
+    desc_en: "Untrusted input is passed as a template (not as template data) to a template engine (Jinja2, Twig, Freemarker), leading to RCE via access to Python objects."
     lang: "python"
     vuln: |
       # PODATNE — input jako string szablonu
@@ -120,6 +127,7 @@ threats:
       - "CWE-117"
     desc: |
       Nieufny input ze znakami nowej linii / sekwencjami ANSI trafia do logów, pozwalając fałszować wpisy, wstrzykiwać do SIEM, lub XSS w logach. Szczególny przypadek: Log4Shell — interpolacja ${jndi:...}.
+    desc_en: "Untrusted input containing newline characters or ANSI sequences reaches log entries, enabling log forging, SIEM injection, or XSS in log viewers. Special case: Log4Shell — ${jndi:...} interpolation."
     lang: "python"
     vuln: |
       # PODATNE
@@ -129,6 +137,7 @@ threats:
       # BEZPIECZNE — sanityzuj newline / loguj strukturalnie
       logger.info("Login failed", extra={"user": username.replace("\n"," ").replace("\r"," ")})
     note: "Severity rośnie do High jeśli interpolacja typu Log4Shell."
+    note_en: "Severity escalates to High if Log4Shell-style interpolation is present."
   - id: "1.8"
     name: "CRLF / HTTP Response Splitting / Header Injection"
     severity: "High"
@@ -139,6 +148,7 @@ threats:
       - "CWE-113"
     desc: |
       Nieufny input ze znakami \r\n trafia do nagłówka HTTP/odpowiedzi, pozwalając wstrzyknąć dodatkowe nagłówki, ciasteczka lub rozbić odpowiedź (cache poisoning, XSS).
+    desc_en: "Untrusted input with \\r\\n characters reaches an HTTP header or response, allowing injection of additional headers, cookies, or response splitting (cache poisoning, XSS)."
     lang: "python"
     vuln: |
       # PODATNE — input do nagłówka bez sanityzacji
@@ -158,6 +168,7 @@ threats:
       - "CWE-644"
     desc: |
       Aplikacja ufa nagłówkowi Host przy budowie linków (reset hasła) lub routingu — atakujący podstawia własną domenę (password reset poisoning, cache poisoning).
+    desc_en: "The application trusts the Host header when building links (password reset) or routing — an attacker substitutes their own domain (password reset poisoning, cache poisoning)."
     lang: "python"
     vuln: |
       # PODATNE — link resetu z nagłówka Host
@@ -175,6 +186,7 @@ threats:
       - "CWE-93"
     desc: |
       Wstrzyknięcie nagłówków (Bcc, Cc, To) przez znaki nowej linii w polach formularza — wykorzystanie serwera do spamu/phishingu.
+    desc_en: "Injection of headers (Bcc, Cc, To) via newline characters in form fields — exploiting the server for spam or phishing."
     lang: "python"
     vuln: |
       # PODATNE
@@ -193,6 +205,7 @@ threats:
       - "CWE-1236"
     desc: |
       Eksport do CSV/XLSX z polami zaczynającymi się od =,+,-,@ — Excel/Sheets wykonuje je jako formuły (exfiltracja danych, wywołanie poleceń DDE).
+    desc_en: "CSV/XLSX export with fields starting with =, +, -, @ — Excel/Sheets executes them as formulas (data exfiltration, DDE command execution)."
     lang: "python"
     vuln: |
       # PODATNE — pole użytkownika wprost do CSV
@@ -212,6 +225,7 @@ threats:
       - "CWE-89"
     desc: |
       SQLi przez fragmenty raw przekazane do ORM (order_by, filter z raw, annotate) lub second-order: dane zapisane bezpiecznie, ale później użyte w surowym zapytaniu.
+    desc_en: "SQLi via raw fragments passed to ORM (order_by, raw filter, annotate) or second-order: data stored safely but later used in a raw query."
     lang: "python"
     vuln: |
       # PODATNE — nazwa kolumny sortowania z requestu
@@ -233,6 +247,7 @@ threats:
       - "CWE-943"
     desc: |
       Wstrzyknięcie do resolverów GraphQL, które budują zapytania do backendu (SQL/NoSQL) z argumentów, lub konkatenacja argumentów w zapytaniu.
+    desc_en: "Injection into GraphQL resolvers that build backend queries (SQL/NoSQL) from arguments, or argument concatenation in a query."
     lang: "javascript"
     vuln: |
       // PODATNE — argument GraphQL wprost do SQL
@@ -251,6 +266,7 @@ threats:
       - "CWE-918"
     desc: |
       Wymieniony w tej kategorii zgodnie ze strukturą raportu, ale szczegółowo omówiony w 9.1 Infrastructure.
+    desc_en: "Listed in this category per report structure, but covered in detail in section 9.1 Infrastructure."
     lang: "python"
     vuln: |
       # brak przykładu
@@ -267,6 +283,7 @@ threats:
       - "CWE-113"
     desc: |
       Niezfiltrowane znaki CR/LF (\r\n) w nagłówkach HTTP/SMTP pozwalają wstrzyknąć dodatkowe nagłówki lub rozdzielić odpowiedź.
+    desc_en: "Unfiltered CR/LF (\\r\\n) characters in HTTP/SMTP headers allow injection of additional headers or response splitting."
     lang: "python"
     vuln: |
       # PODATNE — surowy input do nagłówka
@@ -295,6 +312,7 @@ threats:
       - "CWE-917"
     desc: |
       Wstrzyknięcie wyrażenia EL/SpEL ewaluowanego przez kontener (np. Spring) prowadzi do wykonania kodu.
+    desc_en: "Injection of an EL/SpEL expression evaluated by the container (e.g., Spring) leads to code execution."
     lang: "java"
     vuln: |
       // PODATNE — input ewaluowany jako SpEL
@@ -314,6 +332,7 @@ threats:
       - "CWE-917"
     desc: |
       OGNL injection (np. w Struts) — wyrażenie OGNL z inputu jest wykonywane przez framework, dając RCE.
+    desc_en: "OGNL injection (e.g., in Struts) — an OGNL expression from user input is executed by the framework, resulting in RCE."
     lang: "java"
     vuln: |
       // PODATNE — wartość parametru interpretowana jako OGNL (Struts S2)
@@ -333,6 +352,7 @@ threats:
       - "CWE-94"
     desc: |
       Nieufny input trafia do silnika szablonów jako część szablonu, nie jako dane — atakujący wykonuje kod po stronie serwera.
+    desc_en: "Untrusted input reaches the template engine as part of the template, not as data — an attacker executes code server-side."
     lang: "python"
     vuln: |
       # PODATNE — render_template_string z user inputem
@@ -357,6 +377,7 @@ threats:
       - "CWE-652"
     desc: |
       Nieufny input konkatenowany do zapytania XQuery zmienia jego strukturę (analogicznie do SQLi dla XML).
+    desc_en: "Untrusted input concatenated into an XQuery changes its structure — analogous to SQLi for XML databases."
     lang: "java"
     vuln: |
       String q = "for $u in //user[name='" + name + "'] return $u";
@@ -376,6 +397,7 @@ threats:
       - "CWE-95"
     desc: |
       Nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji.
+    desc_en: "Untrusted input passed to eval/exec is executed as application code."
     lang: "python"
     vuln: |
       def calc(expr):
@@ -398,6 +420,7 @@ threats:
       - "CWE-78"
     desc: |
       Nieufny input trafia do polecenia powłoki — atakujący wykonuje dowolne komendy.
+    desc_en: "Untrusted input reaches a shell command — an attacker executes arbitrary commands."
     lang: "python"
     vuln: |
       import os
@@ -417,6 +440,7 @@ threats:
       - "CWE-113"
     desc: |
       Niezfiltrowane znaki CR/LF (\r\n) w nagłówkach HTTP/SMTP pozwalają wstrzyknąć dodatkowe nagłówki lub rozdzielić odpowiedź.
+    desc_en: "Unfiltered CR/LF (\\r\\n) characters in HTTP/SMTP headers allow injection of additional headers or response splitting."
     lang: "python"
     vuln: |
       # PODATNE — surowy input do nagłówka
@@ -446,6 +470,7 @@ threats:
       - "CWE-95"
     desc: |
       Nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji.
+    desc_en: "Untrusted input passed to eval/exec is executed as application code."
     lang: "python"
     vuln: |
       def calc(expr):
@@ -469,6 +494,7 @@ threats:
       - "CWE-80"
     desc: |
       Nieoczyszczony input wstawiony do HTML pozwala wstrzyknąć znaczniki (np. formularz phishingowy) nawet bez skryptów.
+    desc_en: "Unsanitized input inserted into HTML allows tag injection (e.g., a phishing form) even without scripts."
     lang: "javascript"
     vuln: |
       el.innerHTML = "Witaj " + userName; // userName="<form action=//evil>"
@@ -484,6 +510,7 @@ threats:
       - "CWE-113"
     desc: |
       Niezfiltrowane znaki CR/LF (\r\n) w nagłówkach HTTP/SMTP pozwalają wstrzyknąć dodatkowe nagłówki lub rozdzielić odpowiedź.
+    desc_en: "Unfiltered CR/LF (\\r\\n) characters in HTTP/SMTP headers allow injection of additional headers or response splitting."
     lang: "python"
     vuln: |
       # PODATNE — surowy input do nagłówka
@@ -512,6 +539,7 @@ threats:
       - "CWE-235"
     desc: |
       Zduplikowane parametry są różnie interpretowane przez warstwy aplikacji, co pozwala obejść walidację/WAF.
+    desc_en: "Duplicated parameters are interpreted differently by application layers, allowing validation or WAF bypass."
     lang: "javascript"
     vuln: |
       // ?role=user&role=admin — bierze ostatni
@@ -529,6 +557,7 @@ threats:
       - "CWE-78"
     desc: |
       Nieufny input trafia do polecenia powłoki — atakujący wykonuje dowolne komendy.
+    desc_en: "Untrusted input reaches a shell command — an attacker executes arbitrary commands."
     lang: "python"
     vuln: |
       import os
@@ -548,6 +577,7 @@ threats:
       - "CWE-611"
     desc: |
       Parser XML rozwija encje zewnętrzne/wstrzyknięte (XXE) — odczyt plików, SSRF, DoS.
+    desc_en: "The XML parser expands external/injected entities (XXE) — file read, SSRF, DoS."
     lang: "python"
     vuln: |
       import xml.etree.ElementTree as ET
@@ -566,6 +596,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Client-side template injection (csti)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -582,6 +613,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xslt injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -598,6 +630,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Prompt injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -614,6 +647,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dom-based xss" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -630,6 +664,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -646,6 +681,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Json injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -662,6 +698,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Reflected xss" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -678,6 +715,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Argument injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -694,6 +732,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Stored xss" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -710,6 +749,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Jndi injection (java naming and directory interface)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -726,6 +766,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe) injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -742,6 +783,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Cross-site scripting (xss)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -758,6 +800,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Path traversal / directory traversal" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -774,6 +817,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Svg injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -790,6 +834,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Formula injection (csv)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -806,6 +851,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Regex injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -822,6 +868,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xsl injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -838,6 +885,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Prototype pollution" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -854,6 +902,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Header injection (http)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -870,6 +919,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Integer overflow injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -886,6 +936,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Http parameter injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -902,6 +953,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Perl open() injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -918,6 +970,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Smtp injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -934,6 +987,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Zip slip injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -950,6 +1004,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Null byte injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -966,6 +1021,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Mutation xss (mxss)" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -982,6 +1038,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sparql injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -998,6 +1055,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pdf injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1014,6 +1072,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Odata injection" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
@@ -1030,6 +1089,7 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Freemarker ssti" wskazane w analizie arena.
+    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu

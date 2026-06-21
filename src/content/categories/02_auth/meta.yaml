@@ -6,5 +6,9 @@ color: "#ffa94d"
 difficulty: "Hard → Very Hard"
 desc: |
   Authentication = „kim jesteś”. Authorization = „co ci wolno”. Najgroźniejsze błędy aplikacyjne — często niewidoczne dla SAST, bo to logika, nie wzorzec.
+desc_en: |
+  Authentication = “who you are”. Authorization = “what you're allowed to do”. The most dangerous application flaws — often invisible to SAST because they are logic, not patterns.
 verdict: |
   To logika domenowa. SAST nie wie, że Invoice.get(id) powinno sprawdzać własność. Wykrywalne wzorce: verify_signature:False, alg:none, cookie bez flag, hardcoded JWT secret. Reszta wymaga modelu uprawnień. IDOR/BOLA/BFLA wykrywa się najlepiej runtime (testy z dwoma kontami).
+verdict_en: |
+  This is domain logic. SAST does not know that Invoice.get(id) should check ownership. Detectable patterns: verify_signature:False, alg:none, cookie without flags, hardcoded JWT secret. The rest requires a permission model. IDOR/BOLA/BFLA are best detected at runtime (two-account tests).

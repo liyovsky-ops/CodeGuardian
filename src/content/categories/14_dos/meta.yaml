@@ -6,5 +6,9 @@ color: "#ff6b6b"
 difficulty: "Medium → Hard"
 desc: |
   Atakujący nakłania aplikację do zużycia nieproporcjonalnej ilości CPU, pamięci, dysku lub połączeń małym wejściem (asymmetric/amplification DoS). Korzeń: brak limitów na rozmiar, złożoność i koszt operacji na nieufnym wejściu.
+desc_en: |
+  An attacker causes the application to consume a disproportionate amount of CPU, memory, disk, or connections with a small input (asymmetric/amplification DoS). Root cause: missing limits on size, complexity, and cost of operations on untrusted input.
 verdict: |
   Część wykrywalna wzorcowo: katastrofalne regexy (analiza wzorca), extractall bez walidacji, parser XML z DTD, brak MAX_CONTENT_LENGTH/timeoutów. Realny próg DoS (ile wejścia wystarczy) potwierdza najlepiej runtime/load test i fuzzing. Static wskazuje brak limitu; runtime mierzy podatność.
+verdict_en: |
+  Partially detectable by pattern: catastrophic regexes (pattern analysis), extractall without validation, XML parser with DTD, missing MAX_CONTENT_LENGTH/timeouts. The actual DoS threshold (how much input is enough) is best confirmed with runtime/load testing and fuzzing. Static identifies missing limits; runtime measures exploitability.
