@@ -1,57 +1,67 @@
-# 🛡️ Code Guardian
+# Code Guardian
 
-Kompletny atlas zagrożeń bezpieczeństwa kodu — interaktywna strona referencyjna dla
-developerów (junior → senior) i security engineerów.
+An interactive security threat atlas for developers and security engineers — from junior to architect level.
 
-## Co to jest
+**Live:** https://liyovsky-ops.github.io/CodeGuardian/
 
-Statyczna strona prezentująca **10 kategorii** i **70+ konkretnych zagrożeń** bezpieczeństwa
-aplikacji (OWASP aligned). Dla każdego zagrożenia:
+## What is it
 
-- nazwa, opis, identyfikator (np. `2.2`),
-- **severity badge** (🔴 Critical / 🟠 High / 🟡 Medium / 🔵 Low),
-- **trudność wykrycia** (Easy / Medium / Hard / Very Hard),
-- klikalne **CWE** (link do cwe.mitre.org),
-- zakładki **Podatny kod** / **Bezpieczny kod** z podświetlaniem składni,
-- przycisk **kopiowania** przykładu.
+A static site covering **14 threat categories** and **789 concrete vulnerabilities** (OWASP aligned), built as a developer reference and portfolio project. Each threat includes:
 
-Dodatkowo: macierz wykrywalności (static vs runtime) oraz wnioski dla developerów.
+- Name, description, and confidence rating (Confirmed / Probable / Needs research)
+- **Severity badge** — Critical / High / Medium / Low
+- **Detection difficulty** — Easy / Medium / Hard / Very Hard
+- Clickable **CWE** links (cwe.mitre.org)
+- **Vulnerable** and **Secure** code tabs with syntax highlighting
+- One-click **copy** for code examples
 
-## Funkcje UX
+Also includes: a detectability matrix (static vs runtime) and developer conclusions.
 
-- Sticky sidebar z kategoriami + licznikami (desktop), hamburger menu (mobile)
-- Wyszukiwarka + filtry po severity i trudności
-- Rozwijane karty (collapsible), pasek postępu czytania, „back to top”
-- Dark / light mode (zapamiętywany)
-- Deep-linki (np. `#threat-2.2`) automatycznie otwierają kartę
+## Features
 
-## Uruchomienie
-
-Otwórz `index.html` w przeglądarce. Działa przez `file://`, bez serwera i bez npm.
-
-```
-xdg-open index.html        # Linux
-start index.html           # Windows
-```
+- Sticky sidebar with category nav + severity counters (desktop), hamburger menu (mobile)
+- Full-text search + filters by severity and difficulty
+- Collapsible threat cards, reading progress bar, back-to-top
+- Dark / light mode (persisted in localStorage)
+- Deep links (e.g. `#cat-injection`) auto-scroll to category
+- EN / PL language switcher
+- Research threats toggle — hide unverified threats by default
 
 ## Stack
 
-Vanilla HTML / CSS / JS. Podświetlanie składni: **Prism.js** (CDN, z autoloaderem;
-gdy CDN niedostępny — kod wyświetla się czytelnie jako zwykły monospace).
+**Vite** · **Vanilla JS** (ES modules) · **YAML** content pipeline · **Prism.js** (bundled, no CDN) · **DOMPurify** · **Vitest**
 
-## Struktura
+## Project structure
 
 ```
 CodeGuardian/
-  index.html          # szkielet strony
-  assets/
-    data.js           # baza zagrożeń (źródło: SECURITY_THREATS.md)
-    app.js            # render + interaktywność
-    style.css         # style (dark/light, responsive)
-  README.md
+  src/
+    content/categories/   # 14 × (meta.yaml + threats.yaml) — all threat data
+    data/                 # JS importers per category
+    modules/              # renderer, filters, interactions, theme, clipboard, highlight, dom, badges
+    i18n/                 # EN/PL UI strings
+    __tests__/            # unit tests (vitest)
+    app.js                # bootstrap
+    style.css
+  index.html
+  vite.config.js
+  .github/workflows/      # deploy to GitHub Pages on push
 ```
 
-## Źródło wiedzy
+## Local development
 
-Cała treść pochodzi z `SECURITY_THREATS.md` (War Room). Przykłady „PODATNE” są
-wyłącznie ilustracyjne — **nie używać w produkcji**.
+```bash
+npm install
+npm run dev       # dev server → http://localhost:5173
+npm run build     # production build → dist/
+npm test          # run unit tests
+```
+
+## Security note
+
+All **VULNERABLE** code examples are illustrative only — never use in production.
+
+Threat confidence levels:
+- **Confirmed** — validated by multiple sources
+- **Probable** — likely real, needs testing
+- **Needs research** — theoretical / requires further investigation
