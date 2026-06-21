@@ -1,0 +1,238 @@
+/* =========================================================================
+   Code Guardian — Guide / Legend page
+   Full-screen overlay panel. Inherits Code Guardian's theme tokens.
+   Accent: INDIGO (#6366f1) — neutral, not a severity color.
+   ========================================================================= */
+
+body.guide-lock { overflow: hidden; }
+
+/* ---------- panel shell ---------- */
+#guide-page {
+  position: fixed; inset: 0; z-index: 300;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity var(--t), transform var(--t);
+}
+#guide-page.open { opacity: 1; pointer-events: auto; transform: none; }
+
+.guide-topbar {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 14px;
+  height: var(--topbar-h); padding: 0 24px;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+}
+.guide-brand {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 700; letter-spacing: -0.3px; color: var(--text);
+}
+.guide-brand svg { color: var(--accent); }
+.guide-topbar-title {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #6366f1;
+  padding: 4px 10px; border-radius: 100px;
+  border: 1px solid rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.08);
+}
+.guide-close {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 12px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-dim);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--t);
+}
+.guide-close:hover { border-color: #6366f1; color: #6366f1; background: rgba(99, 102, 241, 0.08); }
+
+/* ---------- shell: nav + body ---------- */
+.guide-shell { flex: 1; display: flex; min-height: 0; }
+
+.guide-nav {
+  width: 232px; flex-shrink: 0;
+  padding: 20px 12px; overflow-y: auto;
+  background: var(--bg-alt);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.guide-nav-link {
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text-dim);
+  border-left: 2px solid transparent;
+  transition: all var(--t);
+}
+.guide-nav-link:hover { color: var(--text); background: var(--surface); text-decoration: none; }
+.guide-nav-link.active {
+  color: #6366f1; background: rgba(99, 102, 241, 0.10);
+  border-left-color: #6366f1; font-weight: 600;
+}
+
+.guide-body {
+  flex: 1; min-width: 0; overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* ---------- sections ---------- */
+.guide-section {
+  max-width: 920px; margin: 0 auto;
+  padding: 40px 40px 8px;
+  scroll-margin-top: 24px;
+}
+.guide-h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+.guide-section-lead { font-size: 14px; color: var(--text-dim); margin-bottom: 24px; max-width: 720px; line-height: 1.65; }
+
+/* ---------- hero ---------- */
+.guide-hero { padding: 24px 0 8px; }
+.guide-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #6366f1;
+  padding: 5px 12px; border-radius: 100px;
+  border: 1px solid rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.08);
+  margin-bottom: 20px;
+}
+.guide-eyebrow svg { color: #6366f1; }
+.guide-hero h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.05; margin-bottom: 12px; }
+.guide-grad {
+  background: linear-gradient(90deg, #6366f1, #818cf8);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.guide-subtitle { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 18px; }
+.guide-lead { font-size: 16px; color: var(--text-dim); line-height: 1.75; max-width: 720px; }
+
+/* ---------- sample card example ---------- */
+.guide-card-example {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px; margin-bottom: 28px;
+}
+.guide-card-example-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.guide-card-example-spacer { flex: 1; }
+.guide-card-example-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.guide-card-example-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.guide-card-example-caption { font-size: 12px; color: var(--text-faint); font-style: italic; }
+
+.guide-mock-id {
+  font-family: var(--mono); font-size: 13px; font-weight: 700; color: #6366f1;
+  background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25);
+  padding: 2px 8px; border-radius: 4px;
+}
+.guide-mock-name { font-size: 15px; font-weight: 700; color: var(--text); }
+.guide-mock-deep {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 6px;
+  font-size: 14px; font-weight: 700; color: #6366f1;
+  background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3);
+}
+.guide-mock-tab {
+  font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 6px;
+}
+.guide-mock-tab.vuln { color: var(--sev-critical); background: rgba(255, 77, 94, 0.12); border: 1px solid rgba(255, 77, 94, 0.3); }
+.guide-mock-tab.safe { color: var(--diff-easy); background: rgba(81, 207, 102, 0.12); border: 1px solid rgba(81, 207, 102, 0.3); }
+
+/* ---------- anatomy list ---------- */
+.guide-anatomy {
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  background: var(--surface);
+}
+.guide-anatomy-row {
+  display: grid; grid-template-columns: 180px 1fr; gap: 18px; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--border-soft);
+}
+.guide-anatomy-row:last-child { border-bottom: none; }
+.guide-anatomy-preview { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.guide-anatomy-mark { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.guide-anatomy-desc { font-size: 13px; color: var(--text-dim); line-height: 1.55; }
+
+/* ---------- level rows (severity / difficulty / confidence) ---------- */
+.guide-levels { display: flex; flex-direction: column; gap: 12px; }
+.guide-level-row {
+  display: grid; grid-template-columns: 200px 1fr; gap: 18px; align-items: start;
+  padding: 16px 18px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+}
+.guide-level-badge { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.guide-level-badge .badge { font-size: 12px; padding: 4px 12px; }
+.guide-level-cvss, .guide-level-who, .guide-level-key {
+  font-size: 11px; color: var(--text-faint); font-family: var(--mono);
+}
+.guide-level-meaning { font-size: 13.5px; color: var(--text-dim); line-height: 1.6; }
+.guide-level-example { font-size: 12.5px; color: var(--text-faint); margin-top: 8px; }
+.guide-level-example span { font-weight: 700; color: var(--text-dim); }
+
+/* ---------- callouts ---------- */
+.guide-callout {
+  padding: 14px 16px; border-radius: var(--radius-sm); font-size: 13.5px; color: var(--text-dim);
+  background: rgba(99, 102, 241, 0.06); border-left: 3px solid #6366f1;
+  margin-bottom: 18px; line-height: 1.6;
+}
+.guide-callout.warn { background: rgba(255, 77, 94, 0.06); border-left-color: var(--sev-critical); margin-top: 18px; margin-bottom: 0; }
+.guide-callout strong { color: var(--text); }
+
+/* ---------- prose / CWE ---------- */
+.guide-prose p { font-size: 14px; color: var(--text-dim); line-height: 1.75; margin-bottom: 16px; }
+.guide-prose code {
+  font-family: var(--mono); font-size: 12.5px; color: #6366f1;
+  background: rgba(99, 102, 241, 0.08); padding: 1px 6px; border-radius: 4px;
+}
+.guide-cwe-demo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 14px 16px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 13px; color: var(--text-dim);
+}
+.guide-cwe-demo .badge.cwe { font-size: 12px; padding: 4px 10px; }
+.guide-cwe-demo code { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+
+/* ---------- prioritization ---------- */
+.guide-prio { display: flex; flex-direction: column; gap: 10px; }
+.guide-prio-row {
+  display: grid; grid-template-columns: 200px 230px 1fr; gap: 16px; align-items: center;
+  padding: 14px 18px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+}
+.guide-prio-row.now { border-left-color: var(--sev-critical); }
+.guide-prio-row.soon { border-left-color: var(--sev-high); }
+.guide-prio-row.next { border-left-color: var(--sev-medium); }
+.guide-prio-row.backlog { border-left-color: var(--sev-low); }
+.guide-prio-label { font-size: 14px; font-weight: 700; }
+.guide-prio-rule { font-size: 12.5px; color: var(--text); font-family: var(--mono); }
+.guide-prio-note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; }
+
+/* ---------- about the data ---------- */
+.guide-data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.guide-data-card {
+  padding: 18px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  transition: border-color var(--t);
+}
+.guide-data-card:hover { border-color: #6366f1; }
+.guide-data-card h4 { font-size: 14px; font-weight: 800; color: #6366f1; margin-bottom: 8px; }
+.guide-data-card p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+
+/* ---------- footer ---------- */
+.guide-footer {
+  max-width: 920px; margin: 48px auto 0; padding: 24px 40px 48px;
+  font-size: 12px; color: var(--text-faint); border-top: 1px solid var(--border);
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 860px) {
+  .guide-nav {
+    width: 100%; flex-direction: row; overflow-x: auto; gap: 6px;
+    padding: 10px 16px; border-right: none; border-bottom: 1px solid var(--border);
+  }
+  .guide-shell { flex-direction: column; }
+  .guide-nav-link { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; }
+  .guide-nav-link.active { border-left: none; border-bottom-color: #6366f1; }
+  .guide-anatomy-row { grid-template-columns: 1fr; gap: 8px; }
+  .guide-level-row { grid-template-columns: 1fr; gap: 10px; }
+  .guide-prio-row { grid-template-columns: 1fr; gap: 6px; }
+}
+@media (max-width: 560px) {
+  .guide-section { padding: 28px 18px 8px; }
+  .guide-topbar { padding: 0 14px; gap: 10px; }
+  .guide-topbar-title { display: none; }
+  .guide-close span { display: none; }
+  .guide-footer { padding: 24px 18px 40px; }
+}
