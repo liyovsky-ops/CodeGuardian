@@ -11,6 +11,8 @@ import { initTheme } from './modules/theme.js';
 import { initClipboard } from './modules/clipboard.js';
 import { initInteractions, wireDynamicInteractions } from './modules/interactions.js';
 import { initLang } from './modules/lang.js';
+import { initSqliPage } from './modules/sqli-page.js';
+import './sqli-page.css';
 
 import { CATEGORIES } from './data/index.js';
 import { getMatrix } from './data/matrix.js';
@@ -141,6 +143,7 @@ try {
   initTheme();
   initInteractions(CATEGORIES);
   initLang(render);
+  initSqliPage();
 } catch (err) {
   console.error('[CodeGuardian] Bootstrap failed:', err);
   const main = document.querySelector('main') || document.body;

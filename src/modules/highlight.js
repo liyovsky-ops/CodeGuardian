@@ -6,6 +6,9 @@ window.Prism.manual = true;
 import 'prismjs/components/prism-python';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-clike'; // required by java
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-go';
 import 'prismjs/components/prism-markup-templating'; // required by php
 import 'prismjs/components/prism-php';
 import 'prismjs/components/prism-json';
