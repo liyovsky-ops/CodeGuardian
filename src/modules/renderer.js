@@ -4,6 +4,9 @@ import { $, $$ } from './dom.js';
 import { highlightElement } from './highlight.js';
 import { getLang } from '../i18n/index.js';
 import { UI } from '../i18n/ui.js';
+import { openSqliPage } from './sqli-page.js';
+
+const DEEPDIVE_THREATS = { '1.1': openSqliPage };
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>
@@ -136,6 +139,12 @@ export function threatCard(t, cat) {
   }
 
   const confCls = t.confidence === 'RESEARCH' ? ' conf-research' : '';
+  const deepDiveBtn = DEEPDIVE_THREATS[t.id]
+    ? `<button class="deepdive-btn" data-threat-id="${esc(t.id)}" title="${lang === 'en' ? 'Open deep-dive' : 'Otwórz szczegóły'}" aria-label="${lang === 'en' ? 'Open SQL Injection deep-dive' : 'Otwórz szczegóły SQL Injection'}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        <span>${lang === 'en' ? 'Deep-dive' : 'Szczegóły'}</span>
+      </button>`
+    : '';
   return `
     <article class="threat${confCls}" id="threat-${t.id}"
              data-sev="${t.severity}" data-diff="${t.difficulty}"
@@ -146,6 +155,7 @@ export function threatCard(t, cat) {
         <span class="badges">
           <span class="badge badge-${sev.cls}">${esc(t.severity)}</span>
           <span class="badge diff ${diffCls}">${esc(t.difficulty)}</span>
+          ${deepDiveBtn}
         </span>
         <span class="chevron" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>

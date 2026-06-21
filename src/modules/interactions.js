@@ -1,6 +1,9 @@
 import { $, $$ } from './dom.js';
 import { highlightCard } from './renderer.js';
 import { SCROLL_ACTIVE_OFFSET, BACK_TO_TOP_THRESHOLD } from '../config.js';
+import { openSqliPage } from './sqli-page.js';
+
+const DEEPDIVE_HANDLERS = { '1.1': openSqliPage };
 
 function wireCollapsible() {
   $$('.threat-head').forEach((head) => {
@@ -90,9 +93,20 @@ function openAnchor() {
   }
 }
 
+function wireDeepDive() {
+  $$('.deepdive-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const handler = DEEPDIVE_HANDLERS[btn.dataset.threatId];
+      if (handler) handler();
+    });
+  });
+}
+
 export function wireDynamicInteractions() {
   wireCollapsible();
   wireTabs();
+  wireDeepDive();
   // Re-attach side-link close handlers (sidebar nav is rebuilt)
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('overlay');

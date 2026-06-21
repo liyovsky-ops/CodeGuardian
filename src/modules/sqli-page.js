@@ -634,6 +634,8 @@ function close() {
   document.body.classList.remove('sqli-lock');
 }
 
+export function openSqliPage() { open(); }
+
 export function initSqliPage() {
   _panel = $('#sqli-page');
   if (!_panel) return;
