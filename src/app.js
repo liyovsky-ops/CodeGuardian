@@ -13,6 +13,8 @@ import { initInteractions, wireDynamicInteractions } from './modules/interaction
 import { initLang } from './modules/lang.js';
 import { initSqliPage } from './modules/sqli-page.js';
 import './sqli-page.css';
+import { initNosqliPage } from './modules/nosqli-page.js';
+import './nosqli-page.css';
 
 import { CATEGORIES } from './data/index.js';
 import { getMatrix } from './data/matrix.js';
@@ -144,6 +146,7 @@ try {
   initInteractions(CATEGORIES);
   initLang(render);
   initSqliPage();
+  initNosqliPage();
 } catch (err) {
   console.error('[CodeGuardian] Bootstrap failed:', err);
   const main = document.querySelector('main') || document.body;

@@ -2,8 +2,9 @@ import { $, $$ } from './dom.js';
 import { highlightCard } from './renderer.js';
 import { SCROLL_ACTIVE_OFFSET, BACK_TO_TOP_THRESHOLD } from '../config.js';
 import { openSqliPage } from './sqli-page.js';
+import { openNosqliPage } from './nosqli-page.js';
 
-const DEEPDIVE_HANDLERS = { '1.1': openSqliPage };
+const DEEPDIVE_HANDLERS = { '1.1': openSqliPage, '1.2': openNosqliPage };
 
 function wireCollapsible() {
   $$('.threat-head').forEach((head) => {

@@ -5,8 +5,9 @@ import { highlightElement } from './highlight.js';
 import { getLang } from '../i18n/index.js';
 import { UI } from '../i18n/ui.js';
 import { openSqliPage } from './sqli-page.js';
+import { openNosqliPage } from './nosqli-page.js';
 
-const DEEPDIVE_THREATS = { '1.1': openSqliPage };
+const DEEPDIVE_THREATS = { '1.1': openSqliPage, '1.2': openNosqliPage };
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>
