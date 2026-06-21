@@ -106,7 +106,6 @@ export function wireDynamicInteractions() {
 }
 
 export function initInteractions(categories) {
-  wireDynamicInteractions();
   wireMobileMenu();
   wireScroll(categories);
 
