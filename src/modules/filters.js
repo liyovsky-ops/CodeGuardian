@@ -15,6 +15,16 @@ export function initFilters(CATEGORIES) {
   const diffSel = $('#filter-diff');
   const heroSearch = $('#hero-search');
   const noResults = $('#no-results');
+  const toggleResearchBtn = $('#toggle-research');
+  const researchCount = $('#research-count');
+
+  let showResearch = false;
+
+  // Count and display RESEARCH threats
+  const researchCards = $$('.threat.conf-research');
+  if (researchCount && researchCards.length > 0) {
+    researchCount.textContent = `(${researchCards.length})`;
+  }
 
   function apply() {
     const q = input.value.trim().toLowerCase();
@@ -26,6 +36,12 @@ export function initFilters(CATEGORIES) {
       const section = $('#cat-' + cat.id);
       let shown = 0;
       $$('.threat', section).forEach((card) => {
+        const isResearch = card.classList.contains('conf-research');
+        // RESEARCH cards are hidden if showResearch is false, regardless of other filters
+        if (isResearch && !showResearch) {
+          card.classList.add('hidden');
+          return;
+        }
         const name = card.dataset.name;
         const matchQ =
           !q ||
@@ -41,6 +57,14 @@ export function initFilters(CATEGORIES) {
       section.classList.toggle('hidden', shown === 0);
     });
     noResults.classList.toggle('hidden', visibleTotal > 0);
+  }
+
+  if (toggleResearchBtn) {
+    toggleResearchBtn.addEventListener('click', () => {
+      showResearch = !showResearch;
+      toggleResearchBtn.classList.toggle('active', !showResearch);
+      apply();
+    });
   }
 
   input.addEventListener('input', debounce(apply, SEARCH_DEBOUNCE_MS));
@@ -62,4 +86,7 @@ export function initFilters(CATEGORIES) {
     if (heroSearch) heroSearch.value = '';
     apply();
   });
+
+  // Initial apply to hide RESEARCH by default
+  apply();
 }

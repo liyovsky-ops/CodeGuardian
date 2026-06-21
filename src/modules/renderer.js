@@ -95,8 +95,9 @@ export function threatCard(t, cat) {
       </div>`;
   }
 
+  const confCls = t.confidence === 'RESEARCH' ? ' conf-research' : '';
   return `
-    <article class="threat" id="threat-${t.id}"
+    <article class="threat${confCls}" id="threat-${t.id}"
              data-sev="${t.severity}" data-diff="${t.difficulty}"
              data-name="${esc(t.name.toLowerCase())}" data-cat="${cat.id}">
       <header class="threat-head" tabindex="0" role="button" aria-expanded="false">
