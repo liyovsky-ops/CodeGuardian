@@ -335,6 +335,14 @@ function buildOverview() {
         <div class="sqli-metric"><div class="sqli-metric-k">A03:2021</div><div class="sqli-metric-v">OWASP Top 10</div></div>
         <div class="sqli-metric"><div class="sqli-metric-k">9</div><div class="sqli-metric-v">${lang === 'en' ? 'Attack variants' : 'Warianty ataku'}</div></div>
       </div>
+      <div class="sqli-sources">
+        <span class="sqli-sources-label">${lang === 'en' ? 'Verified sources:' : 'Zweryfikowane źródła:'}</span>
+        <a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener" class="sqli-source-link">OWASP A03:2021</a>
+        <a href="https://cwe.mitre.org/data/definitions/89.html" target="_blank" rel="noopener" class="sqli-source-link">CWE-89 (MITRE)</a>
+        <a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener" class="sqli-source-link">OWASP Prevention Cheat Sheet</a>
+        <a href="https://nvd.nist.gov/vuln/search/results?query=sql+injection&search_type=all" target="_blank" rel="noopener" class="sqli-source-link">NIST NVD</a>
+        <a href="https://portswigger.net/web-security/sql-injection" target="_blank" rel="noopener" class="sqli-source-link">PortSwigger Academy</a>
+      </div>
     </div>
   </section>`;
 }
@@ -435,9 +443,16 @@ function buildIncidents() {
       <div class="sqli-incident-nums"><span class="sqli-incident-impact">${esc(i.impact)}</span><span class="sqli-incident-cost">${esc(i.cost)}</span></div>
       <p>${i[lang]}</p>
     </article>`).join('');
+  const sources = `<div class="sqli-inline-sources">${lang === 'en' ? 'Sources:' : 'Źródła:'}
+    <a href="https://www.justice.gov/usao-nj/pr/payment-processor-hacker-sentenced-20-years-prison" target="_blank" rel="noopener">Heartland (DOJ)</a>
+    <a href="https://www.ftc.gov/news-events/news/press-releases/2014/08/ftc-files-complaint-against-wyndham-hotels" target="_blank" rel="noopener">FTC enforcement</a>
+    <a href="https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/2016/10/talktalk-gets-record-400-000-fine-for-failing-to-prevent-october-2015-attack/" target="_blank" rel="noopener">TalkTalk (ICO)</a>
+    <a href="https://www.ftc.gov/news-events/news/press-releases/2011/04/ftc-charges-deceptive-privacy-practices-googles-rollout-buzz" target="_blank" rel="noopener"></a>
+    <a href="https://nvd.nist.gov/vuln/detail/CVE-2012-3414" target="_blank" rel="noopener">Yahoo CVE-2012</a>
+  </div>`;
   return secWrap('sqli-incidents', lang === 'en' ? 'Real-world incidents' : 'Rzeczywiste incydenty',
     lang === 'en' ? 'SQLi is not theoretical — these breaches cost hundreds of millions and exposed billions of records.' : 'SQLi nie jest teoretyczne — te wycieki kosztowały setki milionów i odsłoniły miliardy rekordów.',
-    `<div class="sqli-incidents">${cards}</div>`);
+    `<div class="sqli-incidents">${cards}</div>${sources}`);
 }
 
 function buildTools() {
@@ -463,9 +478,15 @@ function buildCompliance() {
       <h4>${esc(c.std)}</h4>
       <ul>${c.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
     </article>`).join('');
+  const sources = `<div class="sqli-inline-sources">${lang === 'en' ? 'Sources:' : 'Źródła:'}
+    <a href="https://www.pcisecuritystandards.org/document_library/" target="_blank" rel="noopener">PCI DSS v4.0</a>
+    <a href="https://gdpr-info.eu/art-32-gdpr/" target="_blank" rel="noopener">GDPR Art. 32</a>
+    <a href="https://gdpr-info.eu/art-33-gdpr/" target="_blank" rel="noopener">GDPR Art. 33</a>
+    <a href="https://www.aicpa.org/resources/article/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security" target="_blank" rel="noopener">SOC 2 (AICPA)</a>
+  </div>`;
   return secWrap('sqli-compliance', lang === 'en' ? 'Compliance quick-reference' : 'Szybka zgodność',
     lang === 'en' ? 'Where SQLi prevention maps onto the controls auditors check.' : 'Gdzie zapobieganie SQLi mapuje się na kontrole sprawdzane przez audytorów.',
-    `<div class="sqli-comp-grid">${cards}</div>`);
+    `<div class="sqli-comp-grid">${cards}</div>${sources}`);
 }
 
 function buildIR() {
