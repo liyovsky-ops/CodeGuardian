@@ -19,6 +19,8 @@ import { initCmdiPage } from './modules/cmdi-page.js';
 import './cmdi-page.css';
 import { initLdapiPage } from './modules/ldapi-page.js';
 import './ldapi-page.css';
+import { initXpathiPage } from './modules/xpathi-page.js';
+import './xpathi-page.css';
 import { initGuidePage } from './modules/guide-page.js';
 import './guide-page.css';
 
@@ -155,6 +157,7 @@ try {
   initNosqliPage();
   initCmdiPage();
   initLdapiPage();
+  initXpathiPage();
   initGuidePage();
 } catch (err) {
   console.error('[CodeGuardian] Bootstrap failed:', err);

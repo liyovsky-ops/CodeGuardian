@@ -1,0 +1,417 @@
+/* =========================================================================
+   Code Guardian — LDAP Injection deep-dive page
+   Full-screen overlay panel. Inherits Code Guardian's theme tokens.
+   Accent: ORANGE (#f97316) — LDAP Injection is High severity, not Critical.
+   ========================================================================= */
+
+/* ---------- topbar tab button ---------- */
+.xpathi-tab-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 12px;
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  border-radius: var(--radius-sm);
+  background: rgba(249, 115, 22, 0.08);
+  color: #f97316;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.03em;
+  cursor: pointer; transition: all var(--t);
+}
+.xpathi-tab-btn:hover {
+  background: rgba(249, 115, 22, 0.16);
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+.xpathi-tab-btn svg { width: 14px; height: 14px; }
+
+body.xpathi-lock { overflow: hidden; }
+
+/* ---------- panel shell ---------- */
+#xpathi-page {
+  position: fixed; inset: 0; z-index: 300;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity var(--t), transform var(--t);
+}
+#xpathi-page.open { opacity: 1; pointer-events: auto; transform: none; }
+
+.xpathi-topbar {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 14px;
+  height: var(--topbar-h); padding: 0 24px;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+}
+.xpathi-brand {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 700; letter-spacing: -0.3px; color: var(--text);
+}
+.xpathi-brand svg { color: var(--accent); }
+.xpathi-topbar-title {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #f97316;
+  padding: 4px 10px; border-radius: 100px;
+  border: 1px solid rgba(249, 115, 22, 0.3); background: rgba(249, 115, 22, 0.08);
+}
+.xpathi-close {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 12px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-dim);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--t);
+}
+.xpathi-close:hover { border-color: #f97316; color: #f97316; background: rgba(249, 115, 22, 0.08); }
+
+/* ---------- shell: nav + body ---------- */
+.xpathi-shell { flex: 1; display: flex; min-height: 0; }
+
+.xpathi-nav {
+  width: 232px; flex-shrink: 0;
+  padding: 20px 12px; overflow-y: auto;
+  background: var(--bg-alt);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.xpathi-nav-link {
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text-dim);
+  border-left: 2px solid transparent;
+  transition: all var(--t);
+}
+.xpathi-nav-link:hover { color: var(--text); background: var(--surface); text-decoration: none; }
+.xpathi-nav-link.active {
+  color: #f97316; background: rgba(249, 115, 22, 0.10);
+  border-left-color: #f97316; font-weight: 600;
+}
+
+.xpathi-body {
+  flex: 1; min-width: 0; overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* ---------- sections ---------- */
+.xpathi-section {
+  max-width: 980px; margin: 0 auto;
+  padding: 40px 40px 8px;
+  scroll-margin-top: 24px;
+}
+.xpathi-h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+.xpathi-section-lead { font-size: 14px; color: var(--text-dim); margin-bottom: 24px; max-width: 760px; line-height: 1.65; }
+
+/* ---------- hero ---------- */
+.xpathi-hero {
+  padding: 24px 0 8px;
+}
+.xpathi-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #f97316;
+  padding: 5px 12px; border-radius: 100px;
+  border: 1px solid rgba(249, 115, 22, 0.3); background: rgba(249, 115, 22, 0.08);
+  margin-bottom: 20px;
+}
+.xpathi-eyebrow svg { color: #f97316; }
+.xpathi-hero h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.05; margin-bottom: 18px; }
+.xpathi-hero h1 .grad { color: #f97316; }
+.xpathi-lead { font-size: 16px; color: var(--text-dim); line-height: 1.75; max-width: 720px; margin-bottom: 32px; }
+
+.xpathi-sev-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #f97316;
+  padding: 4px 12px; border-radius: 100px;
+  border: 1px solid rgba(249, 115, 22, 0.4); background: rgba(249, 115, 22, 0.1);
+  margin-bottom: 16px;
+}
+
+.xpathi-metrics {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.xpathi-metric {
+  padding: 18px 20px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+}
+.xpathi-metric.high { border-color: rgba(249, 115, 22, 0.35); background: rgba(249, 115, 22, 0.05); }
+.xpathi-metric-k { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; line-height: 1; color: var(--text); }
+.xpathi-metric.high .xpathi-metric-k { color: #f97316; }
+.xpathi-metric-v { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 8px; }
+
+/* ---------- type cards ---------- */
+.xpathi-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.xpathi-type-card {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  transition: border-color var(--t), transform var(--t);
+}
+.xpathi-type-card:hover { border-color: #f97316; transform: translateY(-2px); }
+.xpathi-type-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.xpathi-type-card h3 { font-size: 15px; font-weight: 700; }
+.xpathi-type-card p { font-size: 13px; color: var(--text-dim); line-height: 1.6; flex: 1; }
+.xpathi-payload {
+  position: relative;
+  background: var(--code-bg); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); padding: 10px 12px 10px 12px;
+  overflow-x: auto;
+}
+.xpathi-payload-tag {
+  display: inline-block; font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em; color: #f97316;
+  margin-bottom: 4px;
+}
+.xpathi-payload code { display: block; font-family: var(--mono); font-size: 12px; color: #fbbf8c; white-space: pre; }
+
+/* ---------- DB cheatsheet ---------- */
+.xpathi-db-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.xpathi-db-col {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.xpathi-db-col h4 {
+  padding: 12px 14px; font-size: 13px; font-weight: 700;
+  background: var(--surface-2); border-bottom: 1px solid var(--border);
+  color: #f97316;
+}
+.xpathi-db-row {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 14px; border-bottom: 1px solid var(--border-soft);
+}
+.xpathi-db-row:last-child { border-bottom: none; }
+.xpathi-db-key { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); font-weight: 700; }
+.xpathi-db-row code { font-family: var(--mono); font-size: 12px; color: var(--text); word-break: break-all; }
+
+/* ---------- vuln vs secure ---------- */
+.xpathi-lang-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.xpathi-lang-tab {
+  padding: 7px 16px; border-radius: 100px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--t);
+}
+.xpathi-lang-tab:hover { color: var(--text); border-color: #f97316; }
+.xpathi-lang-tab.active { background: #f97316; border-color: #f97316; color: #fff; }
+:root.light .xpathi-lang-tab.active { color: #fff; }
+
+.xpathi-lang-panel { display: none; }
+.xpathi-lang-panel.active { display: block; }
+.xpathi-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.xpathi-vs-col { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.xpathi-vs-col.vuln { border-color: rgba(249, 115, 22, 0.35); }
+.xpathi-vs-col.safe { border-color: rgba(81, 207, 102, 0.35); }
+.xpathi-vs-head {
+  padding: 9px 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+}
+.xpathi-vs-head.vuln { background: rgba(249, 115, 22, 0.12); color: #f97316; }
+.xpathi-vs-head.safe { background: rgba(81, 207, 102, 0.12); color: #51cf66; }
+
+.xpathi-code-area { position: relative; background: var(--code-bg); }
+.xpathi-code-area pre {
+  margin: 0; padding: 14px; overflow-x: auto;
+  background: var(--code-bg) !important;
+  max-height: 360px;
+}
+.xpathi-code-area pre code { font-family: var(--mono); font-size: 12.5px; line-height: 1.6; }
+.xpathi-code-area pre[class*="language-"] { background: var(--code-bg) !important; }
+.xpathi-copy {
+  position: absolute; top: 8px; right: 8px; z-index: 5;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cfd8e3; font-size: 11px; font-weight: 600;
+  padding: 4px 9px; border-radius: 4px; cursor: pointer; transition: all var(--t);
+}
+.xpathi-copy:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.xpathi-copy.copied { background: rgba(81, 207, 102, 0.22); color: #b2f2bb; border-color: rgba(81, 207, 102, 0.5); }
+.xpathi-copy svg { width: 13px; height: 13px; }
+
+/* ---------- ODM / ORM ---------- */
+.xpathi-orm {
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  background: var(--surface);
+}
+.xpathi-orm-row {
+  display: grid; grid-template-columns: 150px 230px 1fr; gap: 16px; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--border-soft);
+}
+.xpathi-orm-row:last-child { border-bottom: none; }
+.xpathi-orm-fw { font-weight: 700; font-size: 14px; }
+.xpathi-orm-api {
+  font-family: var(--mono); font-size: 12px; color: #f97316;
+  background: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.2);
+  padding: 4px 8px; border-radius: 4px; width: fit-content;
+}
+.xpathi-orm-note { font-size: 13px; color: var(--text-dim); }
+
+/* ---------- methodology timeline ---------- */
+.xpathi-timeline { position: relative; padding-left: 8px; }
+.xpathi-step { display: flex; gap: 16px; padding-bottom: 22px; position: relative; }
+.xpathi-step:not(:last-child)::before {
+  content: ''; position: absolute; left: 17px; top: 36px; bottom: 0;
+  width: 2px; background: var(--border);
+}
+.xpathi-step-num {
+  flex-shrink: 0; width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-weight: 800; font-size: 15px;
+  color: #f97316; background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.3); z-index: 1;
+}
+.xpathi-step-body h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.xpathi-step-body p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+
+/* ---------- defense layers ---------- */
+.xpathi-defense { display: flex; flex-direction: column; gap: 10px; }
+.xpathi-def-row {
+  display: grid; grid-template-columns: 44px 1fr 160px; gap: 16px; align-items: center;
+  padding: 14px 18px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+}
+.xpathi-def-row.primary { border-left-color: #51cf66; }
+.xpathi-def-row.strong { border-left-color: #f97316; }
+.xpathi-def-row.mitigation { border-left-color: var(--sev-medium); }
+.xpathi-def-row.weak { border-left-color: var(--sev-high); }
+.xpathi-def-rank { font-size: 18px; font-weight: 800; color: var(--text-faint); }
+.xpathi-def-label { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.xpathi-def-note { font-size: 12.5px; color: var(--text-dim); }
+.xpathi-def-bar { height: 8px; border-radius: 100px; background: var(--border-soft); overflow: hidden; }
+.xpathi-def-bar span { display: block; height: 100%; border-radius: 100px; }
+.xpathi-def-row.primary .xpathi-def-bar span { background: #51cf66; }
+.xpathi-def-row.strong .xpathi-def-bar span { background: #f97316; }
+.xpathi-def-row.mitigation .xpathi-def-bar span { background: var(--sev-medium); }
+.xpathi-def-row.weak .xpathi-def-bar span { background: var(--sev-high); }
+
+/* ---------- incidents ---------- */
+.xpathi-incidents { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.xpathi-incident {
+  padding: 18px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  transition: border-color var(--t);
+}
+.xpathi-incident:hover { border-color: #f97316; }
+.xpathi-incident-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.xpathi-incident-top h4 { font-size: 14px; font-weight: 700; }
+.xpathi-incident-year { font-family: var(--mono); font-size: 12px; color: var(--text-faint); }
+.xpathi-incident-nums { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.xpathi-incident-impact { font-size: 18px; font-weight: 800; color: #f97316; letter-spacing: -0.5px; }
+.xpathi-incident-cost { font-size: 12px; font-weight: 700; color: var(--sev-high); }
+.xpathi-incident p { font-size: 12.5px; color: var(--text-dim); line-height: 1.55; }
+
+/* ---------- tools ---------- */
+.xpathi-tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.xpathi-tool-col {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.xpathi-tool-col h4 {
+  padding: 12px 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  background: var(--surface-2); border-bottom: 1px solid var(--border); color: #f97316;
+}
+.xpathi-tool-row {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border-soft);
+}
+.xpathi-tool-row:last-child { border-bottom: none; }
+.xpathi-tool-row strong { font-size: 13px; }
+.xpathi-tool-row span { font-size: 12px; color: var(--text-dim); }
+
+.xpathi-callout {
+  padding: 14px 16px; border-radius: var(--radius-sm); font-size: 13px; color: var(--text-dim);
+  background: var(--bg-alt); border-left: 3px solid #f97316;
+}
+.xpathi-callout.warn { border-left-color: var(--sev-high); background: rgba(249, 115, 22, 0.06); }
+.xpathi-callout strong { color: var(--text); }
+
+/* ---------- compliance ---------- */
+.xpathi-comp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.xpathi-comp-card {
+  padding: 18px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+}
+.xpathi-comp-card h4 { font-size: 15px; font-weight: 800; color: #f97316; margin-bottom: 12px; }
+.xpathi-comp-card ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.xpathi-comp-card li {
+  font-size: 12.5px; color: var(--text-dim); padding-left: 16px; position: relative; line-height: 1.5;
+}
+.xpathi-comp-card li::before { content: '▸'; position: absolute; left: 0; color: #f97316; }
+
+/* ---------- incident response ---------- */
+.xpathi-ir { list-style: none; display: flex; flex-direction: column; gap: 10px; counter-reset: ir; }
+.xpathi-ir-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 13.5px;
+}
+.xpathi-ir-check {
+  flex-shrink: 0; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-weight: 800; font-size: 13px;
+  color: #f97316; background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+/* ---------- footer ---------- */
+.xpathi-footer {
+  max-width: 980px; margin: 48px auto 0; padding: 24px 40px 48px;
+  font-size: 12px; color: var(--text-faint); border-top: 1px solid var(--border);
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 860px) {
+  .xpathi-nav {
+    width: 100%; flex-direction: row; overflow-x: auto; gap: 6px;
+    padding: 10px 16px; border-right: none; border-bottom: 1px solid var(--border);
+  }
+  .xpathi-shell { flex-direction: column; }
+  .xpathi-nav-link { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; }
+  .xpathi-nav-link.active { border-left: none; border-bottom-color: #f97316; }
+  .xpathi-vs { grid-template-columns: 1fr; }
+  .xpathi-orm-row { grid-template-columns: 1fr; gap: 6px; }
+  .xpathi-def-row { grid-template-columns: 36px 1fr; }
+  .xpathi-def-bar { grid-column: 1 / -1; }
+  .xpathi-tools-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .xpathi-section { padding: 28px 18px 8px; }
+  .xpathi-topbar { padding: 0 14px; gap: 10px; }
+  .xpathi-topbar-title { display: none; }
+  .xpathi-close span { display: none; }
+  .xpathi-footer { padding: 24px 18px 40px; }
+}
+
+/* Sources */
+.xpathi-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: rgba(249, 115, 22, 0.06);
+  border: 1px solid rgba(249, 115, 22, 0.15);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.xpathi-sources-label { color: var(--muted); }
+.xpathi-source-link, .xpathi-inline-sources a {
+  color: #f97316;
+  text-decoration: none;
+  padding: 2px 8px;
+  background: rgba(249, 115, 22, 0.1);
+  border-radius: 4px;
+  transition: background 0.15s;
+  font-size: 11px;
+}
+.xpathi-source-link:hover, .xpathi-inline-sources a:hover {
+  background: rgba(249, 115, 22, 0.25);
+  text-decoration: underline;
+}
+.xpathi-inline-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}

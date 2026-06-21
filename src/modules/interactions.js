@@ -5,8 +5,9 @@ import { openSqliPage } from './sqli-page.js';
 import { openNosqliPage } from './nosqli-page.js';
 import { openCmdiPage } from './cmdi-page.js';
 import { openLdapiPage } from './ldapi-page.js';
+import { openXpathiPage } from './xpathi-page.js';
 
-const DEEPDIVE_HANDLERS = { '1.1': openSqliPage, '1.2': openNosqliPage, '1.3': openCmdiPage, '1.4': openLdapiPage };
+const DEEPDIVE_HANDLERS = { '1.1': openSqliPage, '1.2': openNosqliPage, '1.3': openCmdiPage, '1.4': openLdapiPage, '1.5': openXpathiPage };
 
 function wireCollapsible() {
   $$('.threat-head').forEach((head) => {
