@@ -26,20 +26,19 @@ function render() {
   buildStats(CATEGORIES);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    render();
-    initClipboard();
-    initFilters(CATEGORIES);
-    initTheme();
-    initInteractions(CATEGORIES);
-  } catch (err) {
-    console.error('[CodeGuardian] Bootstrap failed:', err);
-    const main = document.querySelector('main') || document.body;
-    main.innerHTML = `
-      <div class="error-state" role="alert">
-        <h2>⚠️ Nie udało się wczytać atlasu zagrożeń</h2>
-        <p>Odśwież stronę. Jeśli problem się powtarza, otwórz konsolę przeglądarki.</p>
-      </div>`;
-  }
-});
+// Module scripts are always deferred — DOM is ready when this runs
+try {
+  render();
+  initClipboard();
+  initFilters(CATEGORIES);
+  initTheme();
+  initInteractions(CATEGORIES);
+} catch (err) {
+  console.error('[CodeGuardian] Bootstrap failed:', err);
+  const main = document.querySelector('main') || document.body;
+  main.innerHTML = `
+    <div class="error-state" role="alert">
+      <h2>⚠️ Nie udało się wczytać atlasu zagrożeń</h2>
+      <p>Odśwież stronę. Jeśli problem się powtarza, otwórz konsolę przeglądarki.</p>
+    </div>`;
+}
