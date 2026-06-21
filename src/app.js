@@ -17,6 +17,8 @@ import { initNosqliPage } from './modules/nosqli-page.js';
 import './nosqli-page.css';
 import { initCmdiPage } from './modules/cmdi-page.js';
 import './cmdi-page.css';
+import { initLdapiPage } from './modules/ldapi-page.js';
+import './ldapi-page.css';
 
 import { CATEGORIES } from './data/index.js';
 import { getMatrix } from './data/matrix.js';
@@ -150,6 +152,7 @@ try {
   initSqliPage();
   initNosqliPage();
   initCmdiPage();
+  initLdapiPage();
 } catch (err) {
   console.error('[CodeGuardian] Bootstrap failed:', err);
   const main = document.querySelector('main') || document.body;
