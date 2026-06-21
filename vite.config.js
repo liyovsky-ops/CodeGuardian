@@ -1,20 +1,17 @@
 import { defineConfig } from 'vite';
 import ViteYaml from '@modyfi/vite-plugin-yaml';
-import { viteSingleFile } from 'vite-plugin-singlefile';
 
 export default defineConfig({
   root: '.',
-  base: './',
+  base: '/CodeGuardian/',
   publicDir: 'public',
-  plugins: [ViteYaml(), viteSingleFile()],
+  plugins: [ViteYaml()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,
     cssCodeSplit: false,
-    chunkSizeWarningLimit: 800,
   },
   server: {
     port: 5173,
-    open: true,
   },
 });
