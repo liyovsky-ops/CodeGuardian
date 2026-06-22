@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://liyovsky-ops.github.io/CodeGuardian/sitemap.xml

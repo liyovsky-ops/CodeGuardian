@@ -22,6 +22,21 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     cssCodeSplit: false,
+    rollupOptions: {
+      output: {
+        // Rolldown (Vite 8) requires the function form of manualChunks.
+        manualChunks(id) {
+          if (id.includes('node_modules/prismjs')) return 'vendor-prism';
+          if (id.includes('node_modules/dompurify')) return 'vendor-dompurify';
+          if (
+            id.includes('/src/modules/deepdive-renderer.js') ||
+            id.includes('/src/content/deepdives/')
+          ) {
+            return 'deepdives';
+          }
+        },
+      },
+    },
   },
   server: {
     port: 5173,
