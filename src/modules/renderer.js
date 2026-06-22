@@ -10,8 +10,9 @@ import { openCmdiPage } from './cmdi-page.js';
 import { openLdapiPage } from './ldapi-page.js';
 import { openXpathiPage } from './xpathi-page.js';
 import { openSstiPage } from './ssti-page.js';
+import { openLogiPage } from './logi-page.js';
 
-const DEEPDIVE_THREATS = { '1.1': openSqliPage, '1.2': openNosqliPage, '1.3': openCmdiPage, '1.4': openLdapiPage, '1.5': openXpathiPage, '1.6': openSstiPage };
+const DEEPDIVE_THREATS = { '1.1': openSqliPage, '1.2': openNosqliPage, '1.3': openCmdiPage, '1.4': openLdapiPage, '1.5': openXpathiPage, '1.6': openSstiPage, '1.7': openLogiPage };
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>

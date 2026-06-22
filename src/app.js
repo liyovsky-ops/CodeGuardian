@@ -23,6 +23,8 @@ import { initXpathiPage } from './modules/xpathi-page.js';
 import './xpathi-page.css';
 import { initSstiPage } from './modules/ssti-page.js';
 import './ssti-page.css';
+import { initLogiPage } from './modules/logi-page.js';
+import './logi-page.css';
 import { initGuidePage } from './modules/guide-page.js';
 import './guide-page.css';
 
@@ -161,6 +163,7 @@ try {
   initLdapiPage();
   initXpathiPage();
   initSstiPage();
+  initLogiPage();
   initGuidePage();
 } catch (err) {
   console.error('[CodeGuardian] Bootstrap failed:', err);
