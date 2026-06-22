@@ -11,20 +11,8 @@ import { initTheme } from './modules/theme.js';
 import { initClipboard } from './modules/clipboard.js';
 import { initInteractions, wireDynamicInteractions } from './modules/interactions.js';
 import { initLang } from './modules/lang.js';
-import { initSqliPage } from './modules/sqli-page.js';
-import './sqli-page.css';
-import { initNosqliPage } from './modules/nosqli-page.js';
-import './nosqli-page.css';
-import { initCmdiPage } from './modules/cmdi-page.js';
-import './cmdi-page.css';
-import { initLdapiPage } from './modules/ldapi-page.js';
-import './ldapi-page.css';
-import { initXpathiPage } from './modules/xpathi-page.js';
-import './xpathi-page.css';
-import { initSstiPage } from './modules/ssti-page.js';
-import './ssti-page.css';
-import { initLogiPage } from './modules/logi-page.js';
-import './logi-page.css';
+import { initAllDeepDives } from './modules/deepdive-renderer.js';
+import './deepdive.css';
 import { initGuidePage } from './modules/guide-page.js';
 import './guide-page.css';
 
@@ -157,13 +145,7 @@ try {
   initTheme();
   initInteractions(CATEGORIES);
   initLang(render);
-  initSqliPage();
-  initNosqliPage();
-  initCmdiPage();
-  initLdapiPage();
-  initXpathiPage();
-  initSstiPage();
-  initLogiPage();
+  initAllDeepDives();
   initGuidePage();
 } catch (err) {
   console.error('[CodeGuardian] Bootstrap failed:', err);

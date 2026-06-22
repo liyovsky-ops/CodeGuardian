@@ -1,15 +1,24 @@
 import { $, $$ } from './dom.js';
 import { highlightCard } from './renderer.js';
 import { SCROLL_ACTIVE_OFFSET, BACK_TO_TOP_THRESHOLD } from '../config.js';
-import { openSqliPage } from './sqli-page.js';
-import { openNosqliPage } from './nosqli-page.js';
-import { openCmdiPage } from './cmdi-page.js';
-import { openLdapiPage } from './ldapi-page.js';
-import { openXpathiPage } from './xpathi-page.js';
-import { openSstiPage } from './ssti-page.js';
-import { openLogiPage } from './logi-page.js';
+import { openDeepDivePage } from './deepdive-renderer.js';
+import sqliData from '../content/deepdives/sqli.yaml';
+import nosqliData from '../content/deepdives/nosqli.yaml';
+import cmdiData from '../content/deepdives/cmdi.yaml';
+import ldapiData from '../content/deepdives/ldapi.yaml';
+import xpathiData from '../content/deepdives/xpathi.yaml';
+import sstiData from '../content/deepdives/ssti.yaml';
+import logiData from '../content/deepdives/logi.yaml';
 
-const DEEPDIVE_HANDLERS = { '1.1': openSqliPage, '1.2': openNosqliPage, '1.3': openCmdiPage, '1.4': openLdapiPage, '1.5': openXpathiPage, '1.6': openSstiPage, '1.7': openLogiPage };
+const DEEPDIVE_HANDLERS = {
+  '1.1': () => openDeepDivePage(sqliData),
+  '1.2': () => openDeepDivePage(nosqliData),
+  '1.3': () => openDeepDivePage(cmdiData),
+  '1.4': () => openDeepDivePage(ldapiData),
+  '1.5': () => openDeepDivePage(xpathiData),
+  '1.6': () => openDeepDivePage(sstiData),
+  '1.7': () => openDeepDivePage(logiData),
+};
 
 function wireCollapsible() {
   $$('.threat-head').forEach((head) => {

