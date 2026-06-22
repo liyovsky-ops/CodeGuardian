@@ -4,3 +4,4 @@ dist/
 extract_data.js
 gen_yaml.py
 data_extracted.json
+database/threats.db
