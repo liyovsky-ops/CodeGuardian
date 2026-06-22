@@ -12,6 +12,7 @@ import ldapiData from '../content/deepdives/ldapi.yaml';
 import xpathiData from '../content/deepdives/xpathi.yaml';
 import sstiData from '../content/deepdives/ssti.yaml';
 import logiData from '../content/deepdives/logi.yaml';
+import crlfiData from '../content/deepdives/crlfi.yaml';
 
 const DEEPDIVE_THREATS = {
   '1.1': () => openDeepDivePage(sqliData),
@@ -21,6 +22,7 @@ const DEEPDIVE_THREATS = {
   '1.5': () => openDeepDivePage(xpathiData),
   '1.6': () => openDeepDivePage(sstiData),
   '1.7': () => openDeepDivePage(logiData),
+  '1.8': () => openDeepDivePage(crlfiData),
 };
 
 const esc = (s) =>

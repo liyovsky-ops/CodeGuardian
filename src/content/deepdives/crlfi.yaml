@@ -1,0 +1,605 @@
+meta:
+  id: crlfi
+  threatId: "1.8"
+  severity: High
+  color: "#f97316"
+  colorRgb: 249,115,22
+  cwe: CWE-113
+  cvss: "6.1"
+  standard: OWASP A03:2021
+hero:
+  titleMain: "CRLF "
+  titleGrad: Injection
+  titleTail: "/ HTTP Response Splitting"
+  topbar: CRLF Injection
+  lead:
+    en: "CRLF Injection (CWE-113) abuses the fact that the carriage-return + line-feed pair \\r\\n (0x0D 0x0A) is the structural delimiter of the HTTP protocol. When user input reaches a response header unescaped, a single \\r\\n forges new headers (Set-Cookie, Location), and a doubled \\r\\n\\r\\n splits the message into two responses — the attacker now controls the body of the second one. That HTTP Response Splitting primitive escalates fast: a shared proxy caches the forged response and serves stored XSS to every subsequent visitor, while Set-Cookie injection pins a known session ID for fixation. Modern frameworks (Werkzeug 2.1+, Spring 6, Node 14.18+) reject embedded newlines, but raw WSGI writes, sendRedirect, double-encoding (%250d%250a) and h2→HTTP/1.1 downgrade proxies keep the vector alive."
+    pl: "CRLF Injection (CWE-113) wykorzystuje fakt, że para powrotu karetki i znaku nowej linii \\r\\n (0x0D 0x0A) jest strukturalnym separatorem protokołu HTTP. Gdy wejście użytkownika trafia do nagłówka odpowiedzi bez escapingu, pojedyncze \\r\\n fałszuje nowe nagłówki (Set-Cookie, Location), a podwojone \\r\\n\\r\\n rozdziela wiadomość na dwie odpowiedzi — atakujący kontroluje wtedy treść tej drugiej. Ten prymityw HTTP Response Splitting szybko eskaluje: współdzielony proxy buforuje sfałszowaną odpowiedź i serwuje stored XSS każdemu kolejnemu użytkownikowi, a wstrzyknięcie Set-Cookie przypina znany identyfikator sesji do fixation. Nowoczesne frameworki (Werkzeug 2.1+, Spring 6, Node 14.18+) odrzucają osadzone nowe linie, ale surowe zapisy WSGI, sendRedirect, podwójne kodowanie (%250d%250a) i proxy degradujące h2→HTTP/1.1 utrzymują wektor przy życiu."
+  metrics:
+    - k: CWE-113
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "6.1"
+      v: CVSS · High
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "9"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-113 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/113.html
+    - label: PortSwigger Academy
+      url: https://portswigger.net/web-security/request-smuggling
+    - label: OWASP CRLF Injection
+      url: https://owasp.org/www-community/vulnerabilities/CRLF_Injection
+    - label: CVE-2016-10516 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2016-10516
+sectionOrder:
+  - overview
+  - types
+  - cheatsheet
+  - code
+  - orm
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - sources
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack types
+    pl: Typy ataków
+  - id: cheatsheet
+    en: Detection cheatsheet
+    pl: Ściąga detekcji
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: orm
+    en: Language cheatsheet
+    pl: Ściąga języków
+  - id: method
+    en: Attack methodology
+    pl: Metodyka ataku
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: sources
+    en: Sources
+    pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Nine ways the same \r\n root cause manifests — from a single forged header to a doubled CRLF that splits the response, poisons a shared cache, and serves stored XSS to every visitor.
+      pl: Dziewięć sposobów, w jakie ta sama przyczyna \r\n się ujawnia — od pojedynczego sfałszowanego nagłówka po podwojone CRLF, które rozdziela odpowiedź, zatruwa współdzielony cache i serwuje stored XSS każdemu użytkownikowi.
+    items:
+      - name: HTTP Response Splitting
+        sev: high
+        description:
+          en: Injecting \r\n\r\n closes the header block and starts a second, fully attacker-controlled HTTP response. The browser or proxy parses two messages where one was sent — the foundation for cache poisoning and reflected XSS.
+          pl: Wstrzyknięcie \r\n\r\n zamyka blok nagłówków i rozpoczyna drugą, w pełni kontrolowaną przez atakującego odpowiedź HTTP. Przeglądarka lub proxy parsuje dwie wiadomości tam, gdzie wysłano jedną — fundament cache poisoning i reflected XSS.
+        payload: "/page?lang=en%0d%0a%0d%0a<html>attacker body</html>"
+      - name: Set-Cookie Header Injection
+        sev: high
+        description:
+          en: Injecting a Set-Cookie header pins a known session ID (session fixation) or overrides the HttpOnly / Secure flags on an existing cookie, downgrading its protections so JavaScript or plaintext channels can read it.
+          pl: Wstrzyknięcie nagłówka Set-Cookie przypina znany identyfikator sesji (session fixation) lub nadpisuje flagi HttpOnly / Secure istniejącego ciasteczka, obniżając jego ochronę, tak że JavaScript lub kanał plaintext może je odczytać.
+        payload: "name=value%0d%0aSet-Cookie:%20sessionid=attacker-fixed"
+      - name: Location Header / Open Redirect
+        sev: high
+        description:
+          en: A redirect parameter reflected into the Location header lets the attacker chain an open redirect with a forged Set-Cookie in a single request — victim is sent to evil.com while their session is fixed simultaneously.
+          pl: Parametr przekierowania odbity do nagłówka Location pozwala połączyć open redirect ze sfałszowanym Set-Cookie w jednym żądaniu — ofiara trafia na evil.com, a jej sesja jest jednocześnie przypinana.
+        payload: "/redirect?url=https://evil.com%0d%0aSet-Cookie:session=attacker"
+      - name: Cache Poisoning
+        sev: critical
+        description:
+          en: When a shared proxy (Varnish, Squid, nginx, a CDN) caches the forged second response, it is served to all subsequent users of that URL — turning a single CRLF request into a persistent mass-XSS or defacement affecting every visitor.
+          pl: Gdy współdzielony proxy (Varnish, Squid, nginx, CDN) zbuforuje sfałszowaną drugą odpowiedź, jest ona serwowana wszystkim kolejnym użytkownikom tego URL — zamieniając pojedyncze żądanie CRLF w trwały masowy XSS lub defacement dotykający każdego odwiedzającego.
+        payload: "/static.js?v=1%0d%0aContent-Length:0%0d%0a%0d%0aHTTP/1.1%20200%20OK"
+      - name: XSS via Header Injection
+        sev: high
+        description:
+          en: "Injecting Content-Type: text/html\\r\\n\\r\\n followed by a script forces the browser to render an attacker body as HTML in the victim's origin, executing JavaScript with the site's cookies and DOM access."
+          pl: "Wstrzyknięcie Content-Type: text/html\\r\\n\\r\\n a po nim skryptu zmusza przeglądarkę do wyrenderowania ciała atakującego jako HTML w origin ofiary, wykonując JavaScript z ciasteczkami i dostępem do DOM strony."
+        payload: "%0d%0aContent-Type:text/html%0d%0a%0d%0a<script>alert(document.domain)</script>"
+      - name: Mail Header Injection
+        sev: high
+        description:
+          en: CRLF in an email form field passed to PHP mail() injects extra To / CC / BCC headers, turning a contact form into an open spam relay or phishing distributor sending from the trusted domain.
+          pl: CRLF w polu formularza e-mail przekazanym do PHP mail() wstrzykuje dodatkowe nagłówki To / CC / BCC, zamieniając formularz kontaktowy w otwarty przekaźnik spamu lub dystrybutor phishingu wysyłający z zaufanej domeny.
+        payload: "victim@site.com%0d%0aBcc:spam-list@evil.com"
+      - name: HTTP/2 Downgrade Attack
+        sev: medium
+        description:
+          en: HTTP/2 uses length-prefixed binary frames and rejects literal CRLF natively, but an h2→HTTP/1.1 downgrade proxy reintroduces the flaw when it reserializes header values into a text-based request for a legacy backend.
+          pl: HTTP/2 używa binarnych ramek z prefiksem długości i natywnie odrzuca literalne CRLF, ale proxy degradujące h2→HTTP/1.1 ponownie wprowadza wadę, gdy reserializuje wartości nagłówków do tekstowego żądania dla starszego backendu.
+        payload: "h2 header value containing\\r\\nInjected: 1 → reserialized to HTTP/1.1"
+      - name: OAuth State / redirect_uri Injection
+        sev: high
+        description:
+          en: CRLF embedded in the OAuth state or redirect_uri parameter, reflected into the authorization Location header, splits the authorization response — leaking the authorization code or poisoning the redirect that returns the token.
+          pl: CRLF osadzone w parametrze OAuth state lub redirect_uri, odbite do nagłówka Location autoryzacji, rozdziela odpowiedź autoryzacyjną — wyciekając kod autoryzacyjny lub zatruwając przekierowanie zwracające token.
+        payload: "?redirect_uri=https://app.com%0d%0aLocation:https://evil.com&state=x"
+      - name: Double-Encoding Bypass
+        sev: high
+        description:
+          en: "%250d%250a survives a first URL-decode at the WAF / CDN layer (becoming %0d%0a), passes the filter as harmless text, then is decoded a second time by the origin server into a live \\r\\n — bypassing Cloudflare-class normalization."
+          pl: "%250d%250a przeżywa pierwsze dekodowanie URL na warstwie WAF / CDN (stając się %0d%0a), przechodzi przez filtr jako nieszkodliwy tekst, a potem jest dekodowane drugi raz przez serwer origin do żywego \\r\\n — omijając normalizację klasy Cloudflare."
+        payload: "/page?x=val%250d%250aSet-Cookie:pwned=1"
+  cheatsheet:
+    title:
+      en: Detection cheatsheet
+      pl: Ściąga detekcji
+    lead:
+      en: Five practical probes to confirm a CRLF injection point — from a basic header-forge test to a double-encoded WAF bypass and an OAuth Location split.
+      pl: Pięć praktycznych sond potwierdzających punkt CRLF injection — od podstawowego testu fałszowania nagłówka po podwójnie kodowane omijanie WAF i rozdzielenie Location w OAuth.
+    groups:
+      - name: HTTP Response Splitting
+        rows:
+          - - Vector
+            - "val%0d%0a%0d%0a<html>x</html>"
+          - - Where
+            - any reflected header param
+          - - Signal
+            - two responses parsed by client
+          - - Confirm
+            - second body rendered in origin
+          - - Impact
+            - reflected XSS / cache poison
+          - - CWE
+            - CWE-113 base technique
+      - name: Set-Cookie injection
+        rows:
+          - - Vector
+            - "x%0d%0aSet-Cookie:sid=fixed"
+          - - Where
+            - redirect / cookie-echo param
+          - - Signal
+            - extra Set-Cookie in response
+          - - Confirm
+            - browser stores forged cookie
+          - - Impact
+            - session fixation / hijack
+          - - CWE
+            - CWE-113 / CWE-384
+      - name: Cache poisoning
+        rows:
+          - - Vector
+            - "v=1%0d%0aContent-Length:0..."
+          - - Where
+            - cacheable static URL
+          - - Signal
+            - forged body served to others
+          - - Confirm
+            - "X-Cache: HIT on poison"
+          - - Impact
+            - mass stored XSS / defacement
+          - - Tool
+            - Param Miner / Burp
+      - name: OAuth / redirect injection
+        rows:
+          - - Vector
+            - "uri%0d%0aLocation:evil.com"
+          - - Where
+            - redirect_uri / state param
+          - - Signal
+            - split authorization response
+          - - Confirm
+            - code / token leaks off-origin
+          - - Impact
+            - account takeover via OAuth
+          - - CWE
+            - CWE-113 / CWE-601
+      - name: Double-encode bypass
+        rows:
+          - - Vector
+            - "%250d%250aSet-Cookie:x=1"
+          - - Where
+            - param behind WAF / CDN
+          - - Signal
+            - WAF passes, origin injects
+          - - Confirm
+            - forged header at origin only
+          - - Impact
+            - Cloudflare-class bypass
+          - - Tool
+            - Burp Repeater / curl
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The same fix across five languages: never write raw user input into a header — upgrade to a framework that rejects \\r\\n, and validate the value against an allow-list before it reaches the response."
+      pl: "Ta sama naprawa w pięciu językach: nigdy nie zapisuj surowego wejścia do nagłówka — zaktualizuj framework, który odrzuca \\r\\n, i waliduj wartość względem allow-listy zanim trafi do odpowiedzi."
+    languages:
+      - label: Python (Flask)
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — raw param into Location (CVE-2016-10516, Werkzeug < 0.11.10)
+          from flask import Flask, request, redirect
+          app = Flask(__name__)
+          @app.route('/redirect')
+          def redir():
+              url = request.args.get('url')
+              return redirect(url)   # \r\n in url forges Set-Cookie / splits response
+        safe: |-
+          # SECURE — Werkzeug >= 2.1 raises ValueError on \r\n; still allow-list the host
+          from urllib.parse import urlparse
+          from flask import request, redirect, abort
+          ALLOWED_HOSTS = {'example.com'}
+          def safe_redirect(url):
+              parsed = urlparse(url)
+              if parsed.netloc not in ALLOWED_HOSTS:
+                  abort(400)
+              return redirect(url)   # newline rejected at the WSGI layer
+      - label: Java (Spring)
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — raw param into header (Spring < 5.1.1 / raw servlet, CVE-2018-1272)
+          String location = request.getParameter("url");
+          response.setHeader("Location", location);  // \r\n silently accepted
+        safe: |-
+          // SECURE — Spring 6 StrictHttpFirewall + validate before redirect
+          String location = request.getParameter("url");
+          if (!ALLOWED_URLS.contains(location))
+              throw new BadRequestException();
+          response.sendRedirect(location);  // firewall + RedirectView reject CRLF
+      - label: Node.js (Express)
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE — Node.js < 14.18 passes CRLF through silently (CVE-2018-12116)
+          const url = req.query.url;
+          res.writeHead(302, { 'Location': url });  // \r\n splits the response
+          res.end();
+        safe: |-
+          // SECURE — Node >= 14.18 throws ERR_INVALID_CHAR; also validate the origin
+          const { URL } = require('url');
+          const target = new URL(req.query.url, 'https://example.com');
+          if (target.origin !== 'https://example.com') return res.status(400).end();
+          res.redirect(target.pathname);
+      - label: PHP
+        lang: php
+        vulnerable: |-
+          <?php // VULNERABLE — raw GET value into header() injects new headers
+          header("Location: " . $_GET['url']);  // \r\n forges Set-Cookie / splits
+        safe: |-
+          <?php // SECURE — validate URL and reject any CR/LF (PHP 5.1.2+ blocks multi-header)
+          $url = filter_var($_GET['url'], FILTER_VALIDATE_URL);
+          if (!$url || preg_match('/[\r\n]/', $_GET['url'])) {
+              http_response_code(400);
+              exit;
+          }
+          header("Location: " . $url);
+      - label: .NET
+        lang: csharp
+        vulnerable: |-
+          // VULNERABLE — .NET Framework, no validation pre-CVE-2014-4078
+          string location = Request.QueryString["url"];
+          Response.AddHeader("Location", location);  // CRLF injects new headers
+        safe: |-
+          // SECURE — ASP.NET Core Response.Headers[] throws on CRLF; validate origin too
+          var uri = new Uri(location);
+          if (uri.Host != "example.com") return BadRequest();
+          return Redirect(location);  // framework rejects embedded newlines
+  orm:
+    title:
+      en: Language cheatsheet
+      pl: Ściąga języków
+    lead:
+      en: "Per-language vulnerable header sinks and their safe alternatives. The pattern is identical everywhere: upgrade the framework so \\r\\n throws, then allow-list the value."
+      pl: "Podatne sinki nagłówków per język i ich bezpieczne odpowiedniki. Wzorzec jest wszędzie identyczny: zaktualizuj framework, by \\r\\n rzucał wyjątek, a potem stosuj allow-listę wartości."
+    rows:
+      - fw: Python (Flask/Werkzeug)
+        api: "redirect(request.args.get('url'))"
+        note:
+          en: "Vulnerable sink — CVE-2016-10516 (Werkzeug < 0.11.10). Safe: upgrade to Werkzeug >= 2.1 (raises ValueError on \\r\\n) and validate netloc against an allow-list. Raw WSGI start_response still bypasses the check."
+          pl: "Podatny sink — CVE-2016-10516 (Werkzeug < 0.11.10). Bezpiecznie: aktualizacja do Werkzeug >= 2.1 (rzuca ValueError na \\r\\n) i walidacja netloc względem allow-listy. Surowe start_response WSGI nadal omija kontrolę."
+      - fw: Java (Spring MVC)
+        api: "response.setHeader(\"Location\", url)"
+        note:
+          en: "Vulnerable sink — CVE-2018-1272 / CVE-2021-22060. Safe: Spring 6 StrictHttpFirewall + RedirectView; use validated sendRedirect. Beware HttpServletResponse.sendRedirect on legacy containers bypasses the firewall."
+          pl: "Podatny sink — CVE-2018-1272 / CVE-2021-22060. Bezpiecznie: Spring 6 StrictHttpFirewall + RedirectView; używaj zwalidowanego sendRedirect. Uwaga: HttpServletResponse.sendRedirect na starych kontenerach omija firewall."
+      - fw: Node.js (http/Express)
+        api: "res.writeHead(302, { Location: url })"
+        note:
+          en: "Vulnerable sink — CVE-2018-12116 (Node < 8.14/10.14). Safe: Node >= 14.18 throws ERR_INVALID_CHAR; Express 4.x inherits this. node-fetch < 2.6.1 was CVE-2020-15168 — pin patched versions."
+          pl: "Podatny sink — CVE-2018-12116 (Node < 8.14/10.14). Bezpiecznie: Node >= 14.18 rzuca ERR_INVALID_CHAR; Express 4.x to dziedziczy. node-fetch < 2.6.1 to CVE-2020-15168 — przypnij załatane wersje."
+      - fw: PHP
+        api: "header(\"Location: \" . $_GET['url'])"
+        note:
+          en: "Vulnerable sink — header() with raw input. Safe: PHP 5.1.2+ blocks multiple headers in one call, but still preg_match('/[\\r\\n]/', ...) and filter_var FILTER_VALIDATE_URL before writing."
+          pl: "Podatny sink — header() z surowym wejściem. Bezpiecznie: PHP 5.1.2+ blokuje wiele nagłówków w jednym wywołaniu, ale i tak preg_match('/[\\r\\n]/', ...) oraz filter_var FILTER_VALIDATE_URL przed zapisem."
+      - fw: .NET (ASP.NET)
+        api: "Response.AddHeader(\"Location\", url)"
+        note:
+          en: "Vulnerable sink — .NET Framework pre-CVE-2014-4078. Safe: ASP.NET Core Response.Headers[] throws on CRLF and Redirect() validates; still verify the target host explicitly."
+          pl: "Podatny sink — .NET Framework przed CVE-2014-4078. Bezpiecznie: ASP.NET Core Response.Headers[] rzuca wyjątek na CRLF, a Redirect() waliduje; mimo to jawnie sprawdzaj host docelowy."
+      - fw: Go (net/http)
+        api: "w.Header().Set(\"Location\", url)"
+        note:
+          en: "Vulnerable sink if value reaches WriteHeader unchecked. Safe: Go's net/http sanitizes \\r\\n in header values since Go 1.x (textproto strips control chars); still allow-list the redirect target and avoid raw Hijack writes."
+          pl: "Podatny sink, jeśli wartość trafia do WriteHeader bez kontroli. Bezpiecznie: net/http w Go sanityzuje \\r\\n w wartościach nagłówków od Go 1.x (textproto usuwa znaki kontrolne); mimo to stosuj allow-listę celu i unikaj surowych zapisów Hijack."
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a CRLF probe to full shared-cache poisoning affecting every visitor.
+      pl: Jak atakujący przechodzi od sondy CRLF do pełnego zatrucia współdzielonego cache dotykającego każdego użytkownika.
+    steps:
+      - title:
+          en: Probe reflection
+          pl: Sonduj odbicie
+        description:
+          en: Find a parameter reflected into a response header (Location, Set-Cookie, Content-Type) and inject %0d%0aTest:1 — a Test header appearing in the response confirms the sink.
+          pl: Znajdź parametr odbity do nagłówka odpowiedzi (Location, Set-Cookie, Content-Type) i wstrzyknij %0d%0aTest:1 — pojawienie się nagłówka Test w odpowiedzi potwierdza sink.
+      - title:
+          en: Bypass filters
+          pl: Omijaj filtry
+        description:
+          en: If a WAF or framework strips literal \r\n, escalate the encoding — %0d%0a, then double-encoded %250d%250a, then Unicode U+0085 / U+2028 — until a control character survives to the origin.
+          pl: Jeśli WAF lub framework usuwa literalne \r\n, eskaluj kodowanie — %0d%0a, potem podwójnie kodowane %250d%250a, potem Unicode U+0085 / U+2028 — aż znak kontrolny przeżyje do origin.
+      - title:
+          en: Forge a header
+          pl: Sfałszuj nagłówek
+        description:
+          en: Inject a single header — Set-Cookie to fix a session, or Location to chain an open redirect — confirming you control the response structure, not just a value.
+          pl: Wstrzyknij pojedynczy nagłówek — Set-Cookie, by przypiąć sesję, lub Location, by połączyć open redirect — potwierdzając, że kontrolujesz strukturę odpowiedzi, a nie tylko wartość.
+      - title:
+          en: Split the response
+          pl: Rozdziel odpowiedź
+        description:
+          en: Add a doubled \r\n\r\n plus Content-Length and a forged HTTP/1.1 200 OK line to emit a second, fully attacker-controlled response carrying an HTML/JS body that executes in the victim's origin.
+          pl: Dodaj podwojone \r\n\r\n plus Content-Length i sfałszowaną linię HTTP/1.1 200 OK, by wyemitować drugą, w pełni kontrolowaną odpowiedź z ciałem HTML/JS wykonującym się w origin ofiary.
+      - title:
+          en: Poison the cache
+          pl: Zatruj cache
+        description:
+          en: Target a cacheable URL through a shared proxy or CDN so the forged second response is stored under that key and served to every subsequent visitor — escalating reflected XSS into persistent mass compromise.
+          pl: Wymierz w cacheowalny URL przez współdzielony proxy lub CDN, by sfałszowana druga odpowiedź została zapisana pod tym kluczem i serwowana każdemu kolejnemu użytkownikowi — eskalując reflected XSS do trwałego masowego naruszenia.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth — but not all layers are equal. A framework that rejects \r\n at the response layer is the fix; everything else narrows the blast radius and catches bypasses.
+      pl: Obrona w głąb — ale warstwy nie są równe. Framework odrzucający \r\n na warstwie odpowiedzi to naprawa; reszta zawęża skutki i łapie obejścia.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Framework upgrade
+          pl: Aktualizacja frameworka
+        note:
+          en: Werkzeug >= 2.1 (raises ValueError), Spring 6 StrictHttpFirewall + RedirectView, Node >= 14.18 (throws ERR_INVALID_CHAR), Express 4.x, ASP.NET Core — all reject embedded newlines in header values at the response layer.
+          pl: Werkzeug >= 2.1 (rzuca ValueError), Spring 6 StrictHttpFirewall + RedirectView, Node >= 14.18 (rzuca ERR_INVALID_CHAR), Express 4.x, ASP.NET Core — wszystkie odrzucają osadzone nowe linie w wartościach nagłówków na warstwie odpowiedzi.
+      - rank: 2
+        eff: 90
+        kind: strong
+        label:
+          en: Allow-list sanitizer
+          pl: Sanityzer allow-list
+        note:
+          en: Validate every header-bound value against ^[\x20-\x7E]*$ (printable ASCII, RFC 7230) and reject on mismatch — do NOT silently strip, which can leave a partial control sequence usable.
+          pl: Waliduj każdą wartość trafiającą do nagłówka względem ^[\x20-\x7E]*$ (drukowalny ASCII, RFC 7230) i odrzucaj na niezgodność — NIE usuwaj po cichu, bo to może zostawić użyteczną częściową sekwencję kontrolną.
+      - rank: 3
+        eff: 80
+        kind: strong
+        label:
+          en: Redirect URL allow-list
+          pl: Allow-lista URL przekierowań
+        note:
+          en: Never reflect a raw user URL into Location — resolve it against a fixed allow-list of hosts/paths so open-redirect-plus-CRLF chains have nowhere to land.
+          pl: Nigdy nie odbijaj surowego URL użytkownika do Location — rozwiązuj go względem stałej allow-listy hostów/ścieżek, by łańcuchy open-redirect-plus-CRLF nie miały gdzie wylądować.
+      - rank: 4
+        eff: 70
+        kind: strong
+        label:
+          en: WAF CRLF rules
+          pl: Reguły CRLF w WAF
+        note:
+          en: Block %0d%0a and double-encoded %250d%250a patterns at the edge, and normalize encoding once so the WAF and origin agree — closes the Cloudflare-class decode-mismatch bypass.
+          pl: Blokuj wzorce %0d%0a i podwójnie kodowane %250d%250a na brzegu i normalizuj kodowanie raz, by WAF i origin się zgadzały — zamyka obejście klasy Cloudflare przez niezgodność dekodowania.
+      - rank: 5
+        eff: 60
+        kind: mitigation
+        label:
+          en: Content-Security-Policy
+          pl: Content-Security-Policy
+        note:
+          en: A strict CSP (no inline script, locked script-src) mitigates header-injected XSS even if a split response reaches the browser — defense in depth, not a root-cause fix.
+          pl: Restrykcyjne CSP (bez inline script, zablokowany script-src) łagodzi XSS wstrzyknięty przez nagłówek, nawet jeśli rozdzielona odpowiedź dotrze do przeglądarki — obrona w głąb, nie naprawa przyczyny.
+      - rank: 6
+        eff: 55
+        kind: mitigation
+        label:
+          en: Cache key isolation
+          pl: Izolacja klucza cache
+        note:
+          en: Exclude attacker-influenced parameters from the cache key and disable caching of responses with reflected headers — a poisoned response then can never be stored and replayed to others.
+          pl: Wyklucz parametry wpływane przez atakującego z klucza cache i wyłącz buforowanie odpowiedzi z odbitymi nagłówkami — zatruta odpowiedź nie może wtedy zostać zapisana i odtworzona innym.
+      - rank: 7
+        eff: 45
+        kind: mitigation
+        label:
+          en: End-to-end HTTP/2
+          pl: HTTP/2 end-to-end
+        note:
+          en: Run HTTP/2 (binary, length-prefixed) from edge to origin with no h2→HTTP/1.1 downgrade hop — the reserialization that reintroduces literal CRLF never happens.
+          pl: Uruchom HTTP/2 (binarny, z prefiksem długości) od brzegu do origin bez przeskoku degradującego h2→HTTP/1.1 — reserializacja ponownie wprowadzająca literalne CRLF nigdy nie zachodzi.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: CRLF injection is not theoretical — framework CVEs left Flask, Spring and Node globally exploitable, a Carrefour redirect bug drew a GDPR fine, and OAuth Location splits keep earning bug bounties on major platforms.
+      pl: CRLF injection nie jest teoretyczne — CVE frameworków zostawiły Flask, Spring i Node globalnie eksploatowalne, błąd przekierowania Carrefour ściągnął karę GDPR, a rozdzielenia Location w OAuth wciąż przynoszą bug bounty na dużych platformach.
+    items:
+      - org: Werkzeug / Flask
+        year: 2016
+        impact: CVE-2016-10516
+        cost: Global · session fixation
+        description:
+          en: Werkzeug < 0.11.10 did not strip embedded newlines from header values, leaving Flask applications worldwide vulnerable to CRLF in Location headers — enabling Set-Cookie injection and session fixation via the redirect handler.
+          pl: Werkzeug < 0.11.10 nie usuwał osadzonych nowych linii z wartości nagłówków, zostawiając aplikacje Flask na całym świecie podatne na CRLF w nagłówkach Location — umożliwiając wstrzyknięcie Set-Cookie i session fixation przez handler przekierowania.
+      - org: Spring Framework
+        year: 2018
+        impact: CVE-2018-1272
+        cost: Enterprise Java
+        description:
+          en: Spring MVC accepted CRLF through a multipart boundary, allowing header injection in Spring < 5.0.5 / 4.3.15; HttpHeaders.set() silently accepted \r\n. Patched across the enterprise-heavy Java ecosystem in 2018.
+          pl: Spring MVC akceptował CRLF przez granicę multipart, pozwalając na wstrzyknięcie nagłówka w Spring < 5.0.5 / 4.3.15; HttpHeaders.set() po cichu akceptował \r\n. Załatane w mocno korporacyjnym ekosystemie Java w 2018.
+      - org: Node.js core
+        year: 2018
+        impact: CVE-2018-12116
+        cost: All Node apps
+        description:
+          en: The Node.js http module allowed CRLF in HTTP/1.1 header values, affecting every Node application before 8.14 / 10.14; setHeader() passed control characters through silently until ERR_INVALID_CHAR was added.
+          pl: Moduł http Node.js pozwalał na CRLF w wartościach nagłówków HTTP/1.1, dotykając każdej aplikacji Node przed 8.14 / 10.14; setHeader() po cichu przepuszczał znaki kontrolne, dopóki nie dodano ERR_INVALID_CHAR.
+      - org: Carrefour Belgium
+        year: 2021
+        impact: GDPR breach
+        cost: €200k fine
+        description:
+          en: A CRLF flaw in a redirect handler allowed Set-Cookie injection and session fixation against customers; the resulting personal-data exposure triggered a GDPR investigation and an approximately €200k fine.
+          pl: Wada CRLF w handlerze przekierowania pozwalała na wstrzyknięcie Set-Cookie i session fixation wobec klientów; wynikłe ujawnienie danych osobowych uruchomiło dochodzenie GDPR i karę około €200k.
+      - org: HackerOne (OAuth)
+        year: 2019
+        impact: Location split
+        cost: $1k–$5k bounties
+        description:
+          en: Multiple 2019–2023 HackerOne reports paid $1k–$5k for CRLF in OAuth Location-header injection on major platforms (Shopify, Twitter, Facebook), typically chained with shared-cache poisoning for broader impact.
+          pl: Liczne raporty HackerOne z lat 2019–2023 wypłaciły $1k–$5k za CRLF we wstrzyknięciu nagłówka Location w OAuth na dużych platformach (Shopify, Twitter, Facebook), zwykle łączone z zatruciem współdzielonego cache dla szerszego wpływu.
+    inlineSources:
+      - label: CVE-2016-10516 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2016-10516
+      - label: CVE-2018-1272 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2018-1272
+      - label: CVE-2018-12116 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2018-12116
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis traces request input flowing into header sinks; dynamic tools confirm splitting, double-encode bypasses, and cache poisoning. Use both.
+      pl: Analiza statyczna śledzi wejście żądania trafiające do sinków nagłówków; narzędzia dynamiczne potwierdzają rozdzielanie, obejścia podwójnego kodowania i zatruwanie cache. Używaj obu.
+    sast:
+      - - Semgrep
+        - crlf-injection-in-http-header rule (Java + Python)
+      - - CodeQL
+        - java/response-splitting query
+      - - Fortify
+        - Header Manipulation category
+      - - SonarQube
+        - S5167 HTTP response header injection
+    dast:
+      - - Burp Suite
+        - CRLF payloads in header-reflected params
+      - - OWASP ZAP
+        - CRLF injection active scan rules
+      - - Param Miner
+        - cache-poisoning / unkeyed input
+      - - Burp Collaborator
+        - OAST confirmation of split responses
+    note:
+      en: <strong>Key signal:</strong> CodeQL <code>java/response-splitting</code> traces taint from <code>HttpServletRequest</code> to <code>setHeader/addHeader/sendRedirect</code>; Semgrep <code>r2c.java.lang.security.audit.crlf-injection-in-http-header</code> covers Java and Python. Grep for any request value written into a header — <code>setHeader(..., request.getParameter)</code>, <code>res.writeHead(..., {Location:req.query})</code>, <code>header("Location:".$_GET)</code>.
+      pl: <strong>Kluczowy sygnał:</strong> CodeQL <code>java/response-splitting</code> śledzi taint z <code>HttpServletRequest</code> do <code>setHeader/addHeader/sendRedirect</code>; Semgrep <code>r2c.java.lang.security.audit.crlf-injection-in-http-header</code> obejmuje Javę i Pythona. Szukaj każdej wartości żądania zapisanej do nagłówka — <code>setHeader(..., request.getParameter)</code>, <code>res.writeHead(..., {Location:req.query})</code>, <code>header("Location:".$_GET)</code>.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where CRLF-injection prevention maps onto the injection and integrity controls auditors check.
+      pl: Gdzie zapobieganie CRLF injection mapuje się na kontrole injection i integralności sprawdzane przez audytorów.
+    items:
+      - std: PCI DSS
+        items:
+          - Req 6.2.4 — prevent injection attacks
+          - including HTTP header injection
+          - applies to all public-facing apps
+      - std: SOC 2
+        items:
+          - CC6.1 — logical access protection
+          - session fixation breaks access control
+          - auditors require input-validation evidence
+      - std: GDPR
+        items:
+          - Art. 5(1)(f) — integrity & confidentiality
+          - session fixation → personal-data breach
+          - Art. 33 — 72h breach notification
+    inlineSources:
+      - label: PCI DSS
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: GDPR Art. 5
+        url: https://gdpr-info.eu/art-5-gdpr/
+      - label: GDPR Art. 33
+        url: https://gdpr-info.eu/art-33-gdpr/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm an active CRLF / response-splitting breach, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnego naruszenia CRLF / response splitting przejdź tę listę od góry.
+    steps:
+      - en: Identify the vulnerable endpoint and the exact reflected header sink
+        pl: Zidentyfikuj podatny endpoint i dokładny odbity sink nagłówka
+      - en: Purge all shared-cache / CDN layers to evict poisoned responses
+        pl: Wyczyść wszystkie warstwy współdzielonego cache / CDN, by usunąć zatrute odpowiedzi
+      - en: Rotate and invalidate all session IDs to break any fixed sessions
+        pl: Rotuj i unieważnij wszystkie identyfikatory sesji, by przerwać przypięte sesje
+      - en: Grep access logs for %0d%0a, %250d%250a, and split-response markers
+        pl: Przeszukaj access logi pod kątem %0d%0a, %250d%250a i markerów rozdzielonej odpowiedzi
+      - en: Upgrade the framework (Werkzeug/Spring/Node) so \r\n is rejected
+        pl: Zaktualizuj framework (Werkzeug/Spring/Node), by \r\n było odrzucane
+      - en: Deploy the allow-list sanitizer and redirect URL allow-list at the sink
+        pl: Wdróż sanityzer allow-list i allow-listę URL przekierowań przy sinku
+      - en: Notify regulators within 72h (GDPR Art. 33) if sessions were hijacked
+        pl: Powiadom regulatorów w 72h (GDPR Art. 33), jeśli sesje zostały przejęte
+      - en: "Post-incident: SAST sweep (CodeQL response-splitting) for other header sinks"
+        pl: "Po incydencie: przegląd SAST (CodeQL response-splitting) pod kątem innych sinków nagłówków"
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+      - label: OWASP A03:2021 Injection
+        url: https://owasp.org/Top10/A03_2021-Injection/
+      - label: CWE-113 (MITRE)
+        url: https://cwe.mitre.org/data/definitions/113.html
+      - label: CWE-93 CRLF Injection (MITRE)
+        url: https://cwe.mitre.org/data/definitions/93.html
+      - label: OWASP CRLF Injection
+        url: https://owasp.org/www-community/vulnerabilities/CRLF_Injection
+      - label: PortSwigger — HTTP request smuggling
+        url: https://portswigger.net/web-security/request-smuggling
+      - label: CVE-2018-12116 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2018-12116
