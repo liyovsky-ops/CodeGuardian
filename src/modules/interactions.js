@@ -11,6 +11,7 @@ import sstiData from '../content/deepdives/ssti.yaml';
 import logiData from '../content/deepdives/logi.yaml';
 import crlfiData from '../content/deepdives/crlfi.yaml';
 import hhiData from '../content/deepdives/hhi.yaml';
+import emailiData from '../content/deepdives/emaili.yaml';
 
 const DEEPDIVE_HANDLERS = {
   '1.1': () => openDeepDivePage(sqliData),
@@ -22,6 +23,7 @@ const DEEPDIVE_HANDLERS = {
   '1.7': () => openDeepDivePage(logiData),
   '1.8': () => openDeepDivePage(crlfiData),
   '1.9': () => openDeepDivePage(hhiData),
+  '1.10': () => openDeepDivePage(emailiData),
 };
 
 function wireCollapsible() {

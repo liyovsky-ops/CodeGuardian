@@ -1,0 +1,460 @@
+meta:
+  id: emaili
+  threatId: "1.10"
+  severity: High
+  color: "#f97316"
+  colorRgb: 249,115,22
+  cwe: CWE-93
+  cvss: "7.5"
+  standard: OWASP A03:2021
+hero:
+  titleMain: Email Header
+  titleGrad: Injection
+  titleTail: ""
+  topbar: Email / SMTP Header Injection
+  lead:
+    en: "Email Header Injection exploits insufficient sanitization of user input in email header fields — an attacker injects CRLF sequences (\\r\\n) to add arbitrary headers like CC, BCC, or even replace the entire email body. The primary goal is to turn a legitimate application into an open spam relay, abusing the server's IP reputation for phishing campaigns."
+    pl: "Email Header Injection wykorzystuje brak sanityzacji danych użytkownika w nagłówkach email — atakujący wstrzykuje sekwencje CRLF (\\r\\n) by dodać nagłówki CC, BCC lub podmienić całą treść wiadomości. Głównym celem jest zamiana aplikacji w open relay spamowy, nadużywając reputacji IP serwera do kampanii phishingowych."
+  metrics:
+    - k: CWE-93
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "7.5"
+      v: CVSS · High
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "7"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-93 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/93.html
+    - label: OWASP Email Injection
+      url: https://owasp.org/www-community/attacks/Email_Injection
+    - label: RFC 2822 (Internet Message Format)
+      url: https://datatracker.ietf.org/doc/html/rfc2822
+sectionOrder:
+  - overview
+  - types
+  - code
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - migration
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack variants
+    pl: Warianty ataków
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: migration
+    en: Legacy migration
+    pl: Migracja legacy
+sections:
+  attacks:
+    title:
+      en: Attack variants
+      pl: Warianty ataków
+    lead:
+      en: Seven ways to exploit newline injection in email fields — from silent BCC to full body replacement.
+      pl: Siedem sposobów wykorzystania wstrzyknięcia nowej linii w polach email — od cichego BCC do podmianki całego body.
+    items:
+      - name: CC/BCC Injection
+        sev: high
+        description:
+          en: Attacker appends \r\nBCC:attacker@evil.com to a form field, causing the server to silently send copies to arbitrary recipients. The most common variant — used for mass spam distribution through legitimate mail servers.
+          pl: Atakujący dodaje \r\nBCC:attacker@evil.com do pola formularza, powodując ciche wysyłanie kopii do dowolnych odbiorców. Najczęstszy wariant — używany do masowej dystrybucji spamu przez legalne serwery.
+        payload: "victim@x.com\\r\\nBCC: spam1@evil.com, spam2@evil.com"
+      - name: Subject Injection
+        sev: medium
+        description:
+          en: Modifies the email subject by injecting a newline followed by a new Subject header. Used to make phishing emails look legitimate by overwriting the original subject.
+          pl: Modyfikuje temat emaila wstrzykując nową linię z nowym nagłówkiem Subject. Używane do uwiarygodniania phishingu przez nadpisanie oryginalnego tematu.
+        payload: "Original\\r\\nSubject: Your account has been compromised"
+      - name: Body Injection
+        sev: high
+        description:
+          en: Injecting a double CRLF (\r\n\r\n) terminates the headers and starts the message body — allowing the attacker to replace the entire email content with phishing links or malicious payloads.
+          pl: Wstrzyknięcie podwójnego CRLF (\\r\\n\\r\\n) kończy nagłówki i rozpoczyna treść wiadomości — pozwalając atakującemu podmienić całą zawartość emaila na linki phishingowe.
+        payload: "test\\r\\n\\r\\nDear user, click here to verify: http://evil.com"
+      - name: Reply-To Injection
+        sev: medium
+        description:
+          en: Injects a Reply-To header pointing to an attacker-controlled address. All replies from the victim go to the attacker instead of the legitimate sender.
+          pl: Wstrzykuje nagłówek Reply-To wskazujący na adres atakującego. Wszystkie odpowiedzi ofiary trafiają do atakującego zamiast do nadawcy.
+        payload: "user@x.com\\r\\nReply-To: attacker@evil.com"
+      - name: Content-Type Injection
+        sev: high
+        description:
+          en: Changes the email to multipart/mixed format by injecting Content-Type header, enabling attachment of malicious files to the email without the application's knowledge.
+          pl: Zmienia email na format multipart/mixed przez wstrzyknięcie nagłówka Content-Type, umożliwiając dołączenie złośliwych plików bez wiedzy aplikacji.
+        payload: "test\\r\\nContent-Type: multipart/mixed; boundary=evil"
+      - name: Charset Injection
+        sev: medium
+        description:
+          en: Injects Content-Transfer-Encoding or charset (e.g., UTF-7) to bypass XSS filters in webmail clients. The email appears benign but executes JavaScript when rendered.
+          pl: Wstrzykuje Content-Transfer-Encoding lub charset (np. UTF-7) by ominąć filtry XSS w klientach webmail. Email wydaje się nieszkodliwy ale wykonuje JavaScript przy renderowaniu.
+        payload: "test\\r\\nContent-Type: text/html; charset=UTF-7"
+      - name: Open Relay Exploitation
+        sev: critical
+        description:
+          en: Combining CC/BCC injection with body injection turns the application into a full open relay — the attacker can send arbitrary emails from the server's IP address, completely anonymizing their spam/phishing campaign.
+          pl: Połączenie CC/BCC injection z body injection zamienia aplikację w pełny open relay — atakujący może wysyłać dowolne emaile z adresu IP serwera, anonimizując swoją kampanię spam/phishing.
+        payload: "a@x.com\\r\\nBCC: list@spam.com\\r\\n\\r\\nClick here for free money"
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The fix is universal: strip or reject CRLF characters from any input that flows into email headers. Never concatenate user input into raw SMTP headers."
+      pl: "Naprawa jest uniwersalna: usuń lub odrzuć znaki CRLF z każdego wejścia trafiającego do nagłówków email. Nigdy nie konkatenuj danych użytkownika w surowe nagłówki SMTP."
+    languages:
+      - label: Python
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — user input goes directly into email headers
+          import smtplib
+          from email.mime.text import MIMEText
+
+          msg = MIMEText("Hello")
+          msg["Subject"] = request.form["subject"]  # CRLF injection!
+          msg["To"] = request.form["to"]             # CRLF injection!
+          msg["From"] = "noreply@myapp.com"
+          server.sendmail("noreply@myapp.com", [to], msg.as_string())
+        safe: |-
+          # SECURE — validate input + use Django's EmailMessage (strips newlines)
+          from django.core.mail import EmailMessage
+
+          subject = request.POST["subject"]
+          if "\r" in subject or "\n" in subject:
+              raise ValidationError("Invalid characters in subject")
+
+          email = EmailMessage(
+              subject=subject,
+              body="Hello",
+              from_email="noreply@myapp.com",
+              to=[validated_email],
+          )
+          email.send()
+      - label: PHP
+        lang: php
+        vulnerable: |-
+          <?php // VULNERABLE — mail() passes headers directly to sendmail
+          $to = $_POST['email'];
+          $subject = $_POST['subject'];
+          $headers = "From: noreply@myapp.com\r\n";
+          mail($to, $subject, "Hello", $headers);  // CRLF injection!
+        safe: |-
+          <?php // SECURE — PHPMailer 6.x+ sanitizes headers internally
+          use PHPMailer\PHPMailer\PHPMailer;
+
+          $mail = new PHPMailer(true);
+          $mail->setFrom('noreply@myapp.com');
+          $mail->addAddress(filter_var($_POST['email'], FILTER_VALIDATE_EMAIL));
+          $mail->Subject = preg_replace('/[\r\n]/', '', $_POST['subject']);
+          $mail->Body = 'Hello';
+          $mail->send();
+      - label: Java
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — manual header construction with string concatenation
+          String to = request.getParameter("to");
+          String subject = request.getParameter("subject");
+          Transport.send(session, buildRawMessage(to, subject)); // CRLF injection!
+        safe: |-
+          // SECURE — Jakarta Mail validates addresses and headers
+          MimeMessage msg = new MimeMessage(session);
+          msg.setRecipient(Message.RecipientType.TO,
+              new InternetAddress(to, true)); // strict validation
+          // InternetAddress.parse() throws AddressException on CRLF
+          msg.setSubject(subject.replaceAll("[\\r\\n]", ""));
+          Transport.send(msg);
+      - label: Node.js
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE — custom SMTP with raw socket
+          const net = require('net');
+          socket.write(`MAIL FROM:<${userEmail}>\r\n`); // CRLF injection!
+          socket.write(`RCPT TO:<${to}>\r\n`);
+        safe: |-
+          // SECURE — Nodemailer sanitizes headers since v4.0+
+          const nodemailer = require('nodemailer');
+          const transporter = nodemailer.createTransport({ /* config */ });
+          await transporter.sendMail({
+            from: 'noreply@myapp.com',
+            to: validatedEmail,  // Nodemailer rejects CRLF in addresses
+            subject: userSubject, // automatically sanitized
+            text: 'Hello',
+          });
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker identifies and exploits email header injection.
+      pl: Jak atakujący identyfikuje i eksploatuje wstrzyknięcie nagłówków email.
+    steps:
+      - title:
+          en: Identify email inputs
+          pl: Identyfikacja pól email
+        description:
+          en: Find all forms or APIs that trigger email sending — contact forms, password reset, share-by-email, invite features.
+          pl: Znajdź wszystkie formularze lub API wywołujące wysyłkę emaili — formularze kontaktowe, reset hasła, udostępnianie, zaproszenia.
+      - title:
+          en: Inject CRLF payload
+          pl: Wstrzyknięcie CRLF
+        description:
+          en: "Submit URL-encoded CRLF in each field: test%0d%0aBCC:attacker@evil.com — monitor if attacker email receives a copy."
+          pl: "Wyślij URL-encoded CRLF w każdym polu: test%0d%0aBCC:attacker@evil.com — sprawdź czy email atakującego otrzyma kopię."
+      - title:
+          en: Test body injection
+          pl: Test wstrzyknięcia body
+        description:
+          en: "Inject double CRLF to replace body: test%0d%0a%0d%0aPhishing content here — check raw email source for injected body."
+          pl: "Wstrzyknij podwójne CRLF by podmienić body: test%0d%0a%0d%0aTreść phishingowa — sprawdź surowe źródło emaila."
+      - title:
+          en: Escalate to open relay
+          pl: Eskalacja do open relay
+        description:
+          en: Combine CC/BCC injection with body injection to send fully controlled emails from the server's IP address.
+          pl: Połącz CC/BCC injection z body injection by wysyłać w pełni kontrolowane emaile z adresu IP serwera.
+      - title:
+          en: Test encoded variants
+          pl: Test wariantów kodowania
+        description:
+          en: "Try URL-encoded (%0a, %0d), double-encoded (%250a), and Unicode variants to bypass WAF rules."
+          pl: "Spróbuj URL-encoded (%0a, %0d), podwójnie zakodowane (%250a) i warianty Unicode by ominąć reguły WAF."
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth — strip CRLF is the primary fix; use high-level libraries as structural defense.
+      pl: Obrona w głąb — usuwanie CRLF to główna naprawa; biblioteki wysokiego poziomu jako obrona strukturalna.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Strip/reject CRLF in all header inputs
+          pl: Usuwanie/odrzucanie CRLF we wszystkich nagłówkach
+        note:
+          en: "Reject any input containing \\r or \\n before it touches an email header. Universal, language-agnostic."
+          pl: "Odrzuć każde wejście zawierające \\r lub \\n zanim dotknie nagłówka email. Uniwersalne, niezależne od języka."
+      - rank: 2
+        eff: 95
+        kind: primary
+        label:
+          en: Use high-level email libraries
+          pl: Używaj bibliotek email wysokiego poziomu
+        note:
+          en: "Django EmailMessage, PHPMailer 6+, Nodemailer 4+, Jakarta Mail — all sanitize headers internally."
+          pl: "Django EmailMessage, PHPMailer 6+, Nodemailer 4+, Jakarta Mail — sanityzują nagłówki wewnętrznie."
+      - rank: 3
+        eff: 80
+        kind: strong
+        label:
+          en: Email address validation
+          pl: Walidacja adresu email
+        note:
+          en: "Validate with filter_var(FILTER_VALIDATE_EMAIL) or InternetAddress.parse() — rejects structurally invalid addresses."
+          pl: "Waliduj przez filter_var(FILTER_VALIDATE_EMAIL) lub InternetAddress.parse() — odrzuca strukturalnie niepoprawne adresy."
+      - rank: 4
+        eff: 60
+        kind: mitigation
+        label:
+          en: Rate limiting on email endpoints
+          pl: Rate limiting na endpointach email
+        note:
+          en: Limits blast radius if injection succeeds — attacker can't send 100K emails per minute.
+          pl: Ogranicza skutki jeśli wstrzyknięcie się powiedzie — atakujący nie wyśle 100K emaili na minutę.
+      - rank: 5
+        eff: 40
+        kind: mitigation
+        label:
+          en: Use API-based email (SendGrid, SES)
+          pl: Email przez API (SendGrid, SES)
+        note:
+          en: API-based sending separates header construction from the application — the provider handles sanitization.
+          pl: Wysyłka przez API oddziela konstrukcję nagłówków od aplikacji — provider obsługuje sanityzację.
+      - rank: 6
+        eff: 20
+        kind: weak
+        label:
+          en: WAF rules for CRLF patterns
+          pl: Reguły WAF na wzorce CRLF
+        note:
+          en: "Bypassable via double-encoding (%250d%250a) and Unicode. Compensating control only."
+          pl: "Omijalne przez podwójne kodowanie (%250d%250a) i Unicode. Tylko kontrola kompensacyjna."
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Email header injection has affected major PHP libraries, CMSes, and webmail clients — turning millions of websites into spam relays.
+      pl: Wstrzyknięcie nagłówków email dotknęło główne biblioteki PHP, CMSy i klienty webmail — zamieniając miliony stron w relay spamowe.
+    items:
+      - org: PHPMailer
+        year: 2016
+        impact: CVE-2016-10033 (CVSS 9.8)
+        cost: 9M+ affected websites
+        description:
+          en: Critical RCE via crafted sender address — attacker could inject shell arguments through the -f flag passed to sendmail. Affected WordPress, Drupal, Joomla, and 1Password.
+          pl: Krytyczne RCE przez spreparowany adres nadawcy — atakujący mógł wstrzyknąć argumenty shell przez flagę -f przekazywaną do sendmail. Dotknęło WordPress, Drupal, Joomla i 1Password.
+      - org: Roundcube Webmail
+        year: 2016
+        impact: CVE-2016-9920
+        cost: Remote code execution
+        description:
+          en: Authenticated users could execute arbitrary commands via crafted email headers passed to PHP mail() function in Roundcube before 1.2.3.
+          pl: Uwierzytelnieni użytkownicy mogli wykonywać dowolne polecenia przez spreparowane nagłówki email przekazywane do PHP mail() w Roundcube przed 1.2.3.
+      - org: WordPress
+        year: 2017
+        impact: CVE-2017-8295
+        cost: All versions before 4.7.5
+        description:
+          en: Password reset emails could be intercepted by combining Host header injection with email header manipulation in wp_mail(), allowing attackers to receive password reset tokens for arbitrary accounts.
+          pl: Emaile resetu hasła mogły zostać przechwycone przez połączenie Host header injection z manipulacją nagłówków email w wp_mail(), pozwalając atakującym na odbiór tokenów resetu dla dowolnych kont.
+      - org: Django
+        year: 2019
+        impact: CVE-2019-19844
+        cost: Password reset hijacking
+        description:
+          en: Password reset emails could be hijacked via header injection in the email field, allowing attackers to receive password reset tokens for arbitrary accounts in Django before 2.2.9.
+          pl: Emaile resetu hasła mogły być przejęte przez wstrzyknięcie nagłówków w polu email, pozwalając atakującym na odbiór tokenów resetu w Django przed 2.2.9.
+    inlineSources:
+      - label: PHPMailer CVE-2016-10033
+        url: https://nvd.nist.gov/vuln/detail/CVE-2016-10033
+      - label: Roundcube CVE-2016-9920
+        url: https://nvd.nist.gov/vuln/detail/CVE-2016-9920
+      - label: WordPress CVE-2017-8295
+        url: https://nvd.nist.gov/vuln/detail/CVE-2017-8295
+      - label: Django CVE-2019-19844
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-19844
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: CRLF injection in email fields is detectable by both static and dynamic analysis.
+      pl: Wstrzyknięcie CRLF w polach email jest wykrywalne zarówno przez analizę statyczną jak i dynamiczną.
+    sast:
+      - - Semgrep
+        - "Custom rule: detect user input flowing into email header fields without CRLF stripping"
+      - - Bandit
+        - "B608 — detect raw smtplib usage with user-controlled headers (Python)"
+      - - CodeQL
+        - "Taint tracking from HTTP input to email.mime header assignment"
+    dast:
+      - - Burp Suite Pro
+        - "Inject %0d%0aBCC:test@attacker.com in all email-related form fields"
+      - - OWASP ZAP
+        - "Active scan with CRLF injection payloads targeting email endpoints"
+      - - Nuclei
+        - "Template: email-header-injection — automated testing for CRLF in contact forms"
+    note:
+      en: <strong>Key detection pattern:</strong> monitor outbound SMTP traffic for emails with unexpected BCC/CC headers not set by the application. A sudden spike in outbound emails from a single form endpoint indicates exploitation.
+      pl: <strong>Kluczowy wzorzec:</strong> monitoruj wychodzący ruch SMTP pod kątem emaili z nieoczekiwanymi nagłówkami BCC/CC. Nagły skok wychodzących emaili z jednego formularza wskazuje na eksploatację.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Email header injection maps onto injection prevention controls across compliance frameworks.
+      pl: Wstrzyknięcie nagłówków email mapuje się na kontrole zapobiegania injection w ramach frameworków compliance.
+    items:
+      - std: PCI DSS
+        items:
+          - 6.2.4 — secure coding vs injection
+          - 6.3.2 — review custom code
+      - std: GDPR
+        items:
+          - Art. 25 — security by design
+          - Art. 32 — appropriate measures
+          - Art. 33/34 — breach notification (spam relay = data processor breach)
+      - std: SOC 2
+        items:
+          - CC6.1 — logical access controls
+          - CC7.1 — vulnerability detection
+    inlineSources:
+      - label: CWE-93 (MITRE)
+        url: https://cwe.mitre.org/data/definitions/93.html
+      - label: RFC 2822
+        url: https://datatracker.ietf.org/doc/html/rfc2822
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If your server has been used as a spam relay, work this list immediately.
+      pl: Jeśli Twój serwer był używany jako relay spamowy, przejdź tę listę natychmiast.
+    steps:
+      - en: Disable the vulnerable form/endpoint immediately
+        pl: Natychmiast wyłącz podatny formularz/endpoint
+      - en: Check outbound email logs — how many unauthorized emails were sent and to whom
+        pl: Sprawdź logi wychodzących emaili — ile nieautoryzowanych wiadomości wysłano i do kogo
+      - en: Check if your server IP is on any spam blacklist (MXToolbox, Spamhaus)
+        pl: Sprawdź czy IP serwera jest na blackliście spamu (MXToolbox, Spamhaus)
+      - en: "Patch: strip CRLF from all user inputs flowing into email headers"
+        pl: "Załataj: usuń CRLF ze wszystkich danych użytkownika trafiających do nagłówków email"
+      - en: Request delisting from spam blacklists if flagged
+        pl: Wystąp o usunięcie z blacklist spamu jeśli zostałeś zaflagowany
+      - en: Implement rate limiting on all email-sending endpoints
+        pl: Wdróż rate limiting na wszystkich endpointach wysyłających emaile
+      - en: Consider switching from direct SMTP to API-based email (SendGrid, SES)
+        pl: Rozważ przejście z bezpośredniego SMTP na email przez API (SendGrid, SES)
+  migration:
+    title:
+      en: Legacy migration strategy
+      pl: Strategia migracji legacy
+    lead:
+      en: Three phases to secure email sending in a legacy codebase.
+      pl: Trzy fazy zabezpieczania wysyłki email w legacy codebase.
+    steps:
+      - title:
+          en: 1 · Inventory
+          pl: 1 · Inwentaryzacja
+        description:
+          en: "SAST scan for all usages of PHP mail(), raw smtplib, manual SMTP socket connections — catalogue every email-sending path."
+          pl: "Skan SAST pod kątem użycia PHP mail(), raw smtplib, ręcznych połączeń SMTP — skataloguj każdą ścieżkę wysyłki email."
+      - title:
+          en: 2 · Migrate to safe libraries
+          pl: 2 · Migracja do bezpiecznych bibliotek
+        description:
+          en: "Replace PHP mail() with PHPMailer 6+, raw smtplib with Django EmailMessage or email.message, custom SMTP with Nodemailer."
+          pl: "Zamień PHP mail() na PHPMailer 6+, raw smtplib na Django EmailMessage lub email.message, custom SMTP na Nodemailer."
+      - title:
+          en: 3 · Validate and test
+          pl: 3 · Walidacja i testy
+        description:
+          en: "Add CRLF input validation at the application boundary. DAST test every email endpoint with Burp Suite CRLF payloads."
+          pl: "Dodaj walidację CRLF na granicy aplikacji. Testuj DAST każdy endpoint email z payloadami CRLF w Burp Suite."
