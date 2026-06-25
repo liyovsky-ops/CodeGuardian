@@ -1,0 +1,392 @@
+meta:
+  id: hhi
+  threatId: "1.9"
+  severity: High
+  color: "#f97316"
+  colorRgb: 249,115,22
+  cwe: CWE-644
+  cvss: "7.5"
+  standard: OWASP A03:2021
+hero:
+  titleMain: Host Header
+  titleGrad: Injection
+  titleTail: ""
+  topbar: Host Header Injection
+  lead:
+    en: "Host Header Injection occurs when a web application trusts the user-controlled HTTP Host header to generate URLs, route requests, or determine server identity — without validation. An attacker substitutes a malicious domain, hijacking password reset links, poisoning web caches, and in some cases achieving SSRF. The Host header is present in every HTTP request and is fully attacker-controlled."
+    pl: "Host Header Injection występuje gdy aplikacja ufa kontrolowanemu przez użytkownika nagłówkowi HTTP Host do generowania URL-i, routingu lub identyfikacji serwera — bez walidacji. Atakujący podstawia złośliwą domenę, przechwytując linki resetowania haseł, zatruwając cache webowy, a w niektórych przypadkach osiągając SSRF. Nagłówek Host jest obecny w każdym żądaniu HTTP i jest w pełni kontrolowany przez atakującego."
+  metrics:
+    - k: CWE-644
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "7.5"
+      v: CVSS · High
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "5"
+      v:
+        en: Attack variants
+        pl: Warianty ataku
+  sources:
+    - label: CWE-644 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/644.html
+    - label: PortSwigger — Host Header Attacks
+      url: https://portswigger.net/web-security/host-header
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: James Kettle — Practical Cache Poisoning
+      url: https://portswigger.net/research/practical-web-cache-poisoning
+sectionOrder:
+  - overview
+  - types
+  - code
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - migration
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack variants
+    pl: Warianty ataków
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: migration
+    en: Legacy migration
+    pl: Migracja legacy
+sections:
+  attacks:
+    title:
+      en: Attack variants
+      pl: Warianty ataków
+    lead:
+      en: Five distinct ways Host Header Injection is exploited — from password reset hijacking to web cache poisoning and SSRF.
+      pl: Pięć sposobów eksploatacji Host Header Injection — od przechwycenia resetowania haseł po zatruwanie cache i SSRF.
+    items:
+      - name: Password Reset Poisoning
+        sev: critical
+        description:
+          en: Attacker triggers a password reset for the victim, injecting a malicious Host header (Host&#x3a; attacker.com). The application generates a reset link using the injected domain. When the victim clicks the legitimate-looking email link, their reset token is sent to the attacker's server.
+          pl: Atakujący wywołuje reset hasła dla ofiary, wstrzykując złośliwy nagłówek Host (Host&#x3a; attacker.com). Aplikacja generuje link resetujący używając wstrzykniętej domeny. Gdy ofiara kliknie w link z legalnie wyglądającego maila, token resetu trafia do serwera atakującego.
+        payload: "POST /reset HTTP/1.1\\nHost: attacker.com\\nContent-Type: application/x-www-form-urlencoded\\n\\nemail=victim@example.com"
+      - name: Web Cache Poisoning
+        sev: high
+        description:
+          en: Attacker sends a request for a cacheable resource with a malicious Host header. The application reflects the host value in the response. A misconfigured cache (CDN, reverse proxy) stores the poisoned response and serves it to all subsequent users — leading to mass XSS.
+          pl: Atakujący wysyła żądanie dla cacheowalnego zasobu ze złośliwym nagłówkiem Host. Aplikacja odzwierciedla wartość hosta w odpowiedzi. Źle skonfigurowany cache (CDN, reverse proxy) przechowuje zatrutą odpowiedź i serwuje ją wszystkim kolejnym użytkownikom — prowadząc do masowego XSS.
+        payload: "GET /static/main.js HTTP/1.1\\nHost: evil-cdn.com\\n\\n# Cache stores response with evil-cdn.com URLs, serves to ALL users"
+      - name: X-Forwarded-Host Bypass
+        sev: high
+        description:
+          en: Even when the application validates the standard Host header, the X-Forwarded-Host header is an equally dangerous injection vector. Many frameworks (Django, Laravel, Spring) prioritize this header when behind a reverse proxy, allowing attackers to bypass Host validation entirely.
+          pl: Nawet gdy aplikacja waliduje standardowy nagłówek Host, nagłówek X-Forwarded-Host jest równie groźnym wektorem wstrzyknięcia. Wiele frameworków (Django, Laravel, Spring) priorytetyzuje ten nagłówek za reverse proxy, pozwalając atakującym na całkowite obejście walidacji Host.
+        payload: "GET /account HTTP/1.1\\nHost: legitimate.com\\nX-Forwarded-Host: attacker.com\\n\\n# Backend uses X-Forwarded-Host over Host"
+      - name: SSRF via Host Header
+        sev: high
+        description:
+          en: If the application uses the Host header to construct internal request URLs (e.g., calling backend microservices), an attacker can redirect internal routing to access internal services or cloud metadata endpoints (169.254.169.254).
+          pl: Jeśli aplikacja używa nagłówka Host do konstruowania wewnętrznych URL-i (np. wywołania mikroserwisów), atakujący może przekierować wewnętrzny routing do dostępu do usług wewnętrznych lub endpointów metadanych chmury (169.254.169.254).
+        payload: "GET / HTTP/1.1\\nHost: 169.254.169.254\\n\\n# Application routes internal request to cloud metadata endpoint"
+      - name: Virtual Host Confusion
+        sev: medium
+        description:
+          en: On servers hosting multiple virtual hosts, a crafted Host header can route requests to unintended applications or expose admin panels that are only meant to be accessible on internal virtual hosts.
+          pl: Na serwerach hostujących wiele wirtualnych hostów, spreparowany nagłówek Host może routować żądania do niezamierzonych aplikacji lub odsłaniać panele admina dostępne tylko na wewnętrznych wirtualnych hostach.
+        payload: "GET /admin HTTP/1.1\\nHost: internal-admin.local\\n\\n# Routes to admin vhost instead of public app"
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The fix in every language: never trust the Host header for URL generation. Use a configured canonical hostname."
+      pl: "Naprawa w każdym języku: nigdy nie ufaj nagłówkowi Host do generowania URL-i. Używaj skonfigurowanej kanonicznej nazwy hosta."
+    languages:
+      - label: Python / Django
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — builds URL from raw Host header
+          link = f"https://{request.META['HTTP_HOST']}/reset?token={token}"
+          send_email(user.email, link)
+          # Attack: Host: evil.com → token sent to attacker
+        safe: |-
+          # SECURE — ALLOWED_HOSTS whitelist + canonical domain
+          # settings.py: ALLOWED_HOSTS = ['example.com', 'www.example.com']
+          # settings.py: USE_X_FORWARDED_HOST = False
+          link = f"https://{settings.CANONICAL_HOST}/reset?token={token}"
+          send_email(user.email, link)
+      - label: JavaScript / Express
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE — uses raw req.headers.host for URL construction
+          const link = `https://${req.headers.host}/reset?token=${token}`;
+          sendEmail(user.email, link);
+          // Attack: Host: evil.com → token exfiltrated
+        safe: |-
+          // SECURE — hardcoded canonical URL, host validation middleware
+          const ALLOWED_HOSTS = ['example.com', 'www.example.com'];
+          app.use((req, res, next) => {
+            if (!ALLOWED_HOSTS.includes(req.hostname)) return res.status(400).end();
+            next();
+          });
+          const link = `https://${process.env.APP_URL}/reset?token=${token}`;
+      - label: Java / Spring
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — uses getServerName() without validation
+          String host = request.getServerName();
+          String link = "https://" + host + "/reset?token=" + token;
+          emailService.send(user.getEmail(), link);
+        safe: |-
+          // SECURE — validate against whitelist, use configured host
+          // application.properties: server.forward-headers-strategy=NATIVE
+          // application.properties: app.canonical-host=example.com
+          Set<String> allowed = Set.of("example.com", "www.example.com");
+          if (!allowed.contains(request.getServerName())) {
+              return ResponseEntity.badRequest().build();
+          }
+          String link = "https://" + canonicalHost + "/reset?token=" + token;
+      - label: Nginx (reverse proxy)
+        lang: nginx
+        vulnerable: |-
+          # VULNERABLE — passes raw Host header to backend
+          proxy_pass http://backend;
+          # Client controls Host header → backend trusts it
+        safe: |-
+          # SECURE — overwrite Host with known server name
+          proxy_set_header Host $server_name;
+          proxy_set_header X-Forwarded-Host "";
+          # Strip all forwarded headers from client
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker discovers and exploits Host Header Injection.
+      pl: Jak atakujący odkrywa i eksploatuje Host Header Injection.
+    steps:
+      - title:
+          en: Detect
+          pl: Wykrycie
+        description:
+          en: Identify features that generate full URLs (password reset, redirects, email links). Send request with Host set to an out-of-band interaction service (Burp Collaborator, interact.sh). Check if the injected domain appears in response body or email.
+          pl: Zidentyfikuj funkcje generujące pełne URL-e (reset hasła, przekierowania, linki w mailach). Wyślij żądanie z Host ustawionym na serwis OOB (Burp Collaborator, interact.sh). Sprawdź czy wstrzyknięta domena pojawia się w odpowiedzi lub mailu.
+      - title:
+          en: Variant testing
+          pl: Testowanie wariantów
+        description:
+          en: "Test all related headers: X-Forwarded-Host, X-Host, X-Forwarded-Server, X-Original-URL. Many applications validate Host but forget to validate forwarded headers."
+          pl: "Testuj wszystkie powiązane nagłówki: X-Forwarded-Host, X-Host, X-Forwarded-Server, X-Original-URL. Wiele aplikacji waliduje Host ale zapomina o forwarded headers."
+      - title:
+          en: Cache poisoning
+          pl: Zatruwanie cache
+        description:
+          en: Request a cacheable resource with a malicious Host header. If the CDN/proxy caches the response and serves it to other users, the impact multiplies from a single victim to all users.
+          pl: Żądaj cacheowalnego zasobu ze złośliwym nagłówkiem Host. Jeśli CDN/proxy cachuje odpowiedź i serwuje ją innym użytkownikom, wpływ mnoży się z jednej ofiary na wszystkich użytkowników.
+      - title:
+          en: Escalate
+          pl: Eskalacja
+        description:
+          en: Password reset poisoning for account takeover. SSRF via Host header to access internal services or cloud metadata. Cache poisoning for mass XSS.
+          pl: Password reset poisoning do przejęcia konta. SSRF przez nagłówek Host do dostępu do usług wewnętrznych lub metadanych chmury. Zatruwanie cache dla masowego XSS.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: "The primary defense is whitelisting allowed hostnames. All teams in the Arena consensus agreed: reject any request whose Host header doesn't match the whitelist."
+      pl: "Główna obrona to whitelist dozwolonych nazw hostów. Wszystkie zespoły w konsensusie Arena się zgodziły: odrzuć każde żądanie którego nagłówek Host nie pasuje do whitelisty."
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Host whitelist (ALLOWED_HOSTS)
+          pl: Whitelist hostów (ALLOWED_HOSTS)
+        note:
+          en: "Structural fix — application rejects requests with unrecognized Host headers. Django: ALLOWED_HOSTS=['example.com']. Express: hostname validation middleware. Spring: server.forward-headers-strategy=NATIVE with trusted proxies."
+          pl: "Naprawa strukturalna — aplikacja odrzuca żądania z nierozpoznanymi nagłówkami Host. Django: ALLOWED_HOSTS=['example.com']. Express: middleware walidacji hostname. Spring: server.forward-headers-strategy=NATIVE z zaufanymi proxy."
+      - rank: 2
+        eff: 90
+        kind: primary
+        label:
+          en: Canonical hostname in config
+          pl: Kanoniczny hostname w konfiguracji
+        note:
+          en: Never use the Host header to build URLs. Hardcode the canonical domain in configuration (env var APP_URL or settings.CANONICAL_HOST).
+          pl: Nigdy nie używaj nagłówka Host do budowania URL-i. Zakoduj kanoniczną domenę w konfiguracji (zmienna env APP_URL lub settings.CANONICAL_HOST).
+      - rank: 3
+        eff: 80
+        kind: strong
+        label:
+          en: Proxy header stripping
+          pl: Usuwanie nagłówków proxy
+        note:
+          en: "Configure reverse proxy (Nginx) to overwrite Host: proxy_set_header Host $server_name. Strip X-Forwarded-Host from client requests."
+          pl: "Konfiguruj reverse proxy (Nginx) do nadpisywania Host: proxy_set_header Host $server_name. Usuwaj X-Forwarded-Host z żądań klienta."
+      - rank: 4
+        eff: 50
+        kind: mitigation
+        label:
+          en: Disable DEBUG in production
+          pl: Wyłącz DEBUG w produkcji
+        note:
+          en: Django's DEBUG=True bypassed ALLOWED_HOSTS validation (CVE-2016-9014). Never deploy with DEBUG=True.
+          pl: Django DEBUG=True omijało walidację ALLOWED_HOSTS (CVE-2016-9014). Nigdy nie deployuj z DEBUG=True.
+      - rank: 5
+        eff: 30
+        kind: weak
+        label:
+          en: WAF rules
+          pl: Reguły WAF
+        note:
+          en: WAF can block requests with suspicious Host header patterns but is bypassable via encoding. Not a primary defense.
+          pl: WAF może blokować żądania z podejrzanymi wzorcami nagłówka Host ale jest omijalny przez kodowanie. Nie jest główną obroną.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Confirmed CVEs from the Arena consensus — verified by Claude, Gemini, and DeepSeek teams independently.
+      pl: Potwierdzone CVE z konsensusu Arena — zweryfikowane niezależnie przez zespoły Claude, Gemini i DeepSeek.
+    items:
+      - org: Django Project
+        year: 2016
+        impact: CVE-2016-9014 (CVSS 8.1)
+        cost: ALLOWED_HOSTS bypass
+        description:
+          en: "Django's DEBUG=True mode bypassed ALLOWED_HOSTS validation, allowing Host header injection for XSS and password reset poisoning. This led to Django making ALLOWED_HOSTS validation mandatory even in DEBUG mode."
+          pl: "Tryb DEBUG=True Django omijał walidację ALLOWED_HOSTS, pozwalając na Host header injection do XSS i password reset poisoning. Doprowadziło to do obowiązkowej walidacji ALLOWED_HOSTS nawet w trybie DEBUG."
+      - org: Symfony Framework
+        year: 2014
+        impact: CVE-2014-5244, CVE-2014-5245
+        cost: Cache & URL poisoning
+        description:
+          en: "Symfony's HttpFoundation component trusted X-Forwarded-Host without validation, allowing attackers behind reverse proxies to inject arbitrary hostnames into URL generation and redirect logic."
+          pl: "Komponent HttpFoundation Symfony ufał X-Forwarded-Host bez walidacji, pozwalając atakującym za reverse proxy wstrzykiwać dowolne nazwy hostów do generowania URL-i i logiki przekierowań."
+      - org: Django Project
+        year: 2012
+        impact: CVE-2012-4520
+        cost: Password reset poisoning
+        description:
+          en: "Django's password reset mechanism used the Host header to build reset links without validation, enabling direct password reset poisoning attacks."
+          pl: "Mechanizm resetowania haseł Django używał nagłówka Host do budowania linków resetujących bez walidacji, umożliwiając bezpośrednie ataki password reset poisoning."
+    inlineSources:
+      - label: CVE-2016-9014 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2016-9014
+      - label: CVE-2014-5244 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2014-5244
+      - label: CVE-2012-4520 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2012-4520
+      - label: James Kettle — Web Cache Poisoning Research
+        url: https://portswigger.net/research/practical-web-cache-poisoning
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: "All three Arena teams agreed on these detection methods: automated scanning with dedicated tools and manual testing with header manipulation."
+      pl: "Wszystkie trzy zespoły Arena zgodziły się co do tych metod wykrywania: automatyczne skanowanie dedykowanymi narzędziami i ręczne testowanie z manipulacją nagłówkami."
+    sast:
+      - - Semgrep
+        - "Rules for detecting request.META['HTTP_HOST'] / req.headers.host in URL construction"
+      - - CodeQL
+        - Taint tracking from Host header source to URL sink
+      - - Grep / manual
+        - "Search: request.get_host(), getServerName(), req.headers.host, req.hostname"
+    dast:
+      - - Burp Suite
+        - "Built-in Host Header Attack scanner (since 2018); manual: modify Host in Repeater, check for reflection"
+      - - OWASP ZAP
+        - Active scan rule for Host Header Injection
+      - - Nuclei
+        - "host-header-injection.yaml template — automated batch scanning"
+    note:
+      en: "<strong>Key test:</strong> Set Host header to a Burp Collaborator or interact.sh domain, trigger password reset. If you get a callback or the injected domain appears in the email link — the app is vulnerable."
+      pl: "<strong>Kluczowy test:</strong> Ustaw nagłówek Host na domenę Burp Collaborator lub interact.sh, wywołaj reset hasła. Jeśli dostaniesz callback lub wstrzyknięta domena pojawi się w linku w mailu — aplikacja jest podatna."
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    items:
+      - std: PCI DSS
+        items:
+          - 6.2.4 — secure coding vs injection
+          - 6.3.2 — review custom code for header handling
+      - std: GDPR
+        items:
+          - Art. 25 — security by design (validate all input including headers)
+          - Art. 32 — appropriate technical measures
+      - std: SOC 2
+        items:
+          - CC6.1 — logical access controls
+          - CC7.1 — vulnerability management
+    inlineSources:
+      - label: PCI DSS v4.0
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: GDPR Art. 32
+        url: https://gdpr-info.eu/art-32-gdpr/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    steps:
+      - en: Identify all applications using Host header for URL generation (grep for get_host, getServerName, req.headers.host)
+        pl: Zidentyfikuj wszystkie aplikacje używające nagłówka Host do generowania URL-i (grep na get_host, getServerName, req.headers.host)
+      - en: Check web cache / CDN for poisoned entries — purge immediately if found
+        pl: Sprawdź web cache / CDN pod kątem zatrutych wpisów — natychmiast wyczyść jeśli znalezione
+      - en: Invalidate all active password reset tokens (they may have been intercepted)
+        pl: Unieważnij wszystkie aktywne tokeny resetowania haseł (mogły zostać przechwycone)
+      - en: Review access logs for requests with anomalous Host header values
+        pl: Przejrzyj logi dostępu pod kątem żądań z anomalnymi wartościami nagłówka Host
+      - en: Deploy ALLOWED_HOSTS fix and proxy header stripping
+        pl: Wdróż poprawkę ALLOWED_HOSTS i usuwanie nagłówków proxy
+      - en: Re-scan with Burp Suite / Nuclei to confirm remediation
+        pl: Ponownie skanuj Burp Suite / Nuclei aby potwierdzić naprawę
+  migration:
+    title:
+      en: Legacy migration strategy
+      pl: Strategia migracji legacy
+    steps:
+      - title:
+          en: 1 · Audit
+          pl: 1 · Audyt
+        description:
+          en: "Search entire codebase for Host header usage: request.META['HTTP_HOST'], request.get_host(), req.headers.host, getServerName(). Flag every instance used in URL construction, redirects, or email templates."
+          pl: "Przeszukaj całą bazę kodu pod kątem użycia nagłówka Host: request.META['HTTP_HOST'], request.get_host(), req.headers.host, getServerName(). Oznacz każdą instancję używaną w konstruowaniu URL, przekierowaniach lub szablonach maili."
+      - title:
+          en: 2 · Configure
+          pl: 2 · Konfiguracja
+        description:
+          en: "Set ALLOWED_HOSTS (Django), host validation middleware (Express), ForwardedHeaderFilter (Spring). Configure reverse proxy to strip X-Forwarded-Host from client requests."
+          pl: "Ustaw ALLOWED_HOSTS (Django), middleware walidacji hosta (Express), ForwardedHeaderFilter (Spring). Konfiguruj reverse proxy do usuwania X-Forwarded-Host z żądań klienta."
+      - title:
+          en: 3 · Replace
+          pl: 3 · Zamiana
+        description:
+          en: "Replace every request.get_host() / req.headers.host usage with a configured canonical hostname from environment variables or application settings."
+          pl: "Zamień każde użycie request.get_host() / req.headers.host na skonfigurowaną kanoniczną nazwę hosta ze zmiennych środowiskowych lub ustawień aplikacji."
