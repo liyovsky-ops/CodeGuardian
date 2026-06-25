@@ -98,6 +98,19 @@
             <option value="Hard">Hard</option>
             <option value="Very Hard">Very Hard</option>
           </select>
+          <select id="filter-lang" class="select-field" aria-label="Filter by language">
+            <option value="" id="filter-lang-all">All languages</option>
+            <option value="python">🐍 Python</option>
+            <option value="javascript">🟨 JavaScript</option>
+            <option value="java">☕ Java</option>
+            <option value="php">🐘 PHP</option>
+            <option value="c">⚙️ C/C++</option>
+            <option value="ruby">💎 Ruby</option>
+            <option value="go">🔵 Go</option>
+            <option value="rust">🦀 Rust</option>
+            <option value="yaml">📄 YAML</option>
+          </select>
+          <span id="filter-count" class="filter-count"></span>
           <button id="toggle-research" class="toggle-research-btn active" title="Threats requiring verification">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
             <span id="research-btn-label">Needs research</span>

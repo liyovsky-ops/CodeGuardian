@@ -12,6 +12,7 @@ export const UI = {
   filterPlaceholder: { en: 'Filter by threat name…', pl: 'Filtruj po nazwie zagrożenia…' },
   filterAllSev: { en: 'All severities', pl: 'Wszystkie severity' },
   filterAllDiff: { en: 'All difficulties', pl: 'Każda trudność' },
+  filterAllLang: { en: 'All languages', pl: 'Wszystkie języki' },
   clearFilters: { en: 'Clear', pl: 'Wyczyść' },
   researchBtn: { en: 'Needs research', pl: 'Do weryfikacji' },
   noResults: { en: 'No threats match the filters.', pl: 'Brak zagrożeń pasujących do filtrów.' },

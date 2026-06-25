@@ -70,6 +70,9 @@ function updateUI() {
   const filterDiffAll = document.getElementById('filter-diff-all');
   if (filterDiffAll) filterDiffAll.textContent = UI.filterAllDiff[lang];
 
+  const filterLangAll = document.getElementById('filter-lang-all');
+  if (filterLangAll) filterLangAll.textContent = UI.filterAllLang[lang];
+
   const clearBtn = document.getElementById('clear-filters');
   if (clearBtn) clearBtn.textContent = UI.clearFilters[lang];
 

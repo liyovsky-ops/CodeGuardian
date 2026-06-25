@@ -108,10 +108,34 @@ export function buildHeroCards(CATEGORIES) {
   ).join('');
 }
 
+const LANG_ICONS = {
+  python: { icon: '🐍', label: 'Python', color: '#3776ab' },
+  javascript: { icon: '🟨', label: 'JavaScript', color: '#f7df1e' },
+  java: { icon: '☕', label: 'Java', color: '#ed8b00' },
+  php: { icon: '🐘', label: 'PHP', color: '#777bb4' },
+  c: { icon: '⚙️', label: 'C/C++', color: '#00599c' },
+  ruby: { icon: '💎', label: 'Ruby', color: '#cc342d' },
+  go: { icon: '🔵', label: 'Go', color: '#00add8' },
+  rust: { icon: '🦀', label: 'Rust', color: '#dea584' },
+  csharp: { icon: '🟪', label: 'C#', color: '#512bd4' },
+  yaml: { icon: '📄', label: 'YAML', color: '#cb171e' },
+  json: { icon: '📋', label: 'JSON', color: '#292929' },
+  graphql: { icon: '◈', label: 'GraphQL', color: '#e10098' },
+  http: { icon: '🌐', label: 'HTTP', color: '#005c99' },
+};
+
+function langBadge(threatLang) {
+  if (!threatLang || threatLang === 'unknown' || threatLang === 'text' || threatLang === 'none') return '';
+  const meta = LANG_ICONS[threatLang];
+  if (!meta) return '';
+  return `<span class="lang-badge" data-filter-lang="${threatLang}" title="${meta.label}" style="--lang-color:${meta.color}">${meta.icon}</span>`;
+}
+
 export function threatCard(t, cat) {
   const lang = getLang();
   const sev = SEV[t.severity] || SEV.Medium;
   const diffCls = DIFF[t.difficulty] || 'medium';
+  const threatLangBadge = langBadge(t.lang);
   const cweBadges = (t.cwe || [])
     .map(
       (w) =>
@@ -165,9 +189,11 @@ export function threatCard(t, cat) {
   return `
     <article class="threat${confCls}" id="threat-${t.id}"
              data-sev="${t.severity}" data-diff="${t.difficulty}"
+             data-lang="${esc(t.lang || 'unknown')}"
              data-name="${esc(t.name.toLowerCase())}" data-cat="${cat.id}">
       <header class="threat-head" tabindex="0" role="button" aria-expanded="false">
         <span class="threat-id">${esc(t.id)}</span>
+        ${threatLangBadge}
         <span class="threat-title">${esc(t.name)}${confidenceBadge(t.confidence)}</span>
         <span class="badges">
           <span class="badge badge-${sev.cls}">${esc(t.severity)}</span>
