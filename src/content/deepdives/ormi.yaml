@@ -1,0 +1,497 @@
+meta:
+  id: ormi
+  threatId: "1.12"
+  severity: High
+  color: "#f97316"
+  colorRgb: 249,115,22
+  cwe: CWE-89
+  cvss: "8.8"
+  standard: OWASP A03:2021
+hero:
+  titleMain: ORM
+  titleGrad: Injection
+  titleTail: "& Second-Order SQLi"
+  topbar: ORM Injection
+  lead:
+    en: "ORM Injection occurs when developers bypass an ORM's built-in parameterization by using raw query methods with string concatenation. Second-Order SQL Injection is a two-phase variant: malicious data is stored safely via a parameterized write, then retrieved and concatenated into a new raw query — defeating input validation, WAFs, and DAST scanners entirely."
+    pl: "ORM Injection pojawia się gdy deweloperzy omijają wbudowaną parametryzację ORM, używając surowych metod query z konkatenacją stringów. Second-Order SQL Injection to wariant dwufazowy: złośliwe dane są bezpiecznie zapisywane przez sparametryzowany zapis, potem pobierane i sklejane do nowego surowego zapytania — całkowicie omijając walidację wejścia, WAFy i skanery DAST."
+  metrics:
+    - k: CWE-89
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "8.8"
+      v: CVSS · High
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: CVE-2021-35042
+      v:
+        en: Django order_by() RCE
+        pl: Django order_by() RCE
+  sources:
+    - label: CVE-2021-35042 (Django)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-35042
+    - label: CVE-2020-25638 (Hibernate)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2020-25638
+    - label: CVE-2019-14234 (Django JSONField)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-14234
+    - label: OWASP SQL Injection Prevention
+      url: https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+    - label: PortSwigger — Second-order SQLi
+      url: https://portswigger.net/web-security/sql-injection/cheat-sheet
+sectionOrder:
+  - overview
+  - types
+  - code
+  - secondorder
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - migration
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack vectors
+    pl: Wektory ataku
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: secondorder
+    en: Second-order
+    pl: Second-order
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real CVEs
+    pl: Prawdziwe CVE
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: migration
+    en: Legacy migration
+    pl: Migracja legacy
+sections:
+  attacks:
+    title:
+      en: Attack vectors
+      pl: Wektory ataku
+    lead:
+      en: Five ORM-specific surfaces where parameterization breaks down — each exploitable in production code today.
+      pl: Pięć powierzchni ataku specyficznych dla ORM, gdzie parametryzacja się załamuje — każda exploitowalna dziś w produkcyjnym kodzie.
+    items:
+      - name: Raw query methods
+        sev: critical
+        description:
+          en: "Django .raw()/.extra(), SQLAlchemy text() with f-strings, Hibernate createNativeQuery(), Sequelize sequelize.query() — all bypass ORM parameterization when combined with string concatenation."
+          pl: "Django .raw()/.extra(), SQLAlchemy text() z f-stringami, Hibernate createNativeQuery(), Sequelize sequelize.query() — wszystkie omijają parametryzację ORM przy konkatenacji stringów."
+        payload: "User.objects.raw(f\"SELECT * FROM users WHERE name='{name}'\")"
+      - name: Dynamic ORDER BY / identifiers
+        sev: high
+        description:
+          en: "SQL bind parameters work only for values, not column/table names. ORDER BY sort columns from user input cannot be parameterized — they must be allow-listed."
+          pl: "Parametry SQL działają tylko dla wartości, nie dla nazw kolumn/tabel. Kolumny ORDER BY z wejścia użytkownika nie mogą być parametryzowane — muszą być allow-listowane."
+        payload: "queryset.order_by(request.GET['sort'])  # CVE-2021-35042 pattern"
+      - name: Second-order (stored) injection
+        sev: critical
+        description:
+          en: "Payload stored safely in phase 1 (parameterized INSERT). Retrieved and concatenated unsafely in phase 2 (raw query). Invisible to WAF, DAST, and runtime input filters."
+          pl: "Payload zapisywany bezpiecznie w fazie 1 (sparametryzowany INSERT). Pobierany i sklejany niebezpiecznie w fazie 2 (surowe zapytanie). Niewidoczny dla WAF, DAST i filtrów wejścia."
+        payload: "username: admin'--  →  UPDATE users SET pwd=? WHERE name='admin'--'"
+      - name: HQL / JPQL injection (Hibernate)
+        sev: high
+        description:
+          en: "Hibernate Query Language is its own abstraction — injecting into HQL strings (not JDBC) allows data exfiltration across the full mapped object graph."
+          pl: "Hibernate Query Language to własna abstrakcja — wstrzyknięcie w stringi HQL (nie JDBC) pozwala eksfiltrować dane z całego zmapowanego grafu obiektów."
+        payload: "session.createQuery(\"FROM User WHERE name='\" + name + \"'\")"
+      - name: ORM operator injection (NoSQL-style)
+        sev: medium
+        description:
+          en: "Passing user-controlled dicts directly into ORM where clauses enables operator injection — attacker injects $ne/$or conditions to bypass filters."
+          pl: "Przekazywanie słowników kontrolowanych przez użytkownika wprost do klauzul ORM umożliwia wstrzyknięcie operatorów — atakujący wstrzykuje warunki $ne/$or by ominąć filtry."
+        payload: "Model.objects.filter(**user_dict)  # user_dict contains injected operators"
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The same query, safe and unsafe, across the four major ORM ecosystems."
+      pl: "To samo zapytanie, bezpieczne i niebezpieczne, w czterech głównych ekosystemach ORM."
+    languages:
+      - label: Python / SQLAlchemy
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — f-string inside text() negates parameterization entirely
+          # Bandit flags this as B608 (hardcoded SQL)
+          name = request.args.get("name")
+          result = session.execute(text(f"SELECT * FROM users WHERE name='{name}'"))
+
+          # Also vulnerable — string concatenation
+          result = session.execute("SELECT * FROM users WHERE name='" + name + "'")
+        safe: |-
+          # SECURE — named bind parameters; driver sends data separately from SQL
+          result = session.execute(
+              text("SELECT * FROM users WHERE name=:name"),
+              {"name": name}
+          )
+
+          # Or use ORM query builder (always safe)
+          result = session.query(User).filter(User.name == name).all()
+      - label: Python / Django ORM
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — .raw() with string interpolation
+          users = User.objects.raw(f"SELECT * FROM users WHERE name='{name}'")
+
+          # VULNERABLE — .extra() without params argument
+          users = User.objects.extra(where=[f"name='{name}'"])
+
+          # VULNERABLE — CVE-2021-35042 pattern: unsanitized order_by()
+          sort = request.GET.get("sort", "id")
+          users = User.objects.order_by(sort)  # attacker can inject SQL here
+        safe: |-
+          # SECURE — .raw() with params list
+          users = User.objects.raw("SELECT * FROM users WHERE name=%s", [name])
+
+          # SECURE — ORM filter (always parameterized)
+          users = User.objects.filter(name=name)
+
+          # SECURE — allow-listed ORDER BY
+          ALLOWED_SORT = {"id", "name", "created_at"}
+          sort = request.GET.get("sort", "id")
+          if sort not in ALLOWED_SORT:
+              sort = "id"
+          users = User.objects.order_by(sort)
+      - label: Java / Hibernate
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — HQL string concatenation
+          String hql = "FROM User WHERE name='" + name + "'";
+          Query q = session.createQuery(hql);
+          List<User> users = q.list();
+
+          // VULNERABLE — native query without parameters
+          Query nq = session.createNativeQuery(
+              "SELECT * FROM users WHERE name='" + name + "'");
+        safe: |-
+          // SECURE — named HQL parameter
+          Query q = session.createQuery("FROM User WHERE name=:name");
+          q.setParameter("name", name);
+          List<User> users = q.list();
+
+          // SECURE — Criteria API (always parameterized)
+          CriteriaBuilder cb = session.getCriteriaBuilder();
+          CriteriaQuery<User> cq = cb.createQuery(User.class);
+          Root<User> root = cq.from(User.class);
+          cq.where(cb.equal(root.get("name"), name));
+          List<User> users = session.createQuery(cq).getResultList();
+      - label: Node.js / Sequelize
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE — string concatenation in raw query
+          const users = await sequelize.query(
+            `SELECT * FROM users WHERE name='${name}'`
+          );
+
+          // VULNERABLE — literal() injects raw SQL
+          const users = await User.findAll({
+            order: [[sequelize.literal(req.query.sort), 'ASC']]
+          });
+        safe: |-
+          // SECURE — replacements (positional or named)
+          const users = await sequelize.query(
+            "SELECT * FROM users WHERE name=:name",
+            { replacements: { name }, type: QueryTypes.SELECT }
+          );
+
+          // SECURE — ORM findAll with parameterized where
+          const users = await User.findAll({ where: { name } });
+
+          // SECURE — allow-listed ORDER BY
+          const ALLOWED = ["id", "name", "createdAt"];
+          const sort = ALLOWED.includes(req.query.sort) ? req.query.sort : "id";
+          const users = await User.findAll({ order: [[sort, "ASC"]] });
+  secondorder:
+    title:
+      en: Second-order injection — how it works
+      pl: Second-order injection — jak działa
+    lead:
+      en: "A two-phase attack that defeats every first-line defense: WAF, input validation, and DAST scanners all see clean data in phase 1. The payload fires silently in phase 2."
+      pl: "Atak dwufazowy, który pokonuje każdą pierwszą linię obrony: WAF, walidacja wejścia i skanery DAST widzą czyste dane w fazie 1. Payload odpala się cicho w fazie 2."
+    phases:
+      - phase: "Phase 1 — Storage (safe)"
+        description:
+          en: "Attacker registers with username: admin'-- . The application uses a parameterized INSERT — the payload is stored as a literal string in the database. No WAF alert. No scanner warning. Zero evidence of attack."
+          pl: "Atakujący rejestruje się z username: admin'-- . Aplikacja używa sparametryzowanego INSERT — payload jest przechowywany jako literalny string w bazie. Żaden WAF nie reaguje. Żaden skaner nie ostrzega."
+        payload: |
+          # Phase 1 — registration endpoint (SAFE, parameterized)
+          INSERT INTO users (username, password) VALUES (%s, %s)
+          -- Values: ("admin'--", "hashed_password")
+          -- Stored safely as literal string. No injection yet.
+      - phase: "Phase 2 — Detonation (vulnerable)"
+        description:
+          en: "A password-change endpoint retrieves the stored username and concatenates it into a raw UPDATE query. The comment suffix -- strips the WHERE clause — attacker silently resets the admin password instead of their own."
+          pl: "Endpoint zmiany hasła pobiera zapisany username i skleja go z surowym zapytaniem UPDATE. Sufiks komentarza -- usuwa klauzulę WHERE — atakujący cicho resetuje hasło admina zamiast swojego."
+        payload: |
+          # Phase 2 — password change endpoint (VULNERABLE)
+          username = db.query("SELECT username FROM users WHERE id=?", [session.user_id])
+          # username is now: admin'--
+
+          # Developer assumes data FROM the DB is safe — it is NOT
+          db.execute(f"UPDATE users SET password='{new_hash}' WHERE username='{username}'")
+          # Becomes: UPDATE users SET password='...' WHERE username='admin'--'
+          # Result: admin's password changed, attacker's row untouched
+    detection:
+      en: "Second-order injection is missed by: WAF (sees safe input at write time), DAST scanners (test input ↔ output in same request), SAST without inter-procedural taint analysis. Only manual code review or taint-aware SAST (CodeQL, Semgrep with data-flow rules) reliably detects it."
+      pl: "Second-order injection jest pomijany przez: WAF (widzi bezpieczne dane w momencie zapisu), skanery DAST (testują wejście ↔ wyjście w tym samym żądaniu), SAST bez analizy przepływu między funkcjami. Tylko ręczny przegląd kodu lub taint-aware SAST (CodeQL, Semgrep z regułami data-flow) je wykrywa."
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker identifies and exploits ORM injection surfaces.
+      pl: Jak atakujący identyfikuje i exploituje powierzchnie ORM injection.
+    steps:
+      - title:
+          en: Probe sort / filter parameters
+          pl: Sondowanie parametrów sort / filter
+        description:
+          en: "Inject single quote and SQL keywords into sort, filter, and search parameters. An error or behavioral change in the response reveals a raw query surface."
+          pl: "Wstrzyknięcie apostrofu i słów kluczowych SQL do parametrów sort, filter i search. Błąd lub zmiana zachowania ujawnia powierzchnię surowego zapytania."
+      - title:
+          en: Identify raw query methods
+          pl: Identyfikacja surowych metod query
+        description:
+          en: "Code review or error messages reveal .raw(), text(), createNativeQuery(), or literal() usage. These are the primary injection points."
+          pl: "Przegląd kodu lub komunikaty błędów ujawniają użycie .raw(), text(), createNativeQuery() lub literal(). To główne punkty wstrzyknięcia."
+      - title:
+          en: Test ORDER BY injection
+          pl: Test wstrzyknięcia ORDER BY
+        description:
+          en: "Inject ORDER BY (CASE WHEN (1=1) THEN id ELSE name END) to confirm structural injection. Time-based variants confirm blind exploitation."
+          pl: "Wstrzyknięcie ORDER BY (CASE WHEN (1=1) THEN id ELSE name END) potwierdza wstrzyknięcie strukturalne. Warianty czasowe potwierdzają blind exploitation."
+      - title:
+          en: Map second-order flows
+          pl: Mapowanie przepływów second-order
+        description:
+          en: "Trace stored data (usernames, profile fields, preferences) through the codebase to find where they are later used in raw queries without re-sanitization."
+          pl: "Śledzenie przechowywanych danych (username, pola profilu, preferencje) przez codebase — szukanie miejsc gdzie są potem używane w surowych zapytaniach bez re-sanityzacji."
+      - title:
+          en: Escalate
+          pl: Eskalacja
+        description:
+          en: "Depending on DB permissions: data exfiltration via UNION, privilege escalation via UPDATE, or RCE via xp_cmdshell / COPY TO PROGRAM."
+          pl: "W zależności od uprawnień DB: eksfiltracja danych przez UNION, eskalacja uprawnień przez UPDATE, lub RCE przez xp_cmdshell / COPY TO PROGRAM."
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Three fixes and two mitigations. Parameterization is the only complete defense — everything else reduces blast radius.
+      pl: Trzy naprawy i dwa łagodzenia. Parametryzacja to jedyna pełna obrona — reszta ogranicza skutki.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Use ORM query builders — never raw methods
+          pl: Używaj builderów ORM — nigdy surowych metod
+        note:
+          en: "The golden rule: ORM filter/find/where APIs are parameterized by design. Avoid .raw(), text() with f-strings, createNativeQuery(), literal()."
+          pl: "Złota zasada: API filter/find/where ORM są parametryzowane z założenia. Unikaj .raw(), text() z f-stringami, createNativeQuery(), literal()."
+      - rank: 2
+        eff: 95
+        kind: primary
+        label:
+          en: Allow-list all dynamic identifiers
+          pl: Allow-lista dla wszystkich dynamicznych identyfikatorów
+        note:
+          en: "Column names, sort fields, table names — validate against a hardcoded set before use. This is the only fix for ORDER BY injection."
+          pl: "Nazwy kolumn, pola sortowania, nazwy tabel — waliduj wobec hardkodowanego zestawu przed użyciem. To jedyna naprawa ORDER BY injection."
+      - rank: 3
+        eff: 90
+        kind: primary
+        label:
+          en: Treat DB data as untrusted (second-order fix)
+          pl: Traktuj dane z DB jako niezaufane (naprawa second-order)
+        note:
+          en: "Data retrieved from the database may contain stored payloads. Re-validate or re-parameterize it before using in any subsequent query."
+          pl: "Dane pobrane z bazy mogą zawierać zapisane payloady. Re-waliduj lub re-parametryzuj je przed użyciem w każdym kolejnym zapytaniu."
+      - rank: 4
+        eff: 50
+        kind: mitigation
+        label:
+          en: Least-privilege DB account
+          pl: Konto DB o min. uprawnieniach
+        note:
+          en: "Application DB user should have no DDL, no FILE, no xp_cmdshell. Limits blast radius of a successful injection."
+          pl: "Konto DB aplikacji bez DDL, bez FILE, bez xp_cmdshell. Ogranicza skutki udanego wstrzyknięcia."
+      - rank: 5
+        eff: 25
+        kind: weak
+        label:
+          en: SAST with taint analysis
+          pl: SAST z analizą taint
+        note:
+          en: "CodeQL and Semgrep with data-flow rules can detect second-order patterns. Standard SAST misses them. WAF and DAST are blind to second-order entirely."
+          pl: "CodeQL i Semgrep z regułami data-flow mogą wykryć wzorce second-order. Standardowy SAST je pomija. WAF i DAST są całkowicie ślepe na second-order."
+  incidents:
+    title:
+      en: Real CVEs
+      pl: Prawdziwe CVE
+    lead:
+      en: ORM injection is not theoretical — major frameworks shipped injectable APIs that reached production at scale.
+      pl: ORM injection nie jest teoretyczne — główne frameworki dostarczyły podatne API które trafiły do produkcji na dużą skalę.
+    items:
+      - org: Django ≤ 3.2.3
+        year: 2021
+        impact: Full SQL injection via QuerySet.order_by()
+        cost: CVSS 9.8 — Critical
+        description:
+          en: "CVE-2021-35042: Passing unsanitized user input to QuerySet.order_by() enabled time-based blind SQLi and data exfiltration. ORDER BY column identifiers cannot be parameterized — any dynamic pass-through was injectable."
+          pl: "CVE-2021-35042: Przekazanie niesanityzowanego wejścia do QuerySet.order_by() umożliwiło blind SQLi oparty na czasie i eksfiltrację danych. Identyfikatory kolumn ORDER BY nie mogą być parametryzowane — każde dynamiczne przekazanie było podatne."
+      - org: Django ≤ 2.2.4
+        year: 2019
+        impact: JSONField key-path injection
+        cost: CVSS 9.8 — Critical
+        description:
+          en: "CVE-2019-14234: User-controlled key traversal components in JSONField lookups (data__key__user_input) were concatenated into SQL. Even non-obvious ORM features expose injection surfaces when they accept user-controlled identifiers."
+          pl: "CVE-2019-14234: Kontrolowane przez użytkownika komponenty traversal klucza w lookupach JSONField (data__key__user_input) były sklejane z SQL. Nawet nieoczywiste funkcje ORM ujawniają powierzchnie injection gdy przyjmują kontrolowane identyfikatory."
+      - org: Hibernate Core ≤ 5.4.17
+        year: 2020
+        impact: HQL injection — data exfiltration
+        cost: CVSS 7.4 — High
+        description:
+          en: "CVE-2020-25638: String concatenation in HQL queries allowed HQL/JPQL injection. Hibernate's own query language has the same injection risks as raw SQL when built with user input."
+          pl: "CVE-2020-25638: Konkatenacja stringów w zapytaniach HQL umożliwiła wstrzyknięcie HQL/JPQL. Własny język zapytań Hibernate ma te same ryzyko wstrzyknięcia co surowy SQL gdy budowany z wejściem użytkownika."
+      - org: Django ≤ 2.0
+        year: 2014
+        impact: SQL injection via extra() method
+        cost: CVSS 7.5 — High
+        description:
+          en: "CVE-2014-0116: Django's extra() method, used for complex filtering without params= argument, exposed a direct SQL injection surface. The method was later deprecated but remained in widespread use."
+          pl: "CVE-2014-0116: Metoda extra() Django, używana do złożonego filtrowania bez argumentu params=, ujawniała bezpośrednią powierzchnię SQL injection. Metoda była później deprecjonowana, ale pozostała powszechnie używana."
+    inlineSources:
+      - label: CVE-2021-35042 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2021-35042
+      - label: CVE-2019-14234 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2019-14234
+      - label: CVE-2020-25638 (NVD)
+        url: https://nvd.nist.gov/vuln/detail/CVE-2020-25638
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: "ORM injection requires SAST with data-flow analysis. DAST and WAF are blind to second-order variants — the payload and its execution occur in separate HTTP transactions."
+      pl: "ORM injection wymaga SAST z analizą data-flow. DAST i WAF są ślepe na warianty second-order — payload i jego wykonanie następują w osobnych transakcjach HTTP."
+    sast:
+      - - Semgrep
+        - python.django.security.injection rules; data-flow taint for second-order
+      - - Bandit
+        - B608 — detects raw SQL string construction in Python
+      - - CodeQL
+        - Inter-procedural taint analysis — best for second-order detection
+      - - SonarQube
+        - SQL injection rules for Django, Hibernate, Sequelize
+    dast:
+      - - SQLmap
+        - Covers ORDER BY injection; use --level=5 for thorough scan
+      - - Burp Suite Pro
+        - Manual testing of stored → retrieved flows for second-order
+      - - OWASP ZAP
+        - Active scanner for first-order ORM patterns
+    note:
+      en: "<strong>Critical blind spot:</strong> Second-order injection is completely missed by DAST and WAF. Only SAST with inter-procedural taint tracking (CodeQL, Semgrep with data-flow) or manual code review reliably detects it. Flag every .raw(), text(), createNativeQuery(), and literal() call as a mandatory review site."
+      pl: "<strong>Krytyczny martwy punkt:</strong> Second-order injection jest całkowicie pomijany przez DAST i WAF. Tylko SAST z śledzeniem taint między funkcjami (CodeQL, Semgrep z data-flow) lub ręczny przegląd kodu go niezawodnie wykrywa. Oznacz każde wywołanie .raw(), text(), createNativeQuery() i literal() jako obowiązkowe miejsce przeglądu."
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where ORM injection prevention maps onto the controls auditors check.
+      pl: Gdzie zapobieganie ORM injection mapuje się na kontrole sprawdzane przez audytorów.
+    items:
+      - std: PCI DSS
+        items:
+          - 6.2.4 — secure coding against injection
+          - 6.3.2 — review custom code for injection flaws
+          - 11.3.1 — penetration testing (injection)
+      - std: GDPR
+        items:
+          - Art. 25 — security by design
+          - Art. 32 — appropriate technical measures
+          - Art. 33 — 72h breach notification
+      - std: SOC 2
+        items:
+          - CC6.1 — logical access controls
+          - CC7.1 — vulnerability detection procedures
+    inlineSources:
+      - label: PCI DSS v4.0
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: GDPR Art. 32
+        url: https://gdpr-info.eu/art-32-gdpr/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm active ORM injection exploitation, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnego exploitowania ORM injection przejdź tę listę od góry.
+    steps:
+      - en: Isolate the affected endpoint / service from the network
+        pl: Odizoluj dotknięty endpoint / serwis od sieci
+      - en: Preserve database query logs and application logs (do not wipe)
+        pl: Zabezpiecz logi zapytań DB i aplikacji (nie usuwaj)
+      - en: Rotate database credentials and application secrets
+        pl: Zrotuj poświadczenia DB i sekrety aplikacji
+      - en: Audit all .raw() / text() / createNativeQuery() / literal() call sites
+        pl: Zbadaj wszystkie miejsca wywołań .raw() / text() / createNativeQuery() / literal()
+      - en: Assess scope — trace second-order flows (which stored data feeds raw queries)
+        pl: Oceń zakres — prześledź przepływy second-order (jakie dane zasilają surowe zapytania)
+      - en: Patch — replace raw queries with ORM builders or parameterized bindings; add allow-lists for dynamic identifiers
+        pl: Załataj — zastąp surowe zapytania builderami ORM lub sparametryzowanymi bindingami; dodaj allow-listy dla dynamicznych identyfikatorów
+      - en: Notify regulators within 72h (GDPR) if personal data was exposed
+        pl: Powiadom regulatorów w 72h (GDPR) jeśli dane osobowe były narażone
+      - en: Post-incident SAST sweep with data-flow rules across entire codebase
+        pl: Post-incydent skan SAST z regułami data-flow przez cały codebase
+  migration:
+    title:
+      en: Legacy migration strategy
+      pl: Strategia migracji legacy
+    lead:
+      en: Three phases to eliminate raw ORM queries from an existing codebase without a big-bang rewrite.
+      pl: Trzy fazy, by wyeliminować surowe zapytania ORM z istniejącego codebase bez ryzykownego przepisania na raz.
+    steps:
+      - title:
+          en: 1 · Inventory raw query sites
+          pl: 1 · Inwentaryzacja surowych zapytań
+        description:
+          en: "SAST scan (Bandit B608, Semgrep, CodeQL) to catalogue every .raw(), text(), createNativeQuery(), literal(), and sequelize.query() call site. Flag ORDER BY parameters that accept user input."
+          pl: "Skan SAST (Bandit B608, Semgrep, CodeQL) by skatalogować każde wywołanie .raw(), text(), createNativeQuery(), literal() i sequelize.query(). Oznacz parametry ORDER BY przyjmujące wejście użytkownika."
+      - title:
+          en: 2 · Replace and allow-list
+          pl: 2 · Zamiana i allow-lista
+        description:
+          en: "Incremental rewrite: replace raw queries with ORM builders; add allow-lists for all dynamic identifier inputs (sort, filter, column name parameters). Highest-risk endpoints first."
+          pl: "Stopniowa przebudowa: zastąp surowe zapytania builderami ORM; dodaj allow-listy dla wszystkich dynamicznych wejść identyfikatorów (sort, filter, nazwa kolumny). Najpierw najbardziej ryzykowne endpointy."
+      - title:
+          en: 3 · Validate + add CI gate
+          pl: 3 · Walidacja + bramka CI
+        description:
+          en: "SQLmap authenticated scan per endpoint to confirm fixes. Add Semgrep/Bandit rule to CI pipeline that blocks any new .raw() or text() with string formatting — raw query methods become a required-review annotation."
+          pl: "Skan SQLmap w trybie uwierzytelnionym per endpoint by potwierdzić naprawę. Dodaj regułę Semgrep/Bandit do CI blokującą nowe .raw() lub text() z formatowaniem stringów — surowe metody query wymagają anotacji obowiązkowego przeglądu."
