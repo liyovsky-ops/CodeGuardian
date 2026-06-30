@@ -14,6 +14,7 @@ import hhiData from '../content/deepdives/hhi.yaml';
 import emailiData from '../content/deepdives/emaili.yaml';
 import csviData from '../content/deepdives/csvi.yaml';
 import ormiData from '../content/deepdives/ormi.yaml';
+import brokenauthData from '../content/deepdives/brokenauth.yaml';
 
 const DEEPDIVE_HANDLERS = {
   '1.1': () => openDeepDivePage(sqliData),
@@ -28,6 +29,7 @@ const DEEPDIVE_HANDLERS = {
   '1.10': () => openDeepDivePage(emailiData),
   '1.11': () => openDeepDivePage(csviData),
   '1.12': () => openDeepDivePage(ormiData),
+  '2.1': () => openDeepDivePage(brokenauthData),
 };
 
 function wireCollapsible() {

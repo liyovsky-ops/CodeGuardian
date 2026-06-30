@@ -1,0 +1,686 @@
+meta:
+  id: brokenauth
+  threatId: "2.1"
+  severity: Critical
+  color: "#ef4444"
+  colorRgb: 239,68,68
+  cwe: CWE-287
+  cvss: "9.8"
+  standard: OWASP A07:2021
+hero:
+  titleMain: Broken
+  titleGrad: Authentication
+  titleTail: ""
+  topbar: Broken Authentication
+  lead:
+    en: "Broken Authentication covers every flaw in how an application verifies identity: weak password hashing that lets attackers crack credentials offline in seconds, missing rate-limits that allow unlimited brute-force attempts, session IDs that are never rotated after login enabling fixation attacks, and predictable password-reset tokens that can be guessed. Unlike injection, these flaws are often invisible in code review — they live in what is absent rather than what is present."
+    pl: "Broken Authentication obejmuje każdą wadę w sposobie weryfikacji tożsamości: słabe hashowanie haseł pozwalające łamać dane uwierzytelniające offline w sekundy, brak rate-limitingu umożliwiający nieograniczone próby brute-force, tokeny sesji nigdy nie rotowane po logowaniu (session fixation) oraz przewidywalne tokeny resetowania hasła. W odróżnieniu od injection, te błędy są często niewidoczne podczas przeglądu kodu — leżą w tym, czego brakuje, a nie w tym, co jest."
+  metrics:
+    - k: CWE-287
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "9.8"
+      v: CVSS · Critical
+    - k: A07:2021
+      v: OWASP Top 10
+    - k: "7"
+      v:
+        en: Attack vectors
+        pl: Wektory ataku
+  sources:
+    - label: OWASP A07:2021
+      url: https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/
+    - label: CWE-287 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/287.html
+    - label: OWASP Authentication Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
+    - label: OWASP Password Storage Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+    - label: HaveIBeenPwned API
+      url: https://haveibeenpwned.com/API/v3
+sectionOrder:
+  - overview
+  - types
+  - cheatsheet
+  - code
+  - orm
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+  - ir
+  - migration
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack vectors
+    pl: Wektory ataku
+  - id: cheatsheet
+    en: Algorithms
+    pl: Algorytmy
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: orm
+    en: Framework libs
+    pl: Biblioteki frameworków
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: SAST / DAST
+    pl: SAST / DAST
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+  - id: ir
+    en: Incident response
+    pl: Reagowanie
+  - id: migration
+    en: Legacy migration
+    pl: Migracja legacy
+sections:
+  attacks:
+    title:
+      en: Attack vectors
+      pl: Wektory ataku
+    lead:
+      en: Seven distinct ways Broken Authentication manifests — from offline hash cracking to session hijacking via fixation.
+      pl: Siedem sposobów, w jakie Broken Authentication się ujawnia — od łamania hashy offline po przejęcie sesji przez fixation.
+    items:
+      - name: Brute Force
+        sev: high
+        description:
+          en: "No rate-limiting on /login lets an attacker test thousands of passwords per minute. Tools: Hydra, Burp Intruder, ffuf."
+          pl: "Brak rate-limitingu na /login pozwala testować tysiące haseł na minutę. Narzędzia: Hydra, Burp Intruder, ffuf."
+        payload: "hydra -L users.txt -P rockyou.txt target.com http-post-form '/login:user=^USER^&pass=^PASS^:Invalid'"
+      - name: Credential Stuffing
+        sev: critical
+        description:
+          en: Attacker uses breach dumps (Collection #1 — 773M records) to test login pairs across different services. Works because 65% of users reuse passwords.
+          pl: Atakujący używa wycieków (Collection #1 — 773M rekordów) do testowania par login:hasło na różnych serwisach. Działa bo 65% użytkowników reużywa haseł.
+        payload: "openBullet2 / Sentry MBA — automated breach dump testing at scale"
+      - name: Session Fixation
+        sev: high
+        description:
+          en: "Attacker assigns victim a known session ID before login (via URL param). After victim authenticates, attacker uses the pre-set ID to hijack the session."
+          pl: "Atakujący przypisuje ofierze znane session ID przed logowaniem (przez URL). Po autentykacji ofiara, atakujący używa tego ID do przejęcia sesji."
+        payload: "GET /login?JSESSIONID=attacker_controlled_value (victim visits) → attacker reuses same ID"
+      - name: Predictable Reset Token
+        sev: high
+        description:
+          en: "Reset tokens derived from timestamp (int(time.time())) or sequential IDs are guessable. Attacker requests own reset in the same second to infer victim's token."
+          pl: "Tokeny resetowania oparte na timestamp (int(time.time())) lub sekwencyjnym ID można odgadnąć. Atakujący żąda własnego resetu w tej samej sekundzie."
+        payload: "token = str(int(time.time())) + str(user_id)  # guessable — brute within ±30 seconds"
+      - name: Account Enumeration
+        sev: medium
+        description:
+          en: "Different responses for 'user not found' vs 'wrong password' reveal valid usernames. Same for reset endpoint: 'email not found' vs 'link sent'."
+          pl: "Różne odpowiedzi dla 'użytkownik nie istnieje' vs 'złe hasło' ujawniają ważne nazwy użytkowników. Tak samo endpoint resetu: 'email nieznany' vs 'link wysłany'."
+        payload: "for email in wordlist: POST /reset → measure response text + timing"
+      - name: Timing Attack (Password Comparison)
+        sev: medium
+        description:
+          en: "Using == for string comparison leaks information through response time. Short-circuit evaluation means wrong passwords fail faster — revealing valid usernames."
+          pl: "Użycie == do porównania stringów wyciek przez czas odpowiedzi. Short-circuit evaluation sprawia że błędne hasła są szybsze — ujawniając ważnych użytkowników."
+        payload: "measure response time for existing vs non-existing user → enumerate valid accounts"
+      - name: Weak Password Hash (Offline Crack)
+        sev: critical
+        description:
+          en: "MD5/SHA1 without salt: Hashcat cracks 164 GH/s (MD5) or 23 GH/s (SHA1) on a single GPU. An 8-char password is cracked in minutes. bcrypt: 184 KH/s — 6 orders of magnitude slower."
+          pl: "MD5/SHA1 bez soli: Hashcat łamie 164 GH/s (MD5) lub 23 GH/s (SHA1) na jednej GPU. Hasło 8 znaków złamane w minuty. bcrypt: 184 KH/s — 6 rzędów wolniejszy."
+        payload: "hashcat -m 0 hashes.txt rockyou.txt  # MD5 — 164 billion/sec on RTX 4090"
+  cheatsheet:
+    title:
+      en: Password hashing algorithms — comparison
+      pl: Algorytmy hashowania haseł — porównanie
+    lead:
+      en: Not all hashes are equal. MD5/SHA1 are designed for speed — a fatal flaw for passwords. Argon2id is the OWASP-recommended default.
+      pl: Nie wszystkie hashe są równe. MD5/SHA1 zaprojektowane dla szybkości — śmiertelna wada dla haseł. Argon2id to rekomendacja OWASP.
+    groups:
+      - name: Argon2id (recommended)
+        rows:
+          - - Speed (GPU)
+            - "~1 H/s (memory-hard)"
+          - - Memory
+            - 64MB RAM required
+          - - Iterations
+            - 3 (min. OWASP)
+          - - Password limit
+            - None
+          - - OWASP
+            - "✅ First choice"
+          - - Python
+            - "argon2-cffi: PasswordHasher().hash(pwd)"
+          - - Node.js
+            - "argon2: await argon2.hash(pwd)"
+      - name: bcrypt
+        rows:
+          - - Speed (GPU)
+            - "~184 KH/s (cost=12)"
+          - - Memory
+            - 4KB (not memory-hard)
+          - - Iterations
+            - "2^cost (cost=12 → 4096)"
+          - - Password limit
+            - "72 bytes (truncates!)"
+          - - OWASP
+            - "✅ Acceptable"
+          - - Python
+            - "bcrypt.hashpw(pwd.encode(), bcrypt.gensalt(12))"
+          - - Node.js
+            - "bcrypt.hash(pwd, 12)"
+      - name: scrypt
+        rows:
+          - - Speed (GPU)
+            - "~1 KH/s (N=32768)"
+          - - Memory
+            - 32MB RAM
+          - - Iterations
+            - N=32768, r=8, p=1
+          - - Password limit
+            - None
+          - - OWASP
+            - "✅ Acceptable"
+          - - Python
+            - "hashlib.scrypt(pwd, salt=os.urandom(16), n=32768, r=8, p=1)"
+          - - Node.js
+            - "crypto.scrypt(pwd, salt, 64, callback)"
+      - name: MD5 / SHA1 / SHA256
+        rows:
+          - - Speed (GPU)
+            - "164 GH/s MD5 / 23 GH/s SHA1"
+          - - Memory
+            - Negligible
+          - - Iterations
+            - 1 (no stretching)
+          - - Password limit
+            - None
+          - - OWASP
+            - "❌ NEVER for passwords"
+          - - Python
+            - "hashlib.md5(pwd).hexdigest()  # NEVER"
+          - - Note
+            - "Designed for speed — that's the problem"
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "Five most common Broken Authentication anti-patterns and their fixes — in Python, JavaScript, PHP, and Java."
+      pl: "Pięć najczęstszych antywzorców Broken Authentication i ich naprawa — w Python, JavaScript, PHP i Java."
+    languages:
+      - label: Python
+        lang: python
+        vulnerable: |-
+          # VULNERABLE — MD5 without salt + no rate limit
+          import hashlib
+
+          def login(username, password):
+              user = db.get_user(username)
+              if user and user.password == hashlib.md5(password.encode()).hexdigest():
+                  session['user_id'] = user.id  # session ID not regenerated!
+                  return True
+
+          def reset_password(email):
+              token = str(int(time.time()))  # predictable — guessable!
+              db.store_reset_token(email, token)
+              send_email(email, token)
+        safe: |-
+          # SECURE — Argon2id + rate limit + session regeneration + secure token
+          from argon2 import PasswordHasher
+          import secrets
+          from datetime import datetime, timedelta
+          from slowapi import Limiter
+
+          ph = PasswordHasher(time_cost=3, memory_cost=65536)
+          limiter = Limiter(key_func=get_remote_address)
+
+          @limiter.limit("5/15minutes")
+          def login(username, password):
+              user = db.get_user(username)
+              # Constant-time check prevents timing attacks
+              if user and ph.verify(user.password_hash, password):
+                  session.clear()           # regenerate session ID
+                  session['user_id'] = user.id
+                  return True
+              time.sleep(0.5)              # constant-time response (prevent enumeration)
+              return False
+
+          def reset_password(email):
+              token = secrets.token_urlsafe(32)     # 256 bits entropy
+              token_hash = hashlib.sha256(token.encode()).hexdigest()  # store hash, not token
+              expires_at = datetime.utcnow() + timedelta(minutes=15)
+              db.store_reset_token(email, token_hash, expires_at, used=False)
+              send_email(email, token)
+      - label: JavaScript
+        lang: javascript
+        vulnerable: |-
+          // VULNERABLE — no rate limit, no session regeneration, weak comparison
+          app.post('/login', async (req, res) => {
+            const { username, password } = req.body;
+            const user = await db.findUser(username);
+            if (user && user.password === md5(password)) {  // MD5 + == comparison
+              req.session.userId = user.id;  // session ID stays the same!
+              return res.json({ success: true });
+            }
+            return res.json({ error: 'Invalid username or password' });  // enumeration risk
+          });
+        safe: |-
+          // SECURE — rate limit + bcrypt + session regenerate + constant-time response
+          const rateLimit = require('express-rate-limit');
+          const bcrypt = require('bcrypt');
+
+          const loginLimiter = rateLimit({
+            windowMs: 15 * 60 * 1000,  // 15 minutes
+            max: 5,
+            skipSuccessfulRequests: true,
+            message: 'Too many login attempts, try again later'
+          });
+
+          app.post('/login', loginLimiter, async (req, res) => {
+            const { username, password } = req.body;
+            const user = await db.findUser(username);
+
+            // Always run bcrypt.compare — even if user not found (prevent timing attack)
+            const dummyHash = '$2b$12$invalidhashfordummycomparison00000000000000000000000000';
+            const hash = user ? user.passwordHash : dummyHash;
+            const valid = await bcrypt.compare(password, hash);
+
+            if (user && valid) {
+              await new Promise(resolve => req.session.regenerate(resolve));  // new session ID
+              req.session.userId = user.id;
+              return res.json({ success: true });
+            }
+            return res.json({ error: 'Invalid credentials' });  // same message for all failures
+          });
+      - label: PHP
+        lang: php
+        vulnerable: |-
+          <?php
+          // VULNERABLE — MD5, no session regen, predictable reset
+          function login($username, $password) {
+              $user = db_get_user($username);
+              if ($user && $user['password'] === md5($password)) {
+                  $_SESSION['user_id'] = $user['id'];  // session fixation risk
+                  return true;
+              }
+              return false;
+          }
+
+          function reset_token($email) {
+              return md5($email . time());  // guessable!
+          }
+        safe: |-
+          <?php
+          // SECURE — password_hash + session_regenerate_id + random_bytes token
+          function login($username, $password) {
+              $user = db_get_user($username);
+              if ($user && password_verify($password, $user['password_hash'])) {
+                  session_regenerate_id(true);  // new session ID, destroy old one
+                  $_SESSION['user_id'] = $user['id'];
+                  return true;
+              }
+              usleep(500000);  // 0.5s delay — prevent timing/enumeration
+              return false;
+          }
+
+          function reset_token() {
+              return bin2hex(random_bytes(32));  // 256 bits cryptographically secure
+          }
+
+          // Hash to store in DB (never store the raw token):
+          $token_hash = hash('sha256', $token);
+      - label: Java
+        lang: java
+        vulnerable: |-
+          // VULNERABLE — SHA1 + no session invalidation
+          public boolean login(String username, String password) {
+              User user = userRepo.findByUsername(username);
+              String sha1 = DigestUtils.sha1Hex(password);  // SHA1 — insecure
+              return user != null && user.getPasswordHash().equals(sha1);
+              // session NOT regenerated after login
+          }
+        safe: |-
+          // SECURE — BCrypt + session invalidation + Spring Security
+          @Autowired
+          private BCryptPasswordEncoder encoder;
+
+          public boolean login(HttpSession session, String username, String password) {
+              User user = userRepo.findByUsername(username);
+              if (user != null && encoder.matches(password, user.getPasswordHash())) {
+                  // Invalidate old session (prevent fixation)
+                  session.invalidate();
+                  HttpSession newSession = request.getSession(true);
+                  newSession.setAttribute("userId", user.getId());
+                  return true;
+              }
+              return false;
+          }
+
+          // In Spring Security config:
+          // http.sessionManagement()
+          //     .sessionFixation().newSession()  // auto session regeneration
+          //     .maximumSessions(1);
+  orm:
+    title:
+      en: Auth libraries — safe vs unsafe patterns
+      pl: Biblioteki autentykacji — wzorce bezpieczne i niebezpieczne
+    lead:
+      en: Framework auth libraries are safe by default — until you override their defaults. These are the most common overrides that reintroduce vulnerabilities.
+      pl: Biblioteki auth frameworków są domyślnie bezpieczne — dopóki nie nadpiszesz ich domyślnych ustawień. To najczęstsze nadpisania przywracające podatności.
+    rows:
+      - fw: Django
+        api: authenticate() + login()
+        note:
+          en: "login() calls session cycle automatically. Dangerous override: SESSION_COOKIE_AGE too long (default 2w) + no SESSION_EXPIRE_AT_BROWSER_CLOSE."
+          pl: "login() wywołuje cykl sesji automatycznie. Niebezpieczne nadpisanie: SESSION_COOKIE_AGE zbyt długi (domyślnie 2 tyg.) + brak SESSION_EXPIRE_AT_BROWSER_CLOSE."
+      - fw: Passport.js
+        api: passport.authenticate()
+        note:
+          en: "Safe by default with req.logIn(). Risk: custom done() callback that skips req.session.regenerate() or doesn't call req.logIn()."
+          pl: "Domyślnie bezpieczny z req.logIn(). Ryzyko: własny callback done() pomijający req.session.regenerate() lub nie wywołujący req.logIn()."
+      - fw: Spring Security
+        api: sessionManagement()
+        note:
+          en: "Default sessionFixation().migrateSession() is safe. Danger: setting .none() or .newSession() without proper attribute migration."
+          pl: "Domyślne sessionFixation().migrateSession() jest bezpieczne. Danger: ustawienie .none() lub .newSession() bez migracji atrybutów."
+      - fw: Laravel
+        api: Auth::attempt()
+        note:
+          en: "Auth::attempt() rotates session automatically. Risk: using manual session writes ($_SESSION / Session::put) and skipping Session::regenerate()."
+          pl: "Auth::attempt() automatycznie rotuje sesję. Ryzyko: ręczne zapisy do sesji z pominięciem Session::regenerate()."
+      - fw: FastAPI
+        api: OAuth2PasswordBearer
+        note:
+          en: "No built-in session management — you implement it. Risk: JWT without expiry (no exp claim), storing JWT in localStorage (XSS risk vs HttpOnly cookie)."
+          pl: "Brak wbudowanego zarządzania sesją — implementujesz sam. Ryzyko: JWT bez wygaśnięcia (brak exp), JWT w localStorage (ryzyko XSS vs HttpOnly cookie)."
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker systematically tests an application's authentication before attempting account takeover.
+      pl: Jak atakujący systematycznie testuje autentykację aplikacji przed próbą przejęcia konta.
+    steps:
+      - title:
+          en: Recon
+          pl: Rekonesans
+        description:
+          en: "Enumerate login, registration, and password reset endpoints. Check for verbose error messages ('user not found' vs 'wrong password')."
+          pl: "Enumeruj endpointy logowania, rejestracji i resetu hasła. Sprawdź czy błędy są verbose ('użytkownik nieznany' vs 'złe hasło')."
+      - title:
+          en: Token analysis
+          pl: Analiza tokenów
+        description:
+          en: "Run Burp Suite Sequencer against session cookies and reset tokens. Low entropy score = predictable. Check reset token expiry and single-use enforcement."
+          pl: "Uruchom Burp Suite Sequencer na ciasteczkach sesji i tokenach resetu. Niski wynik entropii = przewidywalny. Sprawdź wygaśnięcie tokenu i single-use."
+      - title:
+          en: Rate limit probe
+          pl: Sondowanie rate-limit
+        description:
+          en: "Send 10+ rapid login requests. If no block/delay → brute-force viable. Check if lockout is per-IP, per-account, or both."
+          pl: "Wyślij 10+ szybkich requestów logowania. Brak blokady/opóźnienia → brute-force możliwy. Sprawdź czy lockout jest per-IP, per-konto, czy oba."
+      - title:
+          en: Credential stuffing test
+          pl: Test credential stuffing
+        description:
+          en: "Use a small breach dump subset (~100 pairs) against the target. Rate limit bypass techniques: rotating proxies, distributed IPs, slow-and-low timing."
+          pl: "Użyj małego podzbioru wycieku (~100 par) na cel. Techniki ominięcia rate-limit: rotujące proxy, rozproszone IP, slow-and-low timing."
+      - title:
+          en: Session fixation check
+          pl: Sprawdzenie session fixation
+        description:
+          en: "Note session ID before login, complete login, check if ID changed. If same → fixation possible. Test URL-based session ID passing."
+          pl: "Zapamiętaj session ID przed logowaniem, zaloguj się, sprawdź czy ID się zmieniło. To samo → fixation możliwa. Testuj przekazywanie session ID przez URL."
+      - title:
+          en: Hash analysis (if dump obtained)
+          pl: Analiza hashy (jeśli dump uzyskany)
+        description:
+          en: "Identify hash type (hashid / hash-identifier). MD5/SHA1 → run Hashcat with rockyou.txt immediately. bcrypt with cost<10 → still feasible on GPU cluster."
+          pl: "Zidentyfikuj typ hashu (hashid / hash-identifier). MD5/SHA1 → uruchom Hashcat z rockyou.txt od razu. bcrypt z cost<10 → wciąż wykonalny na GPU cluster."
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth for authentication. Argon2id is the root fix; each additional layer reduces blast radius.
+      pl: Obrona w głąb dla autentykacji. Argon2id to korzeń naprawi; każda kolejna warstwa ogranicza skutki.
+    items:
+      - rank: 1
+        eff: 100
+        kind: primary
+        label:
+          en: Argon2id / bcrypt (cost ≥ 12)
+          pl: Argon2id / bcrypt (cost ≥ 12)
+        note:
+          en: "Structural fix — makes offline cracking computationally infeasible. Argon2id preferred (memory-hard, no 72-byte limit)."
+          pl: "Naprawa strukturalna — łamanie offline staje się obliczeniowo niewykonalne. Argon2id preferowany (memory-hard, brak limitu 72 bajtów)."
+      - rank: 2
+        eff: 90
+        kind: primary
+        label:
+          en: Rate limiting + account lockout
+          pl: Rate limiting + blokada konta
+        note:
+          en: "5 attempts per 15 min per IP + per account. Exponential backoff. CAPTCHA after 3 failures. Eliminates brute-force and credential stuffing."
+          pl: "5 prób per 15 min per IP + per konto. Exponential backoff. CAPTCHA po 3 nieudanych. Eliminuje brute-force i credential stuffing."
+      - rank: 3
+        eff: 85
+        kind: primary
+        label:
+          en: Session ID regeneration on login
+          pl: Regeneracja session ID po logowaniu
+        note:
+          en: "Mandatory after every successful authentication. Destroys pre-login session ID — prevents fixation. One line: session.regenerate() / session_regenerate_id(true)."
+          pl: "Obowiązkowe po każdym udanym logowaniu. Niszczy pre-login session ID — zapobiega fixation. Jedna linia: session.regenerate() / session_regenerate_id(true)."
+      - rank: 4
+        eff: 80
+        kind: primary
+        label:
+          en: Cryptographically secure reset tokens
+          pl: Kryptograficznie bezpieczne tokeny resetu
+        note:
+          en: "secrets.token_urlsafe(32) / crypto.randomBytes(32). Store SHA-256 hash in DB, send raw token in email. TTL 15 min, single-use, invalidate on use."
+          pl: "secrets.token_urlsafe(32) / crypto.randomBytes(32). Przechowuj hash SHA-256 w DB, wyślij raw token emailem. TTL 15 min, single-use, unieważnij po użyciu."
+      - rank: 5
+        eff: 75
+        kind: strong
+        label:
+          en: Multi-Factor Authentication (MFA)
+          pl: Uwierzytelnianie wieloczynnikowe (MFA)
+        note:
+          en: "TOTP (RFC 6238) via pyotp / otplib is the minimum. WebAuthn / passkeys eliminate phishing entirely. Mandatory for admin accounts."
+          pl: "TOTP (RFC 6238) przez pyotp / otplib to minimum. WebAuthn / passkeys całkowicie eliminują phishing. Obowiązkowe dla kont adminów."
+      - rank: 6
+        eff: 65
+        kind: strong
+        label:
+          en: Constant-time response + generic error messages
+          pl: Stały czas odpowiedzi + generyczne komunikaty błędów
+        note:
+          en: "Always return same message ('Invalid credentials') and same response time regardless of whether user exists. Prevents account enumeration."
+          pl: "Zawsze zwracaj ten sam komunikat ('Nieprawidłowe dane') i ten sam czas odpowiedzi niezależnie od tego, czy użytkownik istnieje. Zapobiega enumeracji kont."
+      - rank: 7
+        eff: 55
+        kind: mitigation
+        label:
+          en: HaveIBeenPwned integration
+          pl: Integracja z HaveIBeenPwned
+        note:
+          en: "On registration/password change: check k-anonymity API (only 5-char SHA1 prefix sent — password never leaves server). Block passwords found in breaches."
+          pl: "Przy rejestracji/zmianie hasła: sprawdź k-anonymity API (wysyłany tylko 5-znakowy prefiks SHA1 — hasło nigdy nie opuszcza serwera). Blokuj hasła z wycieków."
+      - rank: 8
+        eff: 30
+        kind: weak
+        label:
+          en: Secure cookie flags
+          pl: Bezpieczne flagi ciasteczek
+        note:
+          en: "HttpOnly (no JS access) + Secure (HTTPS only) + SameSite=Strict (no CSRF). Necessary but not sufficient — does not prevent server-side session hijacking."
+          pl: "HttpOnly (brak dostępu JS) + Secure (tylko HTTPS) + SameSite=Strict (brak CSRF). Konieczne ale niewystarczające — nie zapobiega server-side session hijacking."
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Broken Authentication is not theoretical — these breaches exposed hundreds of millions of credentials and led to cascading account takeovers across the internet.
+      pl: Broken Authentication nie jest teoretyczne — te incydenty odsłoniły setki milionów danych uwierzytelniających i doprowadziły do kaskadowych przejęć kont w całej sieci.
+    items:
+      - org: Adobe
+        year: 2013
+        impact: 153M accounts
+        cost: "$1.1M fine"
+        description:
+          en: Passwords encrypted (not hashed) with 3DES in ECB mode — identical passwords produced identical ciphertext, making bulk cracking trivial.
+          pl: Hasła zaszyfrowane (nie zahashowane) 3DES w trybie ECB — identyczne hasła dawały identyczny szyfrogram, co czyniło masowe łamanie trywialnym.
+      - org: LinkedIn
+        year: 2012
+        impact: 117M accounts
+        cost: "$1.25M settlement"
+        description:
+          en: Unsalted SHA1 hashes. After the dump was published, 90% of passwords were cracked within days using rainbow tables. A second dump appeared in 2016.
+          pl: Niezasalowane hashe SHA1. Po opublikowaniu zrzutu, 90% haseł zostało złamanych w ciągu dni przez tęczowe tablice. Drugi zrzut pojawił się w 2016.
+      - org: RockYou
+        year: 2009
+        impact: 32M accounts
+        cost: "Public plaintext dump"
+        description:
+          en: Passwords stored in plaintext. The resulting wordlist (rockyou.txt) is still the most widely used dictionary in password attacks today.
+          pl: Hasła przechowywane w plaintext. Wynikowa lista słów (rockyou.txt) jest do dziś najczęściej używanym słownikiem w atakach na hasła.
+      - org: Dropbox
+        year: 2012
+        impact: 68M accounts
+        cost: "Forced password reset"
+        description:
+          en: Mix of bcrypt and SHA1 hashes. SHA1 portion was cracked. Breach was disclosed in 2016 — 4 years after the fact. Led to mandatory MFA push.
+          pl: Mix hashy bcrypt i SHA1. Część SHA1 została złamana. Wyciek ujawniony w 2016 — 4 lata po fakcie. Doprowadziło do wymuszenia MFA.
+    inlineSources:
+      - label: Adobe breach (FTC)
+        url: https://www.ftc.gov/news-events/news/press-releases/2013/10/ftc-charges-adobe-failed-protect-personal-information
+      - label: LinkedIn breach (DOJ)
+        url: https://www.justice.gov/usao-ndca/pr/russian-hacker-sentenced-seven-years-prison-role-linkedin-and-formspring-data-breaches
+      - label: HaveIBeenPwned — breach list
+        url: https://haveibeenpwned.com/PwnedWebsites
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: No single tool catches all Broken Authentication variants. Combine SAST for anti-patterns, DAST for rate-limit gaps, and manual review for logic flaws.
+      pl: Żadne jedno narzędzie nie wykrywa wszystkich wariantów. Połącz SAST dla antywzorców, DAST dla luk rate-limit i ręczny przegląd dla błędów logiki.
+    sast:
+      - - Semgrep
+        - "python.lang.security.audit.insecure-hash-algorithms (MD5/SHA1), javascript.lang.security.audit.crypto.weak-hash"
+      - - Bandit
+        - "B303 (MD5), B324 (hashlib with weak algo), B105-B108 (hardcoded passwords)"
+      - - TruffleHog
+        - "Detects hardcoded credentials and API keys in git history and source"
+      - - CodeQL
+        - "Dataflow: CleartextPasswordStorage, WeakCryptographicAlgorithm"
+    dast:
+      - - Burp Suite Pro
+        - "Sequencer (token entropy), Intruder (brute-force), Active Scanner (auth bypass)"
+      - - OWASP ZAP
+        - "Authentication tester, active scan for default credentials, session analysis"
+      - - Hydra / Medusa
+        - "CLI brute-force tool — test rate-limiting and lockout thresholds"
+      - - Nuclei
+        - "Templates: default-logins, exposed-panels, auth-bypass — fast recon"
+    note:
+      en: "<strong>Blind spot:</strong> account enumeration via timing differences and credential stuffing at low rate (1 req/min) are missed by all automated tools — requires manual testing with real breach dumps and precise timing measurement."
+      pl: "<strong>Martwy punkt:</strong> enumeracja kont przez różnice czasowe i credential stuffing w niskim tempie (1 żądanie/min) jest pomijany przez wszystkie narzędzia automatyczne — wymaga ręcznego testowania z realnymi wyciekami i precyzyjnym pomiarem czasu."
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Where Broken Authentication controls map onto frameworks auditors check.
+      pl: Gdzie kontrole Broken Authentication mapują się na frameworki sprawdzane przez audytorów.
+    items:
+      - std: PCI DSS v4.0
+        items:
+          - "8.2.1 — unique IDs for all users"
+          - "8.3.6 — min password length 12 chars"
+          - "8.3.9 — password change every 90 days (if no MFA)"
+          - "8.4.2 — MFA for all non-console admin access"
+          - "8.6.1 — account lockout after ≤10 failed attempts"
+      - std: GDPR
+        items:
+          - "Art. 25 — security by design (bcrypt/argon2id by default)"
+          - "Art. 32 — appropriate technical measures"
+          - "Art. 33/34 — 72h breach notification if credentials exposed"
+      - std: SOC 2
+        items:
+          - "CC6.1 — logical and physical access controls"
+          - "CC6.6 — security measures against external threats"
+          - "CC6.7 — data transmission and multi-factor auth"
+    inlineSources:
+      - label: PCI DSS v4.0 Req 8
+        url: https://www.pcisecuritystandards.org/document_library/
+      - label: NIST SP 800-63B (Digital Identity)
+        url: https://pages.nist.gov/800-63-3/sp800-63b.html
+      - label: OWASP ASVS v4 — Auth requirements
+        url: https://owasp.org/www-project-application-security-verification-standard/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you suspect credentials have been compromised — account takeovers, unusual logins, credential dump on dark web.
+      pl: Jeśli podejrzewasz kompromitację danych uwierzytelniających — przejęcia kont, podejrzane logowania, zrzut danych w dark webie.
+    steps:
+      - en: Force logout all active sessions (invalidate all session tokens / JWT blocklist)
+        pl: Wymuś wylogowanie wszystkich aktywnych sesji (unieważnij tokeny sesji / JWT blocklist)
+      - en: Force password reset for all affected accounts (or all accounts if scope unknown)
+        pl: Wymuś reset haseł dla wszystkich dotkniętych kont (lub wszystkich jeśli zakres nieznany)
+      - en: Preserve authentication logs — login timestamps, IPs, User-Agents (do not wipe)
+        pl: Zabezpiecz logi autentykacji — timestampy logowań, IP, User-Agenty (nie usuwaj)
+      - en: Identify breach vector — hash dump via SQLi? Config file? Insider? Log4Shell?
+        pl: Zidentyfikuj wektor wycieku — zrzut hashy przez SQLi? Plik konfiguracyjny? Insider? Log4Shell?
+      - en: "If hashes leaked: immediately assess hash strength. MD5/SHA1 → assume all cracked."
+        pl: "Jeśli hashe wyciekły: natychmiast oceń siłę hashy. MD5/SHA1 → zakładaj że wszystkie złamane."
+      - en: Migrate password storage to Argon2id before re-enabling accounts
+        pl: Przenieś przechowywanie haseł na Argon2id przed ponownym włączeniem kont
+      - en: Enable MFA as mandatory for all accounts post-incident
+        pl: Włącz MFA jako obowiązkowe dla wszystkich kont po incydencie
+      - en: Notify users and regulators within 72h (GDPR Art. 33) if personal data exposed
+        pl: Powiadom użytkowników i regulatorów w ciągu 72h (GDPR Art. 33) jeśli dane osobowe ujawnione
+      - en: "Post-incident: check HaveIBeenPwned for your domain — monitor for future dumps"
+        pl: "Po incydencie: sprawdź HaveIBeenPwned dla swojej domeny — monitoruj przyszłe zrzuty"
+  migration:
+    title:
+      en: Legacy migration strategy
+      pl: Strategia migracji legacy
+    lead:
+      en: How to migrate from MD5/SHA1 to Argon2id in a live system without forcing all users to reset passwords at once.
+      pl: Jak przenieść się z MD5/SHA1 na Argon2id w działającym systemie bez wymuszania resetu wszystkich haseł na raz.
+    steps:
+      - title:
+          en: 1 · Audit
+          pl: 1 · Audyt
+        description:
+          en: "SAST scan (Bandit B303, Semgrep insecure-hash) to find every hashlib.md5/sha1 call. Also check config files for PBKDF2 iterations < 600000."
+          pl: "Skan SAST (Bandit B303, Semgrep insecure-hash) aby znaleźć każde wywołanie hashlib.md5/sha1. Sprawdź też pliki konfiguracyjne dla PBKDF2 iterations < 600000."
+      - title:
+          en: 2 · Dual-hash migration
+          pl: 2 · Migracja dual-hash
+        description:
+          en: "On successful login: re-hash with Argon2id, store new hash, mark column. Users with old hash get migrated transparently on next login. No mass reset needed."
+          pl: "Przy udanym logowaniu: re-hashuj Argon2id, zapisz nowy hash, oznacz kolumnę. Użytkownicy ze starym hashem są migrowani transparentnie przy następnym logowaniu. Brak masowego resetu."
+      - title:
+          en: 3 · Force reset remainder
+          pl: 3 · Wymuś reset pozostałych
+        description:
+          en: "After 90 days, force password reset for all accounts still using old hash algorithm. Then drop the old hash column from the database."
+          pl: "Po 90 dniach wymuś reset hasła dla wszystkich kont nadal używających starego algorytmu. Następnie usuń starą kolumnę hashu z bazy danych."
