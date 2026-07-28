@@ -49,6 +49,7 @@ sectionOrder:
   - tools
   - compliance
   - ir
+  - labs
   - sources
 nav:
   - id: overview
@@ -84,6 +85,9 @@ nav:
   - id: ir
     en: Incident response
     pl: Reagowanie
+  - id: labs
+    en: Practice labs
+    pl: Laby praktyczne
   - id: sources
     en: Sources
     pl: Źródła
@@ -548,6 +552,26 @@ sections:
         pl: Poluj na persystencję — cron, jednostki systemd, authorized_keys, webshelle
       - en: Notify per PCI DSS / SOC 2 obligations and sweep sibling endpoints with Semgrep/commix
         pl: Powiadom zgodnie z PCI DSS / SOC 2 i przeskanuj bliźniacze endpointy Semgrep/commix
+  labs:
+    title:
+      en: Practice labs
+      pl: Laby praktyczne
+    lead:
+      en: Curated external labs to practice this exact attack — self-reported, not verified by Code Guardian.
+      pl: Kuratorowane zewnętrzne laby do przećwiczenia tego ataku — samodzielnie zgłaszane, nie weryfikowane przez Code Guardian.
+    items:
+      - variant: "Shell Metacharacter Injection"
+        provider: "PortSwigger Web Security Academy"
+        label: "OS command injection, simple case"
+        url: "https://portswigger.net/web-security/os-command-injection/lab-simple"
+      - variant: "Blind Time-Based"
+        provider: "PortSwigger Web Security Academy"
+        label: "Blind OS command injection with time delays"
+        url: "https://portswigger.net/web-security/os-command-injection/lab-blind-time-delays"
+      - variant: "Out-of-Band DNS Exfiltration"
+        provider: "PortSwigger Web Security Academy"
+        label: "Blind OS command injection with out-of-band data exfiltration"
+        url: "https://portswigger.net/web-security/os-command-injection/lab-blind-out-of-band-data-exfiltration"
   sources:
     title:
       en: Sources
@@ -571,3 +595,4 @@ sections:
         url: https://nvd.nist.gov/vuln/detail/CVE-2022-42889
       - label: GitLab CVE-2021-22205
         url: https://nvd.nist.gov/vuln/detail/CVE-2021-22205
+

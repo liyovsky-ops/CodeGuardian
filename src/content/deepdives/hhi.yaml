@@ -48,6 +48,7 @@ sectionOrder:
   - compliance
   - ir
   - migration
+  - labs
 nav:
   - id: overview
     en: Overview
@@ -79,6 +80,9 @@ nav:
   - id: migration
     en: Legacy migration
     pl: Migracja legacy
+  - id: labs
+    en: Practice labs
+    pl: Laby praktyczne
 sections:
   attacks:
     title:
@@ -390,3 +394,27 @@ sections:
         description:
           en: "Replace every request.get_host() / req.headers.host usage with a configured canonical hostname from environment variables or application settings."
           pl: "Zamień każde użycie request.get_host() / req.headers.host na skonfigurowaną kanoniczną nazwę hosta ze zmiennych środowiskowych lub ustawień aplikacji."
+  labs:
+    title:
+      en: Practice labs
+      pl: Laby praktyczne
+    lead:
+      en: Curated external labs to practice this exact attack — self-reported, not verified by Code Guardian.
+      pl: Kuratorowane zewnętrzne laby do przećwiczenia tego ataku — samodzielnie zgłaszane, nie weryfikowane przez Code Guardian.
+    items:
+      - variant: "SSRF via Host Header"
+        provider: "PortSwigger Web Security Academy"
+        label: "SSRF via flawed request parsing"
+        url: "https://portswigger.net/web-security/host-header/exploiting/lab-host-header-ssrf-via-flawed-request-parsing"
+      - variant: "Virtual Host Confusion"
+        provider: "PortSwigger Web Security Academy"
+        label: "Host header authentication bypass"
+        url: "https://portswigger.net/web-security/host-header/exploiting/lab-host-header-authentication-bypass"
+      - variant: "Web Cache Poisoning"
+        provider: "PortSwigger Web Security Academy"
+        label: "Web cache poisoning via ambiguous requests"
+        url: "https://portswigger.net/web-security/host-header/exploiting/lab-host-header-web-cache-poisoning-via-ambiguous-requests"
+      - variant: "Password Reset Poisoning"
+        provider: "PortSwigger Web Security Academy"
+        label: "Password reset poisoning via dangling markup"
+        url: "https://portswigger.net/web-security/host-header/exploiting/password-reset-poisoning/lab-host-header-password-reset-poisoning-via-dangling-markup"

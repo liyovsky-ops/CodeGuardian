@@ -52,6 +52,7 @@ sectionOrder:
   - compliance
   - ir
   - migration
+  - labs
 nav:
   - id: overview
     en: Overview
@@ -89,6 +90,9 @@ nav:
   - id: migration
     en: Legacy migration
     pl: Migracja legacy
+  - id: labs
+    en: Practice labs
+    pl: Laby praktyczne
 sections:
   attacks:
     title:
@@ -684,3 +688,27 @@ sections:
         description:
           en: "After 90 days, force password reset for all accounts still using old hash algorithm. Then drop the old hash column from the database."
           pl: "Po 90 dniach wymuś reset hasła dla wszystkich kont nadal używających starego algorytmu. Następnie usuń starą kolumnę hashu z bazy danych."
+  labs:
+    title:
+      en: Practice labs
+      pl: Laby praktyczne
+    lead:
+      en: Curated external labs to practice this exact attack — self-reported, not verified by Code Guardian.
+      pl: Kuratorowane zewnętrzne laby do przećwiczenia tego ataku — samodzielnie zgłaszane, nie weryfikowane przez Code Guardian.
+    items:
+      - variant: "Account Enumeration"
+        provider: "PortSwigger Web Security Academy"
+        label: "Username enumeration via different responses"
+        url: "https://portswigger.net/web-security/authentication/password-based/lab-username-enumeration-via-different-responses"
+      - variant: "Account Enumeration"
+        provider: "PortSwigger Web Security Academy"
+        label: "Username enumeration via response timing"
+        url: "https://portswigger.net/web-security/authentication/password-based/lab-username-enumeration-via-response-timing"
+      - variant: "Brute Force"
+        provider: "PortSwigger Web Security Academy"
+        label: "Broken brute-force protection, IP block"
+        url: "https://portswigger.net/web-security/authentication/password-based/lab-broken-bruteforce-protection-ip-block"
+      - variant: "2FA bypass (adjacent)"
+        provider: "PortSwigger Web Security Academy"
+        label: "2FA simple bypass"
+        url: "https://portswigger.net/web-security/authentication/multi-factor/lab-2fa-simple-bypass"

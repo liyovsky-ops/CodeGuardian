@@ -49,6 +49,7 @@ sectionOrder:
   - tools
   - compliance
   - ir
+  - labs
   - sources
 nav:
   - id: overview
@@ -84,6 +85,9 @@ nav:
   - id: ir
     en: Incident response
     pl: Reagowanie
+  - id: labs
+    en: Practice labs
+    pl: Laby praktyczne
   - id: sources
     en: Sources
     pl: Źródła
@@ -527,6 +531,26 @@ sections:
         pl: Powiadom regulatorów w 72h (GDPR) i dotkniętych użytkowników
       - en: "Post-incident: Semgrep/NoSQLMap sweep for sibling endpoints"
         pl: "Po incydencie: przegląd Semgrep/NoSQLMap pod kątem bliźniaczych endpointów"
+  labs:
+    title:
+      en: Practice labs
+      pl: Laby praktyczne
+    lead:
+      en: Curated external labs to practice this exact attack — self-reported, not verified by Code Guardian.
+      pl: Kuratorowane zewnętrzne laby do przećwiczenia tego ataku — samodzielnie zgłaszane, nie weryfikowane przez Code Guardian.
+    items:
+      - variant: "Detection"
+        provider: "PortSwigger Web Security Academy"
+        label: "Detecting NoSQL injection"
+        url: "https://portswigger.net/web-security/nosql-injection/lab-nosql-injection-detection"
+      - variant: "Operator injection — auth bypass"
+        provider: "PortSwigger Web Security Academy"
+        label: "Exploiting NoSQL operator injection to bypass authentication"
+        url: "https://portswigger.net/web-security/nosql-injection/lab-nosql-injection-bypass-authentication"
+      - variant: "Operator injection — data extraction"
+        provider: "PortSwigger Web Security Academy"
+        label: "Exploiting NoSQL operator injection to extract unknown fields"
+        url: "https://portswigger.net/web-security/nosql-injection/lab-nosql-injection-extract-unknown-fields"
   sources:
     title:
       en: Sources
@@ -550,3 +574,4 @@ sections:
         url: https://nvd.nist.gov/vuln/detail/CVE-2021-22909
       - label: PortSwigger — NoSQL injection
         url: https://portswigger.net/web-security/nosql-injection
+

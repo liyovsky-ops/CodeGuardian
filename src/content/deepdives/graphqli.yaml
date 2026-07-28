@@ -48,6 +48,7 @@ sectionOrder:
   - incidents
   - tools
   - compliance
+  - labs
 nav:
   - id: overview
     en: Overview
@@ -73,6 +74,9 @@ nav:
   - id: compliance
     en: Compliance
     pl: Zgodność
+  - id: labs
+    en: Practice labs
+    pl: Laby praktyczne
 sections:
   attacks:
     title:
@@ -348,3 +352,27 @@ sections:
         url: https://cwe.mitre.org/data/definitions/943.html
       - label: OWASP API4:2023
         url: https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/
+  labs:
+    title:
+      en: Practice labs
+      pl: Laby praktyczne
+    lead:
+      en: Curated external labs to practice this exact attack — self-reported, not verified by Code Guardian.
+      pl: Kuratorowane zewnętrzne laby do przećwiczenia tego ataku — samodzielnie zgłaszane, nie weryfikowane przez Code Guardian.
+    items:
+      - variant: "Introspection abuse (recon, adjacent)"
+        provider: "PortSwigger Web Security Academy"
+        label: "Finding a hidden GraphQL endpoint"
+        url: "https://portswigger.net/web-security/graphql/lab-graphql-find-the-endpoint"
+      - variant: "Introspection abuse (recon, adjacent)"
+        provider: "PortSwigger Web Security Academy"
+        label: "Accidental exposure of private GraphQL fields"
+        url: "https://portswigger.net/web-security/graphql/lab-graphql-accidental-field-exposure"
+      - variant: "Broken authorization via resolver"
+        provider: "PortSwigger Web Security Academy"
+        label: "Accessing private GraphQL posts"
+        url: "https://portswigger.net/web-security/graphql/lab-graphql-reading-private-posts"
+      - variant: "Batching / aliasing amplification (DoS + rate-limit bypass, adjacent)"
+        provider: "PortSwigger Web Security Academy"
+        label: "Bypassing GraphQL brute force protections"
+        url: "https://portswigger.net/web-security/graphql/lab-graphql-brute-force-protection-bypass"
