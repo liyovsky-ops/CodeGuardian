@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "validate": "node src/schemas/validate-deepdives.js",
+    "validate": "node src/schemas/validate-deepdives.js && node src/schemas/validate-quizzes.js",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -4,38 +4,7 @@ import { $, $$ } from './dom.js';
 import { highlightElement } from './highlight.js';
 import { getLang } from '../i18n/index.js';
 import { UI } from '../i18n/ui.js';
-import { openDeepDivePage } from './deepdive-renderer.js';
-import sqliData from '../content/deepdives/sqli.yaml';
-import nosqliData from '../content/deepdives/nosqli.yaml';
-import cmdiData from '../content/deepdives/cmdi.yaml';
-import ldapiData from '../content/deepdives/ldapi.yaml';
-import xpathiData from '../content/deepdives/xpathi.yaml';
-import sstiData from '../content/deepdives/ssti.yaml';
-import logiData from '../content/deepdives/logi.yaml';
-import crlfiData from '../content/deepdives/crlfi.yaml';
-import hhiData from '../content/deepdives/hhi.yaml';
-import emailiData from '../content/deepdives/emaili.yaml';
-import csviData from '../content/deepdives/csvi.yaml';
-import ormiData from '../content/deepdives/ormi.yaml';
-import brokenauthData from '../content/deepdives/brokenauth.yaml';
-import graphqliData from '../content/deepdives/graphqli.yaml';
-
-const DEEPDIVE_THREATS = {
-  '1.1': () => openDeepDivePage(sqliData),
-  '1.2': () => openDeepDivePage(nosqliData),
-  '1.3': () => openDeepDivePage(cmdiData),
-  '1.4': () => openDeepDivePage(ldapiData),
-  '1.5': () => openDeepDivePage(xpathiData),
-  '1.6': () => openDeepDivePage(sstiData),
-  '1.7': () => openDeepDivePage(logiData),
-  '1.8': () => openDeepDivePage(crlfiData),
-  '1.9': () => openDeepDivePage(hhiData),
-  '1.10': () => openDeepDivePage(emailiData),
-  '1.11': () => openDeepDivePage(csviData),
-  '1.12': () => openDeepDivePage(ormiData),
-  '1.13': () => openDeepDivePage(graphqliData),
-  '2.1': () => openDeepDivePage(brokenauthData),
-};
+import { DEEPDIVES, QUIZZES } from '../data/threat-features.js';
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>
@@ -192,10 +161,16 @@ export function threatCard(t, cat) {
   }
 
   const confCls = t.confidence === 'RESEARCH' ? ' conf-research' : '';
-  const deepDiveBtn = DEEPDIVE_THREATS[t.id]
+  const deepDiveBtn = DEEPDIVES[t.id]
     ? `<button class="deepdive-btn" data-threat-id="${esc(t.id)}" title="${lang === 'en' ? 'Open deep-dive' : 'Otwórz szczegóły'}" aria-label="${lang === 'en' ? 'Open SQL Injection deep-dive' : 'Otwórz szczegóły SQL Injection'}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         <span>${lang === 'en' ? 'Deep-dive' : 'Szczegóły'}</span>
+      </button>`
+    : '';
+  const quizBtn = QUIZZES[t.id]
+    ? `<button class="quiz-btn" data-threat-id="${esc(t.id)}" title="${lang === 'en' ? 'Practice this threat' : 'Ćwicz to zagrożenie'}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>${lang === 'en' ? 'Practice' : 'Ćwicz'}</span>
       </button>`
     : '';
   return `
@@ -211,6 +186,7 @@ export function threatCard(t, cat) {
           <span class="badge badge-${sev.cls}">${esc(t.severity)}</span>
           <span class="badge diff ${diffCls}">${esc(t.difficulty)}</span>
           ${deepDiveBtn}
+          ${quizBtn}
         </span>
         <span class="chevron" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>

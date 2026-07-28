@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import ViteYaml from '@modyfi/vite-plugin-yaml';
 import { validateDeepDives } from './src/schemas/validate-deepdives.js';
+import { validateQuizzes } from './src/schemas/validate-quizzes.js';
 
 // Fail the build if any deep-dive YAML drifts from DeepDiveSchema.
 function validateDeepDivesPlugin() {
@@ -13,11 +14,22 @@ function validateDeepDivesPlugin() {
   };
 }
 
+// Fail the build if any quiz YAML drifts from QuizSchema.
+function validateQuizzesPlugin() {
+  return {
+    name: 'validate-quizzes',
+    buildStart() {
+      const files = validateQuizzes(); // throws on invalid file
+      this.info?.(`validated ${files.length} quiz YAML file(s)`);
+    },
+  };
+}
+
 export default defineConfig({
   root: '.',
   base: '/CodeGuardian/',
   publicDir: 'public',
-  plugins: [validateDeepDivesPlugin(), ViteYaml()],
+  plugins: [validateDeepDivesPlugin(), validateQuizzesPlugin(), ViteYaml()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

@@ -2,38 +2,9 @@ import { $, $$ } from './dom.js';
 import { highlightCard } from './renderer.js';
 import { SCROLL_ACTIVE_OFFSET, BACK_TO_TOP_THRESHOLD } from '../config.js';
 import { openDeepDivePage } from './deepdive-renderer.js';
+import { openQuizPage } from './quiz-renderer.js';
 import { markRead } from './progress.js';
-import sqliData from '../content/deepdives/sqli.yaml';
-import nosqliData from '../content/deepdives/nosqli.yaml';
-import cmdiData from '../content/deepdives/cmdi.yaml';
-import ldapiData from '../content/deepdives/ldapi.yaml';
-import xpathiData from '../content/deepdives/xpathi.yaml';
-import sstiData from '../content/deepdives/ssti.yaml';
-import logiData from '../content/deepdives/logi.yaml';
-import crlfiData from '../content/deepdives/crlfi.yaml';
-import hhiData from '../content/deepdives/hhi.yaml';
-import emailiData from '../content/deepdives/emaili.yaml';
-import csviData from '../content/deepdives/csvi.yaml';
-import ormiData from '../content/deepdives/ormi.yaml';
-import brokenauthData from '../content/deepdives/brokenauth.yaml';
-import graphqliData from '../content/deepdives/graphqli.yaml';
-
-const DEEPDIVE_HANDLERS = {
-  '1.1': () => openDeepDivePage(sqliData),
-  '1.2': () => openDeepDivePage(nosqliData),
-  '1.3': () => openDeepDivePage(cmdiData),
-  '1.4': () => openDeepDivePage(ldapiData),
-  '1.5': () => openDeepDivePage(xpathiData),
-  '1.6': () => openDeepDivePage(sstiData),
-  '1.7': () => openDeepDivePage(logiData),
-  '1.8': () => openDeepDivePage(crlfiData),
-  '1.9': () => openDeepDivePage(hhiData),
-  '1.10': () => openDeepDivePage(emailiData),
-  '1.11': () => openDeepDivePage(csviData),
-  '1.12': () => openDeepDivePage(ormiData),
-  '1.13': () => openDeepDivePage(graphqliData),
-  '2.1': () => openDeepDivePage(brokenauthData),
-};
+import { DEEPDIVES, QUIZZES } from '../data/threat-features.js';
 
 function wireCollapsible() {
   $$('.threat-head').forEach((head) => {
@@ -133,8 +104,19 @@ function wireDeepDive() {
       e.stopPropagation();
       const threatId = btn.dataset.threatId;
       markRead(threatId);
-      const handler = DEEPDIVE_HANDLERS[threatId];
-      if (handler) handler();
+      const data = DEEPDIVES[threatId];
+      if (data) openDeepDivePage(data);
+    });
+  });
+}
+
+function wireQuiz() {
+  $$('.quiz-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const threatId = btn.dataset.threatId;
+      const data = QUIZZES[threatId];
+      if (data) openQuizPage(data);
     });
   });
 }
@@ -143,6 +125,7 @@ export function wireDynamicInteractions() {
   wireCollapsible();
   wireTabs();
   wireDeepDive();
+  wireQuiz();
   // Re-attach side-link close handlers (sidebar nav is rebuilt)
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('overlay');

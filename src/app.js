@@ -12,6 +12,7 @@ import { initClipboard } from './modules/clipboard.js';
 import { initInteractions, wireDynamicInteractions } from './modules/interactions.js';
 import { initLang } from './modules/lang.js';
 import { initAllDeepDives } from './modules/deepdive-renderer.js';
+import { initAllQuizzes } from './modules/quiz-renderer.js';
 import './deepdive.css';
 import { initGuidePage } from './modules/guide-page.js';
 import './guide-page.css';
@@ -151,6 +152,7 @@ try {
   initInteractions(CATEGORIES);
   initLang(render);
   initAllDeepDives();
+  initAllQuizzes();
   initGuidePage();
   initProgressWidget(CATEGORIES);
 } catch (err) {
