@@ -12,9 +12,15 @@ import { CAT_AI }           from './cat_11_ai_llm.js';
 import { CAT_MEMORY }       from './cat_12_memory_safety.js';
 import { CAT_DESERIALIZE }  from './cat_13_deserialization.js';
 import { CAT_DOS }          from './cat_14_dos.js';
+import { CAT_MOBILE }       from './cat_15_mobile.js';
+import { CAT_WEB3 }         from './cat_16_web3.js';
+import { CAT_HARDWARE }     from './cat_17_hardware.js';
+import { CAT_ICS }          from './cat_18_ot_ics_scada.js';
+import { CAT_CLOUD }        from './cat_19_cloud_k8s_iam.js';
 
 export const CATEGORIES = [
   CAT_INJECTION, CAT_AUTH, CAT_CRYPTO, CAT_DATA,
   CAT_INPUT, CAT_SUPPLY, CAT_CONFIG, CAT_LOGIC,
   CAT_INFRA, CAT_API, CAT_AI, CAT_MEMORY, CAT_DESERIALIZE, CAT_DOS,
+  CAT_MOBILE, CAT_WEB3, CAT_HARDWARE, CAT_ICS, CAT_CLOUD,
 ];
