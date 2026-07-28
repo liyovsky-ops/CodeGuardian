@@ -1,0 +1,100 @@
+threatId: "1.5"
+title:
+  en: 'XPath Injection'
+  pl: 'Wstrzyknięcie XPath'
+passScore: 80
+questions:
+  - id: 'q1'
+    type: 'vuln-or-not'
+    prompt:
+      en: 'This lxml handler builds an XPath query from a request parameter. Is it vulnerable to XPath injection?'
+      pl: 'Ten handler lxml buduje zapytanie XPath z parametru żądania. Czy jest podatny na wstrzyknięcie XPath?'
+    snippet:
+      lang: 'python'
+      code: |
+        user = request.args.get("user")   # could be "' or '1'='1"
+        nodes = root.xpath("//user[name=$name]", name=user)
+    isVulnerable: false
+    cwe: 'CWE-643'
+    explanation:
+      en: 'Not vulnerable. lxml keyword binding passes the value through the $name variable, so the expression and the data stay separate — metacharacters like the quote in '' or ''1''=''1 are treated as a literal name, never as query syntax. This is the rank-1 fix: parameterized XPath.'
+      pl: 'Nie jest podatny. Wiązanie przez argument w lxml przekazuje wartość przez zmienną $name, więc wyrażenie i dane pozostają rozdzielone — metaznaki jak cudzysłów w '' or ''1''=''1 są traktowane jako dosłowna nazwa, nigdy jako składnia zapytania. To naprawa nr 1: parametryzowany XPath.'
+  - id: 'q2'
+    type: 'multiple-choice'
+    prompt:
+      en: 'A login builds //user[name=INPUT and password=INPUT] by concatenation. An attacker submits '' or ''1''=''1 as the username. What is the mechanism of the attack?'
+      pl: 'Logowanie buduje //user[name=INPUT and password=INPUT] przez konkatenację. Atakujący podaje '' or ''1''=''1 jako login. Na czym polega mechanizm ataku?'
+    choices:
+      - id: 'a'
+        label:
+          en: 'It forms an always-true predicate that matches every user node, bypassing password verification (auth bypass).'
+          pl: 'Tworzy zawsze prawdziwy predykat pasujący do każdego węzła user, pomijając weryfikację hasła (obejście logowania).'
+      - id: 'b'
+        label:
+          en: 'It triggers a JNDI lookup that loads a remote class for RCE.'
+          pl: 'Wyzwala lookup JNDI ładujący zdalną klasę dla RCE.'
+      - id: 'c'
+        label:
+          en: 'It splits the XML document into two separate responses.'
+          pl: 'Rozdziela dokument XML na dwie osobne odpowiedzi.'
+      - id: 'd'
+        label:
+          en: 'It overflows the XPath parser''s internal buffer.'
+          pl: 'Przepełnia wewnętrzny bufor parsera XPath.'
+    correctChoiceIds: ['a']
+    explanation:
+      en: 'CWE-643. The injected quote closes the name predicate and the or ''1''=''1 tautology makes the whole predicate always true, so the node set contains every user regardless of the password branch. JNDI (b) is Log4Shell, response splitting (c) is CRLF injection.'
+      pl: 'CWE-643. Wstrzyknięty cudzysłów zamyka predykat name, a tautologia or ''1''=''1 czyni cały predykat zawsze prawdziwym, więc zbiór węzłów zawiera każdego użytkownika niezależnie od gałęzi hasła. JNDI (b) to Log4Shell, rozdzielanie odpowiedzi (c) to CRLF injection.'
+  - id: 'q3'
+    type: 'pick-the-fix'
+    prompt:
+      en: 'The vulnerable code is root.xpath(f"//user[name=''{user}'']"). Which variant is the real fix?'
+      pl: 'Podatny kod to root.xpath(f"//user[name=''{user}'']"). Który wariant jest prawdziwą naprawą?'
+    variants:
+      - id: 'v1'
+        lang: 'python'
+        code: |
+          user = request.args.get("user")
+          nodes = root.xpath("//user[name=$name]", name=user)
+      - id: 'v2'
+        lang: 'python'
+        code: |
+          user = request.args.get("user").replace("'", "\\'")
+          nodes = root.xpath(f"//user[name='{user}']")
+      - id: 'v3'
+        lang: 'python'
+        code: |
+          user = request.args.get("user")
+          if "' or '" in user:
+              abort(400)
+          nodes = root.xpath(f"//user[name='{user}']")
+    correctVariantId: 'v1'
+    explanation:
+      en: 'v1 binds the value with an lxml keyword argument, the rank-1 parameterized-XPath fix. v2 backslash-escapes the quote, but XPath has no backslash escaping — the quote still terminates the string and the injection survives. v3 blacklists one literal substring, trivially bypassed with different casing, axes, or the | union operator.'
+      pl: 'v1 wiąże wartość argumentem lxml — naprawa nr 1 (parametryzowany XPath). v2 escape''uje cudzysłów backslashem, ale XPath nie zna escapowania backslashem — cudzysłów nadal kończy string i wstrzyknięcie przechodzi. v3 blacklistuje jeden dosłowny podciąg, trywialnie omijany inną wielkością liter, osiami lub operatorem unii |.'
+  - id: 'q4'
+    type: 'multiple-choice'
+    prompt:
+      en: 'Ranked by effectiveness, which control stops XPath injection at the source rather than merely reducing blast radius?'
+      pl: 'Uszeregowana wg skuteczności — która kontrola zatrzymuje XPath injection u źródła, a nie tylko ogranicza skutki?'
+    choices:
+      - id: 'a'
+        label:
+          en: 'Parameterized XPath / variable binding (XPathVariableResolver, lxml keyword args, .NET SetContext).'
+          pl: 'Parametryzowany XPath / wiązanie zmiennych (XPathVariableResolver, argumenty lxml, .NET SetContext).'
+      - id: 'b'
+        label:
+          en: 'A WAF rule blocking the '' and [ characters.'
+          pl: 'Reguła WAF blokująca znaki '' oraz [.'
+      - id: 'c'
+        label:
+          en: 'Suppressing XPath parse errors from clients.'
+          pl: 'Tłumienie błędów parsowania XPath wobec klientów.'
+      - id: 'd'
+        label:
+          en: 'Disabling the XPath 2.0 doc() function.'
+          pl: 'Wyłączenie funkcji doc() z XPath 2.0.'
+    correctChoiceIds: ['a']
+    explanation:
+      en: 'Variable binding (rank 1, eff 100) separates the expression from the data and is the definitive fix. A WAF (rank 7) is easily bypassed, error suppression (rank 6) only blinds the extraction oracle, and disabling doc() (rank 5) only limits SSRF escalation — all reduce blast radius, none fix the root cause.'
+      pl: 'Wiązanie zmiennych (ranga 1, eff 100) oddziela wyrażenie od danych i jest ostateczną naprawą. WAF (ranga 7) łatwo obejść, tłumienie błędów (ranga 6) tylko oślepia wyrocznię ekstrakcji, a wyłączenie doc() (ranga 5) ogranicza jedynie eskalację SSRF — wszystkie ograniczają skutki, żadna nie usuwa przyczyny.'

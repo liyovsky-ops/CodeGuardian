@@ -1,0 +1,91 @@
+threatId: "1.9"
+title:
+  en: "Host Header Injection — knowledge check"
+  pl: "Host Header Injection — sprawdzian wiedzy"
+passScore: 80
+questions:
+  - id: "q1"
+    type: "vuln-or-not"
+    prompt:
+      en: "This Django view builds a password reset link. Is it vulnerable to Host Header Injection?"
+      pl: "Ten widok Django buduje link do resetu hasła. Czy jest podatny na Host Header Injection?"
+    snippet:
+      lang: "python"
+      code: |
+        link = f"https://{request.META['HTTP_HOST']}/reset?token={token}"
+        send_email(user.email, link)
+    isVulnerable: true
+    cwe: "CWE-644"
+    explanation:
+      en: "The reset URL is built straight from the attacker-controlled HTTP Host header (CWE-644). Sending Host: evil.com makes the app email the victim a link that leaks the reset token to the attacker. Fix: build the URL from a configured canonical host, not the request."
+      pl: "URL resetu jest budowany wprost z kontrolowanego przez atakującego nagłówka Host (CWE-644). Wysłanie Host: evil.com sprawia, że aplikacja wyśle ofierze link, który wycieka token resetu do atakującego. Naprawa: buduj URL z kanonicznego hosta z konfiguracji, nie z żądania."
+  - id: "q2"
+    type: "vuln-or-not"
+    prompt:
+      en: "An Express app already validates req.hostname against a whitelist. Behind its reverse proxy, is the app still exposed through this request?"
+      pl: "Aplikacja Express waliduje już req.hostname wobec whitelisty. Za swoim reverse proxy — czy nadal jest narażona przez to żądanie?"
+    snippet:
+      lang: "http"
+      code: |
+        GET /account HTTP/1.1
+        Host: legitimate.com
+        X-Forwarded-Host: attacker.com
+    isVulnerable: true
+    cwe: "CWE-644"
+    explanation:
+      en: "Validating only the Host header is not enough. Many frameworks (Django, Laravel, Spring) prioritize X-Forwarded-Host behind a proxy, so an attacker bypasses Host validation entirely. Strip X-Forwarded-Host at the proxy and validate every forwarded header."
+      pl: "Walidacja samego nagłówka Host nie wystarcza. Wiele frameworków (Django, Laravel, Spring) priorytetyzuje X-Forwarded-Host za proxy, więc atakujący całkowicie omija walidację Host. Usuwaj X-Forwarded-Host na proxy i waliduj każdy forwarded header."
+  - id: "q3"
+    type: "multiple-choice"
+    prompt:
+      en: "Which single defense do the Arena teams rank as the primary, structural fix for Host Header Injection?"
+      pl: "Którą pojedynczą obronę zespoły Arena wskazują jako główną, strukturalną naprawę Host Header Injection?"
+    choices:
+      - id: "a"
+        label:
+          en: "WAF rules blocking suspicious Host patterns"
+          pl: "Reguły WAF blokujące podejrzane wzorce Host"
+      - id: "b"
+        label:
+          en: "Whitelisting allowed hostnames (ALLOWED_HOSTS) and rejecting non-matching Host headers"
+          pl: "Whitelist dozwolonych hostów (ALLOWED_HOSTS) i odrzucanie niepasujących nagłówków Host"
+      - id: "c"
+        label:
+          en: "Disabling DEBUG mode in production"
+          pl: "Wyłączenie trybu DEBUG w produkcji"
+      - id: "d"
+        label:
+          en: "Rate limiting the password reset endpoint"
+          pl: "Rate limiting na endpoincie resetu hasła"
+    correctChoiceIds: ["b"]
+    explanation:
+      en: "The rank-1 defense is a Host whitelist (ALLOWED_HOSTS) that rejects unrecognized Host headers. WAF rules (bypassable via encoding) and disabling DEBUG (a mitigation for CVE-2016-9014) are weaker, secondary controls."
+      pl: "Obroną rangi 1 jest whitelist hostów (ALLOWED_HOSTS) odrzucająca nierozpoznane nagłówki Host. Reguły WAF (omijalne przez kodowanie) i wyłączenie DEBUG (łagodzenie CVE-2016-9014) to słabsze, wtórne kontrole."
+  - id: "q4"
+    type: "pick-the-fix"
+    prompt:
+      en: "The reset link is built from request.get_host(). Which version actually stops Host Header Injection?"
+      pl: "Link resetu jest budowany z request.get_host(). Która wersja naprawdę zatrzymuje Host Header Injection?"
+    variants:
+      - id: "v1"
+        lang: "python"
+        code: |
+          # lowercase the host before building the URL
+          host = request.META['HTTP_HOST'].lower()
+          link = f"https://{host}/reset?token={token}"
+      - id: "v2"
+        lang: "python"
+        code: |
+          # ALLOWED_HOSTS = ['example.com', 'www.example.com']
+          # USE_X_FORWARDED_HOST = False
+          link = f"https://{settings.CANONICAL_HOST}/reset?token={token}"
+      - id: "v3"
+        lang: "python"
+        code: |
+          # strip whitespace from the header, then use it
+          host = request.META['HTTP_HOST'].strip()
+          link = f"https://{host}/reset?token={token}"
+    correctVariantId: "v2"
+    explanation:
+      en: "Only v2 stops trusting the header entirely — it builds the URL from a configured canonical host plus ALLOWED_HOSTS validation. v1 and v3 still interpolate the attacker-controlled Host value; lowercasing or trimming it does not stop evil.com from being injected."
+      pl: "Tylko v2 przestaje ufać nagłówkowi — buduje URL z kanonicznego hosta z konfiguracji plus walidacja ALLOWED_HOSTS. v1 i v3 nadal wstawiają kontrolowaną przez atakującego wartość Host; zmiana na małe litery czy przycięcie nie powstrzyma wstrzyknięcia evil.com."

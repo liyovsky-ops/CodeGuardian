@@ -19,6 +19,21 @@ import ormiData from '../content/deepdives/ormi.yaml';
 import brokenauthData from '../content/deepdives/brokenauth.yaml';
 import graphqliData from '../content/deepdives/graphqli.yaml';
 
+import sqliQuiz from '../content/quizzes/sqli.yaml';
+import nosqliQuiz from '../content/quizzes/nosqli.yaml';
+import cmdiQuiz from '../content/quizzes/cmdi.yaml';
+import ldapiQuiz from '../content/quizzes/ldapi.yaml';
+import xpathiQuiz from '../content/quizzes/xpathi.yaml';
+import sstiQuiz from '../content/quizzes/ssti.yaml';
+import logiQuiz from '../content/quizzes/logi.yaml';
+import crlfiQuiz from '../content/quizzes/crlfi.yaml';
+import hhiQuiz from '../content/quizzes/hhi.yaml';
+import emailiQuiz from '../content/quizzes/emaili.yaml';
+import csviQuiz from '../content/quizzes/csvi.yaml';
+import ormiQuiz from '../content/quizzes/ormi.yaml';
+import brokenauthQuiz from '../content/quizzes/brokenauth.yaml';
+import graphqliQuiz from '../content/quizzes/graphqli.yaml';
+
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
   '1.1': sqliData,
@@ -37,7 +52,22 @@ export const DEEPDIVES = {
   '2.1': brokenauthData,
 };
 
-// threatId -> quiz YAML data. Populated in a later phase; quizzes may exist
-// for threats that have no deep-dive, so this is intentionally a separate
-// map, not nested under DEEPDIVES.
-export const QUIZZES = {};
+// threatId -> quiz YAML data. Quizzes may exist for threats that have no
+// deep-dive, so this is intentionally a separate map, not nested under
+// DEEPDIVES.
+export const QUIZZES = {
+  '1.1': sqliQuiz,
+  '1.2': nosqliQuiz,
+  '1.3': cmdiQuiz,
+  '1.4': ldapiQuiz,
+  '1.5': xpathiQuiz,
+  '1.6': sstiQuiz,
+  '1.7': logiQuiz,
+  '1.8': crlfiQuiz,
+  '1.9': hhiQuiz,
+  '1.10': emailiQuiz,
+  '1.11': csviQuiz,
+  '1.12': ormiQuiz,
+  '1.13': graphqliQuiz,
+  '2.1': brokenauthQuiz,
+};

@@ -1,0 +1,104 @@
+threatId: "1.10"
+title:
+  en: "Email / SMTP Header Injection — knowledge check"
+  pl: "Email / SMTP Header Injection — sprawdzian wiedzy"
+passScore: 80
+questions:
+  - id: "q1"
+    type: "vuln-or-not"
+    prompt:
+      en: "This Python handler builds an email from form input. Is it vulnerable to email header injection?"
+      pl: "Ten handler w Pythonie buduje email z danych formularza. Czy jest podatny na email header injection?"
+    snippet:
+      lang: "python"
+      code: |
+        msg = MIMEText("Hello")
+        msg["Subject"] = request.form["subject"]
+        msg["To"] = request.form["to"]
+        msg["From"] = "noreply@myapp.com"
+        server.sendmail("noreply@myapp.com", [to], msg.as_string())
+    isVulnerable: true
+    cwe: "CWE-93"
+    explanation:
+      en: "User input flows straight into the Subject and To headers (CWE-93). A value like victim@x.com\\r\\nBCC: spam@evil.com injects a new header, turning the app into a spam relay. Reject any input containing \\r or \\n, or use a high-level library that sanitizes headers."
+      pl: "Dane użytkownika trafiają wprost do nagłówków Subject i To (CWE-93). Wartość typu victim@x.com\\r\\nBCC: spam@evil.com wstrzykuje nowy nagłówek, zamieniając aplikację w relay spamowy. Odrzucaj wejście z \\r lub \\n albo używaj biblioteki wysokiego poziomu sanityzującej nagłówki."
+  - id: "q2"
+    type: "multiple-choice"
+    prompt:
+      en: "An attacker submits the field value below. What does the injected sequence achieve?"
+      pl: "Atakujący wysyła poniższą wartość pola. Co osiąga wstrzyknięta sekwencja?"
+    snippet:
+      lang: "text"
+      code: |
+        test\r\n\r\nDear user, click here to verify: http://evil.com
+    choices:
+      - id: "a"
+        label:
+          en: "Adds a silent BCC recipient to the message"
+          pl: "Dodaje cichego odbiorcę BCC do wiadomości"
+      - id: "b"
+        label:
+          en: "The double CRLF ends the headers and replaces the entire message body"
+          pl: "Podwójny CRLF kończy nagłówki i podmienia całą treść wiadomości"
+      - id: "c"
+        label:
+          en: "Changes the Reply-To so replies go to the attacker"
+          pl: "Zmienia Reply-To tak, że odpowiedzi trafiają do atakującego"
+      - id: "d"
+        label:
+          en: "Nothing — CRLF is ignored inside message bodies"
+          pl: "Nic — CRLF jest ignorowany w treści wiadomości"
+    correctChoiceIds: ["b"]
+    explanation:
+      en: "A double CRLF (\\r\\n\\r\\n) terminates the header section and starts the body, so the attacker's phishing text replaces the intended content — the Body Injection variant. A single CRLF plus BCC: would be the CC/BCC variant instead."
+      pl: "Podwójny CRLF (\\r\\n\\r\\n) kończy sekcję nagłówków i rozpoczyna body, więc tekst phishingowy podmienia zamierzoną treść — wariant Body Injection. Pojedynczy CRLF plus BCC: to byłby wariant CC/BCC."
+  - id: "q3"
+    type: "vuln-or-not"
+    prompt:
+      en: "This Node.js code sends mail via Nodemailer with a validated recipient. Is it vulnerable to header injection?"
+      pl: "Ten kod Node.js wysyła mail przez Nodemailer ze zwalidowanym odbiorcą. Czy jest podatny na header injection?"
+    snippet:
+      lang: "javascript"
+      code: |
+        await transporter.sendMail({
+          from: 'noreply@myapp.com',
+          to: validatedEmail,   // Nodemailer rejects CRLF in addresses
+          subject: userSubject, // automatically sanitized
+          text: 'Hello',
+        });
+    isVulnerable: false
+    cwe: "CWE-93"
+    explanation:
+      en: "Nodemailer (v4.0+) sanitizes headers and rejects CRLF in address fields, so user input can't inject new headers here. This is the recommended structural defense: let a high-level library build the message instead of concatenating raw SMTP headers."
+      pl: "Nodemailer (v4.0+) sanityzuje nagłówki i odrzuca CRLF w polach adresowych, więc dane użytkownika nie wstrzykną tu nowych nagłówków. To zalecana obrona strukturalna: niech bibliotekia wysokiego poziomu buduje wiadomość zamiast sklejania surowych nagłówków SMTP."
+  - id: "q4"
+    type: "pick-the-fix"
+    prompt:
+      en: "A PHP contact form calls mail() with a user-supplied subject. Which fix actually prevents header injection?"
+      pl: "Formularz kontaktowy w PHP wywołuje mail() z tematem od użytkownika. Która poprawka faktycznie blokuje header injection?"
+    variants:
+      - id: "v1"
+        lang: "php"
+        code: |
+          // htmlspecialchars the subject, then send with mail()
+          $subject = htmlspecialchars($_POST['subject']);
+          mail($_POST['email'], $subject, "Hello", "From: noreply@myapp.com\r\n");
+      - id: "v2"
+        lang: "php"
+        code: |
+          $mail = new PHPMailer(true);
+          $mail->setFrom('noreply@myapp.com');
+          $mail->addAddress(filter_var($_POST['email'], FILTER_VALIDATE_EMAIL));
+          $mail->Subject = preg_replace('/[\r\n]/', '', $_POST['subject']);
+          $mail->Body = 'Hello';
+          $mail->send();
+      - id: "v3"
+        lang: "php"
+        code: |
+          // trim the subject to remove stray spaces, then send with mail()
+          $subject = trim($_POST['subject']);
+          mail($_POST['email'], $subject, "Hello", "From: noreply@myapp.com\r\n");
+    correctVariantId: "v2"
+    explanation:
+      en: "v2 uses PHPMailer (which sanitizes headers), validates the address with FILTER_VALIDATE_EMAIL, and strips \\r\\n from the subject. v1's htmlspecialchars is an XSS control that leaves CRLF intact; v3's trim only removes leading/trailing whitespace, so BCC: injection still works."
+      pl: "v2 używa PHPMailer (sanityzuje nagłówki), waliduje adres przez FILTER_VALIDATE_EMAIL i usuwa \\r\\n z tematu. htmlspecialchars z v1 to kontrola XSS, która zostawia CRLF; trim z v3 usuwa tylko białe znaki z brzegów, więc wstrzyknięcie BCC: nadal działa."

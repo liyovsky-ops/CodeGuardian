@@ -1,0 +1,97 @@
+threatId: "1.12"
+title:
+  en: "ORM Injection & Second-Order SQLi — knowledge check"
+  pl: "ORM Injection i Second-Order SQLi — sprawdzian wiedzy"
+passScore: 80
+questions:
+  - id: "q1"
+    type: "vuln-or-not"
+    prompt:
+      en: "This SQLAlchemy query uses text() with a bind parameter. Is it vulnerable to SQL injection?"
+      pl: "To zapytanie SQLAlchemy używa text() z parametrem bind. Czy jest podatne na SQL injection?"
+    snippet:
+      lang: "python"
+      code: |
+        result = session.execute(
+            text("SELECT * FROM users WHERE name=:name"),
+            {"name": name}
+        )
+    isVulnerable: false
+    cwe: "CWE-89"
+    explanation:
+      en: "This is the safe pattern: a named bind parameter (:name) sends the value separately from the SQL text, so the driver never mixes data into the query string. The dangerous variant is text(f\"... name='{name}'\") — an f-string negates parameterization entirely."
+      pl: "To bezpieczny wzorzec: nazwany parametr bind (:name) przesyła wartość oddzielnie od tekstu SQL, więc sterownik nie miesza danych do zapytania. Groźny wariant to text(f\"... name='{name}'\") — f-string całkowicie znosi parametryzację."
+  - id: "q2"
+    type: "vuln-or-not"
+    prompt:
+      en: "This Django endpoint sorts a queryset by a user-supplied column. Is it vulnerable?"
+      pl: "Ten endpoint Django sortuje queryset po kolumnie podanej przez użytkownika. Czy jest podatny?"
+    snippet:
+      lang: "python"
+      code: |
+        sort = request.GET.get("sort", "id")
+        users = User.objects.order_by(sort)
+    isVulnerable: true
+    cwe: "CWE-89"
+    explanation:
+      en: "This is the CVE-2021-35042 pattern. ORDER BY identifiers cannot be parameterized — bind parameters work only for values, not column names — so a raw user-controlled sort field is injectable (time-based blind SQLi, exfiltration). The only fix is an allow-list of permitted columns."
+      pl: "To wzorzec CVE-2021-35042. Identyfikatorów ORDER BY nie da się parametryzować — parametry bind działają tylko dla wartości, nie nazw kolumn — więc surowe pole sort od użytkownika jest podatne (blind SQLi oparty na czasie, eksfiltracja). Jedyna naprawa to allow-lista dozwolonych kolumn."
+  - id: "q3"
+    type: "multiple-choice"
+    prompt:
+      en: "Why do WAFs and DAST scanners miss second-order SQL injection?"
+      pl: "Dlaczego WAFy i skanery DAST pomijają second-order SQL injection?"
+    choices:
+      - id: "a"
+        label:
+          en: "The payload is stored safely in phase 1 and only concatenated into a raw query later, in a separate request"
+          pl: "Payload jest bezpiecznie zapisany w fazie 1 i dopiero później, w osobnym żądaniu, sklejany z surowym zapytaniem"
+      - id: "b"
+        label:
+          en: "Second-order injection only works over HTTPS, which scanners can't inspect"
+          pl: "Second-order injection działa tylko po HTTPS, którego skanery nie widzą"
+      - id: "c"
+        label:
+          en: "The ORM encrypts the payload before storing it"
+          pl: "ORM szyfruje payload przed zapisem"
+      - id: "d"
+        label:
+          en: "WAFs block it reliably; only SAST misses it"
+          pl: "WAFy blokują je niezawodnie; tylko SAST je pomija"
+    correctChoiceIds: ["a"]
+    explanation:
+      en: "In phase 1 the payload (e.g. admin'--) is stored via a parameterized INSERT — clean input, no alert. It detonates in phase 2 when a different endpoint retrieves it and concatenates it into a raw query. WAF/DAST see input↔output in one request; only inter-procedural taint SAST or manual review catches the cross-request flow."
+      pl: "W fazie 1 payload (np. admin'--) jest zapisywany przez sparametryzowany INSERT — czyste dane, brak alertu. Odpala się w fazie 2, gdy inny endpoint go pobiera i skleja z surowym zapytaniem. WAF/DAST widzą wejście↔wyjście w jednym żądaniu; tylko SAST z analizą taint między funkcjami lub ręczny przegląd wychwytuje przepływ między żądaniami."
+  - id: "q4"
+    type: "pick-the-fix"
+    prompt:
+      en: "A Django endpoint runs User.objects.order_by(request.GET['sort']). Which version is safe?"
+      pl: "Endpoint Django wykonuje User.objects.order_by(request.GET['sort']). Która wersja jest bezpieczna?"
+    variants:
+      - id: "v1"
+        lang: "python"
+        code: |
+          # escape quotes in the sort value, then use it
+          sort = request.GET.get("sort", "id").replace("'", "")
+          users = User.objects.order_by(sort)
+      - id: "v2"
+        lang: "python"
+        code: |
+          # allow-list of permitted sort columns
+          ALLOWED_SORT = {"id", "name", "created_at"}
+          sort = request.GET.get("sort", "id")
+          if sort not in ALLOWED_SORT:
+              sort = "id"
+          users = User.objects.order_by(sort)
+      - id: "v3"
+        lang: "python"
+        code: |
+          # pass the sort field as a bind parameter
+          sort = request.GET.get("sort", "id")
+          users = User.objects.raw(
+              "SELECT * FROM users ORDER BY %s", [sort]
+          )
+    correctVariantId: "v2"
+    explanation:
+      en: "v2 allow-lists the sort column against a hardcoded set — the only correct fix for ORDER BY injection. v1's quote-stripping is a blacklist that still lets in CASE/subquery payloads with no quotes. v3 is a trap: bind parameters bind values, not identifiers, so %s for an ORDER BY column doesn't parameterize the column name."
+      pl: "v2 allow-listuje kolumnę sortowania wobec hardkodowanego zestawu — jedyna poprawna naprawa ORDER BY injection. Usuwanie apostrofów w v1 to blacklist, która wpuszcza ładunki CASE/podzapytania bez apostrofów. v3 to pułapka: parametry bind wiążą wartości, nie identyfikatory, więc %s dla kolumny ORDER BY nie parametryzuje nazwy kolumny."

@@ -408,8 +408,7 @@ threats:
     desc: |
       [TŁUMACZENIE OCZEKUJĄCE] Abuses unprotected software control over a device's dynamic voltage/frequency scaling (energy-management) registers to push clock frequency past safe limits and induce computation faults — with no physical access or lab equipment. Demonstrated extracting AES keys from ARM TrustZone (via differential fault analysis) and loading self-signed code into TrustZone. Software-only fault injection; precursor to Plundervolt.
       
-    desc_en: "Abuses unprotected software control over a device's dynamic voltage/frequency scaling (energy-management) registers to push clock frequency past safe limits and induce computation faults — with no physical access or lab equipment. Demonstrated extracting AES keys from ARM TrustZone (via differential fault analysis) and loading self-signed code into TrustZone. Software-only fault injection; precursor to Plundervolt.
-"
+    desc_en: "Abuses unprotected software control over a device's dynamic voltage/frequency scaling (energy-management) registers to push clock frequency past safe limits and induce computation faults — with no physical access or lab equipment. Demonstrated extracting AES keys from ARM TrustZone (via differential fault analysis) and loading self-signed code into TrustZone. Software-only fault injection; precursor to Plundervolt."
     lang: "unknown"
     vuln: |
       # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
@@ -466,8 +465,7 @@ threats:
     desc: |
       [TŁUMACZENIE OCZEKUJĄCE] Physically injecting brief voltage droops or clock glitches (or EM/laser pulses) at a precise moment causes an embedded CPU/secure element to skip instructions or corrupt computation — used to bypass secure-boot signature checks, escape read-protection, or perform differential fault analysis to recover crypto keys. The classic hardware fault-attack model for smartcards, secure elements, and IoT/embedded devices; distinct from software-only undervolting (Plundervolt).
       
-    desc_en: "Physically injecting brief voltage droops or clock glitches (or EM/laser pulses) at a precise moment causes an embedded CPU/secure element to skip instructions or corrupt computation — used to bypass secure-boot signature checks, escape read-protection, or perform differential fault analysis to recover crypto keys. The classic hardware fault-attack model for smartcards, secure elements, and IoT/embedded devices; distinct from software-only undervolting (Plundervolt).
-"
+    desc_en: "Physically injecting brief voltage droops or clock glitches (or EM/laser pulses) at a precise moment causes an embedded CPU/secure element to skip instructions or corrupt computation — used to bypass secure-boot signature checks, escape read-protection, or perform differential fault analysis to recover crypto keys. The classic hardware fault-attack model for smartcards, secure elements, and IoT/embedded devices; distinct from software-only undervolting (Plundervolt)."
     lang: "unknown"
     vuln: |
       # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)

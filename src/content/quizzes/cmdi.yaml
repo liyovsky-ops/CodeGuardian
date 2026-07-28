@@ -1,0 +1,111 @@
+threatId: "1.3"
+title:
+  en: OS Command Injection — knowledge check
+  pl: OS Command Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Python snippet contain an OS command injection vulnerability?
+      pl: Czy ten fragment w Pythonie zawiera podatność OS command injection?
+    snippet:
+      lang: python
+      code: |
+        host = request.args.get("host")
+        subprocess.run(f"ping -c 1 {host}", shell=True)
+    isVulnerable: true
+    cwe: CWE-78
+    explanation:
+      en: shell=True runs the string through /bin/sh, so a value like 127.0.0.1; cat /etc/passwd chains an attacker command. Pass an argument list and drop shell=True — subprocess.run(["ping", "-c", "1", host]).
+      pl: shell=True przepuszcza string przez /bin/sh, więc wartość typu 127.0.0.1; cat /etc/passwd dokleja polecenie atakującego. Przekaż listę argumentów i usuń shell=True — subprocess.run(["ping", "-c", "1", host]).
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Node.js code safe from command injection?
+      pl: Czy ten kod Node.js jest bezpieczny od command injection?
+    snippet:
+      lang: javascript
+      code: |
+        const { execFile } = require("child_process");
+        execFile("ls", [userInput]);
+    isVulnerable: false
+    cwe: CWE-78
+    explanation:
+      en: execFile invokes the binary directly and never spawns /bin/sh -c, so userInput stays a single literal argument and shell metacharacters carry no meaning. Avoiding the shell entirely is the definitive fix. (exec() would be the vulnerable counterpart.)
+      pl: execFile wywołuje binarkę wprost i nigdy nie uruchamia /bin/sh -c, więc userInput pozostaje pojedynczym dosłownym argumentem, a metaznaki powłoki nic nie znaczą. Całkowite unikanie powłoki to ostateczna naprawa. (exec() byłby podatnym odpowiednikiem.)
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: An injection point reflects no output at all. Which technique best confirms that the command actually executed?
+      pl: Punkt wstrzyknięcia nie zwraca żadnego wyniku. Która technika najlepiej potwierdza, że polecenie faktycznie się wykonało?
+    choices:
+      - id: a
+        label:
+          en: A time-based payload such as ; sleep 10, or an out-of-band DNS callback
+          pl: Ładunek czasowy typu ; sleep 10 albo callback DNS out-of-band
+      - id: b
+        label:
+          en: Reading the HTTP status code alone
+          pl: Sam odczyt kodu statusu HTTP
+      - id: c
+        label:
+          en: Escaping the input with shlex.quote
+          pl: Escapowanie wejścia przez shlex.quote
+    correctChoiceIds: ["a"]
+    explanation:
+      en: With no reflected output, a measurable delay (; sleep 10) turns response time into an oracle, and a base64-over-DNS callback ($(id|base64...).oast.me) proves execution even when HTTP egress is blocked. shlex.quote is a defense, not a detection method.
+      pl: Bez zwracanego wyniku mierzalne opóźnienie (; sleep 10) zamienia czas odpowiedzi w wyrocznię, a callback base64-przez-DNS ($(id|base64...).oast.me) dowodzi wykonania nawet gdy ruch HTTP jest zablokowany. shlex.quote to obrona, nie metoda detekcji.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: According to the ranked defenses, which is the single definitive fix for OS command injection?
+      pl: Zgodnie z uszeregowanymi obronami, która jest jedyną ostateczną naprawą OS command injection?
+    choices:
+      - id: a
+        label:
+          en: A WAF blocking shell metacharacters
+          pl: WAF blokujący metaznaki powłoki
+      - id: b
+        label:
+          en: Avoiding the shell entirely via argument-list APIs
+          pl: Całkowite unikanie powłoki przez API z listą argumentów
+      - id: c
+        label:
+          en: Escaping arguments with shlex.quote / escapeshellarg
+          pl: Escapowanie argumentów przez shlex.quote / escapeshellarg
+      - id: d
+        label:
+          en: Running the process as a low-privilege user
+          pl: Uruchamianie procesu jako użytkownik o niskich uprawnieniach
+    correctChoiceIds: ["b"]
+    explanation:
+      en: Argument-list APIs (execFile, ProcessBuilder, subprocess list) mean no shell ever parses metacharacters — the definitive fix. Escaping is an error-prone last resort, least-privilege and WAF only shrink or detect blast radius, never prevent it.
+      pl: API z listą argumentów (execFile, ProcessBuilder, lista subprocess) sprawiają, że żadna powłoka nie parsuje metaznaków — ostateczna naprawa. Escapowanie to zawodna ostateczność, a minimalne uprawnienia i WAF jedynie ograniczają lub wykrywają skutki, nigdy im nie zapobiegają.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: This Node.js call is command-injectable. Which variant actually fixes it?
+      pl: To wywołanie Node.js jest podatne na command injection. Który wariant faktycznie je naprawia?
+    variants:
+      - id: v1
+        lang: javascript
+        code: |
+          // strip ; | & from the input, then exec
+          const clean = userInput.replace(/[;|&]/g, "");
+          exec("ls " + clean);
+      - id: v2
+        lang: javascript
+        code: |
+          // execFile bypasses the shell entirely
+          const { execFile } = require("child_process");
+          execFile("ls", [userInput]);
+      - id: v3
+        lang: javascript
+        code: |
+          // wrap the input in double quotes before exec
+          exec('ls "' + userInput + '"');
+    correctVariantId: v2
+    explanation:
+      en: v2 uses execFile, which never spawns a shell, so metacharacters are inert — the definitive fix. v1's blacklist misses $(...), backticks, newlines and $IFS, and v3's quoting is broken by $(...) and a closing quote inside the input.
+      pl: v2 używa execFile, który nigdy nie uruchamia powłoki, więc metaznaki są martwe — ostateczna naprawa. Blacklista z v1 pomija $(...), backticki, znaki nowej linii i $IFS, a cytowanie z v3 łamie $(...) lub domykający cudzysłów w wejściu.

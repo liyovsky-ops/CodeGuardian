@@ -425,8 +425,7 @@ threats:
     desc: |
       [TŁUMACZENIE OCZEKUJĄCE] ERC-721 safe transfers and _safeMint invoke the recipient contract's onERC721Received hook (ERC-777 uses tokensReceived) before finalizing state; a malicious recipient re-enters the minting/transfer function, and because a counter such as totalSupply is still stale it can mint beyond limits or bypass per-wallet checks. A specific, real instance of reentrancy driven by mandatory token-standard callbacks.
       
-    desc_en: "ERC-721 safe transfers and _safeMint invoke the recipient contract's onERC721Received hook (ERC-777 uses tokensReceived) before finalizing state; a malicious recipient re-enters the minting/transfer function, and because a counter such as totalSupply is still stale it can mint beyond limits or bypass per-wallet checks. A specific, real instance of reentrancy driven by mandatory token-standard callbacks.
-"
+    desc_en: "ERC-721 safe transfers and _safeMint invoke the recipient contract's onERC721Received hook (ERC-777 uses tokensReceived) before finalizing state; a malicious recipient re-enters the minting/transfer function, and because a counter such as totalSupply is still stale it can mint beyond limits or bypass per-wallet checks. A specific, real instance of reentrancy driven by mandatory token-standard callbacks."
     lang: "unknown"
     vuln: |
       # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)

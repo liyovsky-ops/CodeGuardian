@@ -1,0 +1,162 @@
+threatId: "1.13"
+title:
+  en: GraphQL Injection — knowledge check
+  pl: GraphQL Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Apollo Server resolver contain an injection vulnerability?
+      pl: Czy ten resolver Apollo Server zawiera podatność na wstrzyknięcie?
+    snippet:
+      lang: javascript
+      code: |
+        products: async (_, { search }, { db }) => {
+          const sql = `SELECT id, name, price FROM products
+                       WHERE name LIKE '%${search}%'`;
+          const { rows } = await db.query(sql);
+          return rows;
+        }
+    isVulnerable: true
+    cwe: CWE-89
+    explanation:
+      en: The client-controlled `search` argument is concatenated straight into the SQL string, so a value like %' UNION SELECT username,password,1 FROM users-- - rewrites the query. GraphQL validates the argument's type but never sanitizes its value — bind it with a parameterized placeholder instead.
+      pl: Argument `search` sterowany przez klienta jest konkatenowany wprost do stringa SQL, więc wartość typu %' UNION SELECT username,password,1 FROM users-- - przepisuje zapytanie. GraphQL waliduje typ argumentu, ale nigdy nie sanityzuje jego wartości — zwiąż go parametryzowanym placeholderem.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Python (Ariadne) resolver safe from NoSQL operator injection?
+      pl: Czy ten resolver w Pythonie (Ariadne) jest bezpieczny od wstrzyknięcia operatorów NoSQL?
+    snippet:
+      lang: python
+      code: |
+        ALLOWED_FIELDS = {"username", "email", "displayName"}
+
+        async def resolve_search_users(_, info, field, value):
+            if field not in ALLOWED_FIELDS:
+                raise ValueError("Invalid field")
+            cursor = db.users.find({field: {"$eq": str(value)}})
+            return [doc async for doc in cursor]
+    isVulnerable: false
+    cwe: CWE-943
+    explanation:
+      en: 'The resolver takes scalar args instead of a free-form filter object, allowlists the field name, and pins the value under an explicit $eq so it can never be interpreted as a query operator like {"$ne": null}. This closes the CWE-943 operator-injection path.'
+      pl: 'Resolver przyjmuje argumenty skalarne zamiast dowolnego obiektu-filtra, dopuszcza tylko znane nazwy pól i przypina wartość pod jawnym $eq, więc nigdy nie zostanie zinterpretowana jako operator zapytania w rodzaju {"$ne": null}. To zamyka ścieżkę wstrzyknięcia operatorów z CWE-943.'
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: Across the ranked defense layers, which control is the definitive fix for the CWE-89/943 injection core in a resolver?
+      pl: Spośród warstw obrony wg skuteczności, która kontrola jest definitywną naprawą rdzenia wstrzyknięcia CWE-89/943 w resolverze?
+    choices:
+      - id: a
+        label:
+          en: Disabling schema introspection in production
+          pl: Wyłączenie introspekcji schematu na produkcji
+      - id: b
+        label:
+          en: Parameterized queries / safe ORM-ODM APIs in resolvers
+          pl: Zapytania parametryzowane / bezpieczne API ORM-ODM w resolverach
+      - id: c
+        label:
+          en: Query cost and depth limiting
+          pl: Limitowanie kosztu i głębokości zapytania
+      - id: d
+        label:
+          en: A WAF blocking suspicious keywords
+          pl: WAF blokujący podejrzane słowa kluczowe
+    correctChoiceIds: ["b"]
+    explanation:
+      en: Parameterized queries (bound parameters, never string concatenation) directly close the injection core and rank as the top defense. Disabling introspection only slows recon, cost/depth limiting targets the adjacent DoS variants, and a WAF is a supplementary bypassable control — none of them fix the injection itself.
+      pl: Zapytania parametryzowane (parametry wiązane, nigdy konkatenacja stringów) bezpośrednio zamykają rdzeń wstrzyknięcia i są najwyżej ocenianą obroną. Wyłączenie introspekcji tylko spowalnia rekonesans, limitowanie kosztu/głębokości adresuje pokrewne warianty DoS, a WAF to wspomagająca, obchodzalna kontrola — żadne z nich nie naprawia samego wstrzyknięcia.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: An attacker packs 10,000 aliased login operations into a single HTTP request. What does this batching/aliasing technique primarily achieve?
+      pl: Atakujący pakuje 10 000 aliasowanych operacji logowania w jedno żądanie HTTP. Co ta technika batchingu/aliasowania przede wszystkim osiąga?
+    choices:
+      - id: a
+        label:
+          en: It injects SQL operators into the resolver's datastore query
+          pl: Wstrzykuje operatory SQL do zapytania resolvera do magazynu danych
+      - id: b
+        label:
+          en: It reconstructs the schema when introspection is disabled
+          pl: Odtwarza schemat, gdy introspekcja jest wyłączona
+      - id: c
+        label:
+          en: It bypasses per-request rate limiting, enabling brute-force in one call
+          pl: Omija limitowanie per-żądanie, umożliwiając brute-force w jednym wywołaniu
+      - id: d
+        label:
+          en: It escalates a read-only DB account to write access
+          pl: Eskaluje konto DB tylko-do-odczytu do uprawnień zapisu
+    correctChoiceIds: ["c"]
+    explanation:
+      en: Batching and aliasing hide many operations inside one HTTP request, so per-request rate limits count it as a single hit — letting an attacker brute-force OTPs/passwords/tokens in a single call. This is the adjacent DoS/rate-limit-bypass variant (OWASP API4:2023), not the injection core, and the countermeasure is to count operations/aliases rather than HTTP requests.
+      pl: Batching i aliasowanie ukrywają wiele operacji w jednym żądaniu HTTP, więc limity per-żądanie liczą je jako jedno trafienie — pozwalając na brute-force OTP/haseł/tokenów w jednym wywołaniu. To pokrewny wariant DoS/obejścia limitów (OWASP API4:2023), nie rdzeń wstrzyknięcia, a przeciwdziałaniem jest liczenie operacji/aliasów zamiast żądań HTTP.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: The `products(search:)` resolver concatenates its argument into SQL. Which variant actually fixes the injection?
+      pl: Resolver `products(search:)` konkatenuje swój argument do SQL. Który wariant faktycznie naprawia wstrzyknięcie?
+    variants:
+      - id: v1
+        lang: javascript
+        code: |
+          // introspection disabled in production
+          const server = new ApolloServer({ typeDefs, resolvers, introspection: false });
+          products: async (_, { search }, { db }) => {
+            const sql = `SELECT id, name, price FROM products
+                         WHERE name LIKE '%${search}%'`;
+            return (await db.query(sql)).rows;
+          };
+      - id: v2
+        lang: javascript
+        code: |
+          // parameterized placeholder — driver binds the value, never the code
+          products: async (_, { search }, { db }) => {
+            const sql = `SELECT id, name, price FROM products
+                         WHERE name LIKE '%' || $1 || '%'`;
+            return (await db.query(sql, [search])).rows;
+          };
+      - id: v3
+        lang: javascript
+        code: |
+          // strip quotes from the argument, then interpolate
+          products: async (_, { search }, { db }) => {
+            const safe = search.replace(/'/g, "");
+            const sql = `SELECT id, name, price FROM products
+                         WHERE name LIKE '%${safe}%'`;
+            return (await db.query(sql)).rows;
+          };
+    correctVariantId: v2
+    explanation:
+      en: Only v2 parameterizes — the driver binds the value separately from the SQL, the complete fix. v1 disables introspection (recon-only, and the schema is still recoverable via Clairvoyance) while leaving the concatenation fully injectable, and v3's quote-stripping blacklist is bypassable and useless in numeric or comment contexts.
+      pl: Tylko v2 parametryzuje — sterownik wiąże wartość osobno od SQL, co jest pełną naprawą. v1 wyłącza introspekcję (tylko rekonesans, a schemat i tak da się odtworzyć przez Clairvoyance), pozostawiając konkatenację w pełni podatną, a blacklista usuwająca apostrofy z v3 jest obchodzalna i bezużyteczna w kontekście numerycznym lub komentarzy.
+  - id: q6
+    type: multiple-choice
+    prompt:
+      en: A team disables GraphQL introspection in production and considers reconnaissance closed. Why is this incomplete?
+      pl: Zespół wyłącza introspekcję GraphQL na produkcji i uznaje rekonesans za zamknięty. Dlaczego to niepełne?
+    choices:
+      - id: a
+        label:
+          en: Tools like Clairvoyance reconstruct the schema from error-message field suggestions
+          pl: Narzędzia jak Clairvoyance odtwarzają schemat z sugestii pól w komunikatach błędów
+      - id: b
+        label:
+          en: Introspection cannot actually be disabled in any GraphQL engine
+          pl: Introspekcji w żadnym silniku GraphQL nie da się faktycznie wyłączyć
+      - id: c
+        label:
+          en: Disabling introspection also removes parameterized query support
+          pl: Wyłączenie introspekcji usuwa też wsparcie dla zapytań parametryzowanych
+      - id: d
+        label:
+          en: It forces every resolver to concatenate arguments into SQL
+          pl: Zmusza każdy resolver do konkatenacji argumentów do SQL
+    correctChoiceIds: ["a"]
+    explanation:
+      en: Disabling introspection only slows a determined attacker — when field suggestions leak in error messages, a tool like Clairvoyance rebuilds the schema anyway. It is a low-ranked mitigation that does not touch the injection itself.
+      pl: Wyłączenie introspekcji tylko spowalnia zdeterminowanego atakującego — gdy sugestie pól wyciekają w komunikatach błędów, narzędzie jak Clairvoyance i tak odbudowuje schemat. To nisko oceniana mitygacja, która nie dotyka samego wstrzyknięcia.

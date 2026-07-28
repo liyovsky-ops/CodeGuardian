@@ -1,0 +1,100 @@
+threatId: "1.6"
+title:
+  en: 'Server-Side Template Injection (SSTI)'
+  pl: 'Server-Side Template Injection (SSTI)'
+passScore: 80
+questions:
+  - id: 'q1'
+    type: 'vuln-or-not'
+    prompt:
+      en: 'This Flask/Jinja2 route renders a greeting. Is it vulnerable to Server-Side Template Injection?'
+      pl: 'Ta trasa Flask/Jinja2 renderuje powitanie. Czy jest podatna na Server-Side Template Injection?'
+    snippet:
+      lang: 'python'
+      code: |
+        from jinja2 import Environment
+        user_input = request.args.get("name")   # e.g. {{7*7}}
+        Environment().from_string("Hello " + user_input).render()
+    isVulnerable: true
+    cwe: 'CWE-94'
+    explanation:
+      en: 'Vulnerable. User input is concatenated into the template source and then evaluated, so from_string compiles the attacker''s expression — {{7*7}} returns 49, and an MRO chain like {{lipsum.__globals__[''os''].popen(''id'').read()}} reaches os for RCE. The #1 SSTI pattern (CWE-94).'
+      pl: 'Podatna. Wejście użytkownika jest sklejane ze źródłem szablonu i następnie ewaluowane, więc from_string kompiluje wyrażenie atakującego — {{7*7}} zwraca 49, a łańcuch MRO jak {{lipsum.__globals__[''os''].popen(''id'').read()}} sięga os dla RCE. Wzorzec SSTI nr 1 (CWE-94).'
+  - id: 'q2'
+    type: 'multiple-choice'
+    prompt:
+      en: 'You confirmed injection with {{7*7}} → 49. The follow-up probe {{7*''7''}} returns 7777777 (not 49). What does that tell you?'
+      pl: 'Potwierdziłeś wstrzyknięcie przez {{7*7}} → 49. Kolejna sonda {{7*''7''}} zwraca 7777777 (a nie 49). Co to oznacza?'
+    choices:
+      - id: 'a'
+        label:
+          en: 'The engine is Jinja2 (Python): it repeats the string, so you pick a Jinja2 MRO/globals RCE chain.'
+          pl: 'Silnikiem jest Jinja2 (Python): powiela string, więc wybierasz łańcuch RCE MRO/globals dla Jinja2.'
+      - id: 'b'
+        label:
+          en: 'The engine is Twig (PHP): it numerically coerces to 49.'
+          pl: 'Silnikiem jest Twig (PHP): koercjuje numerycznie do 49.'
+      - id: 'c'
+        label:
+          en: 'The input never reaches a template; 7777777 is a coincidence.'
+          pl: 'Wejście nie trafia do szablonu; 7777777 to przypadek.'
+      - id: 'd'
+        label:
+          en: 'The engine is logic-less (Mustache) and cannot execute expressions.'
+          pl: 'Silnik jest bez logiki (Mustache) i nie może wykonywać wyrażeń.'
+    correctChoiceIds: ['a']
+    explanation:
+      en: 'The {{7*''7''}} probe is the Jinja2-vs-Twig differentiator: Jinja2 repeats the string → 7777777, whereas Twig coerces numerically → 49. Fingerprinting the engine tells the attacker which RCE gadget chain to use.'
+      pl: 'Sonda {{7*''7''}} różnicuje Jinja2 od Twig: Jinja2 powiela string → 7777777, a Twig koercjuje numerycznie → 49. Identyfikacja silnika mówi atakującemu, którego łańcucha gadżetów RCE użyć.'
+  - id: 'q3'
+    type: 'pick-the-fix'
+    prompt:
+      en: 'The vulnerable code is Environment().from_string("Hello " + user_input).render(). Which variant actually fixes the SSTI?'
+      pl: 'Podatny kod to Environment().from_string("Hello " + user_input).render(). Który wariant naprawdę naprawia SSTI?'
+    variants:
+      - id: 'v1'
+        lang: 'python'
+        code: |
+          env = Environment()
+          env.get_template("fixed.html").render(name=request.args.get("name"))
+      - id: 'v2'
+        lang: 'python'
+        code: |
+          from jinja2.sandbox import SandboxedEnvironment
+          ui = request.args.get("name")
+          SandboxedEnvironment().from_string("Hello " + ui).render()
+      - id: 'v3'
+        lang: 'python'
+        code: |
+          ui = request.args.get("name").replace("{{", "").replace("}}", "")
+          Environment().from_string("Hello " + ui).render()
+    correctVariantId: 'v1'
+    explanation:
+      en: 'v1 renders a fixed template and passes the input as a context variable — the rank-1 fix (input is never template source). v2 still makes input the template source; SandboxedEnvironment blocks dunder access but Flask context objects (config, request) leak os back, escaping the sandbox. v3 blacklists {{ }}, bypassed by {% %}, |attr(''__class__'') or hex-encoded dunders.'
+      pl: 'v1 renderuje stały szablon i przekazuje wejście jako zmienną kontekstu — naprawa nr 1 (wejście nigdy nie jest źródłem szablonu). v2 wciąż czyni wejście źródłem szablonu; SandboxedEnvironment blokuje dundery, ale obiekty kontekstu Flask (config, request) zwracają os, uciekając z sandboxa. v3 blacklistuje {{ }}, omijane przez {% %}, |attr(''__class__'') lub dundery w hex.'
+  - id: 'q4'
+    type: 'multiple-choice'
+    prompt:
+      en: 'What is the definitive, rank-1 fix for SSTI?'
+      pl: 'Jaka jest ostateczna naprawa SSTI o randze 1?'
+    choices:
+      - id: 'a'
+        label:
+          en: 'Never concatenate input into templates — pass it as a render-context variable to a fixed template.'
+          pl: 'Nigdy nie wklejaj wejścia w szablony — przekaż je jako zmienną kontekstu do stałego szablonu.'
+      - id: 'b'
+        label:
+          en: 'Add a WAF rule blocking {{, }}, __class__ and subclasses.'
+          pl: 'Dodaj regułę WAF blokującą {{, }}, __class__ i subclasses.'
+      - id: 'c'
+        label:
+          en: 'Rely on the engine''s sandbox to contain any injected expression.'
+          pl: 'Polegaj na sandboxie silnika, by powstrzymać wstrzyknięte wyrażenie.'
+      - id: 'd'
+        label:
+          en: 'HTML-escape the rendered output.'
+          pl: 'HTML-escapuj wyrenderowany wynik.'
+    correctChoiceIds: ['a']
+    explanation:
+      en: 'Passing input as a context variable to a fixed template (rank 1, eff 100) means user input can never be template source. Sandboxes (rank 2) are escapable via Flask context objects, and a WAF (rank 6) is bypassed by Unicode whitespace, |attr() and hex encoding — both are compensating, not root-cause fixes.'
+      pl: 'Przekazanie wejścia jako zmiennej kontekstu do stałego szablonu (ranga 1, eff 100) sprawia, że wejście nigdy nie jest źródłem szablonu. Sandboxy (ranga 2) da się obejść przez obiekty kontekstu Flask, a WAF (ranga 6) omijają białe znaki Unicode, |attr() i kodowanie hex — oba są kompensacyjne, nie naprawiają przyczyny.'

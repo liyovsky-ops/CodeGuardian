@@ -427,8 +427,7 @@ threats:
     desc: |
       [TŁUMACZENIE OCZEKUJĄCE] Because a single file can be simultaneously a valid APK (ZIP, signed with the v1/JAR scheme that ignores prepended bytes) and a valid DEX (which tolerates trailing bytes), an attacker prepends a malicious DEX to a legitimate APK; it installs as an update preserving the original signature and data, then the injected code runs. Affects Android 5.1.1-8.0 with v1-only signing; fixed by APK Signature Scheme v2.
       
-    desc_en: "Because a single file can be simultaneously a valid APK (ZIP, signed with the v1/JAR scheme that ignores prepended bytes) and a valid DEX (which tolerates trailing bytes), an attacker prepends a malicious DEX to a legitimate APK; it installs as an update preserving the original signature and data, then the injected code runs. Affects Android 5.1.1-8.0 with v1-only signing; fixed by APK Signature Scheme v2.
-"
+    desc_en: "Because a single file can be simultaneously a valid APK (ZIP, signed with the v1/JAR scheme that ignores prepended bytes) and a valid DEX (which tolerates trailing bytes), an attacker prepends a malicious DEX to a legitimate APK; it installs as an update preserving the original signature and data, then the injected code runs. Affects Android 5.1.1-8.0 with v1-only signing; fixed by APK Signature Scheme v2."
     lang: "unknown"
     vuln: |
       # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)

@@ -1,0 +1,114 @@
+threatId: "1.2"
+title:
+  en: NoSQL Injection — knowledge check
+  pl: NoSQL Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Node.js/Mongoose login handler contain a NoSQL injection vulnerability?
+      pl: Czy ten handler logowania Node.js/Mongoose zawiera podatność NoSQL injection?
+    snippet:
+      lang: javascript
+      code: |
+        app.post('/login', async (req, res) => {
+          const user = await User.findOne(req.body);
+        });
+    isVulnerable: true
+    cwe: CWE-943
+    explanation:
+      en: Passing the whole request body into findOne lets password be an operator object like {"$ne":null}, matching any user and bypassing authentication. Destructure scalars and validate their types before querying.
+      pl: Przekazanie całego ciała żądania do findOne pozwala, by password był obiektem operatora typu {"$ne":null}, pasując do dowolnego użytkownika i omijając logowanie. Destrukturyzuj skalary i waliduj ich typy przed zapytaniem.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this PHP MongoDB lookup safe from operator injection?
+      pl: Czy ten odczyt MongoDB w PHP jest bezpieczny od wstrzyknięcia operatorów?
+    snippet:
+      lang: php
+      code: |
+        <?php
+        $user = (string) $_GET['username'];
+        $pass = (string) $_GET['password'];
+        $collection->findOne(['username' => $user, 'password' => $pass]);
+    isVulnerable: false
+    cwe: CWE-943
+    explanation:
+      en: Casting each value to string collapses any array like password[$ne]=x into a scalar, so operator objects can no longer be injected. Scalar-type enforcement is the primary NoSQL defense.
+      pl: Rzutowanie każdej wartości na string zwija tablicę typu password[$ne]=x do skalara, więc obiektów operatorów nie da się już wstrzyknąć. Wymuszenie typu skalarnego to główna obrona NoSQL.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: What makes {"username":"admin","password":{"$ne":"x"}} a classic NoSQL authentication bypass?
+      pl: Co sprawia, że {"username":"admin","password":{"$ne":"x"}} to klasyczne obejście logowania NoSQL?
+    choices:
+      - id: a
+        label:
+          en: It escapes a quote to break out of the query string grammar
+          pl: Escapuje cudzysłów, by wyłamać się z gramatyki stringa zapytania
+      - id: b
+        label:
+          en: The $ne operator makes the password clause true for any stored password ≠ "x"
+          pl: Operator $ne czyni klauzulę hasła prawdziwą dla każdego zapisanego hasła ≠ "x"
+      - id: c
+        label:
+          en: It triggers server-side JavaScript via $where
+          pl: Wyzwala JavaScript po stronie serwera przez $where
+    correctChoiceIds: ["b"]
+    explanation:
+      en: There is no string grammar to escape in NoSQL — the attacker injects a query operator as a JSON value. {"$ne":"x"} matches any password that is not "x", so the filter authenticates without the real password. $where JS execution is a separate, higher-privilege attack.
+      pl: W NoSQL nie ma gramatyki stringów do escapowania — atakujący wstrzykuje operator zapytania jako wartość JSON. {"$ne":"x"} pasuje do każdego hasła różnego od "x", więc filtr uwierzytelnia bez prawdziwego hasła. Wykonanie JS przez $where to osobny, groźniejszy atak.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: A team relies solely on Mongoose schema validation ("we have a schema, so we're safe from injection"). Why is this reasoning wrong?
+      pl: Zespół polega wyłącznie na walidacji schematu Mongoose ("mamy schemat, więc jesteśmy bezpieczni od wstrzyknięć"). Dlaczego to rozumowanie jest błędne?
+    choices:
+      - id: a
+        label:
+          en: Schema validation applies to document saves, not to query filters
+          pl: Walidacja schematu dotyczy zapisów dokumentów, nie filtrów zapytań
+      - id: b
+        label:
+          en: Schemas only work with the PHP driver
+          pl: Schematy działają tylko ze sterownikiem PHP
+      - id: c
+        label:
+          en: Schemas encrypt data but do not validate it
+          pl: Schematy szyfrują dane, ale ich nie walidują
+    correctChoiceIds: ["a"]
+    explanation:
+      en: Mongoose schema validation guards document saves, not query filters — so find(req.body) is fully injectable despite the schema. Even strictQuery only strips unknown paths; it does not block operator injection inside known fields.
+      pl: Walidacja schematu Mongoose chroni zapisy dokumentów, nie filtry zapytań — więc find(req.body) jest w pełni podatne mimo schematu. Nawet strictQuery jedynie usuwa nieznane ścieżki; nie blokuje wstrzyknięcia operatorów w znanych polach.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: This pymongo login is injectable. Which variant is the correct fix?
+      pl: To logowanie w pymongo jest podatne. Który wariant to poprawna naprawa?
+    variants:
+      - id: v1
+        lang: python
+        code: |
+          # reject non-scalar input before querying
+          pwd = request.json.get("password")
+          if not isinstance(pwd, str):
+              abort(400)
+          db.users.find({"username": str(username), "password": pwd})
+      - id: v2
+        lang: python
+        code: |
+          # reject the password if it contains a "$ne" substring
+          pwd = request.json.get("password")
+          if "$ne" in str(pwd):
+              abort(400)
+          db.users.find({"username": username, "password": pwd})
+      - id: v3
+        lang: python
+        code: |
+          # trust the schema and pass the body straight through
+          db.users.find(request.json)
+    correctVariantId: v1
+    explanation:
+      en: v1 enforces the scalar type — rejecting any operator object at the door — which is the primary defense. v2 is a blacklist that a still-injectable object like {"$gt":""} or {"$regex":"^a"} sails straight past, and it leaves the non-scalar value in the filter; v3 passes the raw body straight into the filter, the exact root cause.
+      pl: v1 wymusza typ skalarny — odrzucając obiekt operatora na wejściu — co jest główną obroną. v2 to blacklista, którą wciąż podatny obiekt typu {"$gt":""} lub {"$regex":"^a"} przechodzi bez problemu, a nie-skalarna wartość zostaje w filtrze; v3 przekazuje surowe ciało wprost do filtra, czyli dokładna przyczyna źródłowa.

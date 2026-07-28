@@ -1,0 +1,111 @@
+threatId: "1.4"
+title:
+  en: LDAP Injection — knowledge check
+  pl: LDAP Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Python ldap3 search contain an LDAP injection vulnerability?
+      pl: Czy to wyszukiwanie ldap3 w Pythonie zawiera podatność LDAP injection?
+    snippet:
+      lang: python
+      code: |
+        user = request.args.get("user")
+        conn.search("dc=corp,dc=com",
+                    f"(uid={user})",
+                    attributes=["cn", "mail"])
+    isVulnerable: true
+    cwe: CWE-90
+    explanation:
+      en: The raw user value flows straight into the filter, so * matches every entry and admin)(|(uid=* rewrites the filter into a tautology. Escape the metacharacters first with escape_filter_chars from ldap3.utils.conv.
+      pl: Surowa wartość user trafia wprost do filtra, więc * pasuje do każdego wpisu, a admin)(|(uid=* przepisuje filtr w tautologię. Najpierw escapuj metaznaki przez escape_filter_chars z ldap3.utils.conv.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Java JNDI search safe from LDAP filter injection?
+      pl: Czy to wyszukiwanie JNDI w Javie jest bezpieczne od wstrzyknięcia filtra LDAP?
+    snippet:
+      lang: java
+      code: |
+        String user = request.getParameter("user");
+        NamingEnumeration<SearchResult> r =
+            ctx.search(base, "(uid={0})", new Object[]{ user }, controls);
+    isVulnerable: false
+    cwe: CWE-90
+    explanation:
+      en: This is the parameterized filterArgs form of DirContext.search() — the {0} placeholder is bound from the Object[] array, so metacharacters in user are escaped by the API rather than concatenated into the filter. This is the recommended fix.
+      pl: To parametryzowana forma filterArgs DirContext.search() — placeholder {0} jest wiązany z tablicy Object[], więc metaznaki w user są escapowane przez API, a nie sklejane z filtrem. To zalecana naprawa.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: A login builds the filter (&(uid=USER)(pass=PASS)) by concatenation. What does submitting * as the username achieve?
+      pl: Logowanie buduje filtr (&(uid=USER)(pass=PASS)) przez konkatenację. Co osiąga podanie * jako nazwy użytkownika?
+    choices:
+      - id: a
+        label:
+          en: It makes (uid=*) match every user entry — a wildcard authentication bypass
+          pl: Sprawia, że (uid=*) pasuje do każdego wpisu użytkownika — obejście logowania wildcardem
+      - id: b
+        label:
+          en: It triggers remote class loading via JNDI
+          pl: Wyzwala zdalne ładowanie klas przez JNDI
+      - id: c
+        label:
+          en: It causes a NUL-byte truncation of the filter
+          pl: Powoduje ucięcie filtra bajtem NUL
+    correctChoiceIds: ["a"]
+    explanation:
+      en: In an LDAP filter * is the wildcard, so (uid=*) matches every entry in the directory — a wildcard auth bypass. JNDI class loading (Log4Shell) needs a ${jndi:ldap://...} payload, and NUL truncation needs a \00 byte.
+      pl: W filtrze LDAP * to wildcard, więc (uid=*) pasuje do każdego wpisu w katalogu — obejście logowania wildcardem. Ładowanie klas JNDI (Log4Shell) wymaga ładunku ${jndi:ldap://...}, a ucięcie NUL wymaga bajtu \00.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: RFC 4515 escaping is the primary LDAP-filter defense. Which characters must be escaped?
+      pl: Escapowanie RFC 4515 to główna obrona filtra LDAP. Które znaki trzeba escapować?
+    choices:
+      - id: a
+        label:
+          en: "( ) * \\ and the NUL byte"
+          pl: "( ) * \\ oraz bajt NUL"
+      - id: b
+        label:
+          en: "Single and double quotes only"
+          pl: "Tylko apostrof i cudzysłów"
+      - id: c
+        label:
+          en: "Semicolons and pipes"
+          pl: "Średniki i pionowe kreski"
+    correctChoiceIds: ["a"]
+    explanation:
+      en: The five LDAP filter metacharacters are ( → \28, ) → \29, * → \2a, \ → \5c, and NUL → \00. Quotes and shell metacharacters (; |) belong to SQL and OS command injection, not the LDAP filter grammar.
+      pl: Pięć metaznaków filtra LDAP to ( → \28, ) → \29, * → \2a, \ → \5c i NUL → \00. Cudzysłowy i metaznaki powłoki (; |) należą do SQL i OS command injection, nie do gramatyki filtra LDAP.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: This PHP ldap_search is injectable. Which variant is the correct fix?
+      pl: To ldap_search w PHP jest podatne. Który wariant to poprawna naprawa?
+    variants:
+      - id: v1
+        lang: php
+        code: |
+          <?php // strip parentheses and asterisks, then concatenate
+          $user = str_replace(['(', ')', '*'], '', $_GET['user']);
+          $r = ldap_search($conn, $dn, "(uid=" . $user . ")");
+      - id: v2
+        lang: php
+        code: |
+          <?php // ldap_escape with LDAP_ESCAPE_FILTER
+          $user = ldap_escape($_GET['user'], '', LDAP_ESCAPE_FILTER);
+          $r = ldap_search($conn, $dn, "(uid=" . $user . ")");
+      - id: v3
+        lang: php
+        code: |
+          <?php // addslashes to neutralize the input
+          $user = addslashes($_GET['user']);
+          $r = ldap_search($conn, $dn, "(uid=" . $user . ")");
+    correctVariantId: v2
+    explanation:
+      en: v2 uses ldap_escape with LDAP_ESCAPE_FILTER, which encodes every RFC 4515 metacharacter (including the backslash and NUL) correctly — the intended fix. v1's blacklist forgets the backslash and NUL byte, and v3's addslashes escapes SQL/PHP quotes, not LDAP filter metacharacters.
+      pl: v2 używa ldap_escape z LDAP_ESCAPE_FILTER, które poprawnie koduje każdy metaznak RFC 4515 (w tym backslash i NUL) — właściwa naprawa. Blacklista z v1 pomija backslash i bajt NUL, a addslashes z v3 escapuje cudzysłowy SQL/PHP, a nie metaznaki filtra LDAP.

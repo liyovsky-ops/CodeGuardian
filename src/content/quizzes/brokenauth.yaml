@@ -1,0 +1,175 @@
+threatId: "2.1"
+title:
+  en: Broken Authentication — knowledge check
+  pl: Broken Authentication — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Python login function have a Broken Authentication flaw?
+      pl: Czy ta funkcja logowania w Pythonie ma wadę Broken Authentication?
+    snippet:
+      lang: python
+      code: |
+        import hashlib
+
+        def login(username, password):
+            user = db.get_user(username)
+            if user and user.password == hashlib.md5(password.encode()).hexdigest():
+                session['user_id'] = user.id  # session ID reused
+                return True
+    isVulnerable: true
+    cwe: CWE-916
+    explanation:
+      en: Unsalted MD5 is built for speed — Hashcat cracks ~164 GH/s on a single GPU, so an 8-char password falls in minutes if the hashes leak. The session ID is also never regenerated after login, allowing fixation. Use Argon2id/bcrypt and regenerate the session on authentication.
+      pl: Niezasolony MD5 jest zaprojektowany dla szybkości — Hashcat łamie ~164 GH/s na jednej GPU, więc 8-znakowe hasło pada w minuty, jeśli hashe wyciekną. Session ID nie jest też nigdy regenerowane po logowaniu, co umożliwia fixation. Użyj Argon2id/bcrypt i regeneruj sesję po uwierzytelnieniu.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this password-reset token generation secure?
+      pl: Czy ta generacja tokenu resetowania hasła jest bezpieczna?
+    snippet:
+      lang: python
+      code: |
+        import secrets, hashlib
+        from datetime import datetime, timedelta
+
+        def reset_password(email):
+            token = secrets.token_urlsafe(32)          # 256 bits entropy
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            expires_at = datetime.utcnow() + timedelta(minutes=15)
+            db.store_reset_token(email, token_hash, expires_at, used=False)
+            send_email(email, token)
+    isVulnerable: false
+    cwe: CWE-330
+    explanation:
+      en: The token is 256 bits of CSPRNG output (not derived from a timestamp), so it cannot be guessed by requesting a reset in the same second. Only its SHA-256 hash is stored, it carries a 15-minute TTL, and it is single-use — the full set of controls for a secure reset token.
+      pl: Token to 256 bitów z CSPRNG (nie pochodzi z timestampa), więc nie da się go odgadnąć żądając resetu w tej samej sekundzie. W bazie przechowywany jest tylko jego hash SHA-256, ma 15-minutowy TTL i jest jednorazowy — pełny zestaw kontroli dla bezpiecznego tokenu resetu.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: Which password-hashing algorithm is OWASP's first-choice default, and why?
+      pl: Który algorytm hashowania haseł jest pierwszym wyborem OWASP i dlaczego?
+    choices:
+      - id: a
+        label:
+          en: SHA-256, because it is a modern cryptographic hash
+          pl: SHA-256, bo to nowoczesny hash kryptograficzny
+      - id: b
+        label:
+          en: MD5, because it is fast and widely supported
+          pl: MD5, bo jest szybki i szeroko wspierany
+      - id: c
+        label:
+          en: Argon2id, because it is memory-hard and has no 72-byte password limit
+          pl: Argon2id, bo jest memory-hard i nie ma limitu 72 bajtów na hasło
+      - id: d
+        label:
+          en: Plain SHA1 with a per-user salt
+          pl: Zwykły SHA1 z solą per-użytkownik
+    correctChoiceIds: ["c"]
+    explanation:
+      en: Argon2id is the OWASP first choice — being memory-hard (64MB required) it collapses GPU cracking to roughly 1 H/s, and unlike bcrypt it has no 72-byte truncation. MD5/SHA1/SHA256 are designed for speed (164/23 GH/s), which is exactly what makes them unfit for passwords even when salted.
+      pl: Argon2id to pierwszy wybór OWASP — jako memory-hard (wymaga 64MB) sprowadza łamanie na GPU do około 1 H/s, a w odróżnieniu od bcrypta nie ma obcięcia po 72 bajtach. MD5/SHA1/SHA256 są zaprojektowane dla szybkości (164/23 GH/s), co właśnie czyni je nieodpowiednimi dla haseł nawet z solą.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: An attacker sets a victim's session ID via a URL parameter before the victim logs in, then reuses that ID afterward. Which single control prevents this?
+      pl: Atakujący ustawia session ID ofiary przez parametr URL zanim ofiara się zaloguje, a potem ponownie używa tego ID. Która pojedyncza kontrola temu zapobiega?
+    choices:
+      - id: a
+        label:
+          en: Regenerating the session ID on every successful login
+          pl: Regeneracja session ID po każdym udanym logowaniu
+      - id: b
+        label:
+          en: Hashing passwords with bcrypt at cost 12
+          pl: Hashowanie haseł bcryptem z cost 12
+      - id: c
+        label:
+          en: Rate limiting the login endpoint to 5 attempts per 15 minutes
+          pl: Limitowanie endpointu logowania do 5 prób na 15 minut
+      - id: d
+        label:
+          en: Returning a generic "Invalid credentials" message
+          pl: Zwracanie generycznego komunikatu "Nieprawidłowe dane"
+    correctChoiceIds: ["a"]
+    explanation:
+      en: This is session fixation, and the fix is mandatory session-ID regeneration after authentication (session.regenerate() / session_regenerate_id(true)), which destroys the attacker's pre-set ID. Strong hashing, rate limiting, and generic messages defend other vectors but do nothing against fixation.
+      pl: To session fixation, a naprawą jest obowiązkowa regeneracja session ID po uwierzytelnieniu (session.regenerate() / session_regenerate_id(true)), która niszczy wcześniej ustawione ID atakującego. Silne hashowanie, rate limiting i generyczne komunikaty bronią innych wektorów, ale nic nie dają przeciw fixation.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: The login below uses MD5 and a == comparison. Which variant is the genuinely secure fix?
+      pl: Poniższe logowanie używa MD5 i porównania ==. Który wariant jest naprawdę bezpieczną naprawą?
+    variants:
+      - id: v1
+        lang: javascript
+        code: |
+          // only compare when the user exists
+          app.post('/login', async (req, res) => {
+            const user = await db.findUser(req.body.username);
+            if (user && await bcrypt.compare(req.body.password, user.passwordHash)) {
+              req.session.userId = user.id;
+              return res.json({ success: true });
+            }
+            return res.json({ error: 'Invalid credentials' });
+          });
+      - id: v2
+        lang: javascript
+        code: |
+          // always run bcrypt.compare, then regenerate the session
+          app.post('/login', loginLimiter, async (req, res) => {
+            const user = await db.findUser(req.body.username);
+            const dummy = '$2b$12$invalidhashfordummycomparison00000000000000000000000000';
+            const valid = await bcrypt.compare(req.body.password, user ? user.passwordHash : dummy);
+            if (user && valid) {
+              await new Promise(r => req.session.regenerate(r));
+              req.session.userId = user.id;
+              return res.json({ success: true });
+            }
+            return res.json({ error: 'Invalid credentials' });
+          });
+      - id: v3
+        lang: javascript
+        code: |
+          // switch MD5 for SHA-256, keep the == comparison
+          app.post('/login', async (req, res) => {
+            const user = await db.findUser(req.body.username);
+            if (user && user.password === sha256(req.body.password)) {
+              req.session.userId = user.id;
+              return res.json({ success: true });
+            }
+            return res.json({ error: 'Invalid credentials' });
+          });
+    correctVariantId: v2
+    explanation:
+      en: v2 is complete — a slow bcrypt hash, a rate limiter, session regeneration, and a dummy-hash compare that runs even when the user is absent so response timing cannot enumerate accounts. v1 skips bcrypt when the user is missing, leaking valid usernames through a timing side channel. v3 just swaps one fast unsalted hash for another (SHA-256 still cracks at ~GH/s) and keeps everything else broken.
+      pl: v2 jest kompletny — wolny hash bcrypt, rate limiter, regeneracja sesji i porównanie z dummy-hashem uruchamiane nawet gdy użytkownika nie ma, więc czas odpowiedzi nie pozwala enumerować kont. v1 pomija bcrypt gdy użytkownika brak, wyciekając ważne loginy kanałem czasowym. v3 tylko zamienia jeden szybki niezasolony hash na drugi (SHA-256 wciąż łamie się w ~GH/s) i zostawia resztę zepsutą.
+  - id: q6
+    type: multiple-choice
+    prompt:
+      en: A team migrates to bcrypt but stores passphrases well over 72 bytes. What is the specific gotcha they must account for?
+      pl: Zespół migruje na bcrypt, ale przechowuje frazy hasłowe znacznie dłuższe niż 72 bajty. O jakiej konkretnej pułapce muszą pamiętać?
+    choices:
+      - id: a
+        label:
+          en: bcrypt silently truncates the input at 72 bytes
+          pl: bcrypt po cichu obcina wejście po 72 bajtach
+      - id: b
+        label:
+          en: bcrypt requires exactly 64MB of memory per hash
+          pl: bcrypt wymaga dokładnie 64MB pamięci na jeden hash
+      - id: c
+        label:
+          en: bcrypt cannot be salted
+          pl: bcrypta nie da się zasolić
+      - id: d
+        label:
+          en: bcrypt is rejected by OWASP for password storage
+          pl: bcrypt jest odrzucony przez OWASP do przechowywania haseł
+    correctChoiceIds: ["a"]
+    explanation:
+      en: bcrypt truncates input to 72 bytes, so everything past that is ignored — two long passphrases sharing a 72-byte prefix collide. OWASP still lists bcrypt as acceptable, but Argon2id is preferred precisely because it is memory-hard and imposes no password-length limit.
+      pl: bcrypt obcina wejście do 72 bajtów, więc wszystko dalej jest ignorowane — dwie długie frazy o wspólnym 72-bajtowym prefiksie kolidują. OWASP wciąż wskazuje bcrypt jako akceptowalny, ale Argon2id jest preferowany właśnie dlatego, że jest memory-hard i nie narzuca limitu długości hasła.

