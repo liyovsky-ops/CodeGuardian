@@ -15,6 +15,7 @@ import emailiData from '../content/deepdives/emaili.yaml';
 import csviData from '../content/deepdives/csvi.yaml';
 import ormiData from '../content/deepdives/ormi.yaml';
 import brokenauthData from '../content/deepdives/brokenauth.yaml';
+import graphqliData from '../content/deepdives/graphqli.yaml';
 
 const DEEPDIVE_HANDLERS = {
   '1.1': () => openDeepDivePage(sqliData),
@@ -29,6 +30,7 @@ const DEEPDIVE_HANDLERS = {
   '1.10': () => openDeepDivePage(emailiData),
   '1.11': () => openDeepDivePage(csviData),
   '1.12': () => openDeepDivePage(ormiData),
+  '1.13': () => openDeepDivePage(graphqliData),
   '2.1': () => openDeepDivePage(brokenauthData),
 };
 

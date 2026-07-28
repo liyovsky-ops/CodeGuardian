@@ -1,0 +1,350 @@
+meta:
+  id: graphqli
+  threatId: "1.13"
+  severity: High
+  color: "#e10098"
+  colorRgb: 225,0,152
+  cwe: CWE-89
+  cvss: "9.3"
+  standard: OWASP A03:2021
+hero:
+  titleMain: GraphQL
+  titleGrad: Injection
+  titleTail: ""
+  topbar: GraphQL Injection
+  lead:
+    en: "GraphQL validates the shape of a query against its schema, but performs zero sanitization of the argument values a client supplies. When a resolver forwards an attacker-controlled argument into a SQL query, a NoSQL filter, a shell command, or an outbound request — via string concatenation instead of a parameterized/safe API — the classic injection classes apply unchanged. The schema's type system creates a false sense of safety: a String-typed argument can still carry ' OR '1'='1, and a permissive JSON-typed filter argument can carry a raw MongoDB operator."
+    pl: "GraphQL waliduje kształt zapytania względem schematu, ale nie sanityzuje wartości argumentów podawanych przez klienta. Gdy resolver przekazuje argument kontrolowany przez atakującego do zapytania SQL, filtra NoSQL, polecenia powłoki lub żądania wychodzącego — przez konkatenację stringów zamiast bezpiecznego API — klasyczne klasy wstrzyknięć działają bez zmian. System typów schematu daje fałszywe poczucie bezpieczeństwa: argument typu String może wciąż nieść ' OR '1'='1, a permisywny argument typu JSON może nieść surowy operator MongoDB."
+  metrics:
+    - k: CWE-89
+      v:
+        en: Weakness ID
+        pl: ID słabości
+    - k: "9.3"
+      v: CVSS · Critical (CVE-2024-37843)
+    - k: A03:2021
+      v: OWASP Top 10
+    - k: "3+3"
+      v:
+        en: Core + adjacent variants
+        pl: Warianty rdzenne + pokrewne
+  sources:
+    - label: OWASP GraphQL Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/GraphQL_Cheat_Sheet.html
+    - label: CWE-89 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/89.html
+    - label: CWE-943 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/943.html
+    - label: PortSwigger — GraphQL
+      url: https://portswigger.net/web-security/graphql
+    - label: CVE-2024-37843 (Craft CMS)
+      url: https://github.com/advisories/GHSA-hq4f-mv3q-8wcv
+sectionOrder:
+  - overview
+  - types
+  - code
+  - method
+  - defense
+  - incidents
+  - tools
+  - compliance
+nav:
+  - id: overview
+    en: Overview
+    pl: Przegląd
+  - id: types
+    en: Attack variants
+    pl: Warianty ataków
+  - id: code
+    en: Vuln vs Secure
+    pl: Podatny vs Bezpieczny
+  - id: method
+    en: Methodology
+    pl: Metodyka
+  - id: defense
+    en: Defense layers
+    pl: Warstwy obrony
+  - id: incidents
+    en: Real incidents
+    pl: Incydenty
+  - id: tools
+    en: Detection
+    pl: Wykrywanie
+  - id: compliance
+    en: Compliance
+    pl: Zgodność
+sections:
+  attacks:
+    title:
+      en: Attack variants
+      pl: Warianty ataków
+    lead:
+      en: "Consensus across three independent research passes: the CWE-89/943 injection core is the resolver-to-datastore path (first three variants). Introspection abuse and batching/aliasing DoS are real and commonly bundled under 'GraphQL injection' content, but are technically adjacent — OWASP API4:2023 (resource consumption) and CWE-200, not CWE-89/943."
+      pl: "Konsensus trzech niezależnych zespołów badawczych: rdzeń CWE-89/943 to ścieżka resolver→magazyn danych (pierwsze trzy warianty). Nadużycie introspekcji i DoS przez batching/aliasing są realne i często dołączane do treści o 'GraphQL injection', ale technicznie są pokrewne — OWASP API4:2023 (zużycie zasobów) i CWE-200, nie CWE-89/943."
+    items:
+      - name: SQL Injection via resolver
+        sev: critical
+        description:
+          en: "A resolver concatenates a client-supplied argument into a raw SQL string instead of using a parameterized query. All classic sub-classes apply: error-based, boolean/blind, UNION, time-based. Confirmed in production software (CVE-2024-37843, Craft CMS)."
+          pl: "Resolver konkatenuje argument od klienta do surowego stringa SQL zamiast użyć zapytania parametryzowanego. Działają wszystkie klasyczne podklasy: error-based, boolean/blind, UNION, time-based. Potwierdzone w produkcyjnym oprogramowaniu (CVE-2024-37843, Craft CMS)."
+        payload: "product(search: \"x' UNION SELECT username,password FROM users-- -\")"
+      - name: NoSQL / operator injection via resolver
+        sev: high
+        description:
+          en: "A resolver accepts a permissive JSON/object-typed filter argument and passes it as-is into a MongoDB/Elasticsearch query, letting the attacker inject query operators to bypass authentication or exfiltrate data."
+          pl: "Resolver przyjmuje permisywny argument typu JSON/obiekt jako filtr i przekazuje go bez zmian do zapytania MongoDB/Elasticsearch, pozwalając atakującemu wstrzyknąć operatory zapytania, by obejść uwierzytelnienie lub wyeksfiltrować dane."
+        payload: "login(filter: {\"username\":\"admin\",\"password\":{\"$ne\":null}})"
+      - name: OS command / SSRF / LDAP injection via resolver
+        sev: high
+        description:
+          en: "Same root cause, different sink — a resolver argument reaches a shell command, an outbound HTTP fetch (SSRF), or an LDAP filter without validation."
+          pl: "Ta sama przyczyna źródłowa, inny sink — argument resolvera trafia do polecenia powłoki, żądania wychodzącego (SSRF) lub filtra LDAP bez walidacji."
+        payload: "imageUrl: \"http://169.254.169.254/latest/meta-data/\""
+      - name: "Introspection abuse (recon, adjacent)"
+        sev: medium
+        description:
+          en: "Default-on introspection (__schema/__type queries) dumps the full schema — types, mutations, deprecated/private fields — mapping the exact arguments an attacker should target for injection. When disabled, tools like Clairvoyance reconstruct the schema from error-message field suggestions."
+          pl: "Domyślnie włączona introspekcja (zapytania __schema/__type) zrzuca cały schemat — typy, mutacje, ukryte/przestarzałe pola — mapując dokładnie te argumenty, w które warto celować wstrzyknięciem. Gdy wyłączona, narzędzia jak Clairvoyance odtwarzają schemat z sugestii pól w komunikatach błędów."
+        payload: "query{__schema{types{name fields{name}}}}"
+      - name: "Batching / aliasing amplification (DoS + rate-limit bypass, adjacent)"
+        sev: high
+        description:
+          en: "Array-based query batching or field aliasing packs many operations into a single HTTP request, bypassing per-request rate limiting and enabling brute-force of OTPs/passwords/tokens in one call. Maps to OWASP API4:2023, not the injection core."
+          pl: "Batching zapytań w tablicy lub aliasowanie pól pakuje wiele operacji w jedno żądanie HTTP, omijając limitowanie żądań per-request i umożliwiając brute-force OTP/haseł/tokenów w jednym wywołaniu. Mapuje się na OWASP API4:2023, nie na rdzeń wstrzyknięcia."
+        payload: "{ a1: login(otp:\"0000\"){ok} a2: login(otp:\"0001\"){ok} ... a9999: login(otp:\"9999\"){ok} }"
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: "The fix is identical across languages: never concatenate a resolver argument into a query string. Use a parameterized/bound-parameter API, and reject permissive object-typed filter arguments in favor of strict, allowlisted fields."
+      pl: "Naprawa jest identyczna niezależnie od języka: nigdy nie konkatenuj argumentu resolvera do stringa zapytania. Użyj API z parametrami wiązanymi i odrzuć permisywne argumenty-filtry typu obiekt na rzecz ścisłych, dozwolonych pól."
+    languages:
+      - label: Node.js (Apollo Server)
+        lang: javascript
+        vulnerable: |-
+          const resolvers = {
+            Query: {
+              products: async (_, { search }, { db }) => {
+                // client-controlled `search` concatenated straight into SQL
+                const sql = `SELECT id, name, price FROM products
+                             WHERE name LIKE '%${search}%'`;   // <-- injection
+                const { rows } = await db.query(sql);
+                return rows;
+              }
+            }
+          };
+          // Attacker: products(search: "%' UNION SELECT username,password,1 FROM users-- -")
+        safe: |-
+          const resolvers = {
+            Query: {
+              products: async (_, { search }, { db }) => {
+                // parameterized placeholder — driver escapes the value, never the code
+                const sql = `SELECT id, name, price FROM products
+                             WHERE name LIKE '%' || $1 || '%'`;
+                const { rows } = await db.query(sql, [search]);   // bound param
+                return rows;
+              }
+            }
+          };
+      - label: Python (Ariadne + Motor/MongoDB)
+        lang: python
+        vulnerable: |-
+          @query.field("searchUsers")
+          async def resolve_search_users(_, info, filter):
+              # 'filter' is a permissive GraphQL JSON scalar -> arbitrary dict from the client
+              cursor = db.users.find(filter)   # attacker: {"password": {"$ne": null}}
+              return [doc async for doc in cursor]
+        safe: |-
+          ALLOWED_FIELDS = {"username", "email", "displayName"}
+
+          @query.field("searchUsers")
+          async def resolve_search_users(_, info, field, value):
+              # 1. Take scalar args, never a free-form filter object
+              if field not in ALLOWED_FIELDS:
+                  raise ValueError("Invalid field")
+              # 2. Value used as a plain equality value, never as a query operator
+              cursor = db.users.find({field: {"$eq": str(value)}})
+              return [doc async for doc in cursor]
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from finding a GraphQL endpoint to exfiltrating data through an injectable resolver.
+      pl: Jak atakujący przechodzi od znalezienia endpointu GraphQL do eksfiltracji danych przez podatny resolver.
+    steps:
+      - title:
+          en: Discover the endpoint
+          pl: Odkrycie endpointu
+        description:
+          en: "Probe common paths (/graphql, /api/graphql, /v1/graphql) with the universal query { __typename }; fingerprint the engine with graphw00f."
+          pl: "Sprawdź typowe ścieżki (/graphql, /api/graphql, /v1/graphql) uniwersalnym zapytaniem { __typename }; rozpoznaj silnik narzędziem graphw00f."
+      - title:
+          en: Map the schema
+          pl: Zmapuj schemat
+        description:
+          en: "Run an introspection query. If disabled, reconstruct types/arguments from error-message field suggestions using Clairvoyance."
+          pl: "Wykonaj zapytanie introspekcyjne. Jeśli wyłączone, odtwórz typy/argumenty z sugestii pól w komunikatach błędów przy pomocy Clairvoyance."
+      - title:
+          en: Identify injectable arguments
+          pl: Zidentyfikuj podatne argumenty
+        description:
+          en: "Look for arguments that plausibly reach a datastore or filter — ids, search, filter, sort — especially JSON/object-typed ones."
+          pl: "Szukaj argumentów, które prawdopodobnie trafiają do magazynu danych lub filtra — id, search, filter, sort — zwłaszcza typu JSON/obiekt."
+      - title:
+          en: Fuzz for injection
+          pl: Fuzzing pod kątem wstrzyknięcia
+        description:
+          en: "Send SQL meta-characters ('), NoSQL operators ({\"$ne\":null}), and boolean/time-based probes; observe error text, response differences, or timing."
+          pl: "Wyślij metaznaki SQL ('), operatory NoSQL ({\"$ne\":null}) oraz sondy boolean/time-based; obserwuj treść błędu, różnice odpowiedzi lub czas."
+      - title:
+          en: Exploit and amplify
+          pl: Eksploatacja i amplifikacja
+        description:
+          en: "Escalate to UNION/blind extraction or NoSQL operator auth bypass; use batching/aliasing to automate blind extraction while evading per-request rate limits."
+          pl: "Eskaluj do ekstrakcji UNION/blind lub obejścia uwierzytelnienia operatorem NoSQL; użyj batchingu/aliasowania do automatyzacji ekstrakcji blind z ominięciem limitów żądań."
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: "Consensus ranking across three independent research passes — parameterized queries are the definitive fix; everything else is defense-in-depth or targets the adjacent DoS/recon variants specifically."
+      pl: "Ranking oparty na konsensusie trzech niezależnych zespołów badawczych — zapytania parametryzowane to definitywna naprawa; reszta to obrona w głąb lub adresuje konkretnie pokrewne warianty DoS/rekonesansu."
+    items:
+      - rank: 1
+        eff: 95
+        kind: primary
+        label:
+          en: "Parameterized queries / safe ORM-ODM APIs in resolvers"
+          pl: "Zapytania parametryzowane / bezpieczne API ORM-ODM w resolverach"
+        note:
+          en: "Never concatenate argument values into SQL/NoSQL/shell/LDAP strings; use bound parameters. Directly closes the CWE-89/943 core."
+          pl: "Nigdy nie konkatenuj wartości argumentów do stringów SQL/NoSQL/powłoki/LDAP; używaj parametrów wiązanych. Bezpośrednio zamyka rdzeń CWE-89/943."
+      - rank: 2
+        eff: 80
+        kind: primary
+        label:
+          en: "Strict input typing + allowlist validation"
+          pl: "Ścisłe typowanie wejścia + walidacja przez listę dozwolonych"
+        note:
+          en: "Replace permissive JSON/object filter scalars with strict input types; allowlist field names and reject query operators in user input."
+          pl: "Zastąp permisywne skalary-filtry typu JSON/obiekt ścisłymi typami input; dopuszczaj tylko znane nazwy pól i odrzucaj operatory zapytań w danych od użytkownika."
+      - rank: 3
+        eff: 70
+        kind: strong
+        label:
+          en: "Least-privilege datastore account"
+          pl: "Konto bazodanowe o minimalnych uprawnieniach"
+        note:
+          en: "Read-only, table-scoped credentials for the resolver's DB connection limit what a successful injection can reach."
+          pl: "Uprawnienia tylko do odczytu, ograniczone do konkretnych tabel dla połączenia DB resolvera ograniczają to, do czego dotrze udane wstrzyknięcie."
+      - rank: 4
+        eff: 60
+        kind: strong
+        label:
+          en: "Query cost/depth limiting (targets the DoS-adjacent variants)"
+          pl: "Limitowanie kosztu/głębokości zapytania (adresuje warianty pokrewne DoS)"
+        note:
+          en: "graphql-depth-limit, graphql-cost-analysis, and batch/alias caps stop the amplification and nested-query variants specifically — they do not fix injection."
+          pl: "graphql-depth-limit, graphql-cost-analysis oraz limity batchy/aliasów zatrzymują konkretnie warianty amplifikacji i zagnieżdżonych zapytań — nie naprawiają wstrzyknięcia."
+      - rank: 5
+        eff: 55
+        kind: mitigation
+        label:
+          en: "Disable introspection & field suggestions in production"
+          pl: "Wyłącz introspekcję i sugestie pól na produkcji"
+        note:
+          en: "Slows reconnaissance; does not stop a determined attacker (schema still recoverable via Clairvoyance) and does not fix the injection itself."
+          pl: "Spowalnia rekonesans; nie zatrzymuje zdeterminowanego atakującego (schemat wciąż odtwarzalny przez Clairvoyance) i nie naprawia samego wstrzyknięcia."
+      - rank: 6
+        eff: 40
+        kind: weak
+        label:
+          en: "Per-operation rate limiting + WAF"
+          pl: "Limitowanie per-operacja + WAF"
+        note:
+          en: "Must count operations/aliases, not HTTP requests, since batching hides many operations in one call — supplementary control only."
+          pl: "Musi liczyć operacje/aliasy, nie żądania HTTP, bo batching ukrywa wiele operacji w jednym wywołaniu — kontrola tylko wspomagająca."
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: "Two incidents independently confirmed by all three research teams. No named mega-breach with disclosed financial impact was found specifically for GraphQL injection — stated honestly rather than invented; most public material is CVEs and bug-bounty reports, not disclosed corporate breaches."
+      pl: "Dwa incydenty niezależnie potwierdzone przez wszystkie trzy zespoły badawcze. Nie znaleziono nazwanego dużego wycieku z ujawnionym wpływem finansowym specyficznie dla GraphQL injection — stwierdzone uczciwie zamiast zmyślone; większość publicznego materiału to CVE i raporty bug bounty, nie ujawnione naruszenia korporacyjne."
+    items:
+      - org: Craft CMS
+        year: 2024
+        impact: Unauthenticated SQL injection via GraphQL API
+        cost: "CVE-2024-37843, CVSS 9.3 Critical"
+        description:
+          en: "Craft CMS versions ≤ 3.7.31 contained an unauthenticated SQL injection reachable through the GraphQL API endpoint. Network attack vector, no privileges or user interaction required, full confidentiality/integrity/availability impact."
+          pl: "Craft CMS w wersjach ≤ 3.7.31 zawierał niewymagające uwierzytelnienia wstrzyknięcie SQL osiągalne przez endpoint API GraphQL. Wektor sieciowy, bez wymaganych uprawnień czy interakcji użytkownika, pełny wpływ na poufność/integralność/dostępność."
+      - org: HackerOne (own platform)
+        year: 2018
+        impact: SQL injection in GraphQL endpoint
+        cost: "Publicly disclosed bug-bounty report #435066"
+        description:
+          en: "SQL injection in the embedded_submission_form_uuid parameter of HackerOne's own /graphql endpoint, allowing extraction of data from the public and secure schema. Widely cited as a canonical example of GraphQL SQLi."
+          pl: "Wstrzyknięcie SQL w parametrze embedded_submission_form_uuid własnego endpointu /graphql HackerOne, umożliwiające ekstrakcję danych ze schematu publicznego i bezpiecznego. Powszechnie cytowane jako kanoniczny przykład GraphQL SQLi."
+    inlineSources:
+      - label: CVE-2024-37843 (GitHub Advisory)
+        url: https://github.com/advisories/GHSA-hq4f-mv3q-8wcv
+      - label: "HackerOne report #435066"
+        url: https://hackerone.com/reports/435066
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: "All three teams independently converged on the same core recon/DAST toolset. No dedicated, widely-adopted SAST ruleset specifically branded for GraphQL injection was found with confidence — coverage comes from generic SQL/NoSQL taint-analysis rules applied to resolver code."
+      pl: "Wszystkie trzy zespoły niezależnie zbiegły się na tym samym podstawowym zestawie narzędzi rekonesans/DAST. Nie znaleziono z pewnością dedykowanego, szeroko przyjętego zestawu reguł SAST specyficznie oznaczonego dla GraphQL injection — pokrycie pochodzi z ogólnych reguł taint-analysis SQL/NoSQL zastosowanych do kodu resolverów."
+    sast:
+      - - Semgrep / CodeQL
+        - "Generic SQL/NoSQL taint-analysis rules tracing resolver argument -> query sink (not GraphQL-specific)"
+    dast:
+      - - InQL
+        - "Burp Suite extension — parses introspection, auto-generates queries/mutations for testing"
+      - - GraphQL-Cop
+        - "Scanner for common misconfigurations: introspection, batching, missing depth limits, field suggestions"
+      - - graphw00f
+        - "GraphQL engine/server fingerprinting"
+      - - Clairvoyance
+        - "Reconstructs schema via error-suggestion mining when introspection is disabled"
+      - - GraphQL Voyager
+        - "Visualizes a recovered schema as an interactive graph for recon"
+    note:
+      en: "<strong>Key insight:</strong> Because the schema's type system does not validate values, generic REST-oriented SAST rules must be explicitly configured to treat resolver arguments as tainted sources — they are not flagged by default in most rulesets."
+      pl: "<strong>Kluczowe:</strong> Ponieważ system typów schematu nie waliduje wartości, ogólne reguły SAST zorientowane na REST muszą być jawnie skonfigurowane, by traktować argumenty resolverów jako źródła skażone — domyślnie nie są flagowane w większości zestawów reguł."
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: "CWE and OWASP web mappings have strong 3/3 consensus. The exact OWASP API Security Top 10 (2023) category is genuinely disputed among the three research teams — presented honestly below rather than asserting a single answer."
+      pl: "Mapowania CWE i OWASP web mają silny konsensus 3/3. Dokładna kategoria OWASP API Security Top 10 (2023) jest faktycznie sporna między trzema zespołami badawczymi — przedstawione poniżej uczciwie, zamiast twierdzić jedną odpowiedź."
+    items:
+      - std: CWE
+        items:
+          - "CWE-89 — SQL Injection (core SQL variant)"
+          - "CWE-943 — Improper Neutralization of Special Elements in Data Query Logic (NoSQL variant)"
+      - std: OWASP Top 10 (web, 2021)
+        items:
+          - "A03:2021 — Injection (unanimous 3/3 mapping)"
+      - std: "OWASP API Security Top 10 (2023) — disputed, no single answer"
+        items:
+          - "Standalone 'Injection' item was retired from the 2023 edition (was API8:2019)"
+          - "Team B: folded into API8:2023 Security Misconfiguration"
+          - "Team C: maps to API10:2023 Unsafe Consumption of APIs"
+          - "All 3 teams agree: batching/aliasing DoS variant maps cleanly to API4:2023 Unrestricted Resource Consumption"
+      - std: PCI-DSS v4.0
+        items:
+          - "Requirement 6.2.4 — address injection in bespoke/custom software (medium confidence: general applicability, not GraphQL-specific text)"
+    inlineSources:
+      - label: CWE-89
+        url: https://cwe.mitre.org/data/definitions/89.html
+      - label: CWE-943
+        url: https://cwe.mitre.org/data/definitions/943.html
+      - label: OWASP API4:2023
+        url: https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/
