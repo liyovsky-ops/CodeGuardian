@@ -1,0 +1,14 @@
+id: "hardware"
+num: 17
+name: "Hardware / Side-Channel"
+icon: "🔩"
+color: "#636e72"
+difficulty: "Hard → Expert"
+desc: |
+  Ataki wykorzystujące fizyczne właściwości sprzętu zamiast błędów w logice aplikacji: mikroarchitektoniczne kanały boczne (Spectre/Meltdown), zakłócenia DRAM (Rowhammer), analiza mocy/zegara, emanacja elektromagnetyczna. Kluczowe przy projektowaniu izolacji w środowiskach multi-tenant.
+desc_en: |
+  Attacks exploiting the physical properties of hardware rather than application-logic bugs: microarchitectural side channels (Spectre/Meltdown), DRAM disturbance (Rowhammer), power/clock analysis, electromagnetic emanation. Central to isolation design in multi-tenant environments.
+verdict: |
+  Te zagrożenia w większości nie da się wykryć analizą kodu aplikacji — to decyzje architektoniczne (wybór izolacji VM vs. kontener, wyłączenie SMT dla obciążeń niezaufanych, patch mikrokodu) i konfiguracja infrastruktury, nie code review.
+verdict_en: |
+  Most of these threats cannot be detected via application code analysis — they are architectural decisions (VM vs. container isolation choice, disabling SMT for untrusted workloads, microcode patching) and infrastructure configuration, not code review.

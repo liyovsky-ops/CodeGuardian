@@ -1,0 +1,439 @@
+threats:
+  - id: "15.1"
+    name: "Improper Credential Usage"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-798"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Hardcoded credentials, API keys, or tokens embedded in the app binary, or insecure credential handling/transmission — extractable via APK/IPA decompilation and reused by attackers.
+      
+    desc_en: "Hardcoded credentials, API keys, or tokens embedded in the app binary, or insecure credential handling/transmission — extractable via APK/IPA decompilation and reused by attackers."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M1. Partially overlaps existing catalog entries (data_exposure desc #218, auth #172) but as the general mobile credential-usage risk it is broader than hardcoded-secret extraction."
+  - id: "15.2"
+    name: "Inadequate Supply Chain Security (Mobile)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1357"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Malicious or compromised third-party SDKs, libraries, or build tooling embedded in a mobile app introduce backdoors, data exfiltration, or vulnerable code that ships to end-user devices.
+      
+    desc_en: "Malicious or compromised third-party SDKs, libraries, or build tooling embedded in a mobile app introduce backdoors, data exfiltration, or vulnerable code that ships to end-user devices."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M2. Mobile-specific facet distinct from the existing general Supply Chain category (SDK bundling, app store signing)."
+  - id: "15.3"
+    name: "Insecure Authentication/Authorization (Mobile)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-287"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Client-side-only authentication or authorization checks, weak session handling, or trusting device-side state that an attacker with local control can bypass or forge.
+      
+    desc_en: "Client-side-only authentication or authorization checks, weak session handling, or trusting device-side state that an attacker with local control can bypass or forge."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M3. Mobile nuance: trust boundary sits on an attacker-controlled device."
+  - id: "15.4"
+    name: "Insufficient Input/Output Validation (Mobile)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-20"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Failure to validate or sanitize data from IPC, deep links, WebViews, files, or network responses, enabling injection, memory corruption, or logic abuse on the device.
+      
+    desc_en: "Failure to validate or sanitize data from IPC, deep links, WebViews, files, or network responses, enabling injection, memory corruption, or logic abuse on the device."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M4."
+  - id: "15.5"
+    name: "Insecure Communication (Mobile)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-319"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Data transmitted over cleartext or with improper TLS certificate/hostname validation, allowing man-in-the-middle interception on hostile networks.
+      
+    desc_en: "Data transmitted over cleartext or with improper TLS certificate/hostname validation, allowing man-in-the-middle interception on hostile networks."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M5. Related CWE-295 (improper certificate validation) — covers missing certificate pinning."
+  - id: "15.6"
+    name: "Inadequate Privacy Controls"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-359"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Collection, storage, or transmission of PII, location, contacts, or device identifiers beyond need or without consent, exposing users to privacy harm and regulatory violations.
+      
+    desc_en: "Collection, storage, or transmission of PII, location, contacts, or device identifiers beyond need or without consent, exposing users to privacy harm and regulatory violations."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M6."
+  - id: "15.7"
+    name: "Insufficient Binary Protections"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-693"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Lack of code obfuscation, anti-tampering, and anti-debugging lets attackers reverse-engineer the app, extract secrets/business logic, patch it, and repackage trojanized versions.
+      
+    desc_en: "Lack of code obfuscation, anti-tampering, and anti-debugging lets attackers reverse-engineer the app, extract secrets/business logic, patch it, and repackage trojanized versions."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M7. Umbrella for root/jailbreak-detection bypass and repackaging."
+  - id: "15.8"
+    name: "Security Misconfiguration (Mobile)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-16"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Insecure default settings, debuggable builds, permissive network security config, or over-broad permissions that weaken the app's security posture on the device.
+      
+    desc_en: "Insecure default settings, debuggable builds, permissive network security config, or over-broad permissions that weaken the app's security posture on the device."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M8."
+  - id: "15.9"
+    name: "Insecure Data Storage"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-312"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Sensitive data stored unencrypted in shared preferences, SQLite databases, plist files, external storage, logs, or caches — readable on rooted/jailbroken or backed-up devices.
+      
+    desc_en: "Sensitive data stored unencrypted in shared preferences, SQLite databases, plist files, external storage, logs, or caches — readable on rooted/jailbroken or backed-up devices."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M9. Related CWE-922 (insecure storage of sensitive information)."
+  - id: "15.10"
+    name: "Insufficient Cryptography (Mobile)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-327"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Use of weak/broken ciphers, hardcoded or predictable keys, ECB mode, or improper key management on-device, allowing decryption of protected mobile data.
+      
+    desc_en: "Use of weak/broken ciphers, hardcoded or predictable keys, ECB mode, or improper key management on-device, allowing decryption of protected mobile data."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Mobile Top 10 2024, M10. Related CWE-321 (hardcoded cryptographic key)."
+  - id: "15.11"
+    name: "WebView JavaScript Bridge Exposure (addJavascriptInterface)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-749"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Native objects exposed to WebView JavaScript via addJavascriptInterface are reachable by any loaded page; untrusted/remote content can invoke native methods, read local files, or achieve code execution (RCE on API < 17 via reflection).
+      
+    desc_en: "Native objects exposed to WebView JavaScript via addJavascriptInterface are reachable by any loaded page; untrusted/remote content can invoke native methods, read local files, or achieve code execution (RCE on API < 17 via reflection)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP MASTG-TEST-0033 (Testing for Java Objects Exposed Through WebViews), MASVS-PLATFORM. Android Developers advisory on insecure WebView native bridges."
+  - id: "15.12"
+    name: "Android Intent Redirection / Hijacking"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-927"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] An app forwards or launches an implicit/attacker-controlled Intent without validation, letting a malicious app redirect it to access protected components or leak sensitive data carried in the Intent.
+      
+    desc_en: "An app forwards or launches an implicit/attacker-controlled Intent without validation, letting a malicious app redirect it to access protected components or leak sensitive data carried in the Intent."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP MASTG Android Platform APIs; CWE-927 (Use of Implicit Intent for Sensitive Communication)."
+  - id: "15.13"
+    name: "Insecure IPC via Exported Components"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-926"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Activities, services, broadcast receivers, or content providers exported without proper permission checks (android:exported=true) let any installed app invoke privileged functionality or read/write internal data.
+      
+    desc_en: "Activities, services, broadcast receivers, or content providers exported without proper permission checks (android:exported=true) let any installed app invoke privileged functionality or read/write internal data."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP MASTG MASVS-PLATFORM (testing for exported components); CWE-926 (Improper Export of Android Application Components)."
+  - id: "15.14"
+    name: "Task Hijacking (StrandHogg)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1021"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A malicious app abuses Android taskAffinity/launchMode or runtime Intent arrays to insert its activity into a legitimate app's task stack, phishing credentials while the victim believes they are in the trusted app.
+      
+    desc_en: "A malicious app abuses Android taskAffinity/launchMode or runtime Intent arrays to insert its activity into a legitimate app's task stack, phishing credentials while the victim believes they are in the trusted app."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: StrandHogg (2019) and StrandHogg 2.0 (CVE-2020-0096); documented in OWASP mobile pentesting references."
+  - id: "15.15"
+    name: "Tapjacking (UI Overlay Attack)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1021"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A malicious app draws a transparent overlay above another app's UI so that user taps are hijacked to perform unintended, attacker-chosen actions (Android equivalent of clickjacking).
+      
+    desc_en: "A malicious app draws a transparent overlay above another app's UI so that user taps are hijacked to perform unintended, attacker-chosen actions (Android equivalent of clickjacking)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP MASTG (testing for overlay/tapjacking, filterTouchesWhenObscured); CWE-1021 (Improper Restriction of Rendered UI Layers)."
+  - id: "15.16"
+    name: "Insecure Deep Link / Custom URL Scheme Handling"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-939"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Deep links or custom URL schemes handled without verifying the caller or domain ownership let a malicious app claim the same scheme or pass hostile parameters to trigger unauthorized actions or leak tokens.
+      
+    desc_en: "Deep links or custom URL schemes handled without verifying the caller or domain ownership let a malicious app claim the same scheme or pass hostile parameters to trigger unauthorized actions or leak tokens."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP MASTG (deep link testing, android:autoVerify / Universal Links); CWE-939 (Improper Authorization in Handler for Custom URL Scheme)."
+  - id: "15.17"
+    name: "Keychain / Keystore Misuse"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-522"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Secrets stored in the iOS Keychain / Android Keystore with weak protection classes or accessibility settings (e.g. kSecAttrAccessibleAlways, no user-auth binding, keys not hardware-backed), leaving them extractable on unlocked or compromised devices.
+      
+    desc_en: "Secrets stored in the iOS Keychain / Android Keystore with weak protection classes or accessibility settings (e.g. kSecAttrAccessibleAlways, no user-auth binding, keys not hardware-backed), leaving them extractable on unlocked or compromised devices."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP MASTG MASVS-STORAGE / MASVS-CRYPTO (Keychain and Keystore testing)."
+  - id: "15.18"
+    name: "Root / Jailbreak Detection Bypass"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-693"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Weak or client-side-only root/jailbreak detection is trivially bypassed with Frida, Magisk, or hooking frameworks, allowing the app to run in a fully attacker-controlled environment where all local protections fail.
+      
+    desc_en: "Weak or client-side-only root/jailbreak detection is trivially bypassed with Frida, Magisk, or hooking frameworks, allowing the app to run in a fully attacker-controlled environment where all local protections fail."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP MASTG MASVS-RESILIENCE (testing root/jailbreak detection); facet of M7 Insufficient Binary Protections."
+  - id: "15.19"
+    name: "Insecure Biometric Authentication Implementation"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-287"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Biometric checks used only as a client-side gate (event-bound BiometricPrompt / LocalAuthentication returning a boolean) rather than releasing a Keystore/Keychain-protected key, allowing bypass via hooking or logic manipulation.
+      
+    desc_en: "Biometric checks used only as a client-side gate (event-bound BiometricPrompt / LocalAuthentication returning a boolean) rather than releasing a Keystore/Keychain-protected key, allowing bypass via hooking or logic manipulation."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP MASTG MASVS-AUTH (testing biometric authentication; crypto-bound vs event-bound)."
+  - id: "15.20"
+    name: "Sensitive Data Leakage via Clipboard / Screenshots / Logs"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-200"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] PII, tokens, or credentials leak through the shared clipboard/pasteboard, backgrounded-app screenshots (task snapshots), keyboard caches, or verbose logging accessible to other apps or forensic extraction.
+      
+    desc_en: "PII, tokens, or credentials leak through the shared clipboard/pasteboard, backgrounded-app screenshots (task snapshots), keyboard caches, or verbose logging accessible to other apps or forensic extraction."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP MASTG MASVS-STORAGE (testing for sensitive data in logs, clipboard, backups, and app backgrounding)."
+  - id: "15.21"
+    name: "Cloak & Dagger (Android overlay + accessibility attack)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1021"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Combines two Android permissions — SYSTEM_ALERT_WINDOW (draw overlays) and BIND_ACCESSIBILITY_SERVICE — to seize control of the UI feedback loop: invisible/clickjacking overlays plus programmatic UI interaction enable stealthy keystroke logging, phishing, silent 'god-mode' app installation, and PIN theft, with victims noticing nothing. Broader than plain tapjacking (which is overlay-only).
+      
+    desc_en: "Combines two Android permissions — SYSTEM_ALERT_WINDOW (draw overlays) and BIND_ACCESSIBILITY_SERVICE — to seize control of the UI feedback loop: invisible/clickjacking overlays plus programmatic UI interaction enable stealthy keystroke logging, phishing, silent 'god-mode' app installation, and PIN theft, with victims noticing nothing. Broader than plain tapjacking (which is overlay-only)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Fratantonio, Qian, Chung & Lee, 'Cloak and Dagger: From Two Permissions to Complete Control of the UI Feedback Loop', IEEE S&P 2017 / Black Hat USA 2017; cloak-and-dagger.org."
+  - id: "15.22"
+    name: "iOS URL Scheme Hijacking"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-939"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] iOS custom URL schemes are claimed first-come/first-served with no ownership verification, so a malicious app can register the same scheme (e.g. a bank's) and be launched instead of the legitimate app, intercepting OAuth callbacks/tokens or phishing credentials passed via the URL. Mitigated by Universal Links (domain-verified) rather than custom schemes.
+      
+    desc_en: "iOS custom URL schemes are claimed first-come/first-served with no ownership verification, so a malicious app can register the same scheme (e.g. a bank's) and be launched instead of the legitimate app, intercepting OAuth callbacks/tokens or phishing credentials passed via the URL. Mitigated by Universal Links (domain-verified) rather than custom schemes."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Documented by FireEye/Trend Micro iOS URL scheme research and Apple's Universal Links guidance. NOTE: round-1 has a cross-platform 'Insecure Deep Link / Custom URL Scheme Handling' entry; this is the specific iOS scheme-collision facet."
+  - id: "15.23"
+    name: "Janus (Android APK signature bypass)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-347"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Because a single file can be simultaneously a valid APK (ZIP, signed with the v1/JAR scheme that ignores prepended bytes) and a valid DEX (which tolerates trailing bytes), an attacker prepends a malicious DEX to a legitimate APK; it installs as an update preserving the original signature and data, then the injected code runs. Affects Android 5.1.1-8.0 with v1-only signing; fixed by APK Signature Scheme v2.
+      
+    desc_en: "Because a single file can be simultaneously a valid APK (ZIP, signed with the v1/JAR scheme that ignores prepended bytes) and a valid DEX (which tolerates trailing bytes), an attacker prepends a malicious DEX to a legitimate APK; it installs as an update preserving the original signature and data, then the injected code runs. Affects Android 5.1.1-8.0 with v1-only signing; fixed by APK Signature Scheme v2.
+"
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2017-13156; GuardSquare disclosure (2017); Android Dec 2017 security bulletin."

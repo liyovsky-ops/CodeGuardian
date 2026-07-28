@@ -1,0 +1,437 @@
+threats:
+  - id: "16.1"
+    name: "Reentrancy"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-841"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A contract makes an external call before updating its own state, allowing the callee to recursively re-enter the vulnerable function and drain funds or corrupt state. Prevented by the checks-effects-interactions pattern or reentrancy guards.
+      
+    desc_en: "A contract makes an external call before updating its own state, allowing the callee to recursively re-enter the vulnerable function and drain funds or corrupt state. Prevented by the checks-effects-interactions pattern or reentrancy guards."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-107 (CWE-841). Landmark real-world case: The DAO hack, June 2016, ~3.6M ETH drained, leading to the Ethereum/Ethereum Classic hard fork."
+  - id: "16.2"
+    name: "Integer Overflow and Underflow"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-682"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Arithmetic operations exceed the fixed-width range of an integer type and wrap around, letting attackers bypass balance/limit checks. Largely mitigated by built-in checked arithmetic in Solidity >=0.8.0, but remains a named class in older code and unchecked{} blocks.
+      
+    desc_en: "Arithmetic operations exceed the fixed-width range of an integer type and wrap around, letting attackers bypass balance/limit checks. Largely mitigated by built-in checked arithmetic in Solidity >=0.8.0, but remains a named class in older code and unchecked{} blocks."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-101 (CWE-682). Real-world: BeautyChain (BEC) 'batchOverflow', April 2018 (CVE-2018-10299), which minted astronomical token amounts."
+  - id: "16.3"
+    name: "Transaction Order Dependence / Front-Running"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-362"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Contract behavior depends on the order in which transactions are mined; observers of the public mempool can insert their own transactions ahead (front-running) or around (sandwiching) a victim's, extracting value (a form of MEV).
+      
+    desc_en: "Contract behavior depends on the order in which transactions are mined; observers of the public mempool can insert their own transactions ahead (front-running) or around (sandwiching) a victim's, extracting value (a form of MEV)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-114 (CWE-362, race condition). Broadly documented as MEV / sandwich attacks on DEXes."
+  - id: "16.4"
+    name: "Unchecked Call Return Value"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-252"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] The return value of a low-level call (call, send) is not checked, so a silently failed external call lets execution continue as if it succeeded, leaving state inconsistent.
+      
+    desc_en: "The return value of a low-level call (call, send) is not checked, so a silently failed external call lets execution continue as if it succeeded, leaving state inconsistent."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-104 (CWE-252). Classic example: the King of the Ether contract."
+  - id: "16.5"
+    name: "Unprotected Ether Withdrawal (Missing Access Control)"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-284"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A state-changing or fund-transferring function lacks proper authorization checks (e.g. no onlyOwner modifier, or an incorrectly named/exposed initializer), allowing any caller to withdraw Ether or take over the contract.
+      
+    desc_en: "A state-changing or fund-transferring function lacks proper authorization checks (e.g. no onlyOwner modifier, or an incorrectly named/exposed initializer), allowing any caller to withdraw Ether or take over the contract."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-105 (CWE-284). Real-world: first Parity multisig wallet hack, July 2017, ~150k ETH stolen via an unprotected initWallet."
+  - id: "16.6"
+    name: "Unprotected SELFDESTRUCT Instruction"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-284"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A selfdestruct (formerly suicide) call is reachable without adequate access control, letting an attacker destroy the contract and release/redirect its Ether, potentially bricking dependent contracts.
+      
+    desc_en: "A selfdestruct (formerly suicide) call is reachable without adequate access control, letting an attacker destroy the contract and release/redirect its Ether, potentially bricking dependent contracts."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-106 (CWE-284). Real-world: second Parity multisig incident, November 2017, the library contract was self-destructed, freezing ~513k ETH (~$280M at the time)."
+  - id: "16.7"
+    name: "Uninitialized Storage Pointer"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-824"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] An uninitialized local storage-reference variable defaults to storage slot 0, so writes through it silently overwrite critical contract state such as the owner. Prevented by the Solidity compiler from version 0.5.0 onward.
+      
+    desc_en: "An uninitialized local storage-reference variable defaults to storage slot 0, so writes through it silently overwrite critical contract state such as the owner. Prevented by the Solidity compiler from version 0.5.0 onward."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-109 (CWE-824)."
+  - id: "16.8"
+    name: "Delegatecall to Untrusted Callee"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-829"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Using delegatecall to an attacker-influenced or untrusted address executes foreign code in the caller's storage context, allowing full state and ownership takeover of the calling contract.
+      
+    desc_en: "Using delegatecall to an attacker-influenced or untrusted address executes foreign code in the caller's storage context, allowing full state and ownership takeover of the calling contract."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-112 (CWE-829). Central to both Parity multisig incidents (2017)."
+  - id: "16.9"
+    name: "Authorization through tx.origin"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-477"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Using tx.origin for authorization instead of msg.sender lets a malicious intermediary contract relay a victim's call, so the check passes for the attacker. Enables phishing-style privilege abuse.
+      
+    desc_en: "Using tx.origin for authorization instead of msg.sender lets a malicious intermediary contract relay a victim's call, so the check passes for the attacker. Enables phishing-style privilege abuse."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-115 (CWE-477)."
+  - id: "16.10"
+    name: "Block Values as a Proxy for Time (Timestamp Dependence)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-829"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Contracts rely on block.timestamp or block.number for time-sensitive logic (payouts, randomness, deadlines), which miners/validators can manipulate within tolerance to gain an advantage.
+      
+    desc_en: "Contracts rely on block.timestamp or block.number for time-sensitive logic (payouts, randomness, deadlines), which miners/validators can manipulate within tolerance to gain an advantage."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-116 (CWE-829)."
+  - id: "16.11"
+    name: "Missing Protection against Signature Replay Attacks"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-347"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Signed messages lack a nonce, contract address, or chain ID binding, so a valid signature can be replayed multiple times or across contracts/chains to repeat privileged actions (e.g. meta-transactions, permits).
+      
+    desc_en: "Signed messages lack a nonce, contract address, or chain ID binding, so a valid signature can be replayed multiple times or across contracts/chains to repeat privileged actions (e.g. meta-transactions, permits)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-121 (CWE-347)."
+  - id: "16.12"
+    name: "Denial of Service with Block Gas Limit"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Operations that iterate over an unbounded, attacker-growable data structure can require more gas than the block gas limit, permanently blocking a function (e.g. mass refunds looping over a payee array).
+      
+    desc_en: "Operations that iterate over an unbounded, attacker-growable data structure can require more gas than the block gas limit, permanently blocking a function (e.g. mass refunds looping over a payee array)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-128 (CWE-400). Illustrated by the GovernMental Ponzi contract."
+  - id: "16.13"
+    name: "Denial of Service with Failed Call (Unexpected Revert)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-703"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A contract's progress depends on an external call succeeding; an attacker whose fallback always reverts (e.g. as the current leader/highest bidder) can permanently block the contract's logic for everyone.
+      
+    desc_en: "A contract's progress depends on an external call succeeding; an attacker whose fallback always reverts (e.g. as the current leader/highest bidder) can permanently block the contract's logic for everyone."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-113 (CWE-703). Classic example: the King of the Ether Throne."
+  - id: "16.14"
+    name: "Function Default Visibility"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-710"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Functions without an explicit visibility specifier defaulted to public in older Solidity, unintentionally exposing sensitive internal functions to external callers. Enforced as an explicit choice since Solidity 0.5.0.
+      
+    desc_en: "Functions without an explicit visibility specifier defaulted to public in older Solidity, unintentionally exposing sensitive internal functions to external callers. Enforced as an explicit choice since Solidity 0.5.0."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-100 (CWE-710). The exposed initWallet in the Parity multisig is the canonical case."
+  - id: "16.15"
+    name: "Weak Sources of Randomness from Chain Attributes"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-330"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Deriving randomness from predictable/manipulable on-chain values (block.timestamp, blockhash, block.difficulty) lets miners or observers predict or bias outcomes in lotteries, games, and NFT mints.
+      
+    desc_en: "Deriving randomness from predictable/manipulable on-chain values (block.timestamp, blockhash, block.difficulty) lets miners or observers predict or bias outcomes in lotteries, games, and NFT mints."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-120 (CWE-330). Real-world: SmartBillions lottery drained via predictable blockhash-based RNG, 2017."
+  - id: "16.16"
+    name: "Write to Arbitrary Storage Location"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-123"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] An attacker-controlled index into a dynamic array or mapping is not bounds-checked, enabling a write-what-where primitive that can overwrite privileged storage slots such as the owner.
+      
+    desc_en: "An attacker-controlled index into a dynamic array or mapping is not bounds-checked, enabling a write-what-where primitive that can overwrite privileged storage slots such as the owner."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-124 (CWE-123, write-what-where condition)."
+  - id: "16.17"
+    name: "Arbitrary Jump with Function Type Variable"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-695"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Manipulating a function-type variable via inline assembly (e.g. mstore) lets execution jump to an arbitrary code location, subverting intended control flow.
+      
+    desc_en: "Manipulating a function-type variable via inline assembly (e.g. mstore) lets execution jump to an arbitrary code location, subverting intended control flow."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: SWC-127 (CWE-695, use of low-level functionality)."
+  - id: "16.18"
+    name: "Short Address / ABI Padding Attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-20"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] An ERC-20 transfer is submitted with a truncated (short) address argument; the EVM right-pads the missing bytes with zeros, shifting the amount field left and multiplying the transferred value. Mitigated by input-length validation in modern web3 client libraries.
+      
+    desc_en: "An ERC-20 transfer is submitted with a truncated (short) address argument; the EVM right-pads the missing bytes with zeros, shifting the amount field left and multiplying the transferred value. Mitigated by input-length validation in modern web3 client libraries."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Not a numbered SWC entry, but a well-documented ERC-20 / ABI-encoding attack class (widely described since ~2017). Largely mitigated at the client/library layer today."
+  - id: "16.19"
+    name: "Flash Loan Attack"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] An attacker borrows a very large uncollateralized amount within a single atomic transaction and uses it to manipulate DeFi protocol state (prices, collateral ratios, governance votes) for profit, repaying the loan before the transaction ends.
+      
+    desc_en: "An attacker borrows a very large uncollateralized amount within a single atomic transaction and uses it to manipulate DeFi protocol state (prices, collateral ratios, governance votes) for profit, repaying the loan before the transaction ends."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Not in the SWC registry (post-2020 DeFi class). Real-world: bZx protocol attacks, February 2020; PancakeBunny, May 2021 (~$45M); Beanstalk governance flash-loan attack, April 2022 (~$182M)."
+  - id: "16.20"
+    name: "Price Oracle Manipulation"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A protocol relies on a manipulable price source (e.g. a single DEX spot price / low-liquidity pool reserves) for valuation; an attacker temporarily skews that price, often via a flash loan, to borrow, mint, or liquidate at a distorted rate.
+      
+    desc_en: "A protocol relies on a manipulable price source (e.g. a single DEX spot price / low-liquidity pool reserves) for valuation; an attacker temporarily skews that price, often via a flash loan, to borrow, mint, or liquidate at a distorted rate."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Not in the SWC registry (post-2020 DeFi class). Real-world: Harvest Finance, October 2020 (~$34M); Mango Markets, October 2022 (~$117M). Mitigated with TWAP / multi-source (e.g. Chainlink) oracles."
+  - id: "16.21"
+    name: "MEV / Sandwich Attacks (Maximal/Miner Extractable Value)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-362"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Systemic value extraction by reordering, inserting, or censoring transactions: a searcher observing a victim's pending DEX swap in the public mempool front-runs it to move the price, lets the victim execute at the worsened price, then back-runs to sell — the 'sandwich'. Formalized as MEV, a market-structure phenomenon broader than a single contract's transaction-order-dependence bug.
+      
+    desc_en: "Systemic value extraction by reordering, inserting, or censoring transactions: a searcher observing a victim's pending DEX swap in the public mempool front-runs it to move the price, lets the victim execute at the worsened price, then back-runs to sell — the 'sandwich'. Formalized as MEV, a market-structure phenomenon broader than a single contract's transaction-order-dependence bug."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Daian et al., 'Flash Boys 2.0: Frontrunning, Transaction Reordering, and Consensus Instability in Decentralized Exchanges' (2019, arXiv:1904.05234); later Flashbots research. NOTE: round-1 has contract-level SWC-114 'Transaction Order Dependence'; this is the distinct systemic MEV/sandwich phenomenon."
+  - id: "16.22"
+    name: "Cross-Chain Bridge Exploits"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-345"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Token bridges lock assets on one chain and mint/release wrapped assets on another based on validator attestations; their security is a separate, often weaker layer than the chains they connect. Compromise of validator/multisig keys or flaws in signature/proof verification let attackers forge deposit proofs and mint or withdraw unbacked assets — the single most damaging DeFi loss class.
+      
+    desc_en: "Token bridges lock assets on one chain and mint/release wrapped assets on another based on validator attestations; their security is a separate, often weaker layer than the chains they connect. Compromise of validator/multisig keys or flaws in signature/proof verification let attackers forge deposit proofs and mint or withdraw unbacked assets — the single most damaging DeFi loss class."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Incident-based class: Ronin Network ~$625M (March 2022, 5-of-9 validator keys compromised, Lazarus Group); Wormhole ~$325M (Feb 2022, Solana guardian signature-verification bug minting 120k wETH); Nomad, Harmony Horizon."
+  - id: "16.23"
+    name: "ERC-721/ERC-777 Reentrancy via safeTransferFrom / _safeMint callback"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-841"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] ERC-721 safe transfers and _safeMint invoke the recipient contract's onERC721Received hook (ERC-777 uses tokensReceived) before finalizing state; a malicious recipient re-enters the minting/transfer function, and because a counter such as totalSupply is still stale it can mint beyond limits or bypass per-wallet checks. A specific, real instance of reentrancy driven by mandatory token-standard callbacks.
+      
+    desc_en: "ERC-721 safe transfers and _safeMint invoke the recipient contract's onERC721Received hook (ERC-777 uses tokensReceived) before finalizing state; a malicious recipient re-enters the minting/transfer function, and because a counter such as totalSupply is still stale it can mint beyond limits or bypass per-wallet checks. A specific, real instance of reentrancy driven by mandatory token-standard callbacks.
+"
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Well-documented class (OpenZeppelin guidance, CertiK, Ackee Blockchain); real incidents include HypeBears and Omni Protocol (2022). Distinct from round-1's generic SWC-107 Reentrancy in that the callback is a standard-mandated hook."

@@ -1,0 +1,497 @@
+threats:
+  - id: "17.1"
+    name: "Spectre v2 (Branch Target Injection, BTI)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Attacker poisons the indirect-branch predictor so a victim speculatively executes attacker-chosen gadgets, leaking memory across the process/kernel and guest/hypervisor boundary. Central to cross-VM isolation risk; mitigated by retpoline/IBRS/IBPB microcode.
+      
+    desc_en: "Attacker poisons the indirect-branch predictor so a victim speculatively executes attacker-chosen gadgets, leaking memory across the process/kernel and guest/hypervisor boundary. Central to cross-VM isolation risk; mitigated by retpoline/IBRS/IBPB microcode."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2017-5715; Kocher et al., 'Spectre Attacks' (IEEE S&P 2019)."
+  - id: "17.2"
+    name: "Spectre v4 (Speculative Store Bypass, SSB)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] The CPU speculatively bypasses a pending store and forwards stale memory to a dependent load, leaking data across a language-level sandbox. Relevant to browser/JIT and managed-runtime isolation; mitigated by SSBD microcode.
+      
+    desc_en: "The CPU speculatively bypasses a pending store and forwards stale memory to a dependent load, leaking data across a language-level sandbox. Relevant to browser/JIT and managed-runtime isolation; mitigated by SSBD microcode."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2018-3639 (Speculative Store Bypass); disclosed by Google Project Zero / Microsoft."
+  - id: "17.3"
+    name: "Meltdown (Rogue Data Cache Load)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Out-of-order execution transiently reads kernel memory before a privilege check retires, then exfiltrates it via cache, dumping all kernel/physical memory from an unprivileged user process. Broke the user/kernel isolation boundary; mitigated by KPTI/KAISER page-table isolation.
+      
+    desc_en: "Out-of-order execution transiently reads kernel memory before a privilege check retires, then exfiltrates it via cache, dumping all kernel/physical memory from an unprivileged user process. Broke the user/kernel isolation boundary; mitigated by KPTI/KAISER page-table isolation."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2017-5754; Lipp et al., 'Meltdown: Reading Kernel Memory from User Space' (USENIX Security 2018)."
+  - id: "17.4"
+    name: "Foreshadow / L1 Terminal Fault (L1TF)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Transient fault handling leaks any data resident in the L1 data cache, defeating Intel SGX enclave confidentiality and — in the L1TF-VMM variant — allowing a malicious guest to read the hypervisor and other VMs. Directly undermines VM isolation and trusted-enclave guarantees in multi-tenant clouds.
+      
+    desc_en: "Transient fault handling leaks any data resident in the L1 data cache, defeating Intel SGX enclave confidentiality and — in the L1TF-VMM variant — allowing a malicious guest to read the hypervisor and other VMs. Directly undermines VM isolation and trusted-enclave guarantees in multi-tenant clouds."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2018-3615 (SGX), CVE-2018-3620 (OS/SMM), CVE-2018-3646 (VMM); Van Bulck et al., 'Foreshadow' (USENIX Security 2018)."
+  - id: "17.5"
+    name: "ZombieLoad / MDS (Microarchitectural Data Sampling)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Transiently samples in-flight data from CPU line-fill buffers, leaking values belonging to other processes, the kernel, other VMs, or SGX enclaves across hyperthreads. A cross-tenant leak that can persist even with per-core scheduling unless SMT is disabled — a key argument against co-scheduling untrusted tenants on sibling threads.
+      
+    desc_en: "Transiently samples in-flight data from CPU line-fill buffers, leaking values belonging to other processes, the kernel, other VMs, or SGX enclaves across hyperthreads. A cross-tenant leak that can persist even with per-core scheduling unless SMT is disabled — a key argument against co-scheduling untrusted tenants on sibling threads."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2018-12130 (MFBDS, ZombieLoad); Schwarz et al., 'ZombieLoad' (ACM CCS 2019)."
+  - id: "17.6"
+    name: "RIDL (Rogue In-Flight Data Load)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] MDS-class attack that leaks data from load ports / fill buffers without needing the victim's address, working across arbitrary security domains including sandboxed JavaScript and across VMs. Reinforces that microarchitectural buffers are shared cross-tenant state.
+      
+    desc_en: "MDS-class attack that leaks data from load ports / fill buffers without needing the victim's address, working across arbitrary security domains including sandboxed JavaScript and across VMs. Reinforces that microarchitectural buffers are shared cross-tenant state."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2018-12127 (MLPDS) and CVE-2019-11091 (MDSUM); Van Schaik et al., 'RIDL: Rogue In-Flight Data Load' (IEEE S&P 2019)."
+  - id: "17.7"
+    name: "LazyFP (Lazy FPU State Restore)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Speculative access to lazily-restored FPU/SIMD register state leaks another process's or VM's floating-point/vector registers, which can hold cryptographic key material. Fixed by switching OSes to eager FPU state save/restore.
+      
+    desc_en: "Speculative access to lazily-restored FPU/SIMD register state leaks another process's or VM's floating-point/vector registers, which can hold cryptographic key material. Fixed by switching OSes to eager FPU state save/restore."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2018-3665 (Lazy FP State Restore); Stecklina & Prescher, 'LazyFP' (2018)."
+  - id: "17.8"
+    name: "Retbleed (Spectre-BTI via return instructions)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Return instructions are exploited as speculative-execution gadgets, bypassing retpoline defenses to leak kernel memory on Intel and AMD CPUs. Reopened the Spectre v2 cross-privilege leak against systems believed mitigated; costly software fixes (return thunks / IBPB-on-entry).
+      
+    desc_en: "Return instructions are exploited as speculative-execution gadgets, bypassing retpoline defenses to leak kernel memory on Intel and AMD CPUs. Reopened the Spectre v2 cross-privilege leak against systems believed mitigated; costly software fixes (return thunks / IBPB-on-entry)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2022-29900 (AMD), CVE-2022-29901 (Intel); Wikner & Razavi, 'Retbleed' (USENIX Security 2022)."
+  - id: "17.9"
+    name: "Downfall (Gather Data Sampling, GDS)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] The AVX gather instruction transiently forwards stale data from shared vector-register hardware, leaking data (including AES keys) across users, processes, VMs, and SGX enclaves on 6th–11th gen Intel Core and 1st–4th gen Xeon Scalable. High-impact cross-tenant leak on widely deployed cloud CPUs; mitigated by microcode.
+      
+    desc_en: "The AVX gather instruction transiently forwards stale data from shared vector-register hardware, leaking data (including AES keys) across users, processes, VMs, and SGX enclaves on 6th–11th gen Intel Core and 1st–4th gen Xeon Scalable. High-impact cross-tenant leak on widely deployed cloud CPUs; mitigated by microcode."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2022-40982; Moghimi, 'Downfall: Exploiting Speculative Data Gathering' (USENIX Security 2023)."
+  - id: "17.10"
+    name: "Inception / SRSO (Speculative Return Stack Overflow)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] On AMD Zen 1–4, an attacker overflows/manipulates the return-address predictor to hijack speculative execution of returns and leak kernel memory from an unprivileged process. AMD-only Retbleed-class break of the user/kernel boundary; needs kernel + microcode mitigation.
+      
+    desc_en: "On AMD Zen 1–4, an attacker overflows/manipulates the return-address predictor to hijack speculative execution of returns and leak kernel memory from an unprivileged process. AMD-only Retbleed-class break of the user/kernel boundary; needs kernel + microcode mitigation."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2023-20569; Trujillo et al. (ETH Zurich), 'Inception' (USENIX Security 2023)."
+  - id: "17.11"
+    name: "Zenbleed"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1342"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A mispredicted vector-register optimization on AMD Zen 2 leaks the contents of the shared YMM register file across processes, VMs, and containers at high bandwidth without special privileges. A practical cross-tenant register leak on cloud AMD hardware; fixed by microcode.
+      
+    desc_en: "A mispredicted vector-register optimization on AMD Zen 2 leaks the contents of the shared YMM register file across processes, VMs, and containers at high bandwidth without special privileges. A practical cross-tenant register leak on cloud AMD hardware; fixed by microcode."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2023-20593; Ormandy (Google Project Zero), 'Zenbleed' (2023)."
+  - id: "17.12"
+    name: "Rowhammer"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1256"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Rapidly, repeatedly activating a DRAM row induces bit flips in adjacent rows, enabling privilege escalation and sandbox escape (page-table corruption) purely by memory access patterns. Software-only fault injection that crosses process/VM boundaries and defeats the assumption memory can't be modified without write access.
+      
+    desc_en: "Rapidly, repeatedly activating a DRAM row induces bit flips in adjacent rows, enabling privilege escalation and sandbox escape (page-table corruption) purely by memory access patterns. Software-only fault injection that crosses process/VM boundaries and defeats the assumption memory can't be modified without write access."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Kim et al., 'Flipping Bits in Memory Without Accessing Them' (ISCA 2014); weaponized as Google Project Zero's Rowhammer sandbox escape (2015)."
+  - id: "17.13"
+    name: "RAMBleed"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1256"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Uses Rowhammer bit flips as a read side channel — inferring the value of neighboring bits from flip probability — to read physical memory belonging to other processes/tenants (demonstrated recovering an OpenSSH RSA key). Turns a known integrity attack into a confidentiality breach across isolation boundaries.
+      
+    desc_en: "Uses Rowhammer bit flips as a read side channel — inferring the value of neighboring bits from flip probability — to read physical memory belonging to other processes/tenants (demonstrated recovering an OpenSSH RSA key). Turns a known integrity attack into a confidentiality breach across isolation boundaries."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2019-0174; Kwong et al., 'RAMBleed: Reading Bits in Memory Without Accessing Them' (IEEE S&P 2020)."
+  - id: "17.14"
+    name: "Plundervolt (Voltage Fault Injection)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1300"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Software-controlled undervolting via the CPU's voltage-scaling interface induces faults inside Intel SGX enclaves, corrupting multiplications/AES rounds to extract enclave secrets and break memory integrity. Shows a privileged host can defeat enclave-based confidential computing without physical access.
+      
+    desc_en: "Software-controlled undervolting via the CPU's voltage-scaling interface induces faults inside Intel SGX enclaves, corrupting multiplications/AES rounds to extract enclave secrets and break memory integrity. Shows a privileged host can defeat enclave-based confidential computing without physical access."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2019-11157; Murdock et al., 'Plundervolt: Software-based Fault Injection Attacks against Intel SGX' (IEEE S&P 2020)."
+  - id: "17.15"
+    name: "Hertzbleed (Frequency-Scaling Side Channel)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1300"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Dynamic voltage/frequency scaling makes CPU throughput data-dependent, converting a power side channel into a remote timing channel that leaks cryptographic keys (demonstrated against SIKE) over the network. Turns 'constant-time' crypto non-constant-time in practice; not fixed in microcode, must be handled in crypto libraries.
+      
+    desc_en: "Dynamic voltage/frequency scaling makes CPU throughput data-dependent, converting a power side channel into a remote timing channel that leaks cryptographic keys (demonstrated against SIKE) over the network. Turns 'constant-time' crypto non-constant-time in practice; not fixed in microcode, must be handled in crypto libraries."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: CVE-2022-23823 (AMD), CVE-2022-24436 (Intel); Wang et al., 'Hertzbleed' (USENIX Security 2022)."
+  - id: "17.16"
+    name: "Differential/Simple Power Analysis (DPA/SPA)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1300"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Measuring a device's instantaneous power consumption during cryptographic operations reveals key-dependent variations, recovering keys via statistical (DPA) or direct (SPA) analysis. Primary threat model for smartcards, HSMs, IoT, and hardware wallets; motivates masked/constant-power hardware implementations.
+      
+    desc_en: "Measuring a device's instantaneous power consumption during cryptographic operations reveals key-dependent variations, recovering keys via statistical (DPA) or direct (SPA) analysis. Primary threat model for smartcards, HSMs, IoT, and hardware wallets; motivates masked/constant-power hardware implementations."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Kocher, Jaffe & Jun, 'Differential Power Analysis' (CRYPTO 1999)."
+  - id: "17.17"
+    name: "TEMPEST / Electromagnetic Emanation Eavesdropping"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1300"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Compromising electromagnetic (and RF) emanations radiated by displays, cables, and CPUs can be captured at a distance to reconstruct screen content or extract cryptographic keys. Physical-proximity threat driving TEMPEST/EMSEC shielding requirements for high-assurance and air-gapped environments.
+      
+    desc_en: "Compromising electromagnetic (and RF) emanations radiated by displays, cables, and CPUs can be captured at a distance to reconstruct screen content or extract cryptographic keys. Physical-proximity threat driving TEMPEST/EMSEC shielding requirements for high-assurance and air-gapped environments."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: NSA TEMPEST program; academic basis in Van Eck, 'Electromagnetic Radiation from Video Display Units' (1985); EM key-extraction in Genkin et al. (CHES 2015)."
+  - id: "17.18"
+    name: "Cold Boot Attack"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1300"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] DRAM retains contents for seconds to minutes after power loss (longer when chilled), so an attacker with brief physical access can dump RAM and recover disk-encryption keys (e.g. BitLocker/FileVault/LUKS). Undermines full-disk encryption on unattended/lost devices; motivates memory encryption and key scrubbing on suspend.
+      
+    desc_en: "DRAM retains contents for seconds to minutes after power loss (longer when chilled), so an attacker with brief physical access can dump RAM and recover disk-encryption keys (e.g. BitLocker/FileVault/LUKS). Undermines full-disk encryption on unattended/lost devices; motivates memory encryption and key scrubbing on suspend."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Halderman et al., 'Lest We Remember: Cold Boot Attacks on Encryption Keys' (USENIX Security 2008)."
+  - id: "17.19"
+    name: "Acoustic Cryptanalysis"
+    severity: "Low"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1300"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] High-frequency acoustic emanations from a computer's voltage-regulator/capacitor coil whine vary with the operations executed, allowing key extraction (demonstrated recovering a 4096-bit RSA key from GnuPG via a phone microphone). A physical-proximity confidentiality side channel against crypto implementations.
+      
+    desc_en: "High-frequency acoustic emanations from a computer's voltage-regulator/capacitor coil whine vary with the operations executed, allowing key extraction (demonstrated recovering a 4096-bit RSA key from GnuPG via a phone microphone). A physical-proximity confidentiality side channel against crypto implementations."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Genkin, Shamir & Tromer, 'RSA Key Extraction via Low-Bandwidth Acoustic Cryptanalysis' (CRYPTO 2014)."
+  - id: "17.20"
+    name: "CPU Cache Side-Channel Attacks (Flush+Reload, Prime+Probe, Evict+Time)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1303"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] By timing access to shared CPU caches (last-level cache), an attacker infers a victim's memory-access pattern to recover secrets — Flush+Reload on shared pages, Prime+Probe / Evict+Time without sharing — working cross-core and cross-VM in the cloud. The building-block primitive most transient-execution attacks use for exfiltration; a core argument for cache partitioning between tenants.
+      
+    desc_en: "By timing access to shared CPU caches (last-level cache), an attacker infers a victim's memory-access pattern to recover secrets — Flush+Reload on shared pages, Prime+Probe / Evict+Time without sharing — working cross-core and cross-VM in the cloud. The building-block primitive most transient-execution attacks use for exfiltration; a core argument for cache partitioning between tenants."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Yarom & Falkner, 'Flush+Reload' (USENIX Security 2014); Osvik, Shamir & Tromer, Prime+Probe (CT-RSA 2006); cross-VM demo in Zhang et al. (ACM CCS 2012)."
+  - id: "17.21"
+    name: "PLATYPUS (Intel RAPL power side-channel)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1300"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Unprivileged access to Intel's RAPL energy-reporting interface yields power-consumption values correlated with executed instructions and operand Hamming weights, letting software (no oscilloscope/physical access) leak AES-NI keys from SGX and the kernel, recover RSA keys from mbedTLS, and break KASLR. Turns a physical power side-channel into a software-only one.
+      
+    desc_en: "Unprivileged access to Intel's RAPL energy-reporting interface yields power-consumption values correlated with executed instructions and operand Hamming weights, letting software (no oscilloscope/physical access) leak AES-NI keys from SGX and the kernel, recover RSA keys from mbedTLS, and break KASLR. Turns a physical power side-channel into a software-only one."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Lipp et al., 'PLATYPUS: Software-based Power Side-Channel Attacks on x86', IEEE S&P 2021; CVE-2020-8694 (Linux), CVE-2020-8695 (Intel); mitigated by microcode."
+  - id: "17.22"
+    name: "CLKSCREW (DVFS-based fault injection)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1247"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Abuses unprotected software control over a device's dynamic voltage/frequency scaling (energy-management) registers to push clock frequency past safe limits and induce computation faults — with no physical access or lab equipment. Demonstrated extracting AES keys from ARM TrustZone (via differential fault analysis) and loading self-signed code into TrustZone. Software-only fault injection; precursor to Plundervolt.
+      
+    desc_en: "Abuses unprotected software control over a device's dynamic voltage/frequency scaling (energy-management) registers to push clock frequency past safe limits and induce computation faults — with no physical access or lab equipment. Demonstrated extracting AES keys from ARM TrustZone (via differential fault analysis) and loading self-signed code into TrustZone. Software-only fault injection; precursor to Plundervolt.
+"
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Tang, Sethumadhavan & Stolfo, 'CLKSCREW: Exposing the Perils of Security-Oblivious Energy Management', USENIX Security 2017."
+  - id: "17.23"
+    name: "BadUSB (malicious USB firmware reprogramming)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1299"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] USB device controllers typically lack firmware-authenticity checks, so their firmware can be reflashed to make a benign-looking device covertly emulate a HID keyboard (inject keystrokes/commands), a network card (redirect traffic), or otherwise attack the host. The malice lives in firmware — invisible to antivirus and surviving OS reinstall/file wipe. A hardware trust-boundary attack.
+      
+    desc_en: "USB device controllers typically lack firmware-authenticity checks, so their firmware can be reflashed to make a benign-looking device covertly emulate a HID keyboard (inject keystrokes/commands), a network card (redirect traffic), or otherwise attack the host. The malice lives in firmware — invisible to antivirus and surviving OS reinstall/file wipe. A hardware trust-boundary attack."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Nohl & Lell, 'BadUSB: On Accessories that Turn Evil', Black Hat USA 2014."
+  - id: "17.24"
+    name: "JTAG / Debug Interface Exposure"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1191"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] On-chip debug/test interfaces (JTAG, SWD, UART consoles) left enabled or without access control on shipped devices give an attacker with physical access full read/write of memory and registers, allowing firmware/secret extraction, security-fuse readout, secure-boot bypass, and persistent implants. A pervasive embedded/IoT hardware weakness.
+      
+    desc_en: "On-chip debug/test interfaces (JTAG, SWD, UART consoles) left enabled or without access control on shipped devices give an attacker with physical access full read/write of memory and registers, allowing firmware/secret extraction, security-fuse readout, secure-boot bypass, and persistent implants. A pervasive embedded/IoT hardware weakness."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE CWE-1191 (On-Chip Debug and Test Interface With Improper Access Control), CWE-1244; OWASP IoT / FIRMWARE testing guidance."
+  - id: "17.25"
+    name: "Voltage / Clock Glitching Fault Injection (physical)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1247"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Physically injecting brief voltage droops or clock glitches (or EM/laser pulses) at a precise moment causes an embedded CPU/secure element to skip instructions or corrupt computation — used to bypass secure-boot signature checks, escape read-protection, or perform differential fault analysis to recover crypto keys. The classic hardware fault-attack model for smartcards, secure elements, and IoT/embedded devices; distinct from software-only undervolting (Plundervolt).
+      
+    desc_en: "Physically injecting brief voltage droops or clock glitches (or EM/laser pulses) at a precise moment causes an embedded CPU/secure element to skip instructions or corrupt computation — used to bypass secure-boot signature checks, escape read-protection, or perform differential fault analysis to recover crypto keys. The classic hardware fault-attack model for smartcards, secure elements, and IoT/embedded devices; distinct from software-only undervolting (Plundervolt).
+"
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Foundational: Boneh, DeMillo & Lipton, 'On the Importance of Checking Cryptographic Protocols for Faults' (Bellcore attack, EUROCRYPT 1997); widely used in device pentesting (ChipWhisperer). CWE-1247/CWE-1332."
+  - id: "17.26"
+    name: "Hardware Trojans"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1278"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Malicious modifications inserted into an integrated circuit during design or (untrusted) fabrication — a hidden trigger activates a payload that leaks secrets, disables functionality, or degrades reliability. Because they live below the software/firmware layer they evade conventional defenses; a recognized supply-chain-of-silicon threat and active research field.
+      
+    desc_en: "Malicious modifications inserted into an integrated circuit during design or (untrusted) fabrication — a hidden trigger activates a payload that leaks secrets, disables functionality, or degrades reliability. Because they live below the software/firmware layer they evade conventional defenses; a recognized supply-chain-of-silicon threat and active research field."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Academic/industry field: Tehranipoor & Koushanfar, 'A Survey of Hardware Trojan Taxonomy and Detection', IEEE Design & Test 2010; DARPA TRUST program; MITRE CWE-1278 / hardware CWE view (CWE-1194)."

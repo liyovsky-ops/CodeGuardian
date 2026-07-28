@@ -1,0 +1,14 @@
+id: "mobile"
+num: 15
+name: "Mobile Security"
+icon: "📱"
+color: "#00b894"
+difficulty: "Easy → Hard"
+desc: |
+  Zagrożenia specyficzne dla aplikacji mobilnych (Android/iOS): niebezpieczne przechowywanie danych, nadużycia WebView, przejęcie Intentów, słabości biometrii i ochrony binarki. Oparte na OWASP Mobile Top 10 (2024) oraz OWASP MASVS/MASTG.
+desc_en: |
+  Threats specific to mobile applications (Android/iOS): insecure data storage, WebView abuse, Intent hijacking, weak biometric auth, and insufficient binary protection. Based on the OWASP Mobile Top 10 (2024) and OWASP MASVS/MASTG.
+verdict: |
+  Wiele z tych zagrożeń wymaga analizy binarki (APK/IPA) lub testów dynamicznych na urządzeniu — SAST kodu źródłowego wykrywa tylko część (np. hardkodowane sekrety), reszta (Intent hijacking, WebView bridge) wymaga MASTG-owych testów dynamicznych.
+verdict_en: |
+  Many of these threats require binary analysis (APK/IPA) or on-device dynamic testing — source-level SAST only catches part of this (e.g. hardcoded secrets); the rest (Intent hijacking, WebView bridge exposure) needs MASTG-style dynamic testing.

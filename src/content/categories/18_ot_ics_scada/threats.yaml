@@ -1,0 +1,343 @@
+threats:
+  - id: "18.1"
+    name: "Modbus Unauthorized Command Message (no authentication)"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-306"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Modbus (TCP/RTU) has no authentication, integrity, or encryption, so any host with network reach can send unauthorized write/control function codes (e.g. Write Single Coil/Register) to a PLC and drive actuators or setpoints.
+      
+    desc_en: "Modbus (TCP/RTU) has no authentication, integrity, or encryption, so any host with network reach can send unauthorized write/control function codes (e.g. Write Single Coil/Register) to a PLC and drive actuators or setpoints."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0855 (Unauthorized Command Message); Modbus lacks authentication by design."
+  - id: "18.2"
+    name: "DNP3 Protocol Manipulation (missing authentication/encryption)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-319"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Base DNP3 provides no encryption or message authentication, exposing SCADA links to eavesdropping, man-in-the-middle command modification, and replay of legitimate control/reporting messages across substations and RTUs.
+      
+    desc_en: "Base DNP3 provides no encryption or message authentication, exposing SCADA links to eavesdropping, man-in-the-middle command modification, and replay of legitimate control/reporting messages across substations and RTUs."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0830 (Adversary-in-the-Middle); DNP3 baseline lacks auth (Secure Authentication extension often not deployed)."
+  - id: "18.3"
+    name: "Rogue Master / Master Station Impersonation"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-290"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Because ICS field protocols do not authenticate the master, an attacker can pose as a legitimate master/SCADA server (a 'rogue master') to issue commands to slaves/RTUs or poll for process data.
+      
+    desc_en: "Because ICS field protocols do not authenticate the master, an attacker can pose as a legitimate master/SCADA server (a 'rogue master') to issue commands to slaves/RTUs or poll for process data."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0848 (Rogue Master)."
+  - id: "18.4"
+    name: "Spoof Reporting Message (falsified sensor/telemetry data)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-345"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Adversaries forge reporting messages so the HMI/historian shows normal process values while the physical process is being manipulated, blinding operators to the real state of the plant.
+      
+    desc_en: "Adversaries forge reporting messages so the HMI/historian shows normal process values while the physical process is being manipulated, blinding operators to the real state of the plant."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0856 (Spoof Reporting Message); technique used by Stuxnet to mask centrifuge state."
+  - id: "18.5"
+    name: "Internet-Accessible / Public-Facing ICS Device Exposure"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-284"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] PLCs, RTUs, and HMIs directly reachable from the internet (often discoverable via Shodan) let attackers interact with control logic without first breaching an enterprise perimeter.
+      
+    desc_en: "PLCs, RTUs, and HMIs directly reachable from the internet (often discoverable via Shodan) let attackers interact with control logic without first breaching an enterprise perimeter."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0883 (Internet Accessible Device), T0819 (Exploit Public-Facing Application)."
+  - id: "18.6"
+    name: "Purdue Model Level-Crossing / IT-OT Segmentation Failure"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-923"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Flat or poorly segmented networks let an IT-side compromise pivot down the Purdue model into control (Level 1/2) networks; weak DMZ/firewall rules between enterprise and OT are the primary lateral-movement path.
+      
+    desc_en: "Flat or poorly segmented networks let an IT-side compromise pivot down the Purdue model into control (Level 1/2) networks; weak DMZ/firewall rules between enterprise and OT are the primary lateral-movement path."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Purdue Enterprise Reference Architecture / ISA-95, IEC 62443 zone-and-conduit segmentation; pivot pattern seen in Ukraine 2015."
+  - id: "18.7"
+    name: "Default / Hardcoded Credentials in Industrial Devices"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-798"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] PLCs, HMIs, RTUs, and industrial gateways frequently ship with default or hardcoded passwords that are rarely changed, granting attackers administrative access to engineering and control functions.
+      
+    desc_en: "PLCs, HMIs, RTUs, and industrial gateways frequently ship with default or hardcoded passwords that are rarely changed, granting attackers administrative access to engineering and control functions."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0859 (Valid Accounts); recurring theme in ICS-CERT/CISA advisories."
+  - id: "18.8"
+    name: "Unpatched Known Vulnerabilities (uptime-driven patch avoidance)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1329"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Continuous-availability requirements and vendor certification lock-in mean ICS devices run outdated firmware with known, exploitable CVEs for years, leaving publicly documented bugs unremediated.
+      
+    desc_en: "Continuous-availability requirements and vendor certification lock-in mean ICS devices run outdated firmware with known, exploitable CVEs for years, leaving publicly documented bugs unremediated."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: IEC 62443 patch-management guidance; recognized ICS operational constraint documented by CISA."
+  - id: "18.9"
+    name: "Wireless ICS Compromise / RF Sniffing"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-311"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Proprietary and standard industrial RF links (e.g. Zigbee, WirelessHART, unlicensed radio telemetry) with weak or absent encryption allow attackers to sniff process data or inject commands without wired access.
+      
+    desc_en: "Proprietary and standard industrial RF links (e.g. Zigbee, WirelessHART, unlicensed radio telemetry) with weak or absent encryption allow attackers to sniff process data or inject commands without wired access."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0860 (Wireless Compromise), T0887 (Wireless Sniffing)."
+  - id: "18.10"
+    name: "PLC Control Logic / Program Manipulation"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-94"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Attackers download or modify PLC ladder/program logic to change how the controller drives physical equipment, altering process behavior directly at the control layer.
+      
+    desc_en: "Attackers download or modify PLC ladder/program logic to change how the controller drives physical equipment, altering process behavior directly at the control layer."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0889 (Modify Program), T0821 (Modify Controller Tasking), T0843 (Program Download); core of Stuxnet."
+  - id: "18.11"
+    name: "PLC/Field Device Firmware Tampering"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-494"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Uploading malicious or backdoored firmware to a PLC, RTU, or protection relay gives persistent, low-level control that survives program reloads and can hide from engineering software.
+      
+    desc_en: "Uploading malicious or backdoored firmware to a PLC, RTU, or protection relay gives persistent, low-level control that survives program reloads and can hide from engineering software."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0857 (System Firmware) / T1693 (Modify Firmware)."
+  - id: "18.12"
+    name: "Engineering Workstation Compromise as Control-Plane Pivot"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-506"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] The engineering workstation holds project files and programming software with trusted write access to controllers; compromising it (or infecting shared project files) lets an attacker push malicious logic to every connected PLC.
+      
+    desc_en: "The engineering workstation holds project files and programming software with trusted write access to controllers; compromising it (or infecting shared project files) lets an attacker push malicious logic to every connected PLC."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0873 (Project File Infection), T0864 (Transient Cyber Asset); Stuxnet infected Step7 project files."
+  - id: "18.13"
+    name: "HMI Manipulation / Manipulation of View"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-451"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Compromising the HMI lets attackers directly operate controls (e.g. open breakers) or present operators a falsified view of the process, both delaying response and enabling direct physical action.
+      
+    desc_en: "Compromising the HMI lets attackers directly operate controls (e.g. open breakers) or present operators a falsified view of the process, both delaying response and enabling direct physical action."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0832 (Manipulation of View), T0831 (Manipulation of Control); operator HMIs hijacked in Ukraine 2015 grid attack."
+  - id: "18.14"
+    name: "Alarm Suppression / Modify Alarm Settings"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-778"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Disabling or altering process alarms and protective-relay settings prevents operators and automated systems from detecting or reacting to unsafe conditions during an attack.
+      
+    desc_en: "Disabling or altering process alarms and protective-relay settings prevents operators and automated systems from detecting or reacting to unsafe conditions during an attack."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0878 (Alarm Suppression), T0838 (Modify Alarm Settings); Industroyer disabled protective relays."
+  - id: "18.15"
+    name: "Control Device Denial of Service / Forced Restart"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Flooding, malformed packets (e.g. Industroyer's Siemens SIPROTEC DoS), or restart/shutdown commands take controllers and protection devices offline, causing loss of control or view of the process.
+      
+    desc_en: "Flooding, malformed packets (e.g. Industroyer's Siemens SIPROTEC DoS), or restart/shutdown commands take controllers and protection devices offline, causing loss of control or view of the process."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0814 (Denial of Service), T0816 (Device Restart/Shutdown); Industroyer used a SIPROTEC DoS module (CVE-2015-5374)."
+  - id: "18.16"
+    name: "Safety Instrumented System (SIS) Targeting — Loss of Safety"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-693"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Malware that reprograms or disables Safety Instrumented Systems removes the last automated safeguard against hazardous conditions, enabling physical damage, environmental release, or loss of life.
+      
+    desc_en: "Malware that reprograms or disables Safety Instrumented Systems removes the last automated safeguard against hazardous conditions, enabling physical damage, environmental release, or loss of life."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK for ICS T0880 (Loss of Safety); TRITON/TRISIS malware (2017) targeting Schneider Triconex SIS controllers."
+  - id: "18.17"
+    name: "Stuxnet-Class Physical-Damage Attack (logic manipulation + state masking)"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1384"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A combined attack that manipulates control logic to drive equipment beyond safe limits (e.g. varying centrifuge speeds) while spoofing sensor/reporting data so operators and monitoring see normal values until physical damage occurs.
+      
+    desc_en: "A combined attack that manipulates control logic to drive equipment beyond safe limits (e.g. varying centrifuge speeds) while spoofing sensor/reporting data so operators and monitoring see normal values until physical damage occurs."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Stuxnet, 2010 (Natanz centrifuges); maps to T0836 Modify Parameter + T0856 Spoof Reporting Message + T0831 Manipulation of Control."
+  - id: "18.18"
+    name: "Grid Protocol Abuse for Substation Sabotage (Industroyer-class)"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-306"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Purpose-built malware speaks native grid protocols (IEC 60870-5-101/104, IEC 61850, OPC DA) to autonomously issue breaker-open and control commands across substations, causing wide-area power loss.
+      
+    desc_en: "Purpose-built malware speaks native grid protocols (IEC 60870-5-101/104, IEC 61850, OPC DA) to autonomously issue breaker-open and control commands across substations, causing wide-area power loss."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Industroyer/CrashOverride (2016 Ukraine) and Industroyer2 (2022); MITRE ATT&CK for ICS T0855 (Unauthorized Command Message), T0843 (Program Download)."

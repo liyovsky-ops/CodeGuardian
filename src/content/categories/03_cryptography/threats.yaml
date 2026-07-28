@@ -9,15 +9,18 @@ threats:
       - "CWE-328"
     desc: |
       MD5/SHA1 do podpisów lub haseł, DES/3DES/RC4 do szyfrowania. Złamane lub trywialne do brute-force.
+
     desc_en: "Passwords stored as MD5/SHA1/SHA256 hashes without salting — rainbow tables or GPU attacks crack them in minutes."
     lang: "python"
     vuln: |
       # PODATNE
       import hashlib; hashlib.md5(password.encode()).hexdigest()  # hasło
+
     safe: |
       # BEZPIECZNE — KDF do haseł
       import bcrypt; bcrypt.hashpw(password.encode(), bcrypt.gensalt())
       # lub argon2id / scrypt / PBKDF2 z dużą liczbą iteracji
+
   - id: "3.2"
     name: "Hasła hashowane szybkim hashem (bez KDF)"
     severity: "High"
@@ -27,13 +30,16 @@ threats:
       - "CWE-916"
     desc: |
       Użycie SHA-256 (nawet z solą) do haseł — szybki hash umożliwia masowy brute-force na GPU. Hasła wymagają wolnego KDF.
+
     desc_en: "Using deprecated/broken cryptographic algorithms: MD5, SHA1, DES, 3DES, RC4, ECB mode — known to be broken against modern attacks."
     lang: "python"
     vuln: |
       # PODATNE — szybki hash, nawet z solą
       hashlib.sha256(salt + password).hexdigest()
+
     safe: |
       # BEZPIECZNE — argon2id (preferowane) / bcrypt / scrypt
+
   - id: "3.3"
     name: "Tryb ECB"
     severity: "High"
@@ -43,14 +49,17 @@ threats:
       - "CWE-327"
     desc: |
       ECB szyfruje identyczne bloki tak samo — ujawnia wzorce w danych (słynny „pingwin ECB”). Brak semantycznego bezpieczeństwa.
+
     desc_en: "AES-ECB mode: identical plaintext blocks produce identical ciphertext — reveals data patterns and enables block rearrangement without the key."
     lang: "python"
     vuln: |
       # PODATNE
       Cipher(algorithms.AES(key), modes.ECB())
+
     safe: |
       # BEZPIECZNE — AEAD z losowym nonce
       AESGCM(key).encrypt(os.urandom(12), data, aad)
+
   - id: "3.4"
     name: "Statyczny / przewidywalny / reużywany IV/nonce"
     severity: "Critical"
@@ -61,14 +70,17 @@ threats:
       - "CWE-330"
     desc: |
       Reużycie nonce w GCM/CTR jest katastrofalne (ujawnia plaintext, łamie autentyczność). Stały IV w CBC = wyciek równości plaintextów.
+
     desc_en: "Reusing a nonce in stream cipher or AES-CTR/GCM — XOR of two ciphertexts encrypted with the same key+nonce reveals the plaintext."
     lang: "python"
     vuln: |
       # PODATNE — stały nonce
       NONCE = b"000000000000"; AESGCM(key).encrypt(NONCE, data, None)
+
     safe: |
       # BEZPIECZNE — losowy unikalny nonce per wiadomość
       AESGCM(key).encrypt(os.urandom(12), data, None)
+
     note: "Critical dla GCM/CTR reuse, High dla CBC."
   - id: "3.5"
     name: "Hardcoded keys / sekrety w kodzie"
@@ -80,14 +92,17 @@ threats:
       - "CWE-321"
     desc: |
       Klucz szyfrujący/HMAC/API zaszyty w źródle lub repo. Dostępny każdemu z dostępem do kodu, niemożliwy do rotacji bez deployu.
+
     desc_en: "Using random/Math.random (PRNG) instead of os.urandom/secrets (CSPRNG) for tokens, session IDs, or cryptographic keys — output is predictable."
     lang: "python"
     vuln: |
       # PODATNE
       SECRET_KEY = "s3cr3t-prod-key-2026"
+
     safe: |
       # BEZPIECZNE — z env / secret managera (Vault, KMS, SOPS)
       SECRET_KEY = os.environ["SECRET_KEY"]
+
   - id: "3.6"
     name: "Słaby RNG do celów bezpieczeństwa"
     severity: "High"
@@ -98,14 +113,17 @@ threats:
       - "CWE-330"
     desc: |
       Użycie random / Math.random() (PRNG, nie kryptograficzny) do tokenów, sesji, resetów haseł — przewidywalne.
+
     desc_en: "TLS certificate verification disabled (verify=False, InsecureSkipVerify=True) — enables MITM attack: an attacker can intercept and modify encrypted traffic."
     lang: "python"
     vuln: |
       # PODATNE
       import random; token = str(random.randint(0, 10**9))
+
     safe: |
       # BEZPIECZNE
       import secrets; token = secrets.token_urlsafe(32)
+
   - id: "3.7"
     name: "Timing attacks (porównania niestałoczasowe)"
     severity: "Medium"
@@ -115,14 +133,17 @@ threats:
       - "CWE-208"
     desc: |
       Porównanie sekretów (token, HMAC, hasło) zwykłym == przerywa się przy pierwszej różnicy — wyciek bajt po bajcie przez pomiar czasu.
+
     desc_en: "String comparison with `==` for MACs, tokens, or password hashes — vulnerable to timing attacks (different execution time based on match length, enabling secret recovery)."
     lang: "python"
     vuln: |
       # PODATNE
       if user_token == real_token: ...
+
     safe: |
       # BEZPIECZNE
       import hmac; hmac.compare_digest(user_token, real_token)
+
     note: "Severity rośnie do High dla zdalnych HMAC w niektórych warunkach."
   - id: "3.8"
     name: "Brak / niewłaściwa weryfikacja certyfikatów TLS"
@@ -133,14 +154,17 @@ threats:
       - "CWE-295"
     desc: |
       Wyłączona weryfikacja certyfikatu (verify=False) otwiera MITM.
+
     desc_en: "Cryptographic key or secret hardcoded in source code or config file — rotated by reading the code, not by rotating the key."
     lang: "python"
     vuln: |
       # PODATNE
       requests.get(url, verify=False)
+
     safe: |
       # BEZPIECZNE — domyślnie verify=True; pinning gdzie potrzeba
       requests.get(url)
+
   - id: "3.9"
     name: "Padding Oracle / brak AEAD (encrypt bez MAC)"
     severity: "High"
@@ -151,14 +175,17 @@ threats:
       - "CWE-696"
     desc: |
       CBC bez uwierzytelnienia + komunikaty/zachowanie różne dla błędnego paddingu → atakujący odszyfrowuje/podrabia. Ogólnie: szyfrowanie bez weryfikacji integralności (encrypt-then-MAC lub AEAD).
+
     desc_en: "Password-based encryption with a weak KDF (MD5/SHA1 without iterations) instead of bcrypt/Argon2/scrypt — dictionary attacks run at full GPU speed."
     lang: "python"
     vuln: |
       # PODATNE — CBC bez MAC, błąd paddingu rozróżnialny
       pt = unpad(AES_CBC(key, iv).decrypt(ct))  # padding error -> oracle
+
     safe: |
       # BEZPIECZNE — AEAD (autentyczność wbudowana)
       AESGCM(key).decrypt(nonce, ct, aad)   # InvalidTag = jednolity błąd
+
   - id: "3.10"
     name: "Słabe parametry KDF / brak soli / brak HKDF"
     severity: "High"
@@ -170,15 +197,18 @@ threats:
       - "CWE-760"
     desc: |
       PBKDF2 ze zbyt małą liczbą iteracji, brak unikalnej soli (rainbow tables), klucz wyprowadzany z hasła bez KDF, używanie surowego sekretu jako klucza bez HKDF.
+
     desc_en: "TLS 1.0/1.1 enabled; support for weak cipher suites (RC4, NULL, EXPORT, DES, 3DES, MD5 MACs) — susceptible to BEAST, POODLE, FREAK, DROWN, SLOTH."
     lang: "python"
     vuln: |
       # PODATNE — mało iteracji, stała sól
       PBKDF2(pwd, salt=b"static", iterations=1000)
+
     safe: |
       # BEZPIECZNE — argon2id / scrypt lub PBKDF2 z dużą liczbą iteracji + losowa sól
       from argon2 import PasswordHasher; PasswordHasher().hash(pwd)
       # do kluczy: HKDF(master, salt=os.urandom(16), info=context)
+
   - id: "3.11"
     name: "Słabe podpisy / weak RSA padding / krótkie klucze"
     severity: "High"
@@ -189,16 +219,19 @@ threats:
       - "CWE-780"
     desc: |
       RSA < 2048 bitów, RSA z PKCS#1 v1.5 (Bleichenbacher) zamiast OAEP/PSS, klucze symetryczne < 128 bit, krzywe spoza standardu.
+
     desc_en: "Encryption that is reversible (DES, AES-ECB with key in code) instead of a one-way hash (bcrypt/Argon2) for password storage — key compromise reveals all passwords."
     lang: "python"
     vuln: |
       # PODATNE — RSA 1024 + PKCS#1 v1.5
       key = rsa.generate_private_key(public_exponent=65537, key_size=1024)
       ciphertext = pub.encrypt(data, padding.PKCS1v15())
+
     safe: |
       # BEZPIECZNE — RSA >=2048/3072 + OAEP do szyfrowania, PSS do podpisu
       key = rsa.generate_private_key(public_exponent=65537, key_size=3072)
       pub.encrypt(data, padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
+
   - id: "3.12"
     name: "Pominięta / błędna weryfikacja podpisu"
     severity: "Critical"
@@ -208,15 +241,18 @@ threats:
       - "CWE-347"
     desc: |
       Weryfikacja podpisu pominięta, obsługa błędu połykana (verify w try/except bez reakcji), lub porównanie podpisu zwykłym == zamiast verify. Dotyczy webhooków, aktualizacji, tokenów.
+
     desc_en: "RSA without OAEP padding (raw RSA, PKCS#1 v1.5) — Bleichenbacher/padding oracle attack enables decryption or signature forgery."
     lang: "python"
     vuln: |
       # PODATNE — wynik weryfikacji ignorowany
       try: verify(sig, data, pub)
       except Exception: pass   # i tak przetwarza
+
     safe: |
       # BEZPIECZNE — błąd weryfikacji = twardy odrzut
       if not verify(sig, data, pub): abort(401)
+
   - id: "3.13"
     name: "Reużycie klucza między kontekstami / brak rotacji"
     severity: "Medium"
@@ -227,15 +263,18 @@ threats:
       - "CWE-320"
     desc: |
       Ten sam klucz do szyfrowania i HMAC, jeden klucz dla wszystkich środowisk/tenantów, brak rotacji i wersjonowania kluczy (rotacja niemożliwa bez ponownego szyfrowania).
+
     desc_en: "Static/deterministic IV in AES-CBC — identical plaintexts produce identical ciphertexts; CBC with known IV enables chosen-plaintext attack."
     lang: "python"
     vuln: |
       # PODATNE — jeden KEY do enc i mac, brak wersji
       mac = hmac.new(KEY, ct).digest(); ct = enc(KEY, pt)
+
     safe: |
       # BEZPIECZNE — osobne klucze (HKDF z różnym info), key id w danych, rotacja
       k_enc = hkdf(master, info=b"enc"); k_mac = hkdf(master, info=b"mac")
       store({"kid": current_kid, "ct": ct})
+
   - id: "3.14"
     name: "Cache-Timing Attacks"
     severity: "Medium"
@@ -246,15 +285,18 @@ threats:
       - "CWE-385"
     desc: |
       Porównania zależne od danych (czas/cache/zużycie energii) wyciekają sekrety bit po bicie.
+
     desc_en: "GCM tag truncated (e.g., 32 bits instead of 128) — attacker can forge messages with 2^32 attempts instead of 2^128."
     lang: "python"
     vuln: |
       def check(sig, expected):
           return sig == expected  # early-exit, niestałoczasowe
+
     safe: |
       import hmac
       def check(sig, expected):
           return hmac.compare_digest(sig, expected)  # constant time
+
   - id: "3.15"
     name: "Fault Injection Attack"
     severity: "Medium"
@@ -265,15 +307,18 @@ threats:
       - "CWE-385"
     desc: |
       Porównania zależne od danych (czas/cache/zużycie energii) wyciekają sekrety bit po bicie.
+
     desc_en: "Missing HSTS header or short max-age — browser allows plain HTTP connection; MITM possible on first visit (SSL stripping)."
     lang: "python"
     vuln: |
       def check(sig, expected):
           return sig == expected  # early-exit, niestałoczasowe
+
     safe: |
       import hmac
       def check(sig, expected):
           return hmac.compare_digest(sig, expected)  # constant time
+
   - id: "3.16"
     name: "Padding Oracle Attacks"
     severity: "High"
@@ -284,15 +329,18 @@ threats:
       - "CWE-347"
     desc: |
       Rozróżnialne błędy paddingu (CBC bez MAC) pozwalają odszyfrować/zmienić ciphertext bez klucza.
+
     desc_en: "JWT signed with a symmetric secret (HS256) shared between services — compromise of one service enables forging tokens for all others."
     lang: "python"
     vuln: |
       # AES-CBC bez uwierzytelnienia, różne błędy paddingu
       pt = unpad(cipher.decrypt(ct))  # ujawnia padding error
+
     safe: |
       # AEAD — AES-GCM, uwierzytelnia ciphertext
       from cryptography.hazmat.primitives.ciphers.aead import AESGCM
       pt = AESGCM(key).decrypt(nonce, ct, aad)  # InvalidTag, nie padding oracle
+
   - id: "3.17"
     name: "Power Analysis Attack"
     severity: "Medium"
@@ -301,18 +349,21 @@ threats:
     cwe: []
     desc: |
       Power Analysis Attack — zagrożenie z kategorii Cryptography wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+
     desc_en: "Self-signed TLS certificate that can be generated by anyone and accepted by the client without pinning — enables MITM."
     lang: "python"
     vuln: |
       # PODATNE — Power Analysis Attack
       # brak walidacji / kontroli (przykład poglądowy)
       result = handle(untrusted_input)
+
     safe: |
       # BEZPIECZNE — Power Analysis Attack
       # waliduj wejście, stosuj allowlistę i least privilege
       if not is_valid(untrusted_input):
           raise ValueError('odrzucone')
       result = handle(untrusted_input)
+
   - id: "3.18"
     name: "Timing Side-Channel Attack"
     severity: "Medium"
@@ -323,15 +374,18 @@ threats:
       - "CWE-385"
     desc: |
       Porównania zależne od danych (czas/cache/zużycie energii) wyciekają sekrety bit po bicie.
+
     desc_en: "Too-short RSA/DSA/DH key (< 2048 bits) — factorizable within reach of modern hardware or a nation-state actor."
     lang: "python"
     vuln: |
       def check(sig, expected):
           return sig == expected  # early-exit, niestałoczasowe
+
     safe: |
       import hmac
       def check(sig, expected):
           return hmac.compare_digest(sig, expected)  # constant time
+
   - id: "3.19"
     name: "Weak Key Generation"
     severity: "High"
@@ -342,14 +396,17 @@ threats:
       - "CWE-331"
     desc: |
       Klucze generowane ze słabego źródła entropii lub o niewystarczającej długości są łatwe do złamania.
+
     desc_en: "Cryptographic key stored unencrypted in the database, configuration file, or source code — full compromise if the storage is breached."
     lang: "python"
     vuln: |
       import random
       key = bytes(random.randint(0,255) for _ in range(16))  # nie-CSPRNG
+
     safe: |
       import secrets
       key = secrets.token_bytes(32)  # 256-bit, CSPRNG
+
   - id: "3.20"
     name: "ECB Mode Encryption"
     severity: "Medium"
@@ -359,14 +416,17 @@ threats:
       - "CWE-327"
     desc: |
       Tryb ECB szyfruje identyczne bloki tak samo — ujawnia wzorce w danych.
+
     desc_en: "Outdated TLS protocol (TLS 1.0/1.1) or weak cipher suites enabled — susceptible to known protocol-level attacks."
     lang: "python"
     vuln: |
       from Crypto.Cipher import AES
       c = AES.new(key, AES.MODE_ECB)
+
     safe: |
       from cryptography.hazmat.primitives.ciphers.aead import AESGCM
       ct = AESGCM(key).encrypt(nonce, pt, None)  # AEAD zamiast ECB
+
   - id: "3.21"
     name: "Hardcoded Cryptographic Keys"
     severity: "High"
@@ -377,12 +437,16 @@ threats:
       - "CWE-798"
     desc: |
       Klucz kryptograficzny zaszyty w kodzie lub trzymany jawnie — kompromitacja repo = kompromitacja szyfrowania.
+
+    desc_en: ""
     lang: "python"
     vuln: |
       KEY = b'0123456789abcdef'  # hardcoded w repo
+
     safe: |
       import os
       KEY = bytes.fromhex(os.environ['ENC_KEY'])  # z KMS/secret store
+
   - id: "3.22"
     name: "Hash Collision Attacks"
     severity: "Medium"
@@ -392,13 +456,17 @@ threats:
       - "CWE-328"
     desc: |
       MAC oparty na MD5/SHA1(secret||msg) podatny na length extension; słabe hashe na kolizje.
+
+    desc_en: ""
     lang: "python"
     vuln: |
       import hashlib
       def mac(msg): return hashlib.sha1(SECRET + msg).hexdigest()  # length extension
+
     safe: |
       import hmac, hashlib
       def mac(msg): return hmac.new(SECRET, msg, hashlib.sha256).hexdigest()
+
   - id: "3.23"
     name: "Improper Certificate Validation"
     severity: "High"
@@ -409,13 +477,17 @@ threats:
       - "CWE-300"
     desc: |
       Wyłączona/niepoprawna weryfikacja certyfikatu TLS pozwala na atak MITM.
+
+    desc_en: ""
     lang: "python"
     vuln: |
       import requests
       requests.get(url, verify=False)  # akceptuje dowolny cert
+
     safe: |
       import requests
       requests.get(url, verify='/etc/ssl/certs/ca.pem')  # weryfikuje łańcuch
+
   - id: "3.24"
     name: "Insecure Key Storage"
     severity: "High"
@@ -426,12 +498,16 @@ threats:
       - "CWE-798"
     desc: |
       Klucz kryptograficzny zaszyty w kodzie lub trzymany jawnie — kompromitacja repo = kompromitacja szyfrowania.
+
+    desc_en: ""
     lang: "python"
     vuln: |
       KEY = b'0123456789abcdef'  # hardcoded w repo
+
     safe: |
       import os
       KEY = bytes.fromhex(os.environ['ENC_KEY'])  # z KMS/secret store
+
   - id: "3.25"
     name: "Insufficient Key Length"
     severity: "High"
@@ -442,13 +518,17 @@ threats:
       - "CWE-331"
     desc: |
       Klucze generowane ze słabego źródła entropii lub o niewystarczającej długości są łatwe do złamania.
+
+    desc_en: ""
     lang: "python"
     vuln: |
       import random
       key = bytes(random.randint(0,255) for _ in range(16))  # nie-CSPRNG
+
     safe: |
       import secrets
       key = secrets.token_bytes(32)  # 256-bit, CSPRNG
+
   - id: "3.26"
     name: "Length Extension Attack"
     severity: "Medium"
@@ -457,17 +537,21 @@ threats:
     cwe: []
     desc: |
       Length Extension Attack — zagrożenie z kategorii Cryptography wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+
+    desc_en: ""
     lang: "python"
     vuln: |
       # PODATNE — Length Extension Attack
       # brak walidacji / kontroli (przykład poglądowy)
       result = handle(untrusted_input)
+
     safe: |
       # BEZPIECZNE — Length Extension Attack
       # waliduj wejście, stosuj allowlistę i least privilege
       if not is_valid(untrusted_input):
           raise ValueError('odrzucone')
       result = handle(untrusted_input)
+
   - id: "3.27"
     name: "Man-in-the-Middle (MITM)"
     severity: "High"
@@ -478,13 +562,17 @@ threats:
       - "CWE-300"
     desc: |
       Wyłączona/niepoprawna weryfikacja certyfikatu TLS pozwala na atak MITM.
+
+    desc_en: ""
     lang: "python"
     vuln: |
       import requests
       requests.get(url, verify=False)  # akceptuje dowolny cert
+
     safe: |
       import requests
       requests.get(url, verify='/etc/ssl/certs/ca.pem')  # weryfikuje łańcuch
+
   - id: "3.28"
     name: "Replay Attack"
     severity: "Medium"
@@ -493,17 +581,21 @@ threats:
     cwe: []
     desc: |
       Replay Attack — zagrożenie z kategorii Cryptography wskazane przez audyt arena. Wymaga walidacji wejścia i kontroli po stronie serwera.
+
+    desc_en: ""
     lang: "python"
     vuln: |
       # PODATNE — Replay Attack
       # brak walidacji / kontroli (przykład poglądowy)
       result = handle(untrusted_input)
+
     safe: |
       # BEZPIECZNE — Replay Attack
       # waliduj wejście, stosuj allowlistę i least privilege
       if not is_valid(untrusted_input):
           raise ValueError('odrzucone')
       result = handle(untrusted_input)
+
   - id: "cat_3_research01"
     name: "Weak cipher algorithm (e.g., des, rc4)"
     severity: "Medium"
@@ -512,15 +604,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Weak cipher algorithm (e.g., des, rc4)" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research02"
     name: "Insufficiently random values"
     severity: "Medium"
@@ -529,15 +624,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insufficiently random values" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research03"
     name: "Predictable random numbers"
     severity: "Medium"
@@ -546,15 +644,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Predictable random numbers" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research04"
     name: "Protocol downgrade attack"
     severity: "Medium"
@@ -563,15 +664,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Protocol downgrade attack" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research05"
     name: "Nonce reuse in stream ciphers"
     severity: "Medium"
@@ -580,15 +684,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Nonce reuse in stream ciphers" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research06"
     name: "Key reuse across sessions"
     severity: "Medium"
@@ -597,15 +704,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Key reuse across sessions" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research07"
     name: "Known plaintext attack"
     severity: "Medium"
@@ -614,15 +724,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Known plaintext attack" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research08"
     name: "Chosen ciphertext attack"
     severity: "Medium"
@@ -631,32 +744,36 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Chosen ciphertext attack" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research09"
-    name: "Robot attack"
-    severity: "Medium"
+    name: "ROBOT (Return Of Bleichenbacher's Oracle Threat)"
+    severity: "High"
     difficulty: "Unknown"
-    confidence: "RESEARCH"
-    cwe: []
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-203"
     desc: |
-      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Robot attack" wskazane w analizie arena.
-    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
+      [TŁUMACZENIE OCZEKUJĄCE] A 2017 resurrection of Bleichenbacher's 1998 adaptive-chosen-ciphertext padding-oracle attack on RSA PKCS#1 v1.5 key exchange: distinguishable server responses to malformed padding act as an oracle allowing decryption of the RSA-encrypted premaster secret or forging of signatures (demonstrated against facebook.com). Fix: deprecate RSA PKCS#1 v1.5 key exchange.
+    desc_en: "A 2017 resurrection of Bleichenbacher's 1998 adaptive-chosen-ciphertext padding-oracle attack on RSA PKCS#1 v1.5 key exchange: distinguishable server responses to malformed padding act as an oracle allowing decryption of the RSA-encrypted premaster secret or forging of signatures (demonstrated against facebook.com). Fix: deprecate RSA PKCS#1 v1.5 key exchange."
     lang: "unknown"
     vuln: |
-      # Wymaga weryfikacji — brak przykładu kodu
-      # To zagrożenie pojawił się tylko u jednego modelu AI
-      # Potrzebny dalszy research przed dodaniem przykładu
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
     safe: |
-      # Brak zweryfikowanego przykładu bezpiecznego kodu
-      # Po weryfikacji zagrożenia zostanie dodany przykład
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: Böck, Somorovsky & Young, 'Return Of Bleichenbacher's Oracle Threat', USENIX Security 2018; robotattack.org. NOTE: exists in catalog only as unverified stub 'Robot attack' (~line 644) — this is the verified entry."
   - id: "cat_3_research10"
     name: "Ciphertext-only attack"
     severity: "Medium"
@@ -665,15 +782,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ciphertext-only attack" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research11"
     name: "Key reuse attack"
     severity: "Medium"
@@ -682,32 +802,36 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Key reuse attack" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research12"
-    name: "Poodle attack"
-    severity: "Medium"
+    name: "POODLE (Padding Oracle On Downgraded Legacy Encryption)"
+    severity: "High"
     difficulty: "Unknown"
-    confidence: "RESEARCH"
-    cwe: []
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-310"
     desc: |
-      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Poodle attack" wskazane w analizie arena.
-    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
+      [TŁUMACZENIE OCZEKUJĄCE] A MITM forces a downgrade to SSL 3.0 and exploits its non-deterministic CBC padding as a padding oracle, decrypting a chosen ciphertext byte in as few as 256 requests (e.g. recovering a session cookie). Fixed by disabling SSLv3 (and via TLS_FALLBACK_SCSV).
+    desc_en: "A MITM forces a downgrade to SSL 3.0 and exploits its non-deterministic CBC padding as a padding oracle, decrypting a chosen ciphertext byte in as few as 256 requests (e.g. recovering a session cookie). Fixed by disabling SSLv3 (and via TLS_FALLBACK_SCSV)."
     lang: "unknown"
     vuln: |
-      # Wymaga weryfikacji — brak przykładu kodu
-      # To zagrożenie pojawił się tylko u jednego modelu AI
-      # Potrzebny dalszy research przed dodaniem przykładu
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
     safe: |
-      # Brak zweryfikowanego przykładu bezpiecznego kodu
-      # Po weryfikacji zagrożenia zostanie dodany przykład
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2014-3566; Möller, Duong & Kotowicz (Google, 2014). NOTE: exists in catalog only as unverified stub 'Poodle attack' (~line 695) — this is the verified entry."
   - id: "cat_3_research13"
     name: "Python pycryptodome misuse"
     severity: "Medium"
@@ -716,15 +840,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Python pycryptodome misuse" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research14"
     name: "Md5 hash collision"
     severity: "Medium"
@@ -733,15 +860,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Md5 hash collision" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research15"
     name: "Openssl renegotiation attack"
     severity: "Medium"
@@ -750,15 +880,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Openssl renegotiation attack" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research16"
     name: "Format string crypto bypass"
     severity: "Medium"
@@ -767,15 +900,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Format string crypto bypass" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research17"
     name: "Short key length"
     severity: "Medium"
@@ -784,15 +920,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Short key length" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research18"
     name: "Insecure key exchange"
     severity: "Medium"
@@ -801,32 +940,36 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure key exchange" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research19"
-    name: "Crime attack"
-    severity: "Medium"
+    name: "CRIME (Compression Ratio Info-leak Made Easy)"
+    severity: "High"
     difficulty: "Unknown"
-    confidence: "RESEARCH"
-    cwe: []
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-310"
     desc: |
-      Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Crime attack" wskazane w analizie arena.
-    desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
+      [TŁUMACZENIE OCZEKUJĄCE] A compression side-channel against TLS-level (and SPDY) compression: an attacker who can inject data into a request observes the compressed length of the encrypted record to recover secrets such as session cookies. Distinct from BREACH, which targets HTTP-response body compression. Mitigated by disabling TLS/SPDY compression.
+    desc_en: "A compression side-channel against TLS-level (and SPDY) compression: an attacker who can inject data into a request observes the compressed length of the encrypted record to recover secrets such as session cookies. Distinct from BREACH, which targets HTTP-response body compression. Mitigated by disabling TLS/SPDY compression."
     lang: "unknown"
     vuln: |
-      # Wymaga weryfikacji — brak przykładu kodu
-      # To zagrożenie pojawił się tylko u jednego modelu AI
-      # Potrzebny dalszy research przed dodaniem przykładu
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
     safe: |
-      # Brak zweryfikowanego przykładu bezpiecznego kodu
-      # Po weryfikacji zagrożenia zostanie dodany przykład
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2012-4929; Rizzo & Duong (2012). NOTE: exists in catalog only as unverified stub 'Crime attack' (~line 814) — this is the verified entry."
   - id: "cat_3_research20"
     name: "Post-quantum migration failure"
     severity: "Medium"
@@ -835,15 +978,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Post-quantum migration failure" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research21"
     name: "Aes-cbc iv predictable"
     severity: "Medium"
@@ -852,15 +998,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Aes-cbc iv predictable" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research22"
     name: "Ruby openssl misconfiguration"
     severity: "Medium"
@@ -869,15 +1018,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ruby openssl misconfiguration" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research23"
     name: "Go crypto/tls misconfiguration"
     severity: "Medium"
@@ -886,15 +1038,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Go crypto/tls misconfiguration" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research24"
     name: "Private key disclosure"
     severity: "Medium"
@@ -903,15 +1058,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Private key disclosure" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research25"
     name: "Missing certificate validation"
     severity: "Medium"
@@ -920,15 +1078,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing certificate validation" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research26"
     name: "Static iv usage"
     severity: "Medium"
@@ -937,15 +1098,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Static iv usage" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research27"
     name: "Missing salt for passwords"
     severity: "Medium"
@@ -954,15 +1118,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing salt for passwords" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research28"
     name: "Certificate transparency bypass"
     severity: "Medium"
@@ -971,15 +1138,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Certificate transparency bypass" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research29"
     name: "Missing message authentication code"
     severity: "Medium"
@@ -988,15 +1158,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Missing message authentication code" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_3_research30"
     name: "Insecure random number"
     severity: "Medium"
@@ -1005,12 +1178,393 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure random number" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
+  - id: "3.29"
+    name: "BEAST (Browser Exploit Against SSL/TLS)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-329"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Chosen-plaintext attack against the predictable (chained) CBC IV in SSL 3.0 / TLS 1.0, letting a MITM decrypt secrets such as session cookies block by block. Mitigated by TLS 1.1+ and record splitting.
+    desc_en: "Chosen-plaintext attack against the predictable (chained) CBC IV in SSL 3.0 / TLS 1.0, letting a MITM decrypt secrets such as session cookies block by block. Mitigated by TLS 1.1+ and record splitting."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2011-3389; Duong & Rizzo (2011)."
+  - id: "3.30"
+    name: "BREACH (Browser Reconnaissance and Exfiltration via Adaptive Compression of Hypertext)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-200"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Compression-ratio side-channel attack against HTTP responses that use gzip/DEFLATE: an attacker who can inject guesses into a response containing a secret (e.g. a CSRF token) recovers it from observed compressed-size changes. Distinct from CRIME (targets HTTP body compression, not TLS compression).
+    desc_en: "Compression-ratio side-channel attack against HTTP responses that use gzip/DEFLATE: an attacker who can inject guesses into a response containing a secret (e.g. a CSRF token) recovers it from observed compressed-size changes. Distinct from CRIME (targets HTTP body compression, not TLS compression)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2013-3587; Gluck, Harris & Prado, Black Hat 2013."
+  - id: "3.31"
+    name: "FREAK (Factoring RSA Export Keys)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-757"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Downgrade attack that forces a TLS handshake to use weak 512-bit export-grade RSA (RSA_EXPORT) key exchange, which a MITM can factor to recover the session and decrypt/modify traffic.
+    desc_en: "Downgrade attack that forces a TLS handshake to use weak 512-bit export-grade RSA (RSA_EXPORT) key exchange, which a MITM can factor to recover the session and decrypt/modify traffic."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2015-0204; smacktls.com (2015)."
+  - id: "3.32"
+    name: "Logjam"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-757"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] MITM downgrade of Diffie-Hellman key exchange to 512-bit export-grade DHE parameters, which are then broken; also exposes servers reusing common weak 1024-bit DH groups to precomputation attacks.
+    desc_en: "MITM downgrade of Diffie-Hellman key exchange to 512-bit export-grade DHE parameters, which are then broken; also exposes servers reusing common weak 1024-bit DH groups to precomputation attacks."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2015-4000; Adrian et al., 'Imperfect Forward Secrecy' (2015)."
+  - id: "3.33"
+    name: "DROWN (Decrypting RSA with Obsolete and Weakened eNcryption)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-327"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Cross-protocol Bleichenbacher attack: a server (or one sharing an RSA key/cert) that still supports the obsolete SSLv2 protocol can be used as an oracle to decrypt modern TLS sessions.
+    desc_en: "Cross-protocol Bleichenbacher attack: a server (or one sharing an RSA key/cert) that still supports the obsolete SSLv2 protocol can be used as an oracle to decrypt modern TLS sessions."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2016-0800; Aviram et al., DROWN attack (2016)."
+  - id: "3.34"
+    name: "Sweet32 (birthday attack on 64-bit block ciphers)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-327"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Birthday-bound collision attack against 64-bit block ciphers (3DES, Blowfish) in CBC mode: after ~2^32 blocks under one key a collision leaks plaintext, enabling recovery of secrets in long-lived TLS/VPN sessions.
+    desc_en: "Birthday-bound collision attack against 64-bit block ciphers (3DES, Blowfish) in CBC mode: after ~2^32 blocks under one key a collision leaks plaintext, enabling recovery of secrets in long-lived TLS/VPN sessions."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2016-2183; Bhargavan & Leurent, Sweet32 (2016)."
+  - id: "3.35"
+    name: "Lucky Thirteen"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-208"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Timing-based padding-oracle attack on the MAC-then-encrypt CBC construction in TLS/DTLS: tiny timing differences in MAC verification of malformed padding allow plaintext recovery. A named, specific instance of a CBC padding/timing oracle.
+    desc_en: "Timing-based padding-oracle attack on the MAC-then-encrypt CBC construction in TLS/DTLS: tiny timing differences in MAC verification of malformed padding allow plaintext recovery. A named, specific instance of a CBC padding/timing oracle."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2013-0169; AlFardan & Paterson, Lucky Thirteen (2013)."
+  - id: "3.36"
+    name: "Heartbleed"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-125"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Missing bounds check in OpenSSL's TLS heartbeat extension (buffer over-read) lets a remote attacker read up to 64KB of server/client process memory per request, disclosing private keys, session tokens and passwords.
+    desc_en: "Missing bounds check in OpenSSL's TLS heartbeat extension (buffer over-read) lets a remote attacker read up to 64KB of server/client process memory per request, disclosing private keys, session tokens and passwords."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2014-0160; OpenSSL / CISA advisory (2014)."
+  - id: "3.37"
+    name: "ROCA (Return of Coppersmith's Attack)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-327"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Infineon's 'Fast Prime' RSA key generation produces moduli with a structured form that is efficiently factorable via a Coppersmith-type attack, allowing recovery of the private key from the public key for 1024- and 2048-bit keys.
+    desc_en: "Infineon's 'Fast Prime' RSA key generation produces moduli with a structured form that is efficiently factorable via a Coppersmith-type attack, allowing recovery of the private key from the public key for 1024- and 2048-bit keys."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2017-15361; Nemec et al., ACM CCS 2017 (CRoCS Masaryk University)."
+  - id: "3.38"
+    name: "Raccoon attack (TLS-DH premaster timing)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-208"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Timing side channel arising from the TLS spec stripping leading zero bytes of a Diffie-Hellman premaster secret; with DH key reuse an attacker can compute the premaster secret and decrypt the session.
+    desc_en: "Timing side channel arising from the TLS spec stripping leading zero bytes of a Diffie-Hellman premaster secret; with DH key reuse an attacker can compute the premaster secret and decrypt the session."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2020-1968; Merget et al., Raccoon attack (2020)."
+  - id: "3.39"
+    name: "ALPACA (Application Layer Protocol Confusion Attack)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-436"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Cross-protocol attack exploiting that TLS does not bind a connection to the intended application protocol: a MITM redirects a victim's HTTPS traffic to a different service (e.g. FTP/SMTP/IMAP) sharing a compatible certificate, enabling cross-protocol exploitation. Mitigated by strict ALPN and SNI.
+    desc_en: "Cross-protocol attack exploiting that TLS does not bind a connection to the intended application protocol: a MITM redirects a victim's HTTPS traffic to a different service (e.g. FTP/SMTP/IMAP) sharing a compatible certificate, enabling cross-protocol exploitation. Mitigated by strict ALPN and SNI."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2021-3618; Brinkmann et al., USENIX Security 2021."
+  - id: "3.40"
+    name: "CurveBall (Windows CryptoAPI ECC certificate spoofing)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-295"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Windows CryptoAPI (crypt32.dll) failed to fully validate ECC certificate parameters (accepting an attacker-chosen generator/curve), letting an attacker forge certificates that chain to a trusted root and spoof code-signing or TLS endpoints.
+    desc_en: "Windows CryptoAPI (crypt32.dll) failed to fully validate ECC certificate parameters (accepting an attacker-chosen generator/curve), letting an attacker forge certificates that chain to a trusted root and spoof code-signing or TLS endpoints."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2020-0601; NSA-reported 'Chain of Fools' / CurveBall (2020)."
+  - id: "3.41"
+    name: "Terrapin attack (SSH prefix truncation)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-757"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] MITM prefix-truncation/downgrade attack on the SSH transport protocol: by manipulating sequence numbers during the handshake an attacker deletes messages from the start of the secure channel, downgrading security (e.g. stripping keystroke-timing countermeasures or forcing weaker algorithms).
+    desc_en: "MITM prefix-truncation/downgrade attack on the SSH transport protocol: by manipulating sequence numbers during the handshake an attacker deletes messages from the start of the secure channel, downgrading security (e.g. stripping keystroke-timing countermeasures or forcing weaker algorithms)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2023-48795; Bäumer, Brinkmann & Schwenk, Terrapin (2023), Ruhr University Bochum."
+  - id: "3.42"
+    name: "OpenSSL CCS Injection (early ChangeCipherSpec)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-300"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] OpenSSL accepted a ChangeCipherSpec message early in the handshake, letting a MITM force use of weak, predictable keying material and decrypt/modify traffic. Distinct from TLS renegotiation attacks.
+    desc_en: "OpenSSL accepted a ChangeCipherSpec message early in the handshake, letting a MITM force use of weak, predictable keying material and decrypt/modify traffic. Distinct from TLS renegotiation attacks."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2014-0224; OpenSSL / Red Hat advisory (2014)."
+  - id: "3.43"
+    name: "ECDSA/DSA nonce reuse (repeated k) private-key recovery"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-323"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Reusing (or using a predictable) per-signature nonce k in DSA/ECDSA lets an attacker solve for the long-term private key from two signatures. Distinct from symmetric IV/nonce reuse; the fix is deterministic nonces per RFC 6979. Famously broke Sony PS3 signing and Android Bitcoin wallets.
+    desc_en: "Reusing (or using a predictable) per-signature nonce k in DSA/ECDSA lets an attacker solve for the long-term private key from two signatures. Distinct from symmetric IV/nonce reuse; the fix is deterministic nonces per RFC 6979. Famously broke Sony PS3 signing and Android Bitcoin wallets."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: RFC 6979; Sony PS3 (fail0verflow, 27C3 2010); Android SecureRandom Bitcoin theft (2013)."
+  - id: "3.44"
+    name: "Invalid curve / small subgroup attack (missing EC point validation)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-325"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] In ECDH, failing to verify that a received public point actually lies on the correct curve/prime-order subgroup lets an attacker submit low-order or off-curve points; the victim's responses leak the private key modulo small factors, recovered incrementally via CRT.
+    desc_en: "In ECDH, failing to verify that a received public point actually lies on the correct curve/prime-order subgroup lets an attacker submit low-order or off-curve points; the victim's responses leak the private key modulo small factors, recovered incrementally via CRT."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: Jager, Schwenk & Somorovsky, 'Practical Invalid Curve Attacks on TLS-ECDH' (ESORICS 2015); Antipa et al. (2003)."
+  - id: "3.45"
+    name: "Dual_EC_DRBG kleptographic backdoor"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-338"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] The Dual Elliptic Curve deterministic RNG (formerly in NIST SP 800-90A) uses fixed curve points whose relationship, if known to whoever generated them, lets that party predict all future PRNG output from limited observed output — a kleptographic backdoor. Withdrawn by NIST in 2014; using it (e.g. as a CSPRNG default) is a real risk.
+    desc_en: "The Dual Elliptic Curve deterministic RNG (formerly in NIST SP 800-90A) uses fixed curve points whose relationship, if known to whoever generated them, lets that party predict all future PRNG output from limited observed output — a kleptographic backdoor. Withdrawn by NIST in 2014; using it (e.g. as a CSPRNG default) is a real risk."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: NIST SP 800-90A (withdrawal, 2014); Shumow & Ferguson (2007); Bernstein/Lange/Niederhagen analysis."
+  - id: "3.46"
+    name: "SLOTH (transcript collision attacks on TLS/IKE signatures)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-328"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Continued use of MD5 (or truncated) hashes in TLS 1.2 / IKE handshake signatures enables transcript-collision attacks allowing signature forgery, MITM impersonation, and downgrade despite the protocol otherwise being modern.
+    desc_en: "Continued use of MD5 (or truncated) hashes in TLS 1.2 / IKE handshake signatures enables transcript-collision attacks allowing signature forgery, MITM impersonation, and downgrade despite the protocol otherwise being modern."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2015-7575; Bhargavan & Leurent, SLOTH, NDSS 2016."
+  - id: "3.47"
+    name: "KRACK (Key Reinstallation Attack on WPA2)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-323"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] By manipulating and replaying handshake messages, an attacker forces reinstallation of an already-in-use WPA/WPA2 session key, resetting the associated nonce/packet counter and enabling nonce reuse — allowing decryption, replay, and (with some ciphers) forgery of Wi-Fi frames. A protocol-level flaw affecting virtually all WPA2 implementations.
+    desc_en: "By manipulating and replaying handshake messages, an attacker forces reinstallation of an already-in-use WPA/WPA2 session key, resetting the associated nonce/packet counter and enabling nonce reuse — allowing decryption, replay, and (with some ciphers) forgery of Wi-Fi frames. A protocol-level flaw affecting virtually all WPA2 implementations."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: Vanhoef & Piessens, 'Key Reinstallation Attacks: Forcing Nonce Reuse in WPA2', ACM CCS 2017; CVE-2017-13077..13088; krackattacks.com."
+  - id: "3.48"
+    name: "Dragonblood (WPA3 SAE / Dragonfly handshake weaknesses)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-208"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A set of side-channel (cache/timing) and downgrade weaknesses in WPA3-Personal's SAE 'Dragonfly' handshake: timing/cache leaks during password-element derivation enable an offline dictionary/password-partitioning attack, and forced WPA3->WPA2 or weaker-group downgrades reintroduce older attacks.
+    desc_en: "A set of side-channel (cache/timing) and downgrade weaknesses in WPA3-Personal's SAE 'Dragonfly' handshake: timing/cache leaks during password-element derivation enable an offline dictionary/password-partitioning attack, and forced WPA3->WPA2 or weaker-group downgrades reintroduce older attacks."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: Vanhoef & Ronen, 'Dragonblood: A Security Analysis of WPA3's SAE Handshake', IEEE S&P 2020 / Black Hat USA 2019; CVE-2019-9494 (cache), CVE-2019-9495 (timing) et al."
+  - id: "3.49"
+    name: "Efail (S/MIME & OpenPGP exfiltration channels)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-standard-violation"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Malleability (CBC/CFB gadget) attacks and abuse of HTML active content in encrypted email: an attacker modifies an intercepted encrypted message so that, when the victim's client auto-decrypts it, external HTML resources (e.g. images) exfiltrate the decrypted plaintext to an attacker URL. Break of S/MIME and OpenPGP email confidentiality in practice.
+    desc_en: "Malleability (CBC/CFB gadget) attacks and abuse of HTML active content in encrypted email: an attacker modifies an intercepted encrypted message so that, when the victim's client auto-decrypts it, external HTML resources (e.g. images) exfiltrate the decrypted plaintext to an attacker URL. Break of S/MIME and OpenPGP email confidentiality in practice."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: Poddebniak et al., 'Efail: Breaking S/MIME and OpenPGP Email Encryption using Exfiltration Channels', USENIX Security 2018; CVE-2017-17688 (OpenPGP CFB), CVE-2017-17689 (S/MIME CBC); efail.de."

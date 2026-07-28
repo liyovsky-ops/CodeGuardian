@@ -1,0 +1,14 @@
+id: "web3"
+num: 16
+name: "Web3 / Smart Contract"
+icon: "⛓️"
+color: "#6c5ce7"
+difficulty: "Medium → Hard"
+desc: |
+  Podatności specyficzne dla kontraktów inteligentnych i systemów blockchain: reentrancy, manipulacja orakli, ataki flash-loan, błędy kontroli dostępu w Solidity. Oparte na SWC Registry i udokumentowanych incydentach DeFi.
+desc_en: |
+  Vulnerabilities specific to smart contracts and blockchain systems: reentrancy, oracle manipulation, flash loan attacks, Solidity access-control bugs. Based on the SWC Registry and documented DeFi incidents.
+verdict: |
+  To dziedzina, gdzie statyczna analiza (Slither, Mythril) jest dojrzała dla klasycznych SWC (reentrancy, overflow), ale ataki ekonomiczne (flash loans, manipulacja orakli) wymagają symulacji na forku sieci, nie tylko analizy kodu.
+verdict_en: |
+  This is a domain where static analysis (Slither, Mythril) is mature for classic SWC entries (reentrancy, overflow), but economic attacks (flash loans, oracle manipulation) require mainnet-fork simulation, not just code analysis.

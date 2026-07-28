@@ -1,0 +1,476 @@
+threats:
+  - id: "19.1"
+    name: "Kubernetes RBAC misconfiguration / overly permissive roles"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-269"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] ClusterRoles bound with wildcard verbs/resources, cluster-admin granted to service accounts, or bindings to system:authenticated/anonymous — any pod token compromise yields cluster takeover.
+      
+    desc_en: "ClusterRoles bound with wildcard verbs/resources, cluster-admin granted to service accounts, or bindings to system:authenticated/anonymous — any pod token compromise yields cluster takeover."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K02 (Overly Permissive Authorization Configurations)."
+  - id: "19.2"
+    name: "Kubernetes ServiceAccount token abuse for privilege escalation"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-269"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Auto-mounted ServiceAccount tokens with escalate/bind/impersonate rights (or verbs like create pods/exec) let an attacker in one pod escalate to higher-privileged roles across the cluster.
+      
+    desc_en: "Auto-mounted ServiceAccount tokens with escalate/bind/impersonate rights (or verbs like create pods/exec) let an attacker in one pod escalate to higher-privileged roles across the cluster."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K02; MITRE ATT&CK T1078 (Valid Accounts) in the Containers matrix."
+  - id: "19.3"
+    name: "Kubernetes Secrets stored unencrypted in etcd"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-312"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] By default Kubernetes Secrets are only base64-encoded, not encrypted, in etcd — anyone with etcd/backup/node access reads all cluster secrets in cleartext unless EncryptionConfiguration (KMS) is enabled.
+      
+    desc_en: "By default Kubernetes Secrets are only base64-encoded, not encrypted, in etcd — anyone with etcd/backup/node access reads all cluster secrets in cleartext unless EncryptionConfiguration (KMS) is enabled."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K03 (Secrets Management Failures); Kubernetes docs 'Encrypting Secret Data at Rest'."
+  - id: "19.4"
+    name: "Exposed / unauthenticated etcd datastore"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-306"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] etcd (default ports 2379/2380) reachable without client-cert auth exposes the entire cluster state including all Secrets in cleartext, and allows attacker writes that compromise the whole cluster.
+      
+    desc_en: "etcd (default ports 2379/2380) reachable without client-cert auth exposes the entire cluster state including all Secrets in cleartext, and allows attacker writes that compromise the whole cluster."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K06 (Overly Exposed Kubernetes Components)."
+  - id: "19.5"
+    name: "Exposed kubelet API (anonymous auth on port 10250)"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-306"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] kubelet started with --anonymous-auth=true / --authorization-mode=AlwaysAllow lets unauthenticated callers list pods and exec/run commands inside containers on the node (RCE).
+      
+    desc_en: "kubelet started with --anonymous-auth=true / --authorization-mode=AlwaysAllow lets unauthenticated callers list pods and exec/run commands inside containers on the node (RCE)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K06; MITRE ATT&CK T1609 (Container Administration Command)."
+  - id: "19.6"
+    name: "Exposed Kubernetes Dashboard without authentication"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-306"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] An internet-reachable Kubernetes Dashboard with no auth or a privileged backing ServiceAccount grants full cluster control; the Tesla 2018 breach used exactly this to reach AWS credentials and run cryptomining.
+      
+    desc_en: "An internet-reachable Kubernetes Dashboard with no auth or a privileged backing ServiceAccount grants full cluster control; the Tesla 2018 breach used exactly this to reach AWS credentials and run cryptomining."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Tesla 2018 exposed Kubernetes console incident (RedLock); OWASP Kubernetes Top 10 K06."
+  - id: "19.7"
+    name: "Exposed cloud/Kubernetes API server on public network"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-284"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] kube-apiserver (or managed control-plane endpoint) exposed to the internet without network restriction widens the attack surface for credential brute force, token replay, and known-CVE exploitation.
+      
+    desc_en: "kube-apiserver (or managed control-plane endpoint) exposed to the internet without network restriction widens the attack surface for credential brute force, token replay, and known-CVE exploitation."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K06; K09 (Broken Authentication Mechanisms)."
+  - id: "19.8"
+    name: "Admission controller bypass / lack of cluster-level policy enforcement"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-284"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Absent or misconfigured admission control (Pod Security Admission, OPA/Gatekeeper, Kyverno) — including failurePolicy=Ignore or namespaces exempted — lets non-compliant privileged/hostPath pods be scheduled unchecked.
+      
+    desc_en: "Absent or misconfigured admission control (Pod Security Admission, OPA/Gatekeeper, Kyverno) — including failurePolicy=Ignore or namespaces exempted — lets non-compliant privileged/hostPath pods be scheduled unchecked."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K04 (Lack of Cluster-Level Policy Enforcement)."
+  - id: "19.9"
+    name: "Container breakout via container-runtime or kernel vulnerability"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-269"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Even unprivileged containers can escape to the host by exploiting runtime/kernel CVEs (e.g. runc CVE-2019-5736, CVE-2024-21626 'Leaky Vessels', kernel CVE-2022-0185) — a distinct vector from misconfiguration-based escape.
+      
+    desc_en: "Even unprivileged containers can escape to the host by exploiting runtime/kernel CVEs (e.g. runc CVE-2019-5736, CVE-2024-21626 'Leaky Vessels', kernel CVE-2022-0185) — a distinct vector from misconfiguration-based escape."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK T1611 (Escape to Host); named runc/kernel CVEs. Distinct sub-vector from 9.12 (misconfig)."
+  - id: "19.10"
+    name: "Insecure workload configuration (runAsRoot, no securityContext, no seccomp)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-250"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Pods running as root without dropped capabilities, readOnlyRootFilesystem, seccomp/AppArmor profiles or resource limits widen blast radius of any in-container compromise.
+      
+    desc_en: "Pods running as root without dropped capabilities, readOnlyRootFilesystem, seccomp/AppArmor profiles or resource limits widen blast radius of any in-container compromise."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K01 (Insecure Workload Configurations)."
+  - id: "19.11"
+    name: "Namespace isolation failure / multi-tenancy breakout"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-653"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Kubernetes namespaces are a soft boundary; shared nodes, cluster-scoped roles, or missing per-tenant policies allow a tenant workload to reach or affect other tenants on the same cluster.
+      
+    desc_en: "Kubernetes namespaces are a soft boundary; shared nodes, cluster-scoped roles, or missing per-tenant policies allow a tenant workload to reach or affect other tenants on the same cluster."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Kubernetes multi-tenancy guidance; OWASP Kubernetes Top 10 K02/K05."
+  - id: "19.12"
+    name: "Missing network segmentation / no NetworkPolicy (flat pod network)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-923"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Without NetworkPolicies, all pods can talk to all pods and to the control plane by default, enabling unrestricted east-west lateral movement after any single pod compromise.
+      
+    desc_en: "Without NetworkPolicies, all pods can talk to all pods and to the control plane by default, enabling unrestricted east-west lateral movement after any single pod compromise."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K05 (Missing Network Segmentation Controls); OWASP Cloud-Native CNAS-6."
+  - id: "19.13"
+    name: "IMDSv1 SSRF to cloud credential theft"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-918"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A server-side request forgery reaching the instance metadata endpoint (169.254.169.254) on IMDSv1 returns temporary IAM role credentials, which the attacker uses to access cloud resources — the canonical Capital One 2019 pattern.
+      
+    desc_en: "A server-side request forgery reaching the instance metadata endpoint (169.254.169.254) on IMDSv1 returns temporary IAM role credentials, which the attacker uses to access cloud resources — the canonical Capital One 2019 pattern."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: Capital One breach, 2019; MITRE ATT&CK T1552.005 (Unsecured Credentials: Cloud Instance Metadata API)."
+  - id: "19.14"
+    name: "IMDSv2 hop-limit / defense bypass"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-918"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] IMDSv2 relies on a PUT token and a low IP hop limit; a default hop limit >1, container networking that preserves it, or an SSRF primitive able to send PUT+GET can still reach the metadata service and exfiltrate credentials.
+      
+    desc_en: "IMDSv2 relies on a PUT token and a low IP hop limit; a default hop limit >1, container networking that preserves it, or an SSRF primitive able to send PUT+GET can still reach the metadata service and exfiltrate credentials."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: AWS IMDSv2 hardening guidance; documented IMDSv2 hop-limit bypass research (extends T1552.005)."
+  - id: "19.15"
+    name: "Cluster-to-cloud lateral movement (pod to node IAM role)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-269"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A compromised pod reaches the node's instance metadata service to steal the node/instance IAM role credentials, pivoting from cluster compromise into the broader cloud account.
+      
+    desc_en: "A compromised pod reaches the node's instance metadata service to steal the node/instance IAM role credentials, pivoting from cluster compromise into the broader cloud account."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K08 (Cluster-to-Cloud Lateral Movement); MITRE ATT&CK T1552.005."
+  - id: "19.16"
+    name: "Cloud IAM privilege escalation via policy manipulation"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-269"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A role holding iam:PassRole, iam:CreatePolicyVersion, iam:AttachRolePolicy, or lambda:CreateFunction+PassRole can be abused to grant itself administrator privileges — a well-documented family of AWS privesc paths.
+      
+    desc_en: "A role holding iam:PassRole, iam:CreatePolicyVersion, iam:AttachRolePolicy, or lambda:CreateFunction+PassRole can be abused to grant itself administrator privileges — a well-documented family of AWS privesc paths."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK T1098 (Account Manipulation); Rhino Security Labs AWS IAM privilege-escalation research."
+  - id: "19.17"
+    name: "Cross-account IAM role chaining / confused deputy (missing ExternalId)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-441"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] An assumable cross-account role whose trust policy lacks an ExternalId (or uses an overly broad Principal) lets a third party act as a confused deputy and assume the role, gaining unintended access.
+      
+    desc_en: "An assumable cross-account role whose trust policy lacks an ExternalId (or uses an overly broad Principal) lets a third party act as a confused deputy and assume the role, gaining unintended access."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: AWS confused-deputy / ExternalId documentation; MITRE ATT&CK T1078.004 (Valid Accounts: Cloud Accounts)."
+  - id: "19.18"
+    name: "Public cloud object storage misconfiguration (public read/write bucket)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-732"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] S3/GCS/Azure Blob containers set to public-read or public-write (or via broad bucket policies/ACLs) expose or allow tampering of stored data — a leading cause of cloud data breaches.
+      
+    desc_en: "S3/GCS/Azure Blob containers set to public-read or public-write (or via broad bucket policies/ACLs) expose or allow tampering of stored data — a leading cause of cloud data breaches."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK T1530 (Data from Cloud Storage); OWASP Cloud-Native CNAS-1."
+  - id: "19.19"
+    name: "Over-permissioned serverless (Lambda) execution role"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-269"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Serverless functions granted excessive IAM permissions beyond what the function needs turn any code-injection or dependency compromise in the function into broad cloud access.
+      
+    desc_en: "Serverless functions granted excessive IAM permissions beyond what the function needs turn any code-injection or dependency compromise in the function into broad cloud access."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Cloud-Native CNAS-3; OWASP Serverless Top 10."
+  - id: "19.20"
+    name: "Serverless event injection"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-74"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Serverless functions triggered by many event sources (HTTP, queue, storage, cloud events) may pass untrusted event data unsanitized into interpreters/commands/queries, enabling injection with a large trigger surface.
+      
+    desc_en: "Serverless functions triggered by many event sources (HTTP, queue, storage, cloud events) may pass untrusted event data unsanitized into interpreters/commands/queries, enabling injection with a large trigger surface."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Cloud-Native CNAS-2 (Injection flaws incl. cloud events); OWASP Serverless Top 10."
+  - id: "19.21"
+    name: "Secrets hardcoded in container images or environment variables"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-312"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] API keys, tokens, or passwords baked into image layers (ENV, build args, source) or passed as plaintext env vars are readable by anyone with the image or `kubectl describe`/exec access.
+      
+    desc_en: "API keys, tokens, or passwords baked into image layers (ENV, build args, source) or passed as plaintext env vars are readable by anyone with the image or `kubectl describe`/exec access."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K03; OWASP Cloud-Native CNAS-5 (Insecure Secrets Storage)."
+  - id: "19.22"
+    name: "Vulnerable or malicious container base image (supply chain)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1104"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Building on unpatched, unpinned, or attacker-controlled base images pulls known-vulnerable or backdoored components into every deployed container across the cluster.
+      
+    desc_en: "Building on unpatched, unpinned, or attacker-controlled base images pulls known-vulnerable or backdoored components into every deployed container across the cluster."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K07; OWASP Cloud-Native CNAS-7; MITRE ATT&CK T1525 (Implant Internal Image)."
+  - id: "19.23"
+    name: "CI/CD pipeline access to cluster/cloud credentials"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-522"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] CI/CD systems holding long-lived kubeconfig or cloud deploy credentials (often in plaintext runner env or shared secrets) let a pipeline or dependency compromise pivot straight into the cluster or cloud account.
+      
+    desc_en: "CI/CD systems holding long-lived kubeconfig or cloud deploy credentials (often in plaintext runner env or shared secrets) let a pipeline or dependency compromise pivot straight into the cluster or cloud account."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Cloud-Native CNAS-4 (CI/CD pipeline & software supply chain flaws)."
+  - id: "19.24"
+    name: "Resource hijacking / cryptomining on exposed compute"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-400"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Attackers who gain workload access (via exposed dashboards, weak RBAC, or over-permissive roles) deploy cryptominers or other compute-heavy workloads, causing financial damage and denial of service.
+      
+    desc_en: "Attackers who gain workload access (via exposed dashboards, weak RBAC, or over-permissive roles) deploy cryptominers or other compute-heavy workloads, causing financial damage and denial of service."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: MITRE ATT&CK T1496 (Resource Hijacking); OWASP Cloud-Native CNAS-9 (Inadequate compute resource quota limits); Tesla 2018 cryptojacking."
+  - id: "19.25"
+    name: "Inadequate logging and monitoring of cloud/cluster activity"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-778"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Missing audit logs (Kubernetes audit policy, CloudTrail) and alerting leave credential theft, privilege escalation, and lateral movement undetected until impact — a recurring factor in cloud breaches.
+      
+    desc_en: "Missing audit logs (Kubernetes audit policy, CloudTrail) and alerting leave credential theft, privilege escalation, and lateral movement undetected until impact — a recurring factor in cloud breaches."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+      
+    note_en: "Source: OWASP Kubernetes Top 10 K10; OWASP Cloud-Native CNAS-10."

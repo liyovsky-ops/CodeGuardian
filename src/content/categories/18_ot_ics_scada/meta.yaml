@@ -1,0 +1,14 @@
+id: "ics"
+num: 18
+name: "OT / ICS / SCADA"
+icon: "🏭"
+color: "#e17055"
+difficulty: "Hard → Expert"
+desc: |
+  Zagrożenia dla systemów sterowania przemysłowego (ICS/SCADA/PLC): protokoły bez uwierzytelniania (Modbus, DNP3), manipulacja logiką sterownika, ataki na systemy bezpieczeństwa (SIS). Oparte na MITRE ATT&CK for ICS i udokumentowanych incydentach (Stuxnet, Industroyer, TRITON).
+desc_en: |
+  Threats to industrial control systems (ICS/SCADA/PLC): unauthenticated protocols (Modbus, DNP3), controller logic manipulation, attacks on Safety Instrumented Systems (SIS). Based on MITRE ATT&CK for ICS and documented incidents (Stuxnet, Industroyer, TRITON).
+verdict: |
+  Domena odrębna od klasycznego IT security — priorytet to dostępność i bezpieczeństwo fizyczne (safety), nie poufność. Segmentacja IT/OT (model Purdue) i inwentaryzacja urządzeń są tu ważniejsze niż typowy SAST/DAST.
+verdict_en: |
+  A domain distinct from classic IT security — availability and physical safety take priority over confidentiality. IT/OT segmentation (Purdue model) and device inventory matter more here than typical SAST/DAST.

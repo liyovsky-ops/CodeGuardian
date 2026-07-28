@@ -9,15 +9,18 @@ threats:
       - "CWE-937"
     desc: |
       Użycie wersji biblioteki z publicznym CVE (np. log4j, podatny lodash). Najczęstszy i najłatwiejszy do wykrycia problem supply chain.
+
     desc_en: "Using a dependency with a known CVE (Common Vulnerabilities and Exposures) — the vulnerability is public, has an exploit, and the dependency is in the production code path."
     lang: "text"
     vuln: |
       # PODATNE — requirements.txt
       flask==0.12.2        # znane CVE
       log4j-core:2.14.1    # Log4Shell
+
     safe: |
       # BEZPIECZNE — aktualne wersje + lockfile + ciągły skan
       # (Dependabot, osv-scanner, Snyk)
+
     note: "Severity zależne od CVE (do Critical, np. Log4Shell)."
   - id: "6.2"
     name: "Typosquatting"
@@ -28,14 +31,17 @@ threats:
       - "CWE-506"
     desc: |
       Złośliwa paczka o nazwie łudząco podobnej do popularnej (reqeusts, python-dateutils). Instalacja literówki = wykonanie złośliwego kodu (często w setup.py/postinstall).
+
     desc_en: "Typosquatting: an attacker publishes `reqeusts` or `djang0` to npm/PyPI — developers install the malicious package due to a typo. Dependency confusion: internal package name resolved from a public registry."
     lang: "text"
     vuln: |
       # PODATNE
       pip install python-sqlite   # nie istnieje oficjalnie -> squat
+
     safe: |
       # BEZPIECZNE — weryfikuj nazwę/popularność/maintainera,
       # pin + hash, allowlist
+
   - id: "6.3"
     name: "Dependency Confusion"
     severity: "Critical"
@@ -45,14 +51,17 @@ threats:
       - "CWE-427"
     desc: |
       Atakujący publikuje w repo publicznym paczkę o nazwie wewnętrznej firmy z wyższą wersją; resolver pobiera wersję publiczną zamiast prywatnej.
+
     desc_en: "Malicious package: a popular package (event-stream) is taken over by a new maintainer and a backdoor is added — installed by millions of projects."
     lang: "text"
     vuln: |
       # PODATNE — resolver bez priorytetu prywatnego rejestru
       # wciąga publiczny pakiet o nazwie wewnętrznej z wyższą wersją
+
     safe: |
       # BEZPIECZNE — scoped packages, prywatny rejestr z priorytetem,
       # explicit index-url, pinned hashes (--require-hashes)
+
   - id: "6.4"
     name: "Brak weryfikacji integralności (no lockfile / no hash pinning)"
     severity: "Medium"
@@ -63,14 +72,17 @@ threats:
       - "CWE-494"
     desc: |
       Brak lockfile lub pinów z hashem oznacza, że build może wciągnąć inną (potencjalnie skompromitowaną) wersję — brak reprodukowalności.
+
     desc_en: "Compromised CI/CD: malicious code in a GitHub Action, CircleCI orb, or Makefile target — executes during build and can exfiltrate secrets or modify artifacts."
     lang: "text"
     vuln: |
       # PODATNE — brak lockfile, wersje luźne
       requests>=2
+
     safe: |
       # BEZPIECZNE — lockfile + hash pinning
       requests==2.31.0 --hash=sha256:...
+
     note: "Severity Medium → High."
   - id: "6.5"
     name: "Złośliwy kod w postinstall / build scripts"
@@ -81,14 +93,17 @@ threats:
       - "CWE-506"
     desc: |
       Skrypty instalacyjne (npm postinstall, pythonowy setup.py) wykonują dowolny kod przy instalacji — wektor exfiltracji sekretów z CI.
+
     desc_en: "Missing SRI (Subresource Integrity): external CDN scripts included without integrity hash — CDN compromise serves malicious JS to all users."
     lang: "json"
     vuln: |
       // PODATNE — package.json
       "scripts": { "postinstall": "node exfiltrate.js" }
+
     safe: |
       # BEZPIECZNE — npm ci --ignore-scripts, audyt skryptów,
       # izolowane buildy bez sekretów w env
+
   - id: "6.6"
     name: "Przestarzałe / nieutrzymywane / abandoned deps"
     severity: "Medium"
@@ -98,12 +113,15 @@ threats:
       - "CWE-1104"
     desc: |
       Zależność bez wsparcia nie dostanie łatek — narastający dług bezpieczeństwa.
+
     desc_en: "Unpinned dependency (version range `^1.0.0` or `>=`) — a new minor/patch release with a backdoor is automatically installed on the next `npm install`."
     lang: "text"
     vuln: |
       # PODATNE — paczka bez commitów od lat, brak maintainera
+
     safe: |
       # BEZPIECZNE — monitoruj aktywność projektu, migruj na utrzymywane alternatywy
+
   - id: "6.7"
     name: "Compromised CI/CD pipeline"
     severity: "Critical"
@@ -114,6 +132,7 @@ threats:
       - "CWE-506"
     desc: |
       Atak na pipeline (skradzione sekrety CI, modyfikacja kroków build, wstrzyknięcie do artefaktu). SolarWinds-class. Sekrety CI z szerokim dostępem to high-value target.
+
     desc_en: "LLM-hallucinated package name: AI model recommends a non-existent package name — attacker publishes it with malicious code (slopsquatting)."
     lang: "yaml"
     vuln: |
@@ -121,10 +140,12 @@ threats:
       on: pull_request_target
       jobs: { build: { steps: [{uses: actions/checkout@v4, with: {ref: ${{github.event.pull_request.head.sha}}}}] }}
       env: { TOKEN: ${{ secrets.DEPLOY }} }   # kod z forka widzi sekret
+
     safe: |
       # BEZPIECZNE — minimalne uprawnienia tokena, brak sekretów dla kodu z forków,
       # pinned action SHA, środowiska z approval, OIDC zamiast długich sekretów
       permissions: { contents: read }
+
   - id: "6.8"
     name: "Niezapięte / złośliwe GitHub Actions (tag mutation)"
     severity: "High"
@@ -135,14 +156,17 @@ threats:
       - "CWE-494"
     desc: |
       Użycie akcji po ruchomym tagu (@v3) zamiast po SHA — maintainer (lub atakujący po przejęciu) podmienia tag, wstrzykując kod do tysięcy pipeline'ów (incydent tj-actions/changed-files).
+
     desc_en: "Missing or misconfigured package provenance: no SLSA attestation, unsigned package — supply chain integrity cannot be verified."
     lang: "yaml"
     vuln: |
       # PODATNE — ruchomy tag
       - uses: some/action@v1   # tag może wskazać na złośliwy commit
+
     safe: |
       # BEZPIECZNE — pin do pełnego SHA + komentarz z wersją
       - uses: some/action@a1b2c3d4...  # v1.2.3
+
   - id: "6.9"
     name: "Podatne / nieufne obrazy bazowe kontenerów"
     severity: "High"
@@ -152,14 +176,17 @@ threats:
       - "CWE-1395"
     desc: |
       Obraz bazowy (FROM ...:latest, nieoficjalny) ciągnie podatne pakiety systemowe, nieznane warstwy, czasem malware. Brak skanu i pinów digestu.
+
     desc_en: "Leaked CI/CD secret: GITHUB_TOKEN, AWS credentials, or API key leaked in build logs, environment dump, or public artifact."
     lang: "text"
     vuln: |
       # PODATNE
       FROM node:latest          # ruchomy tag, niepinowany, podatne liby
+
     safe: |
       # BEZPIECZNE — minimalny, pinowany digest, skan (Trivy/Grype), distroless
       FROM node:20-slim@sha256:...
+
   - id: "6.10"
     name: "Slopsquatting / AI-hallucinated packages"
     severity: "High"
@@ -169,14 +196,17 @@ threats:
       - "CWE-506"
     desc: |
       Asystenci AI „halucynują” nazwy nieistniejących paczek; atakujący rejestrują te nazwy z malware. Developer wkleja sugerowany import i instaluje złośliwą paczkę.
+
     desc_en: "Build script or Makefile executes third-party code or downloads resources without integrity verification — MITM or registry compromise during build."
     lang: "text"
     vuln: |
       # PODATNE — instalacja paczki zasugerowanej przez LLM bez weryfikacji
       pip install fast-json-utils   # nie istniała, ktoś zarejestrował malware
+
     safe: |
       # BEZPIECZNE — weryfikuj istnienie/popularność/maintainera przed instalacją,
       # allowlist, prywatne proxy rejestru, lockfile z hashami
+
     note: "Nowy wektor (era LLM) — weryfikuj każdą sugerowaną zależność."
   - id: "6.11"
     name: "Brak SBOM / niewidoczność łańcucha dostaw"
@@ -187,12 +217,16 @@ threats:
       - "CWE-1357"
     desc: |
       Brak Software Bill of Materials i podpisów artefaktów uniemożliwia szybką odpowiedź na nowe CVE (gdzie używamy podatnej libki?) i weryfikację pochodzenia.
+
+    desc_en: ""
     lang: "text"
     vuln: |
       # PODATNE — brak SBOM, artefakty niepodpisane, brak provenance
+
     safe: |
       # BEZPIECZNE — generuj SBOM (CycloneDX/SPDX), podpisuj (Sigstore/cosign),
       # weryfikuj provenance (SLSA) w deployu
+
   - id: "6.12"
     name: "Compromised Build Tool"
     severity: "High"
@@ -202,15 +236,19 @@ threats:
       - "CWE-1357"
     desc: |
       Złośliwy/zhakowany build tool wstrzykuje kod w artefakty (atak typu SolarWinds).
+
+    desc_en: ""
     lang: "yaml"
     vuln: |
       steps:
         - run: curl http://buildhost/installer.sh | sh  # niezweryfikowany
+
     safe: |
       steps:
         - run: |
             echo "<sha256>  installer.sh" | sha256sum -c
             ./installer.sh  # weryfikacja sumy + pinned digest obrazu
+
   - id: "6.13"
     name: "Maintainer Account Takeover"
     severity: "High"
@@ -220,15 +258,19 @@ threats:
       - "CWE-1357"
     desc: |
       Przejęcie konta maintainera paczki pozwala opublikować złośliwą wersję, którą zaciągną wszyscy.
+
+    desc_en: ""
     lang: "yaml"
     vuln: |
       # brak pinowania, brak 2FA na koncie publisher
       dependencies:
         left-pad: "*"  # dowolna nowa wersja
+
     safe: |
       # pinowanie + weryfikacja integralności + 2FA + provenance
       dependencies:
         left-pad: "1.3.0"  # z lockfile + npm provenance/sigstore
+
   - id: "6.14"
     name: "Transitive Dependency Vulnerability"
     severity: "High"
@@ -238,14 +280,18 @@ threats:
       - "CWE-1395"
     desc: |
       Podatność w zależności pośredniej (zależność zależności) nie widocznej wprost w manifeście.
+
+    desc_en: ""
     lang: "yaml"
     vuln: |
       # tylko bezpośrednie zależności, brak audytu transitive
       dependencies:
         express: "^4.0.0"
+
     safe: |
       # lockfile + skan całego drzewa
       # npm audit / osv-scanner zależności pośrednich w CI
+
   - id: "cat_6_research01"
     name: "Repo-jacking"
     severity: "Medium"
@@ -254,15 +300,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Repo-jacking" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research02"
     name: "Manifest tampering"
     severity: "Medium"
@@ -271,15 +320,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Manifest tampering" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research03"
     name: "Unmaintained dependency exploit"
     severity: "Medium"
@@ -288,15 +340,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unmaintained dependency exploit" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research04"
     name: "Insecure version pinning"
     severity: "Medium"
@@ -305,15 +360,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Insecure version pinning" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research05"
     name: "Compromised upstream repository"
     severity: "Medium"
@@ -322,15 +380,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Compromised upstream repository" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research06"
     name: "Known vulnerable dependencies"
     severity: "Medium"
@@ -339,15 +400,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Known vulnerable dependencies" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research07"
     name: "Ci/cd pipeline poisoning"
     severity: "Medium"
@@ -356,15 +420,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ci/cd pipeline poisoning" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research08"
     name: "Malicious install scripts"
     severity: "Medium"
@@ -373,15 +440,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Malicious install scripts" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research09"
     name: "Malicious package injection"
     severity: "Medium"
@@ -390,15 +460,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Malicious package injection" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research10"
     name: "Lockfile poisoning"
     severity: "Medium"
@@ -407,15 +480,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Lockfile poisoning" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research11"
     name: "Trojanized compiler"
     severity: "Medium"
@@ -424,15 +500,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Trojanized compiler" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research12"
     name: "Compromised legitimate package"
     severity: "Medium"
@@ -441,15 +520,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Compromised legitimate package" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research13"
     name: "Ci/cd pipeline injection"
     severity: "Medium"
@@ -458,15 +540,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ci/cd pipeline injection" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research14"
     name: "Subresource integrity bypass"
     severity: "Medium"
@@ -475,15 +560,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Subresource integrity bypass" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research15"
     name: "Malicious binary in vendor directory"
     severity: "Medium"
@@ -492,15 +580,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Malicious binary in vendor directory" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research16"
     name: "Solarwinds-style attack"
     severity: "Medium"
@@ -509,15 +600,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Solarwinds-style attack" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research17"
     name: "Container image tampering"
     severity: "Medium"
@@ -526,15 +620,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Container image tampering" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research18"
     name: "Dependency pinning failure"
     severity: "Medium"
@@ -543,15 +640,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dependency pinning failure" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research19"
     name: "Dependency chain poisoning"
     severity: "Medium"
@@ -560,15 +660,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Dependency chain poisoning" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research20"
     name: "Xz utils backdoor style"
     severity: "Medium"
@@ -577,15 +680,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xz utils backdoor style" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research21"
     name: "Protestware sabotage"
     severity: "Medium"
@@ -594,15 +700,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Protestware sabotage" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research22"
     name: "Version range ambiguity attack"
     severity: "Medium"
@@ -611,15 +720,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Version range ambiguity attack" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research23"
     name: "Compromised ci/cd environment"
     severity: "Medium"
@@ -628,15 +740,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Compromised ci/cd environment" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research24"
     name: "Binary transparency gap"
     severity: "Medium"
@@ -645,15 +760,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Binary transparency gap" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research25"
     name: "Backdoored build artifact"
     severity: "Medium"
@@ -662,15 +780,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Backdoored build artifact" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research26"
     name: "License compliance risk attack"
     severity: "Medium"
@@ -679,15 +800,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "License compliance risk attack" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research27"
     name: "Build server compromise"
     severity: "Medium"
@@ -696,15 +820,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Build server compromise" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research28"
     name: "Unsigned package"
     severity: "Medium"
@@ -713,15 +840,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Unsigned package" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research29"
     name: "Ci/cd secret leakage"
     severity: "Medium"
@@ -730,15 +860,18 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Ci/cd secret leakage" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
   - id: "cat_6_research30"
     name: "Terraform module backdoor"
     severity: "Medium"
@@ -747,12 +880,300 @@ threats:
     cwe: []
     desc: |
       Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Terraform module backdoor" wskazane w analizie arena.
+
     desc_en: "This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis."
     lang: "unknown"
     vuln: |
       # Wymaga weryfikacji — brak przykładu kodu
       # To zagrożenie pojawił się tylko u jednego modelu AI
       # Potrzebny dalszy research przed dodaniem przykładu
+
     safe: |
       # Brak zweryfikowanego przykładu bezpiecznego kodu
       # Po weryfikacji zagrożenia zostanie dodany przykład
+
+  - id: "6.15"
+    name: "CICD-SEC-1: Insufficient Flow Control Mechanisms"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A CI/CD flow lacks controls preventing an actor with push/PR access from pushing malicious code or artifacts down the pipeline into production without independent review or approval (e.g. auto-merge, no required reviewers, no branch protection).
+    desc_en: "A CI/CD flow lacks controls preventing an actor with push/PR access from pushing malicious code or artifacts down the pipeline into production without independent review or approval (e.g. auto-merge, no required reviewers, no branch protection)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: OWASP Top 10 CI/CD Security Risks, CICD-SEC-1 (owasp.org)."
+  - id: "6.16"
+    name: "CICD-SEC-2: Inadequate Identity and Access Management"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-284"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Poorly managed identities across the CI/CD ecosystem (stale accounts, over-permissioned service accounts, shared identities, external self-registered identities) expand the attack surface and enable pipeline compromise.
+    desc_en: "Poorly managed identities across the CI/CD ecosystem (stale accounts, over-permissioned service accounts, shared identities, external self-registered identities) expand the attack surface and enable pipeline compromise."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: OWASP Top 10 CI/CD Security Risks, CICD-SEC-2 (owasp.org)."
+  - id: "6.17"
+    name: "CICD-SEC-5: Insufficient PBAC (Pipeline-Based Access Controls)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-269"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Pipeline execution nodes have access far beyond the needs of the pipeline they run; malicious code executing in the pipeline can abuse this excessive privilege to move laterally and reach sensitive resources.
+    desc_en: "Pipeline execution nodes have access far beyond the needs of the pipeline they run; malicious code executing in the pipeline can abuse this excessive privilege to move laterally and reach sensitive resources."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: OWASP Top 10 CI/CD Security Risks, CICD-SEC-5 (owasp.org)."
+  - id: "6.18"
+    name: "CICD-SEC-6: Insufficient Credential Hygiene"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-522"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Flaws in how secrets are handled in the CI/CD system: long-lived over-scoped credentials, secrets in code/build logs/env dumps, no rotation, tokens usable outside their intended context. A top exfiltration target for pipeline attacks.
+    desc_en: "Flaws in how secrets are handled in the CI/CD system: long-lived over-scoped credentials, secrets in code/build logs/env dumps, no rotation, tokens usable outside their intended context. A top exfiltration target for pipeline attacks."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: OWASP Top 10 CI/CD Security Risks, CICD-SEC-6 (owasp.org)."
+  - id: "6.19"
+    name: "CICD-SEC-7: Insecure System Configuration"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Security gaps in the configuration/hardening of CI/CD platform components (SCM, CI server, orchestrator) — outdated versions, weak permissions, exposed management interfaces — allowing compromise of the platform itself.
+    desc_en: "Security gaps in the configuration/hardening of CI/CD platform components (SCM, CI server, orchestrator) — outdated versions, weak permissions, exposed management interfaces — allowing compromise of the platform itself."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: OWASP Top 10 CI/CD Security Risks, CICD-SEC-7 (owasp.org)."
+  - id: "6.20"
+    name: "CICD-SEC-8: Ungoverned Usage of 3rd Party Services"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1357"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Heavy reliance on third-party services (SaaS integrations, GitHub Apps, OAuth-connected tools) granted broad access to CI/CD assets, with no governance over what they can do — each becomes an implicit trust relationship an attacker can abuse.
+    desc_en: "Heavy reliance on third-party services (SaaS integrations, GitHub Apps, OAuth-connected tools) granted broad access to CI/CD assets, with no governance over what they can do — each becomes an implicit trust relationship an attacker can abuse."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: OWASP Top 10 CI/CD Security Risks, CICD-SEC-8 (owasp.org)."
+  - id: "6.21"
+    name: "CICD-SEC-9: Improper Artifact Integrity Validation"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-494"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] The pipeline consumes or ships artifacts (packages, images, IaC) without validating signatures/provenance, so an attacker who can tamper with an artifact anywhere in the chain gets malicious code delivered as trusted output.
+    desc_en: "The pipeline consumes or ships artifacts (packages, images, IaC) without validating signatures/provenance, so an attacker who can tamper with an artifact anywhere in the chain gets malicious code delivered as trusted output."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: OWASP Top 10 CI/CD Security Risks, CICD-SEC-9 (owasp.org)."
+  - id: "6.22"
+    name: "CICD-SEC-10: Insufficient Logging and Visibility"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-778"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] The CI/CD environment lacks the logging/monitoring needed to detect and investigate a pipeline compromise, letting attackers operate and cover their tracks undetected.
+    desc_en: "The CI/CD environment lacks the logging/monitoring needed to detect and investigate a pipeline compromise, letting attackers operate and cover their tracks undetected."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: OWASP Top 10 CI/CD Security Risks, CICD-SEC-10 (owasp.org)."
+  - id: "6.23"
+    name: "Subdomain takeover / dangling DNS of registry or vendor infrastructure"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe: []
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A dangling DNS record (e.g. pointing to an unclaimed cloud bucket) on package-registry or vendor infrastructure is claimed by an attacker, who then serves malicious content from a trusted host. Documented against assets.npmjs.com (unclaimed S3 bucket, reported via HackerOne, rated High).
+    desc_en: "A dangling DNS record (e.g. pointing to an unclaimed cloud bucket) on package-registry or vendor infrastructure is claimed by an attacker, who then serves malicious content from a trusted host. Documented against assets.npmjs.com (unclaimed S3 bucket, reported via HackerOne, rated High)."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: SentinelOne / Shockwave writeups; documented assets.npmjs.com takeover (HackerOne)."
+  - id: "6.24"
+    name: "Protestware / maintainer self-sabotage"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-506"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A maintainer intentionally corrupts their own widely-used package to make a political or personal statement. node-ipc 11.1.0 (2022) wiped files on hosts geolocated to Russia/Belarus via the bundled peacenotwar payload; colors.js and faker.js were sabotaged with an infinite loop / gutted code by their author Marak.
+    desc_en: "A maintainer intentionally corrupts their own widely-used package to make a political or personal statement. node-ipc 11.1.0 (2022) wiped files on hosts geolocated to Russia/Belarus via the bundled peacenotwar payload; colors.js and faker.js were sabotaged with an infinite loop / gutted code by their author Marak."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: Snyk, BleepingComputer, Sonatype reporting on node-ipc (Mar 2022) and colors/faker (Jan 2022)."
+  - id: "6.25"
+    name: "Long-con maintainer backdoor (xz/liblzma-style trust infiltration)"
+    severity: "Critical"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-506"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] An attacker spends months/years building trust to become a co-maintainer of a critical project, then commits a stealthy backdoor. CVE-2024-3094: the 'Jia Tan' persona gained maintainer rights on xz-utils over ~2 years and hid an Ed448-gated RCE backdoor in liblzma affecting sshd, caught by chance before wide distribution.
+    desc_en: "An attacker spends months/years building trust to become a co-maintainer of a critical project, then commits a stealthy backdoor. CVE-2024-3094: the 'Jia Tan' persona gained maintainer rights on xz-utils over ~2 years and hid an Ed448-gated RCE backdoor in liblzma affecting sshd, caught by chance before wide distribution."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: CVE-2024-3094; Wikipedia, Sonatype, Andres Freund disclosure."
+  - id: "6.26"
+    name: "Repo-jacking (GitHub namespace / renamed-account reuse)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1357"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] When a GitHub account is renamed or deleted, the old username becomes claimable; an attacker registers it and re-creates the repo, so dependencies still referencing the old owner/repo path silently pull attacker-controlled code. AquaSec estimated ~9M repos potentially affected; GitHub's popularity-based tombstoning is incomplete.
+    desc_en: "When a GitHub account is renamed or deleted, the old username becomes claimable; an attacker registers it and re-creates the repo, so dependencies still referencing the old owner/repo path silently pull attacker-controlled code. AquaSec estimated ~9M repos potentially affected; GitHub's popularity-based tombstoning is incomplete."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: AquaSec, Snyk Labs, GitHub Security Blog on repo-jacking."
+  - id: "6.27"
+    name: "Lockfile poisoning"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-494"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] An attacker modifies an existing lockfile (package-lock.json / yarn.lock) in a PR to add a malicious dependency or repoint an existing package's 'resolved' URL (and matching integrity hash) to an attacker server, so any subsequent install fetches malware. Exploits reviewers' tendency to skip large auto-generated lockfile diffs.
+    desc_en: "An attacker modifies an existing lockfile (package-lock.json / yarn.lock) in a PR to add a malicious dependency or repoint an existing package's 'resolved' URL (and matching integrity hash) to an attacker server, so any subsequent install fetches malware. Exploits reviewers' tendency to skip large auto-generated lockfile diffs."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: Snyk 'npm lockfiles as a security blindspot'; SafeDep lockfile-poisoning analysis."
+  - id: "6.28"
+    name: "Starjacking (falsified popularity metadata)"
+    severity: "Medium"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-345"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] A malicious package points its metadata at a popular, unrelated GitHub repo so the registry displays that project's stars/activity, borrowing unearned credibility. Registries don't verify the package-to-repo link, so a fresh malicious package can appear well-established.
+    desc_en: "A malicious package points its metadata at a popular, unrelated GitHub repo so the registry displays that project's stars/activity, borrowing unearned credibility. Registries don't verify the package-to-repo link, so a fresh malicious package can appear well-established."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: Checkmarx 'StarJacking' research; Socket/Checkmarx fake-star reporting."
+  - id: "6.29"
+    name: "Brandjacking / brand-squatting of trusted projects"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-506"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Malicious packages impersonate a trusted project's brand without a misspelling — via suffix addition, embedding, scope/version mimicry or posing as an official plugin/SDK/wrapper (e.g. unscoped 'tanstack' squatting the legit @tanstack/* org). Analysis found ~91% of brandjacking malware goes beyond classic typosquatting.
+    desc_en: "Malicious packages impersonate a trusted project's brand without a misspelling — via suffix addition, embedding, scope/version mimicry or posing as an official plugin/SDK/wrapper (e.g. unscoped 'tanstack' squatting the legit @tanstack/* org). Analysis found ~91% of brandjacking malware goes beyond classic typosquatting."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: Socket (TanStack brand-squat), Sonatype (Lazarus npm brandjacking campaign)."
+  - id: "6.30"
+    name: "Self-hosted CI runner compromise (non-ephemeral / public-repo exposure)"
+    severity: "High"
+    difficulty: "Unknown"
+    confidence: "POSSIBLE"
+    cwe:
+      - "CWE-1357"
+    desc: |
+      [TŁUMACZENIE OCZEKUJĄCE] Non-ephemeral self-hosted CI runners persist state between jobs; when attached to a public repo, a malicious PR/fork workflow runs arbitrary code on the runner and can install persistent backdoors or C2. Demonstrated at scale by the Shai-Hulud worm (Nov 2025) installing rogue runners as a C2 channel.
+    desc_en: "Non-ephemeral self-hosted CI runners persist state between jobs; when attached to a public repo, a malicious PR/fork workflow runs arbitrary code on the runner and can install persistent backdoors or C2. Demonstrated at scale by the Shai-Hulud worm (Nov 2025) installing rogue runners as a C2 channel."
+    lang: "unknown"
+    vuln: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    safe: |
+      # Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+
+    note_en: "Source: GitHub Docs security guidance; Sysdig, Praetorian, Wiz writeups; Shai-Hulud worm reporting."

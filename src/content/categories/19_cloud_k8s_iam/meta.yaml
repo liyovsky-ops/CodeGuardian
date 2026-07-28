@@ -1,0 +1,14 @@
+id: "cloud"
+num: 19
+name: "Cloud / Kubernetes / IAM"
+icon: "☁️"
+color: "#0984e3"
+difficulty: "Medium → Hard"
+desc: |
+  Zagrożenia natywne dla chmury i konteneryzacji: nadmiarowe uprawnienia IAM, błędy RBAC w Kubernetes, eksponowane komponenty klastra (etcd, kubelet, dashboard), SSRF do metadanych instancji, ucieczka z kontenera. Oparte na OWASP Kubernetes Top 10 (2025), OWASP Cloud-Native Top 10 i MITRE ATT&CK for Cloud.
+desc_en: |
+  Threats native to cloud and containerized environments: overly permissive IAM, Kubernetes RBAC misconfiguration, exposed cluster components (etcd, kubelet, dashboard), SSRF to instance metadata, container escape. Based on the OWASP Kubernetes Top 10 (2025), OWASP Cloud-Native Top 10, and MITRE ATT&CK for Cloud.
+verdict: |
+  To prawdopodobnie najbardziej praktycznie istotna nowa kategoria dla architektów budujących systemy chmurowe — większość tych błędów to konfiguracja infrastruktury (IaC), nie kod aplikacji, więc wymaga skanowania IaC (Terraform/Helm) obok SAST.
+verdict_en: |
+  This is likely the most practically relevant new category for architects building cloud-native systems — most of these are infrastructure configuration (IaC) issues, not application code, so they need IaC scanning (Terraform/Helm) alongside SAST.
