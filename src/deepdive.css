@@ -282,6 +282,24 @@ body.deepdive-lock { overflow: hidden; }
 /* ---------- footer ---------- */
 .deepdive-footer { max-width: 980px; margin: 48px auto 0; padding: 24px 40px 48px; font-size: 12px; color: var(--text-faint); border-top: 1px solid var(--border); }
 
+/* ---------- labs ---------- */
+.deepdive-labs-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.deepdive-lab-card {
+  display: block; padding: 16px; border-radius: var(--radius); background: var(--surface);
+  border: 1px solid var(--border); text-decoration: none; transition: border-color var(--t);
+}
+.deepdive-lab-card:hover { border-color: var(--dd-accent); }
+.deepdive-lab-variant { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--dd-accent); margin-bottom: 6px; }
+.deepdive-lab-label { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.4; margin-bottom: 10px; }
+.deepdive-lab-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-faint); }
+.deepdive-lab-diff { padding: 2px 8px; border-radius: 4px; background: rgba(124, 106, 247, 0.1); color: #7c6af7; }
+.deepdive-lab-callout { margin-bottom: 14px; }
+.deepdive-lab-checkbox-row {
+  display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-dim);
+  cursor: pointer; user-select: none;
+}
+.deepdive-lab-checkbox-row input { width: 16px; height: 16px; accent-color: var(--dd-accent); cursor: pointer; }
+
 /* ---------- sources ---------- */
 .deepdive-sources {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;

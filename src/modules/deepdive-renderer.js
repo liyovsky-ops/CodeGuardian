@@ -6,6 +6,7 @@
 import { $, $$ } from './dom.js';
 import { highlightElement } from './highlight.js';
 import { getLang } from '../i18n/index.js';
+import { getThreatStatus, setLabStatus } from './progress.js';
 
 const esc = (s) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -26,6 +27,11 @@ const TXT = {
   sources: { en: 'Verified sources:', pl: 'Zweryfikowane źródła:' },
   inlineSources: { en: 'Sources:', pl: 'Źródła:' },
   sectionsLabel: { en: 'Page sections', pl: 'Sekcje strony' },
+  labsDisclaimer: {
+    en: 'External, curated links — practicing on them is not verified or tracked by Code Guardian beyond the checkbox below.',
+    pl: 'Zewnętrzne, kuratorowane linki — ćwiczenie na nich nie jest weryfikowane ani śledzone przez Code Guardian poza poniższym checkboxem.',
+  },
+  labsCheckbox: { en: "I've practiced this threat in a lab", pl: 'Przećwiczyłem/łam to zagrożenie w labie' },
 };
 const t = (k) => tr(TXT[k]);
 const SEV_LABEL = {
@@ -118,6 +124,18 @@ const SECTION_RENDERERS = {
   migration: (s) => secWrap('migration', s, `<div class="deepdive-mig">${s.steps
     .map((m) => `<div class="deepdive-mig-card"><h4>${esc(tr(m.title))}</h4><p>${esc(tr(m.description))}</p></div>`).join('')}</div>`),
 
+  labs: (s) => secWrap('labs', s, `<div class="deepdive-labs-list">${s.items
+    .map((it) => `<a href="${esc(it.url)}" target="_blank" rel="noopener" class="deepdive-lab-card">
+      <div class="deepdive-lab-variant">${esc(it.variant)}</div>
+      <div class="deepdive-lab-label">${esc(it.label)}</div>
+      <div class="deepdive-lab-meta"><span class="deepdive-lab-provider">${esc(it.provider)}</span>${it.difficulty ? `<span class="deepdive-lab-diff">${esc(it.difficulty)}</span>` : ''}</div>
+    </a>`).join('')}</div>
+    <div class="deepdive-callout warn deepdive-lab-callout">${t('labsDisclaimer')}</div>
+    <label class="deepdive-lab-checkbox-row">
+      <input type="checkbox" class="deepdive-lab-checkbox" />
+      <span>${t('labsCheckbox')}</span>
+    </label>`),
+
   sources: (s) => `<section id="dd-sources" class="deepdive-section">
     <h2 class="deepdive-h2">${esc(tr(s.title))}</h2>
     <div class="deepdive-sources-list">${s.items
@@ -137,7 +155,7 @@ const NAV_TO_SECTION = {
   types: 'attacks', cheatsheet: 'cheatsheet', code: 'code', orm: 'orm',
   langrisks: 'langRisks', method: 'method', defense: 'defenses',
   incidents: 'incidents', tools: 'tools', compliance: 'compliance',
-  ir: 'ir', migration: 'migration', sources: 'sources',
+  ir: 'ir', migration: 'migration', labs: 'labs', sources: 'sources',
 };
 
 /* ---------- top-level rendering ---------- */
@@ -227,6 +245,16 @@ function wireLangTabs(panel) {
   });
 }
 
+function wireLabCheckbox(panel, data) {
+  const box = $('.deepdive-lab-checkbox', panel);
+  if (!box) return;
+  const threatId = data.meta.threatId;
+  box.checked = getThreatStatus(threatId).lab?.status === 'completed';
+  box.addEventListener('change', () => {
+    setLabStatus(threatId, box.checked ? 'completed' : 'not-started');
+  });
+}
+
 function wireScrollSpy(panel) {
   const body = $('.deepdive-body', panel);
   const links = $$('.deepdive-nav-link', panel);
@@ -274,6 +302,7 @@ function renderInto(panel, data) {
   $('.deepdive-close', panel).addEventListener('click', closeDeepDivePage);
   wireCopy(panel);
   wireLangTabs(panel);
+  wireLabCheckbox(panel, data);
   wireScrollSpy(panel);
 }
 

@@ -159,6 +159,20 @@ const SourcesSectionSchema = z.object({
   items: z.array(SourceLink).min(1),
 });
 
+// Curated external micro-labs (PortSwigger Academy etc.) per attack variant.
+// Self-reported "completed" tracking lives in progress.js — this section is
+// only ever curated links, never a hosted/verified lab (site is static).
+const LabsSchema = z.object({
+  ...sectionHeader,
+  items: z.array(z.object({
+    variant: z.string().min(1),
+    provider: z.string().min(1),
+    label: z.string().min(1),
+    url: z.string().url(),
+    difficulty: z.string().optional(),
+  })).min(1),
+});
+
 const SectionsSchema = z.object({
   attacks: AttacksSchema.optional(),
   cheatsheet: CheatsheetSchema.optional(),
@@ -172,6 +186,7 @@ const SectionsSchema = z.object({
   compliance: ComplianceSchema.optional(),
   ir: IrSchema.optional(),
   migration: MigrationSchema.optional(),
+  labs: LabsSchema.optional(),
   sources: SourcesSectionSchema.optional(),
 });
 
