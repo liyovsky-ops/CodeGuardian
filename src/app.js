@@ -15,6 +15,8 @@ import { initAllDeepDives } from './modules/deepdive-renderer.js';
 import './deepdive.css';
 import { initGuidePage } from './modules/guide-page.js';
 import './guide-page.css';
+import { initProgressWidget } from './modules/progress-widget.js';
+import './progress.css';
 
 import { CATEGORIES } from './data/index.js';
 import { getMatrix } from './data/matrix.js';
@@ -150,6 +152,7 @@ try {
   initLang(render);
   initAllDeepDives();
   initGuidePage();
+  initProgressWidget(CATEGORIES);
 } catch (err) {
   console.error('[CodeGuardian] Bootstrap failed:', err);
   const main = document.querySelector('main') || document.body;

@@ -2,6 +2,7 @@ import { $, $$ } from './dom.js';
 import { highlightCard } from './renderer.js';
 import { SCROLL_ACTIVE_OFFSET, BACK_TO_TOP_THRESHOLD } from '../config.js';
 import { openDeepDivePage } from './deepdive-renderer.js';
+import { markRead } from './progress.js';
 import sqliData from '../content/deepdives/sqli.yaml';
 import nosqliData from '../content/deepdives/nosqli.yaml';
 import cmdiData from '../content/deepdives/cmdi.yaml';
@@ -40,7 +41,11 @@ function wireCollapsible() {
       const card = head.closest('.threat');
       const open = card.classList.toggle('open');
       head.setAttribute('aria-expanded', open ? 'true' : 'false');
-      if (open) highlightCard(card);
+      if (open) {
+        highlightCard(card);
+        const threatId = card.id.replace(/^threat-/, '');
+        markRead(threatId);
+      }
     };
     head.addEventListener('click', toggle);
     head.addEventListener('keydown', (e) => {
@@ -126,7 +131,9 @@ function wireDeepDive() {
   $$('.deepdive-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const handler = DEEPDIVE_HANDLERS[btn.dataset.threatId];
+      const threatId = btn.dataset.threatId;
+      markRead(threatId);
+      const handler = DEEPDIVE_HANDLERS[threatId];
       if (handler) handler();
     });
   });

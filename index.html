@@ -117,8 +117,28 @@
             <span id="research-count"></span>
           </button>
           <button id="clear-filters" id="clear-filters-btn">Clear</button>
+          <button id="progress-btn" class="toggle-research-btn" title="My learning progress">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+            <span id="progress-btn-label">My Progress</span>
+          </button>
         </div>
         <div id="no-results" class="hidden" aria-live="polite">No threats match the filters.</div>
+
+        <div id="progress-panel" class="progress-panel hidden" role="dialog" aria-label="My learning progress">
+          <div class="progress-panel-inner">
+            <div class="progress-panel-head">
+              <h3 id="progress-panel-title">My Progress</h3>
+              <button id="progress-panel-close" class="progress-panel-close" aria-label="Close">×</button>
+            </div>
+            <div id="progress-stats" class="progress-stats"></div>
+            <p class="progress-note" id="progress-note">Stored locally in this browser only. Export a backup before clearing your cache or switching devices.</p>
+            <div class="progress-actions">
+              <button id="progress-export" class="progress-action-btn">Export progress (.json)</button>
+              <button id="progress-import" class="progress-action-btn">Import progress (.json)</button>
+              <input id="progress-import-input" type="file" accept="application/json" class="hidden" />
+            </div>
+          </div>
+        </div>
 
         <!-- Categories (rendered by JS) -->
         <div id="categories"></div>
