@@ -1,0 +1,488 @@
+meta:
+  id: pathtraversal
+  threatId: cat_1_research13
+  severity: Critical
+  color: '#14b8a6'
+  colorRgb: 20,184,166
+  cwe: CWE-22
+  cvss: '10.0'
+  standard: OWASP A01:2021
+hero:
+  titleMain: 'Path '
+  titleGrad: Traversal
+  titleTail: ''
+  topbar: Path Traversal / Directory Traversal
+  lead:
+    en: 'Path traversal happens when untrusted input is used to build a filesystem path without verifying the resolved path stays inside an intended base directory — a dot-dot-slash sequence or an absolute path climbs out of the sandbox to read, write, or execute arbitrary files. The root cause is a canonicalization gap: the string a filter inspects is not the same path the OS ultimately resolves. Unauthenticated, pre-auth instances (like Pulse Connect Secure, CVE-2019-11510) rate CVSS 10.0 — full arbitrary file read with no login required.'
+    pl: 'Path traversal zdarza się, gdy niezaufane wejście jest używane do budowy ścieżki plikowej bez weryfikacji, że rozwiązana ścieżka pozostaje wewnątrz zamierzonego katalogu bazowego — sekwencja dot-dot-slash lub ścieżka absolutna wychodzi z piaskownicy, by czytać, zapisywać lub wykonywać dowolne pliki. Przyczyną źródłową jest luka kanonizacji: string sprawdzany przez filtr nie jest tą samą ścieżką, którą finalnie rozwiązuje system. Nieuwierzytelnione instancje pre-auth (jak Pulse Connect Secure, CVE-2019-11510) oceniane są na CVSS 10.0 — pełny odczyt dowolnego pliku bez logowania.'
+  metrics:
+  - k: CWE-22
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '10.0'
+    v: CVSS · Critical
+  - k: A01:2021
+    v: OWASP Top 10
+  - k: '7'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A01:2021
+    url: https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+  - label: CWE-22 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/22.html
+  - label: PortSwigger Academy
+    url: https://portswigger.net/web-security/file-path-traversal
+  - label: OWASP Path Traversal
+    url: https://owasp.org/www-community/attacks/Path_Traversal
+sectionOrder:
+- overview
+- types
+- code
+- langrisks
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: langrisks
+  en: Language risks
+  pl: Ryzyka per język
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laby praktyczne
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Seven ways the same canonicalization gap manifests — from a plain ../ to a proxy/app normalization mismatch that powered real CVEs.
+      pl: Siedem sposobów, w jakie ta sama luka kanonizacji się ujawnia — od zwykłego ../ po niezgodność normalizacji proxy/aplikacji, która napędziła realne CVE.
+    items:
+    - name: Classic ../ Dot-Dot-Slash
+      sev: high
+      description:
+        en: Relative parent-directory sequences climb out of the base directory. Attackers over-supply ../ since extra ones past filesystem root are harmless no-ops.
+        pl: Względne sekwencje katalogu nadrzędnego wychodzą z katalogu bazowego. Atakujący nadmiarowo dodają ../ , bo dodatkowe za korzeniem systemu plików są niegroźne.
+      payload: GET /download?file=../../../../../../etc/passwd
+    - name: Absolute Path Injection
+      sev: high
+      description:
+        en: A naive prefix check or path-join call is bypassed by supplying a fully-qualified path — many join functions discard the base entirely when the input is absolute.
+        pl: Naiwna kontrola prefiksu lub wywołanie łączenia ścieżek jest omijane przez podanie w pełni kwalifikowanej ścieżki — wiele funkcji join całkowicie odrzuca bazę gdy wejście jest absolutne.
+      payload: ?file=/etc/passwd  or  ?file=C:\Windows\win.ini
+    - name: Encoded / Double-Encoded Traversal
+      sev: high
+      description:
+        en: URL-encoding (or double-encoding) the dots/slashes evades filters that only pattern-match the literal ../ string; the server decodes later, after the check.
+        pl: Kodowanie URL (lub podwójne kodowanie) kropek/ukośników omija filtry dopasowujące tylko literalny string ../; serwer dekoduje później, już po kontroli.
+      payload: '%2e%2e%2f%2e%2e%2fetc%2fpasswd   /   double: %252e%252e%252f'
+    - name: Null Byte Injection (legacy)
+      sev: medium
+      description:
+        en: A %00 truncates the string at the underlying C-string layer, discarding a forced extension the app appended. Real against old PHP (<5.3.4) and legacy native APIs; mostly dead on modern managed runtimes.
+        pl: '%00 obcina string na poziomie leżącego pod spodem C-stringa, odrzucając wymuszone rozszerzenie doklejone przez aplikację. Realne przeciw staremu PHP (<5.3.4) i legacy API natywnym; w większości martwe na nowoczesnych runtime''ach.'
+      payload: ?file=../../../../etc/passwd%00.jpg
+    - name: Zip Slip (Archive Extraction)
+      sev: critical
+      description:
+        en: Extracting an archive whose entry name contains ../ ; naive extractors concatenate the entry name to the output directory and write outside it — overwriting configs, cron files, or authorized_keys.
+        pl: Wypakowanie archiwum, którego nazwa wpisu zawiera ../ ; naiwne ekstraktory doklejają nazwę wpisu do katalogu wyjściowego i piszą poza nim — nadpisując konfiguracje, cron czy authorized_keys.
+      payload: 'Zip entry name: ../../../../home/user/.ssh/authorized_keys'
+    - name: Windows-Specific Bypasses
+      sev: high
+      description:
+        en: Windows accepts backslashes, UNC paths, drive letters, and 8.3 short names — each can dodge a filter tuned only for Unix-style forward slashes.
+        pl: Windows akceptuje ukośniki wsteczne, ścieżki UNC, litery dysków i krótkie nazwy 8.3 — każda może ominąć filtr dostrojony tylko do uniksowych ukośników w przód.
+      payload: '..\..\..\windows\win.ini   /   UNC: \\attacker\share\x'
+    - name: Proxy / Server Normalization Mismatch
+      sev: critical
+      description:
+        en: The front-end web server and the back-end app decode/normalize the path differently, so an ACL enforced on the raw path is bypassed after the app's own decoding. The exact mechanism behind CVE-2021-41773.
+        pl: Serwer front-end i aplikacja back-end dekodują/normalizują ścieżkę inaczej, więc ACL egzekwowany na surowej ścieżce jest omijany po własnym dekodowaniu aplikacji. Dokładny mechanizm stojący za CVE-2021-41773.
+      payload: GET /cgi-bin/.%2e/.%2e/.%2e/bin/sh
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The same fix everywhere: canonicalize the full path first, then verify it is still contained inside the trusted base directory — comparing with a trailing separator so /base doesn''t false-match /base-evil.'
+      pl: 'Ta sama naprawa wszędzie: najpierw skanonizuj pełną ścieżkę, potem zweryfikuj że wciąż mieści się w zaufanym katalogu bazowym — porównując z końcowym separatorem, by /base nie dopasowało się fałszywie do /base-evil.'
+    languages:
+    - label: Python
+      lang: python
+      vulnerable: "# VULNERABLE — absolute name overrides the base entirely\ndef get_file(name):\n    path = os.path.join(\"/var/www/files\", name)\n    return open(path).read()"
+      safe: "# SECURE — canonicalize, then verify containment\nBASE = os.path.realpath(\"/var/www/files\")\ndef get_file(name):\n    path = os.path.realpath(os.path.join(BASE, name))\n    if os.path.commonpath([path, BASE]) != BASE:\n        raise ValueError(\"path traversal blocked\")\n    return open(path).read()"
+    - label: Node.js
+      lang: javascript
+      vulnerable: "// VULNERABLE — ../ escapes the intended folder\napp.get('/dl', (req, res) => {\n  res.sendFile('/srv/files/' + req.query.f);\n});"
+      safe: "// SECURE — resolve then verify containment\nconst BASE = path.resolve('/srv/files');\napp.get('/dl', (req, res) => {\n  const target = path.resolve(BASE, req.query.f);\n  if (target !== BASE && !target.startsWith(BASE + path.sep))\n    return res.status(400).send('blocked');\n  res.sendFile(target);\n});"
+    - label: Java
+      lang: java
+      vulnerable: '// VULNERABLE — string concatenation, no containment check
+
+        File f = new File("/data/uploads/" + name);
+
+        return Files.readAllBytes(f.toPath());'
+      safe: "// SECURE — normalize + resolve symlinks + containment\nPath base = Paths.get(\"/data/uploads\").toRealPath();\nPath target = base.resolve(name).normalize().toRealPath();\nif (!target.startsWith(base))\n    throw new SecurityException(\"path traversal blocked\");\nreturn Files.readAllBytes(target);"
+    - label: PHP
+      lang: php
+      vulnerable: '// VULNERABLE
+
+        $file = "/var/www/docs/" . $_GET[''file''];
+
+        readfile($file);'
+      safe: "// SECURE — realpath() canonicalizes; compare with trailing separator\n$base = realpath(\"/var/www/docs\");\n$full = realpath($base . DIRECTORY_SEPARATOR . $_GET['file']);\nif ($full === false || strpos($full, $base . DIRECTORY_SEPARATOR) !== 0) {\n    http_response_code(400); exit(\"blocked\");\n}\nreadfile($full);"
+    - label: Go
+      lang: go
+      vulnerable: '// VULNERABLE — Join alone does not enforce containment
+
+        data, _ := os.ReadFile(filepath.Join("/srv/files", name))'
+      safe: "// SECURE — resolve symlinks, verify containment\nbase, _ := filepath.EvalSymlinks(\"/srv/files\")\ntarget, err := filepath.EvalSymlinks(filepath.Join(base, name))\nif err != nil || !strings.HasPrefix(target, base+string(os.PathSeparator)) {\n    return errors.New(\"path traversal blocked\")\n}\ndata, _ := os.ReadFile(target)"
+  langRisks:
+    title:
+      en: Language-specific risks
+      pl: Ryzyka per język
+    lead:
+      en: 'Every language''s path-join function has the same footgun: it silently discards the base directory when the input is an absolute path.'
+      pl: 'Funkcja łączenia ścieżek w każdym języku ma tę samą pułapkę: cicho odrzuca katalog bazowy, gdy wejście jest ścieżką absolutną.'
+    rows:
+    - fw: Python
+      api: os.path.join(base, name)
+      note:
+        en: If name is absolute (starts with /), join() returns name alone, discarding base entirely. Always canonicalize the result and verify containment — never trust join() as a security boundary.
+        pl: Jeśli name jest absolutne (zaczyna się od /), join() zwraca samo name, całkowicie odrzucając base. Zawsze kanonizuj wynik i weryfikuj zawieranie — nigdy nie traktuj join() jako granicy bezpieczeństwa.
+    - fw: Node.js
+      api: path.join(base, name)
+      note:
+        en: join() normalizes .. but does NOT enforce containment — path.resolve(base, name) with an absolute name can still escape. Always add the startsWith(base + sep) check after resolving.
+        pl: join() normalizuje .. ale NIE egzekwuje zawierania — path.resolve(base, name) z absolutnym name wciąż może uciec. Zawsze dodaj kontrolę startsWith(base + sep) po resolve.
+    - fw: Java
+      api: new File(base, name)
+      note:
+        en: The File(parent, child) constructor treats an absolute child as an absolute path, ignoring parent. Use Path.resolve().normalize().toRealPath() plus startsWith(base) instead.
+        pl: Konstruktor File(parent, child) traktuje absolutne child jako ścieżkę absolutną, ignorując parent. Użyj zamiast tego Path.resolve().normalize().toRealPath() plus startsWith(base).
+    - fw: PHP
+      api: realpath()
+      note:
+        en: realpath() returns false for a non-existent path — a common bug is treating false as "safe" instead of rejecting the request. Always check for false explicitly before the containment comparison.
+        pl: realpath() zwraca false dla nieistniejącej ścieżki — częstym błędem jest traktowanie false jako "bezpieczne" zamiast odrzucenia żądania. Zawsze sprawdzaj false jawnie przed porównaniem zawierania.
+    - fw: Go
+      api: filepath.Join(base, name)
+      note:
+        en: Join cleans .. lexically but does not resolve symlinks or verify containment against a base. Go 1.24+'s os.Root/Root.Open enforces confinement natively — prefer it over manual prefix checks.
+        pl: Join czyści .. leksykalnie, ale nie rozwiązuje dowiązań symbolicznych ani nie weryfikuje zawierania względem bazy. os.Root/Root.Open z Go 1.24+ egzekwuje ograniczenie natywnie — preferuj to zamiast ręcznych kontroli prefiksu.
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a file parameter to credential theft or RCE.
+      pl: Jak atakujący przechodzi od parametru pliku do kradzieży poświadczeń lub RCE.
+    steps:
+    - title:
+        en: Map file-touching endpoints
+        pl: Mapowanie endpointów dotykających plików
+      description:
+        en: 'Enumerate parameters/features that name a file: ?file=, ?page=, ?download=, ?template=, image/PDF viewers, upload+retrieve flows, archive import.'
+        pl: 'Wylicz parametry/funkcje nazywające plik: ?file=, ?page=, ?download=, ?template=, podglądy obrazów/PDF, przepływy upload+odczyt, import archiwów.'
+    - title:
+        en: Probe with traversal
+        pl: Sonda z traversal
+      description:
+        en: Inject increasing ../ depth toward a universal canary file (/etc/passwd on Unix, win.ini on Windows) — extra ../ past root are harmless, so over-supplying is safe.
+        pl: Wstrzyknij rosnącą głębokość ../ w stronę uniwersalnego pliku-kanarka (/etc/passwd na Unix, win.ini na Windows) — dodatkowe ../ za korzeniem są niegroźne, więc nadmiar jest bezpieczny.
+    - title:
+        en: Bypass filters
+        pl: Obejście filtrów
+      description:
+        en: 'If literal ../ is blocked: URL-encode, double-encode, use backslashes, non-recursive-strip bypass (....//), or absolute paths.'
+        pl: 'Jeśli literalne ../ jest blokowane: koduj URL, koduj podwójnie, użyj ukośników wstecznych, obejścia non-recursive-strip (....//), albo ścieżek absolutnych.'
+    - title:
+        en: Determine OS and depth
+        pl: Ustalenie systemu i głębokości
+      description:
+        en: Successful read of /etc/passwd confirms Unix; win.ini confirms Windows. Count ../ needed to learn directory depth.
+        pl: Udany odczyt /etc/passwd potwierdza Unix; win.ini potwierdza Windows. Policz ile ../ potrzeba, by poznać głębokość katalogu.
+    - title:
+        en: Loot high-value files
+        pl: Łupienie cennych plików
+      description:
+        en: Target .env, config.php, ~/.ssh/id_rsa and authorized_keys, .aws/credentials, /proc/self/environ, web.config.
+        pl: Celuj w .env, config.php, ~/.ssh/id_rsa i authorized_keys, .aws/credentials, /proc/self/environ, web.config.
+    - title:
+        en: Escalate read to RCE
+        pl: Eskalacja odczytu do RCE
+      description:
+        en: Log poisoning (inject PHP into a User-Agent, then include the log), PHP wrappers (php://filter for source theft, expect:// for exec), or session-file inclusion.
+        pl: Log poisoning (wstrzyknij PHP w User-Agent, potem dołącz log), wrappery PHP (php://filter do kradzieży źródła, expect:// do wykonania), albo dołączenie plików sesji.
+    - title:
+        en: Escalate write to RCE
+        pl: Eskalacja zapisu do RCE
+      description:
+        en: Where the sink writes (Zip Slip, upload+extract), overwrite authorized_keys, cron, or a web-served script to plant a webshell.
+        pl: Tam gdzie sink zapisuje (Zip Slip, upload+ekstrakcja), nadpisz authorized_keys, cron, albo skrypt serwowany przez web, by podrzucić webshella.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Blocklisting ../ is the classic trap that gives false confidence — indirect references and canonicalize-then-verify are the real fixes.
+      pl: Blacklistowanie ../ to klasyczna pułapka dająca fałszywe poczucie bezpieczeństwa — pośrednie referencje i kanonizacja-potem-weryfikacja to prawdziwe naprawy.
+    items:
+    - rank: 1
+      eff: 98
+      kind: primary
+      label:
+        en: Indirect references (opaque ID → server-side path)
+        pl: Pośrednie referencje (nieprzezroczyste ID → ścieżka po stronie serwera)
+      note:
+        en: Map a user-facing ID/enum to the real path server-side. The user never controls a path component, so there is structurally nothing to traverse.
+        pl: Zmapuj widoczne dla użytkownika ID/enum na prawdziwą ścieżkę po stronie serwera. Użytkownik nigdy nie kontroluje komponentu ścieżki, więc strukturalnie nie ma czego trawersować.
+    - rank: 2
+      eff: 95
+      kind: primary
+      label:
+        en: Canonicalize + verify containment
+        pl: Kanonizacja + weryfikacja zawierania
+      note:
+        en: Resolve to the real/canonical path (collapsing .. and following symlinks), then confirm it's still under the allowed base directory with a separator-aware comparison.
+        pl: Rozwiąż do rzeczywistej/kanonicznej ścieżki (zwijając .. i podążając za dowiązaniami), potem potwierdź że wciąż mieści się pod dozwolonym katalogiem bazowym z porównaniem świadomym separatora.
+    - rank: 3
+      eff: 90
+      kind: strong
+      label:
+        en: Allow-list of filenames/extensions
+        pl: Allowlista nazw plików/rozszerzeń
+      note:
+        en: Validate input IS a known-good value (e.g. ^[A-Za-z0-9_-]+\.pdf$) rather than checking it lacks ../. Positive validation beats blocklisting.
+        pl: Waliduj że wejście JEST znaną-dobrą wartością (np. ^[A-Za-z0-9_-]+\.pdf$) zamiast sprawdzać że nie zawiera ../. Pozytywna walidacja bije blacklistowanie.
+    - rank: 4
+      eff: 80
+      kind: strong
+      label:
+        en: chroot / jail / container confinement
+        pl: Ograniczenie chroot / jail / kontener
+      note:
+        en: Caps the blast radius — even a successful traversal can't leave the jail. Doesn't stop traversal within the jail; defense-in-depth, not prevention.
+        pl: Ogranicza zasięg skutków — nawet udany traversal nie ucieknie z jaila. Nie zatrzymuje trawersowania wewnątrz jaila; obrona w głąb, nie zapobieganie.
+    - rank: 5
+      eff: 58
+      kind: mitigation
+      label:
+        en: Least-privilege file permissions
+        pl: Uprawnienia plikowe najmniejszego przywileju
+      note:
+        en: Reduces impact (can't read /etc/shadow or SSH keys) but the vulnerability still exists and app-readable data (.env, source) is still exposed.
+        pl: Ogranicza skutki (nie można odczytać /etc/shadow czy kluczy SSH), ale podatność wciąż istnieje, a dane czytelne dla aplikacji (.env, źródło) wciąż są wystawione.
+    - rank: 6
+      eff: 30
+      kind: weak
+      label:
+        en: WAF / blocklist patterns
+        pl: WAF / wzorce blacklisty
+      note:
+        en: Only a speed bump. Encoding, double-encoding, backslashes, and normalization mismatches routinely bypass signature blocklists — this is exactly how CVE-2021-41773 defeated naive filtering.
+        pl: Tylko spowolnienie. Kodowanie, podwójne kodowanie, ukośniki wsteczne i niezgodności normalizacji rutynowo omijają blacklisty sygnaturowe — dokładnie tak CVE-2021-41773 pokonało naiwne filtrowanie.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: From a 2018 archive-extraction bug affecting thousands of projects to a pre-auth CVSS 10.0 VPN flaw mass-exploited by ransomware groups.
+      pl: Od błędu ekstrakcji archiwów z 2018 dotykającego tysięcy projektów, po lukę VPN pre-auth CVSS 10.0 masowo eksploitowaną przez grupy ransomware.
+    items:
+    - org: Zip Slip (Snyk disclosure)
+      year: 2018
+      impact: Thousands of projects
+      cost: CVE-2018-1002200 + siblings
+      description:
+        en: Snyk Security Research disclosed a widespread arbitrary-file-write class via archive extraction (zip/tar/jar/war) across Java, JavaScript, Ruby, .NET and Go ecosystems — including HP, Amazon, Apache, and Pivotal projects. An entry name containing ../ writes outside the extraction directory, enabling config overwrite and RCE.
+        pl: Snyk Security Research ujawnił szeroko zakrojoną klasę zapisu dowolnego pliku przez ekstrakcję archiwów (zip/tar/jar/war) w ekosystemach Java, JavaScript, Ruby, .NET i Go — w tym projekty HP, Amazon, Apache i Pivotal. Nazwa wpisu zawierająca ../ zapisuje poza katalogiem ekstrakcji, umożliwiając nadpisanie konfiguracji i RCE.
+    - org: Apache HTTP Server
+      year: 2021
+      impact: CVE-2021-41773 + CVE-2021-42013
+      cost: Actively exploited, CISA KEV
+      description:
+        en: A path-normalization regression in 2.4.49 let an encoded second dot (.%2e/) escape Alias-mapped directories for file disclosure, and RCE where mod_cgi was enabled. The same-day 2.4.50 fix was incomplete — double-encoding re-enabled the bypass — fully fixed only in 2.4.51.
+        pl: Regresja normalizacji ścieżek w 2.4.49 pozwoliła zakodowanej drugiej kropce (.%2e/) uciec z katalogów mapowanych przez Alias dla ujawnienia plików, i RCE gdy włączony był mod_cgi. Naprawa 2.4.50 tego samego dnia była niepełna — podwójne kodowanie ponownie umożliwiło obejście — w pełni naprawione dopiero w 2.4.51.
+    - org: Pulse Connect Secure (Pulse Secure / Ivanti)
+      year: 2019
+      impact: CVE-2019-11510, CVSS 10.0
+      cost: Mass ransomware exploitation
+      description:
+        en: An unauthenticated, pre-auth path traversal in the SSL VPN gateway let attackers read arbitrary files including plaintext credentials and session data — enabling full session/account takeover. Mass-exploited by ransomware operators and nation-state actors; subject of a CISA advisory.
+        pl: Nieuwierzytelniony path traversal pre-auth w bramce SSL VPN pozwalał atakującym odczytać dowolne pliki, w tym poświadczenia w postaci jawnej i dane sesji — umożliwiając pełne przejęcie sesji/konta. Masowo eksploitowane przez operatorów ransomware i aktorów państwowych; przedmiot advisory CISA.
+    inlineSources:
+    - label: Snyk — Zip Slip vulnerability
+      url: https://security.snyk.io/research/zip-slip-vulnerability
+    - label: CVE-2021-41773
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-41773
+    - label: CVE-2019-11510
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-11510
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis traces tainted input into file APIs; dedicated fuzzers generate the encoding/depth permutations that break naive filters.
+      pl: Analiza statyczna śledzi zanieczyszczone wejście do API plikowych; dedykowane fuzzery generują permutacje kodowania/głębokości łamiące naiwne filtry.
+    sast:
+    - - Semgrep
+      - Taint rules for tainted input reaching open/readFile/File APIs
+    - - CodeQL
+      - 'Dataflow queries: py/path-injection, js/path-injection, java/path-injection'
+    - - Checkmarx SAST
+      - Dedicated Path/Absolute Path Traversal queries (CWE-22)
+    - - SonarQube / Fortify SCA
+      - Path Manipulation rule category mapping directly to CWE-22
+    dast:
+    - - DotDotPwn
+      - Fuzzer purpose-built for directory traversal — encoding/depth permutations
+    - - Burp Suite
+      - Active Scanner + Intruder with traversal payload wordlists
+    - - OWASP ZAP
+      - Active scan rule for path traversal / LFI
+    - - Nuclei
+      - Templated detection for known traversal CVEs (e.g. Apache 2.4.49)
+    note:
+      en: <strong>Key signal:</strong> grep for <code>open()</code>/<code>readFile</code>/<code>File()</code>/<code>ReadAllBytes</code> calls fed by request data without a preceding <code>realpath</code>/<code>resolve</code>/<code>normalize</code> + containment check.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj wywołań <code>open()</code>/<code>readFile</code>/<code>File()</code>/<code>ReadAllBytes</code> zasilanych danymi żądania bez poprzedzającej kontroli <code>realpath</code>/<code>resolve</code>/<code>normalize</code> + zawierania.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Path traversal sits under Broken Access Control (A01:2021), not Injection — a detail worth getting right when mapping findings.
+      pl: Path traversal mieści się pod Broken Access Control (A01:2021), nie Injection — szczegół warty poprawnego zmapowania przy raportowaniu ustaleń.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-22 — primary/parent entry (Improper Limitation of a Pathname to a Restricted Directory)
+      - CWE-23 — Relative Path Traversal (the ../ subclass)
+      - CWE-36 — Absolute Path Traversal
+      - CWE-73 — External Control of File Name or Path (broader root cause)
+    - std: OWASP
+      items:
+      - A01:2021 — Broken Access Control (path traversal is explicitly listed here, not under Injection)
+      - ASVS V12 — File and Resources
+      - WSTG-ATHZ-01 — Testing Directory Traversal / File Include
+    - std: PCI DSS v4.0
+      items:
+      - 6.2.4 — address common software attacks including improper access to files
+      - 6.3 — identify and address vulnerabilities in bespoke/custom software
+    - std: CAPEC / NIST
+      items:
+      - CAPEC-126 — Path Traversal
+      - NIST SP 800-53 SI-10 — Information Input Validation
+    inlineSources:
+    - label: CWE-22 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/22.html
+    - label: OWASP A01:2021
+      url: https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    - label: PCI DSS v4.0
+      url: https://www.pcisecuritystandards.org/document_library/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm active path-traversal exploitation, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji path traversal, przejdź tę listę od góry.
+    steps:
+    - en: Identify exactly which files were read or written by correlating access logs with the traversal payload
+      pl: Ustal dokładnie które pliki zostały odczytane lub zapisane, korelując logi dostępu z ładunkiem traversal
+    - en: Rotate every credential/key that could have been exposed in a read file (.env, SSH keys, cloud credentials)
+      pl: Zrotuj każde poświadczenie/klucz, które mogło zostać ujawnione w odczytanym pliku (.env, klucze SSH, poświadczenia chmurowe)
+    - en: If any file was written (Zip Slip / upload-extract), check authorized_keys, cron, and web-served scripts for planted webshells
+      pl: Jeśli jakiś plik został zapisany (Zip Slip / upload-ekstrakcja), sprawdź authorized_keys, cron i skrypty serwowane przez web pod kątem podrzuconych webshelli
+    - en: 'Patch the root cause: add canonicalize + containment check, not just a blocklist for ../'
+      pl: 'Załataj przyczynę źródłową: dodaj kontrolę kanonizacji + zawierania, nie tylko blacklistę dla ../'
+    - en: Audit any archive-extraction code paths in dependencies for the Zip Slip pattern
+      pl: Przeaudytuj wszystkie ścieżki kodu ekstrahującego archiwa w zależnościach pod kątem wzorca Zip Slip
+    - en: Sweep sibling endpoints with Semgrep/CodeQL for the same unguarded file-API pattern
+      pl: Przeskanuj bliźniacze endpointy Semgrep/CodeQL pod kątem tego samego niezabezpieczonego wzorca API plikowego
+    - en: Notify per applicable compliance obligations (PCI DSS 6.2.4 scope)
+      pl: Powiadom zgodnie z obowiązującymi wymogami zgodności (zakres PCI DSS 6.2.4)
+  labs:
+    title:
+      en: Practice labs
+      pl: Laby praktyczne
+    lead:
+      en: Curated external labs to practice this exact attack — self-reported, not verified by Code Guardian.
+      pl: Kuratorowane zewnętrzne laby do przećwiczenia tego ataku — samodzielnie zgłaszane, nie weryfikowane przez Code Guardian.
+    items:
+    - variant: Classic ../ Dot-Dot-Slash
+      provider: PortSwigger Web Security Academy
+      label: File path traversal, simple case
+      url: https://portswigger.net/web-security/file-path-traversal/lab-simple
+    - variant: Absolute Path Injection
+      provider: PortSwigger Web Security Academy
+      label: File path traversal, traversal sequences blocked with absolute path bypass
+      url: https://portswigger.net/web-security/file-path-traversal/lab-absolute-path-bypass
+    - variant: Encoded / Double-Encoded Traversal
+      provider: PortSwigger Web Security Academy
+      label: File path traversal, traversal sequences stripped with superfluous URL-decode
+      url: https://portswigger.net/web-security/file-path-traversal/lab-superfluous-url-decode
+    - variant: Null Byte Injection (legacy)
+      provider: PortSwigger Web Security Academy
+      label: File path traversal, validation of file extension with null byte bypass
+      url: https://portswigger.net/web-security/file-path-traversal/lab-validate-file-extension-null-byte-bypass
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A01:2021 Broken Access Control
+      url: https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    - label: CWE-22 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/22.html
+    - label: OWASP Path Traversal
+      url: https://owasp.org/www-community/attacks/Path_Traversal
+    - label: PortSwigger — File path traversal
+      url: https://portswigger.net/web-security/file-path-traversal
+    - label: Snyk — Zip Slip vulnerability
+      url: https://security.snyk.io/research/zip-slip-vulnerability
+    - label: NIST NVD — CWE-22
+      url: https://nvd.nist.gov/vuln/search/results?cwe_id=CWE-22
+    - label: CVE-2021-41773 (Apache)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-41773
+    - label: CVE-2019-11510 (Pulse Connect Secure)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-11510

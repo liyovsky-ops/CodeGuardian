@@ -9,6 +9,7 @@ export const LEARNING_PATH = [
   '1.3', // Command Injection
   '2.1', // Broken Authentication
   'cat_1_research12', // Cross-Site Scripting (XSS)
+  'cat_1_research13', // Path Traversal / Directory Traversal
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

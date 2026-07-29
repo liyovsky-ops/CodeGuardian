@@ -1,0 +1,105 @@
+threatId: "cat_1_research13"
+title:
+  en: Path Traversal — knowledge check
+  pl: Path Traversal — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Python file-download handler contain a path traversal vulnerability?
+      pl: Czy ten handler pobierania plików w Pythonie zawiera podatność path traversal?
+    snippet:
+      lang: python
+      code: |
+        def get_file(name):
+            path = os.path.join("/var/www/files", name)
+            return open(path).read()
+    isVulnerable: true
+    cwe: CWE-22
+    explanation:
+      en: os.path.join discards the base directory entirely if name is absolute (e.g. "/etc/passwd"), and even a relative name like "../../etc/passwd" climbs out. There is no canonicalization or containment check.
+      pl: os.path.join całkowicie odrzuca katalog bazowy, jeśli name jest absolutne (np. "/etc/passwd"), a nawet względne name jak "../../etc/passwd" wychodzi na zewnątrz. Brak kanonizacji czy kontroli zawierania.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Java file-serving code safe from path traversal?
+      pl: Czy ten kod serwujący pliki w Javie jest bezpieczny od path traversal?
+    snippet:
+      lang: java
+      code: |
+        Path base = Paths.get("/data/uploads").toRealPath();
+        Path target = base.resolve(name).normalize().toRealPath();
+        if (!target.startsWith(base)) {
+            throw new SecurityException("blocked");
+        }
+        return Files.readAllBytes(target);
+    isVulnerable: false
+    cwe: CWE-22
+    explanation:
+      en: This resolves symlinks (toRealPath), collapses .. (normalize), and verifies the result is still inside base using Path.startsWith, which is component-aware (not a naive string prefix match). This is the correct canonicalize-then-verify pattern.
+      pl: Ten kod rozwiązuje dowiązania symboliczne (toRealPath), zwija .. (normalize) i weryfikuje że wynik wciąż jest wewnątrz base przy pomocy Path.startsWith, które jest świadome komponentów (nie naiwne dopasowanie prefiksu stringa). To poprawny wzorzec kanonizacja-potem-weryfikacja.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: An application extracts an uploaded ZIP file, writing each entry to outputDir + entry.getName(). What attack does this enable?
+      pl: Aplikacja wypakowuje przesłany plik ZIP, zapisując każdy wpis do outputDir + entry.getName(). Jaki atak to umożliwia?
+    choices:
+      - id: a
+        label: { en: SQL injection, pl: SQL injection }
+      - id: b
+        label: { en: "Zip Slip — arbitrary file write via a crafted entry name like ../../authorized_keys", pl: "Zip Slip — dowolny zapis pliku przez spreparowaną nazwę wpisu jak ../../authorized_keys" }
+      - id: c
+        label: { en: Cross-site scripting, pl: Cross-site scripting }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: This is the exact Zip Slip pattern disclosed by Snyk in 2018 — concatenating an archive entry's name to the output directory without validating it stays contained lets a malicious archive overwrite files anywhere the process can write, including authorized_keys or cron files.
+      pl: To dokładnie wzorzec Zip Slip ujawniony przez Snyk w 2018 — doklejenie nazwy wpisu archiwum do katalogu wyjściowego bez walidacji że pozostaje w granicach pozwala złośliwemu archiwum nadpisać pliki wszędzie tam gdzie proces może pisać, w tym authorized_keys czy pliki cron.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: Which OWASP Top 10 2021 category does path traversal fall under?
+      pl: Do której kategorii OWASP Top 10 2021 należy path traversal?
+    choices:
+      - id: a
+        label: { en: A03:2021 — Injection, pl: A03:2021 — Injection }
+      - id: b
+        label: { en: A01:2021 — Broken Access Control, pl: A01:2021 — Broken Access Control }
+      - id: c
+        label: { en: A02:2021 — Cryptographic Failures, pl: A02:2021 — Cryptographic Failures }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: Path traversal is explicitly listed under A01:2021 Broken Access Control, not Injection — it's fundamentally a failure to enforce that a user can only access files within their authorized scope, even though the mechanism (untrusted input reaching a file API) resembles injection.
+      pl: Path traversal jest wprost wymieniony pod A01:2021 Broken Access Control, nie Injection — to fundamentalnie błąd egzekwowania że użytkownik może uzyskać dostęp tylko do plików w swoim autoryzowanym zakresie, mimo że mechanizm (niezaufane wejście trafiające do API plikowego) przypomina injection.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: This Node.js download endpoint is injectable. Which variant actually fixes the path traversal?
+      pl: Ten endpoint pobierania w Node.js jest podatny. Który wariant faktycznie naprawia path traversal?
+    variants:
+      - id: v1
+        lang: javascript
+        code: |
+          // blacklist "../" before joining
+          const clean = req.query.f.replace(/\.\.\//g, '');
+          res.sendFile(path.join(BASE, clean));
+      - id: v2
+        lang: javascript
+        code: |
+          // resolve, then verify containment
+          const target = path.resolve(BASE, req.query.f);
+          if (target !== BASE && !target.startsWith(BASE + path.sep)) {
+            return res.status(400).send('blocked');
+          }
+          res.sendFile(target);
+      - id: v3
+        lang: javascript
+        code: |
+          // just check the string starts with the base directory name
+          if (req.query.f.startsWith('/srv/files')) {
+            res.sendFile(req.query.f);
+          }
+    correctVariantId: v2
+    explanation:
+      en: v2 resolves the full path first (collapsing .. and normalizing) and then verifies containment with a separator-aware check — the correct pattern. v1's blacklist is defeated by non-recursive stripping (....// becomes ../ after one pass) or encoding (%2e%2e%2f); v3 checks the raw, unresolved string, which an attacker can trivially satisfy while still escaping via encoded or absolute-looking paths that resolve elsewhere.
+      pl: v2 najpierw rozwiązuje pełną ścieżkę (zwijając .. i normalizując), a potem weryfikuje zawieranie kontrolą świadomą separatora — poprawny wzorzec. Blacklista z v1 jest pokonywana przez nierekurencyjne usuwanie (....// staje się ../ po jednym przejściu) lub kodowanie (%2e%2e%2f); v3 sprawdza surowy, nierozwiązany string, który atakujący może trywialnie spełnić, wciąż uciekając przez zakodowane lub pozornie absolutne ścieżki rozwiązujące się gdzie indziej.

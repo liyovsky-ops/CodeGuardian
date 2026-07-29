@@ -864,28 +864,20 @@ threats:
 
     '
 - id: cat_1_research13
-  name: Path traversal / directory traversal
-  severity: Medium
+  name: Path Traversal / Directory Traversal
+  severity: Critical
   difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Path traversal / directory traversal" wskazane w analizie arena.
-
-    '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
-
-    # To zagrożenie pojawił się tylko u jednego modelu AI
-
-    # Potrzebny dalszy research przed dodaniem przykładu
-
-    '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
-
-    # Po weryfikacji zagrożenia zostanie dodany przykład
-
-    '
+  confidence: POSSIBLE
+  cwe:
+  - CWE-22
+  - CWE-23
+  - CWE-36
+  - CWE-73
+  desc: Niezaufane wejście użyte do budowy ścieżki plikowej bez weryfikacji, że rozwiązana ścieżka pozostaje w zamierzonym katalogu bazowym. Sekwencje ../ (lub ścieżka absolutna) wychodzą z piaskownicy, umożliwiając odczyt (kradzież poświadczeń, kluczy, źródła) lub zapis dowolnego pliku (nadpisanie configów, Zip Slip przy ekstrakcji archiwów) — a przy dołączaniu/wykonywaniu treści eskaluje do RCE. Nieuwierzytelnione instancje pre-auth (np. Pulse Connect Secure, CVE-2019-11510) oceniane są na CVSS 10.0.
+  desc_en: Untrusted input used to build a filesystem path without verifying the resolved path stays inside an intended base directory. ../ sequences (or an absolute path) escape the sandbox, enabling arbitrary file read (credential/key/source theft) or write (config overwrite, Zip Slip via archive extraction) — and escalates to RCE when the traversed content is included or executed. Unauthenticated pre-auth instances (e.g. Pulse Connect Secure, CVE-2019-11510) rate CVSS 10.0.
+  lang: python
+  vuln: "# VULNERABLE — absolute name overrides the base entirely\ndef get_file(name):\n    path = os.path.join(\"/var/www/files\", name)\n    return open(path).read()\n"
+  safe: "# SECURE — canonicalize, then verify containment\nBASE = os.path.realpath(\"/var/www/files\")\ndef get_file(name):\n    path = os.path.realpath(os.path.join(BASE, name))\n    if os.path.commonpath([path, BASE]) != BASE:\n        raise ValueError(\"path traversal blocked\")\n    return open(path).read()\n"
 - id: cat_1_research14
   name: Svg injection
   severity: Medium
