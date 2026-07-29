@@ -1,0 +1,98 @@
+threatId: "1.17"
+title:
+  en: OGNL Injection (Apache Struts) — knowledge check
+  pl: OGNL Injection (Apache Struts) — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Java code contain an OGNL injection vulnerability?
+      pl: Czy ten kod w Javie zawiera podatność OGNL injection?
+    snippet:
+      lang: java
+      code: |
+        String expr = request.getParameter("q");
+        Object result = Ognl.getValue(expr, context, root);
+    isVulnerable: true
+    cwe: CWE-917
+    explanation:
+      en: The attacker-controlled parameter is passed directly as an OGNL expression to be evaluated. OGNL exposes static method invocation (@class@method()) and full object-graph access by design, so a crafted expr can reach Runtime.exec() or ProcessBuilder — full RCE.
+      pl: Kontrolowany przez atakującego parametr jest przekazywany bezpośrednio jako wyrażenie OGNL do ewaluacji. OGNL z założenia udostępnia wywołanie metod statycznych (@class@method()) i pełny dostęp do grafu obiektów, więc spreparowane expr może dosięgnąć Runtime.exec() lub ProcessBuilder — pełne RCE.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Struts configuration safe from the classic OGNL sandbox-bypass pattern?
+      pl: Czy ta konfiguracja Struts jest bezpieczna od klasycznego wzorca obejścia sandboxa OGNL?
+    snippet:
+      lang: java
+      code: |
+        SecurityMemberAccess sma = new SecurityMemberAccess(false);
+        sma.setExcludedClasses(Set.of("java.lang.Runtime", "java.lang.ProcessBuilder", "java.lang.System"));
+        sma.setExcludedPackageNames(Set.of("java.lang", "javax", "ognl"));
+    isVulnerable: false
+    cwe: CWE-917
+    explanation:
+      en: This is the correct hardening pattern — static method access is denied by default (false), and the dangerous classes/packages that enable RCE are explicitly excluded. Note this is still defense-in-depth (rank 3 in this threat's ranked defenses, ~65% effective) — it has historically been bypassed by clearing these very lists from inside a crafted OGNL expression, so upgrading Struts remains the primary fix.
+      pl: To poprawny wzorzec wzmocnienia — dostęp do metod statycznych jest domyślnie odmawiany (false), a niebezpieczne klasy/pakiety umożliwiające RCE są jawnie wykluczone. Zauważ że to wciąż obrona w głąb (ranga 3 w rankingu obron tego zagrożenia, ~65% skuteczności) — historycznie było omijane przez wyczyszczenie właśnie tych list od wewnątrz spreparowanego wyrażenia OGNL, więc aktualizacja Struts pozostaje główną naprawą.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: What made CVE-2017-5638 (the Equifax breach) especially dangerous compared to earlier Struts OGNL CVEs?
+      pl: Co uczyniło CVE-2017-5638 (wyciek Equifax) szczególnie niebezpiecznym w porównaniu do wcześniejszych CVE OGNL Struts?
+    choices:
+      - id: a
+        label: { en: "It was exploitable pre-authentication via a single malformed Content-Type header — no file upload, login, or special parameter needed", pl: "Było eksploatowalne pre-auth przez pojedynczy zniekształcony nagłówek Content-Type — bez potrzeby uploadu pliku, logowania czy specjalnego parametru" }
+      - id: b
+        label: { en: It was the first Struts vulnerability to ever be assigned a CVE number, pl: Było pierwszą podatnością Struts, której kiedykolwiek przypisano numer CVE }
+      - id: c
+        label: { en: It only affected Struts installations running on Windows servers, pl: Dotyczyło tylko instalacji Struts działających na serwerach Windows }
+    correctChoiceIds: ["a"]
+    explanation:
+      en: CVE-2017-5638 required only a malformed Content-Type header on a request to a multipart-handling endpoint — triggering an exception in the Jakarta Multipart parser whose error-message path evaluated the raw header as OGNL. This made it exploitable pre-authentication with minimal preconditions, which is exactly why it was so widely and rapidly weaponized after disclosure.
+      pl: CVE-2017-5638 wymagało jedynie zniekształconego nagłówka Content-Type w żądaniu do endpointu obsługującego multipart — wyzwalając wyjątek w parserze Jakarta Multipart, którego ścieżka komunikatu błędu ewaluowała surowy nagłówek jako OGNL. To uczyniło je eksploatowalnym pre-auth przy minimalnych warunkach wstępnych, dokładnie dlatego zostało tak szeroko i szybko uzbrojone po ujawnieniu.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: Equifax had a web application firewall in place, yet was still breached via CVE-2017-5638. What does this best illustrate?
+      pl: Equifax miało wdrożony firewall aplikacji webowej, a mimo to zostało skompromitowane przez CVE-2017-5638. Co to najlepiej ilustruje?
+    choices:
+      - id: a
+        label: { en: WAFs are completely useless and should never be deployed, pl: WAF-y są całkowicie bezużyteczne i nigdy nie powinny być wdrażane }
+      - id: b
+        label: { en: "A WAF buys time to patch but is never a substitute for patching a known library CVE — the fix had been public for over two months before exploitation began", pl: "WAF daje czas na załatanie, ale nigdy nie zastępuje załatania znanego CVE biblioteki — naprawa była publiczna ponad dwa miesiące przed rozpoczęciem eksploatacji" }
+      - id: c
+        label: { en: The breach proves that OGNL injection cannot be detected by any signature-based tool, pl: Wyciek dowodzi że OGNL injection nie może być wykryte przez żadne narzędzie oparte na sygnaturach }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: The Struts patch for CVE-2017-5638 was released March 6-7, 2017; Equifax's own vulnerability scan on March 15 failed to find the vulnerable host, and attackers exploited it starting mid-May. This is the canonical case study for why upgrading (rank 1, ~95% effective) sits far above WAF signature rules (rank 5, ~30%, weak) in the ranked defenses — perimeter tools can help, but they cannot substitute for closing a known, patchable vulnerability.
+      pl: Łatka Struts dla CVE-2017-5638 została wydana 6-7 marca 2017; własny skan podatności Equifax z 15 marca nie znalazł podatnego hosta, a atakujący wykorzystali ją zaczynając od połowy maja. To podręcznikowy case study dlaczego aktualizacja (ranga 1, ~95% skuteczności) znajduje się dużo wyżej niż reguły sygnaturowe WAF (ranga 5, ~30%, słabe) w rankingu obron — narzędzia obwodowe mogą pomóc, ale nie mogą zastąpić zamknięcia znanej, możliwej do załatania podatności.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: A Struts action mapping is injectable via Dynamic Method Invocation. Which variant actually fixes it?
+      pl: Mapowanie akcji Struts jest podatne przez Dynamic Method Invocation. Który wariant faktycznie to naprawia?
+    variants:
+      - id: v1
+        lang: xml
+        code: |
+          <!-- keep DMI on, but blacklist the word "Runtime" in method names -->
+          <constant name="struts.enable.DynamicMethodInvocation" value="true"/>
+          <interceptor-ref name="params">
+            <param name="excludeParams">.*Runtime.*</param>
+          </interceptor-ref>
+      - id: v2
+        lang: xml
+        code: |
+          <constant name="struts.enable.DynamicMethodInvocation" value="false"/>
+          <action name="viewUser" method="view" class="com.example.UserAction"/>
+      - id: v3
+        lang: xml
+        code: |
+          <!-- keep DMI on, just make the action name longer/obfuscated -->
+          <constant name="struts.enable.DynamicMethodInvocation" value="true"/>
+          <action name="a1b2c3_*" method="{1}" class="com.example.UserAction"/>
+    correctVariantId: v2
+    explanation:
+      en: "v2 disables Dynamic Method Invocation entirely and uses explicit, fixed action/method names — closing the \"method:\" prefix vector (CVE-2016-3081 class) completely. v1's blacklist only blocks the literal string \"Runtime\" in method names, trivially bypassed via @java.lang.ProcessBuilder@ or any other reachable class/method not matching that pattern. v3 still lets the attacker choose the invoked method via the URL; obfuscating the action name prefix does nothing to close the underlying DMI vector."
+      pl: "v2 całkowicie wyłącza Dynamic Method Invocation i używa jawnych, stałych nazw akcji/metod — zamykając całkowicie wektor prefiksu \"method:\" (klasa CVE-2016-3081). Blacklista z v1 blokuje tylko literalny string \"Runtime\" w nazwach metod, trywialnie omijalna przez @java.lang.ProcessBuilder@ lub jakąkolwiek inną osiągalną klasę/metodę niepasującą do tego wzorca. v3 wciąż pozwala atakującemu wybrać wywoływaną metodę przez URL; zaciemnienie prefiksu nazwy akcji niczego nie zamyka w leżącym pod spodem wektorze DMI."

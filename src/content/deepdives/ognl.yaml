@@ -1,0 +1,437 @@
+meta:
+  id: ognl
+  threatId: '1.17'
+  severity: Critical
+  color: '#84cc16'
+  colorRgb: 132,204,22
+  cwe: CWE-917
+  cvss: '9.8'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'OGNL '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: OGNL Injection (Apache Struts)
+  lead:
+    en: 'OGNL was built to navigate and mutate the full Java object graph — including calling arbitrary static methods via @class@method() syntax. When Apache Struts2 evaluates attacker-controlled input as an OGNL expression instead of treating it as data, that expressiveness becomes a direct line to Runtime.exec(). This is exactly how Equifax was breached in 2017: CVE-2017-5638 let a single malformed Content-Type header execute commands, exposing 147.9 million people''s data. The patch existed for over two months before exploitation — the canonical proof that a WAF is not a substitute for patching.'
+    pl: 'OGNL zostało zbudowane, by nawigować i mutować pełny graf obiektów Java — w tym wywoływać dowolne metody statyczne przez składnię @class@method(). Gdy Apache Struts2 ewaluuje kontrolowane przez atakującego wejście jako wyrażenie OGNL zamiast traktować je jako dane, ta ekspresywność staje się bezpośrednią linią do Runtime.exec(). Dokładnie tak zostało skompromitowane Equifax w 2017: CVE-2017-5638 pozwoliło pojedynczemu zniekształconemu nagłówkowi Content-Type wykonać polecenia, ujawniając dane 147.9 miliona osób. Łatka istniała ponad dwa miesiące przed eksploatacją — podręcznikowy dowód że WAF nie zastępuje łatania.'
+  metrics:
+  - k: CWE-917
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '9.8'
+    v: CVSS · Critical
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '7'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A03:2021
+    url: https://owasp.org/Top10/A03_2021-Injection/
+  - label: CWE-917 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/917.html
+  - label: FTC — Equifax settlement
+    url: https://www.ftc.gov/enforcement/refunds/equifax-data-breach-settlement
+  - label: NVD — CVE-2017-5638
+    url: https://nvd.nist.gov/vuln/detail/CVE-2017-5638
+sectionOrder:
+- overview
+- types
+- code
+- langrisks
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: langrisks
+  en: Sandbox bypass history
+  pl: Historia obejść sandboxa
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Seven ways the same expression-evaluation capability is turned into RCE — from a crafted parameter name to the Content-Type header that breached Equifax.
+      pl: Siedem sposobów, w jakie ta sama zdolność ewaluacji wyrażeń zamienia się w RCE — od spreparowanej nazwy parametru po nagłówek Content-Type, który skompromitował Equifax.
+    items:
+    - name: ValueStack Parameter-Name Pollution
+      sev: critical
+      description:
+        en: Struts historically mapped HTTP parameter names directly onto OGNL setter expressions against the ValueStack — a crafted parameter name could pollute the stack and disable the security sandbox.
+        pl: Struts historycznie mapował nazwy parametrów HTTP wprost na wyrażenia setterów OGNL względem ValueStack — spreparowana nazwa parametru mogła zanieczyścić stos i wyłączyć sandbox bezpieczeństwa.
+      payload: ('#_memberAccess.allowStaticMethodAccess')(x)=true&(#cmd=@java.lang.Runtime@getRuntime().exec('id'))
+    - name: Content-Type Header Injection (Equifax mechanism)
+      sev: critical
+      description:
+        en: A malformed Content-Type on a multipart request triggers an exception in the Jakarta Multipart parser; the raw header value is passed through an error-message builder that evaluates it as OGNL. Pre-auth, no actual upload needed.
+        pl: Zniekształcony Content-Type w żądaniu multipart wyzwala wyjątek w parserze Jakarta Multipart; surowa wartość nagłówka jest przekazywana przez budowniczego komunikatu błędu, który ewaluuje ją jako OGNL. Pre-auth, żaden faktyczny upload niepotrzebny.
+      payload: 'Content-Type: %{(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#context.setMemberAccess(#dm))...}'
+    - name: SecurityMemberAccess Sandbox Bypass
+      sev: critical
+      description:
+        en: Struts blocks direct static-method access via a security guard; researchers repeatedly bypassed it by resetting the guard from inside OGNL itself — clearing excluded classes/packages or swapping in the permissive DEFAULT_MEMBER_ACCESS.
+        pl: Struts blokuje bezpośredni dostęp do metod statycznych przez strażnika bezpieczeństwa; badacze wielokrotnie to omijali, resetując strażnika od wewnątrz OGNL — czyszcząc wykluczone klasy/pakiety lub podmieniając na permisywny DEFAULT_MEMBER_ACCESS.
+      payload: (#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#context.setMemberAccess(#dm))
+    - name: Full RCE via ProcessBuilder
+      sev: critical
+      description:
+        en: Once the sandbox is neutralized, the terminal step spawns a native process (ProcessBuilder preferred over Runtime.exec for clean argument handling) and streams output back into the HTTP response.
+        pl: Gdy sandbox jest zneutralizowany, ostatni krok tworzy proces natywny (ProcessBuilder preferowany nad Runtime.exec dla czystej obsługi argumentów) i strumieniuje wynik z powrotem do odpowiedzi HTTP.
+      payload: new java.lang.ProcessBuilder({'/bin/bash','-c','id'}).start()
+    - name: Double / Nested OGNL Evaluation
+      sev: high
+      description:
+        en: Some tag attributes force OGNL evaluation of a value, and the result is evaluated again — attacker input whose resolved output is itself an expression defeats naive single-pass sanitization.
+        pl: Niektóre atrybuty tagów wymuszają ewaluację OGNL wartości, a wynik jest ewaluowany ponownie — wejście atakującego, którego rozwiązany wynik jest samo w sobie wyrażeniem, pokonuje naiwną jednoprzebiegową sanityzację.
+      payload: Value resolved as %{7*7} where the container re-evaluates the result -> 49 proves double eval
+    - name: Namespace / URL-Derived OGNL (CVE-2018-11776)
+      sev: critical
+      description:
+        en: When alwaysSelectFullNamespace is true and a result/URL tag omits an explicit namespace, an untrusted URL path segment itself is treated as the namespace and evaluated as OGNL — injection lives in the path, no parameters needed.
+        pl: Gdy alwaysSelectFullNamespace jest true, a tag result/URL pomija jawną przestrzeń nazw, sam niezaufany segment ścieżki URL jest traktowany jako przestrzeń nazw i ewaluowany jako OGNL — wstrzyknięcie żyje w ścieżce, parametry niepotrzebne.
+      payload: GET /${(111+111)}/actionName.action -> redirect containing 222 proves evaluation
+    - name: Dynamic Method Invocation RCE (CVE-2016-3081)
+      sev: critical
+      description:
+        en: 'When Dynamic Method Invocation is enabled, a method: prefix in the action name lets the attacker choose which Java method gets invoked, chaining into OGNL evaluation.'
+        pl: 'Gdy Dynamic Method Invocation jest włączone, prefiks method: w nazwie akcji pozwala atakującemu wybrać, która metoda Java zostanie wywołana, łącząc się w ewaluację OGNL.'
+      payload: action!method:@java.lang.Runtime@getRuntime().exec('id')
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: The definitive fix is upgrading Struts — every other layer (allow-listing, disabling DMI) narrows one specific vector while leaving the framework's broader OGNL surface intact.
+      pl: Ostateczną naprawą jest aktualizacja Struts — każda inna warstwa (allowlista, wyłączenie DMI) zawęża jeden konkretny wektor, zostawiając szerszą powierzchnię OGNL frameworka nietkniętą.
+    languages:
+    - label: Direct Ognl.getValue()
+      lang: java
+      vulnerable: '// VULNERABLE — evaluates a user string as an OGNL expression
+
+        String expr = request.getParameter("q");     // attacker-controlled
+
+        Object result = Ognl.getValue(expr, context, root);   // RCE sink'
+      safe: '// SECURE — never evaluate user input as an expression; treat as data
+
+        String q = request.getParameter("q");
+
+        User u = repository.findByName(q);            // parameterized lookup, no expression engine'
+    - label: Struts action mapping
+      lang: xml
+      vulnerable: '<!-- VULNERABLE — DMI on, wildcard method binding from the URL -->
+
+        <constant name="struts.enable.DynamicMethodInvocation" value="true"/>
+
+        <action name="user_*" method="{1}" class="com.example.UserAction"/>'
+      safe: '<!-- SECURE -->
+
+        <constant name="struts.enable.DynamicMethodInvocation" value="false"/>
+
+        <constant name="struts.mapper.alwaysSelectFullNamespace" value="false"/>
+
+        <action name="viewUser" method="view" class="com.example.UserAction"/>'
+    - label: SecurityMemberAccess allow-list
+      lang: java
+      vulnerable: '// VULNERABLE — no restriction on static method access
+
+        OgnlContext ctx = (OgnlContext) Ognl.createDefaultContext(root);'
+      safe: '// SECURE — strict deny-by-default member access
+
+        SecurityMemberAccess sma = new SecurityMemberAccess(false);  // no static method access
+
+        sma.setExcludedClasses(Set.of("java.lang.Runtime", "java.lang.ProcessBuilder", "java.lang.System"));
+
+        sma.setExcludedPackageNames(Set.of("java.lang", "javax", "ognl"));'
+  langRisks:
+    title:
+      en: Sandbox bypass history
+      pl: Historia obejść sandboxa
+    lead:
+      en: Every hardening layer Struts added was eventually bypassed by resetting the guard from inside OGNL itself — this recurring pattern is why upgrading remains the only durable fix.
+      pl: Każda warstwa wzmocnienia dodana przez Struts była ostatecznie omijana przez zresetowanie strażnika od wewnątrz samego OGNL — ten powracający wzorzec jest powodem, dla którego aktualizacja pozostaje jedyną trwałą naprawą.
+    rows:
+    - fw: S2-003/S2-005/S2-009 (2010-2012)
+      api: '#context / allowStaticMethodAccess'
+      note:
+        en: 'Established the original bypass pattern: crafted parameter names could flip allowStaticMethodAccess to true before invoking a static method.'
+        pl: 'Ustanowiło oryginalny wzorzec obejścia: spreparowane nazwy parametrów mogły przełączyć allowStaticMethodAccess na true przed wywołaniem metody statycznej.'
+    - fw: S2-016 (CVE-2013-2251)
+      api: 'action: / redirect: / redirectAction: prefixes'
+      note:
+        en: One of the earliest widely-exploited Struts2 OGNL RCEs, via URL-prefixed parameters that were OGNL-evaluated.
+        pl: Jeden z najwcześniej szeroko eksploatowanych RCE OGNL Struts2, przez parametry z prefiksem URL, które były ewaluowane jako OGNL.
+    - fw: S2-032 (CVE-2016-3081)
+      api: 'Dynamic Method Invocation (method: prefix)'
+      note:
+        en: 'Fix: struts.enable.DynamicMethodInvocation=false. Closes this specific vector entirely but not Content-Type or namespace vectors.'
+        pl: 'Naprawa: struts.enable.DynamicMethodInvocation=false. Zamyka ten konkretny wektor całkowicie, ale nie wektory Content-Type czy przestrzeni nazw.'
+    - fw: S2-045/S2-046 (CVE-2017-5638, Equifax)
+      api: Content-Type header via Jakarta Multipart parser
+      note:
+        en: 'The bypass chain clears OgnlUtil''s excluded-classes list and resets #_memberAccess to DEFAULT_MEMBER_ACCESS — from inside the very expression meant to be sandboxed.'
+        pl: 'Łańcuch obejścia czyści listę wykluczonych klas OgnlUtil i resetuje #_memberAccess na DEFAULT_MEMBER_ACCESS — od wewnątrz samego wyrażenia, które miało być piaskownicowane.'
+    - fw: S2-057 (CVE-2018-11776)
+      api: alwaysSelectFullNamespace + missing namespace on url/action tags
+      note:
+        en: 'Fix: struts.mapper.alwaysSelectFullNamespace=false, plus always specifying an explicit namespace on result/url tags.'
+        pl: 'Naprawa: struts.mapper.alwaysSelectFullNamespace=false, plus zawsze podawanie jawnej przestrzeni nazw na tagach result/url.'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from fingerprinting a Struts app to full RCE.
+      pl: Jak atakujący przechodzi od rozpoznania aplikacji Struts do pełnego RCE.
+    steps:
+    - title:
+        en: Fingerprint the framework
+        pl: Rozpoznanie frameworka
+      description:
+        en: Look for .action/.do extensions, Struts-specific error pages, struts-tags in HTML, and version leakage via error stack traces.
+        pl: Szukaj rozszerzeń .action/.do, stron błędów specyficznych dla Struts, struts-tags w HTML, i wycieku wersji przez ślady stosu błędów.
+    - title:
+        en: Probe with a benign OGNL canary
+        pl: Sonda z niegroźnym kanarkiem OGNL
+      description:
+        en: Inject %{7*7} or ${(111+111)} where evaluation is suspected — a reflected 49 or 222 (not the literal text) confirms real evaluation, not mere reflection.
+        pl: Wstrzyknij %{7*7} albo ${(111+111)} tam gdzie podejrzewana jest ewaluacja — odbite 49 albo 222 (nie literalny tekst) potwierdza prawdziwą ewaluację, nie zwykłe odbicie.
+    - title:
+        en: Identify the specific CVE/vector
+        pl: Identyfikacja konkretnego CVE/wektora
+      description:
+        en: 'Map the app''s Struts version and behavior to a known advisory: S2-045 (Content-Type), S2-057 (namespace), S2-032 (DMI method: prefix).'
+        pl: 'Zmapuj wersję i zachowanie aplikacji Struts na znane ostrzeżenie: S2-045 (Content-Type), S2-057 (przestrzeń nazw), S2-032 (prefiks DMI method:).'
+    - title:
+        en: Deploy the public sandbox-escape chain
+        pl: Wdroż publiczny łańcuch ucieczki z sandboxa
+      description:
+        en: 'Use the well-known payload for that CVE — reset #_memberAccess and clear OgnlUtil''s excluded classes, then invoke ProcessBuilder.'
+        pl: 'Użyj dobrze znanego ładunku dla tego CVE — zresetuj #_memberAccess i wyczyść wykluczone klasy OgnlUtil, potem wywołaj ProcessBuilder.'
+    - title:
+        en: Confirm RCE and pivot
+        pl: Potwierdź RCE i przejdź dalej
+      description:
+        en: Run id/whoami, read the output back from the HTTP response, then establish a reverse shell and move laterally — as happened at Equifax into internal databases with cleartext credentials.
+        pl: Uruchom id/whoami, odczytaj wynik z odpowiedzi HTTP, potem ustanów odwrotną powłokę i przemieszczaj się lateralnie — jak stało się w Equifax do wewnętrznych baz danych z poświadczeniami w postaci jawnej.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Equifax had perimeter defenses and was still breached — the patch was available for over two months before exploitation. This is the canonical proof that a WAF is never a substitute for patching a known library CVE.
+      pl: Equifax miało zabezpieczenia obwodowe i wciąż zostało skompromitowane — łatka była dostępna ponad dwa miesiące przed eksploatacją. To podręcznikowy dowód że WAF nigdy nie zastępuje załatania znanego CVE biblioteki.
+    items:
+    - rank: 1
+      eff: 95
+      kind: primary
+      label:
+        en: Upgrade Struts/OGNL to the latest patched version
+        pl: Aktualizacja Struts/OGNL do najnowszej załatanej wersji
+      note:
+        en: This is fundamentally a recurring library vulnerability class — each CVE closes one specific evaluation path. Requires a continuous patch process, not a one-time act, since new sandbox-bypass CVEs keep appearing.
+        pl: To fundamentalnie powracająca klasa podatności biblioteki — każde CVE zamyka jedną konkretną ścieżkę ewaluacji. Wymaga ciągłego procesu łatania, nie jednorazowego działania, bo wciąż pojawiają się nowe CVE obejść sandboxa.
+    - rank: 2
+      eff: 90
+      kind: primary
+      label:
+        en: Never evaluate user input as OGNL (treat as data)
+        pl: Nigdy nie ewaluuj wejścia użytkownika jako OGNL (traktuj jako dane)
+      note:
+        en: Eliminates the root cause in your own code. Below 100% because much OGNL evaluation happens inside the framework itself, outside application-code control.
+        pl: Eliminuje przyczynę źródłową we własnym kodzie. Poniżej 100%, bo dużo ewaluacji OGNL dzieje się wewnątrz samego frameworka, poza kontrolą kodu aplikacji.
+    - rank: 3
+      eff: 65
+      kind: strong
+      label:
+        en: SecurityMemberAccess strict allow-list
+        pl: Ścisła allowlista SecurityMemberAccess
+      note:
+        en: Constrains reachable classes/methods, but has a poor track record — researchers repeatedly bypassed it by resetting the guard from inside OGNL itself.
+        pl: Ogranicza osiągalne klasy/metody, ale ma słabą historię — badacze wielokrotnie to omijali, resetując strażnika od wewnątrz samego OGNL.
+    - rank: 4
+      eff: 55
+      kind: mitigation
+      label:
+        en: Disable Dynamic Method Invocation + alwaysSelectFullNamespace
+        pl: Wyłączenie Dynamic Method Invocation + alwaysSelectFullNamespace
+      note:
+        en: 'Closes the method: prefix (CVE-2016-3081) and namespace (CVE-2018-11776) vectors entirely, but does nothing for Content-Type-based evaluation.'
+        pl: 'Zamyka całkowicie wektory prefiksu method: (CVE-2016-3081) i przestrzeni nazw (CVE-2018-11776), ale nic nie robi dla ewaluacji opartej na Content-Type.'
+    - rank: 5
+      eff: 30
+      kind: weak
+      label:
+        en: WAF signature rules
+        pl: Sygnatury WAF
+      note:
+        en: Catches commodity payload shapes but is routinely evaded via OGNL obfuscation and encoding. Equifax had perimeter defenses yet was breached because the actual patch was never applied — a WAF buys time to patch, it is not a substitute.
+        pl: Wyłapuje typowe kształty ładunków, ale jest rutynowo omijane przez zaciemnianie i kodowanie OGNL. Equifax miało zabezpieczenia obwodowe, a mimo to zostało skompromitowane, bo faktyczna łatka nigdy nie została zastosowana — WAF daje czas na załatanie, nie jest jego zastępstwem.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Equifax remains the largest data-breach settlement in U.S. history at the time — a direct, verified consequence of a two-month-old unpatched Struts CVE.
+      pl: Equifax pozostaje największą ugodą za wyciek danych w historii USA w tamtym czasie — bezpośrednia, zweryfikowana konsekwencja niezałatanego od dwóch miesięcy CVE Struts.
+    items:
+    - org: Equifax
+      year: 2017
+      impact: CVE-2017-5638 (S2-045), 147.9M people
+      cost: $575M-$700M FTC/CFPB/states settlement
+      description:
+        en: 'Patch and advisory released March 6-7, 2017. Equifax''s own vulnerability scan on March 15 failed to find the vulnerable host. Attackers gained access ~May 13, 2017, exfiltrated data through July, and were detected July 29-30. Exposed: names, SSNs, birth dates, addresses, some driver''s-license and credit-card numbers for 147.9 million people. Settlement (July 22, 2019) with FTC, CFPB, and 48 states/territories: at least $575M, up to $700M.'
+        pl: 'Łatka i ostrzeżenie wydane 6-7 marca 2017. Własny skan podatności Equifax z 15 marca nie znalazł podatnego hosta. Atakujący uzyskali dostęp ~13 maja 2017, eksfiltrowali dane do lipca, wykryci 29-30 lipca. Ujawnione: nazwiska, numery SSN, daty urodzenia, adresy, niektóre numery prawa jazdy i kart kredytowych dla 147.9 miliona osób. Ugoda (22 lipca 2019) z FTC, CFPB i 48 stanami/terytoriami: co najmniej 575 mln USD, do 700 mln USD.'
+    - org: Apache Struts (S2-057)
+      year: 2018
+      impact: CVE-2018-11776, CVSS 9.8
+      cost: Patched in 2.3.35 / 2.5.17
+      description:
+        en: Namespace/URL-derived OGNL RCE discovered by Man Yue Mo of Semmle using CodeQL taint tracking. Public PoCs and a Metasploit module appeared within days, followed by opportunistic cryptomining campaigns.
+        pl: RCE OGNL wywodzące się z przestrzeni nazw/URL odkryte przez Man Yue Mo z Semmle przy użyciu śledzenia skażenia CodeQL. Publiczne PoC i moduł Metasploit pojawiły się w ciągu dni, po czym nastąpiły oportunistyczne kampanie kryptowalutowe.
+    - org: Apache Struts (S2-032)
+      year: 2016
+      impact: CVE-2016-3081, CVSS ~8.1
+      cost: Patched in 2.3.28.1
+      description:
+        en: 'RCE via the method: prefix when Dynamic Method Invocation is enabled — one of several DMI-related OGNL vulnerabilities in the 2.3.19-2.3.28 range that established the pattern later closed by disabling DMI by default.'
+        pl: 'RCE przez prefiks method: gdy Dynamic Method Invocation jest włączone — jedna z kilku podatności OGNL związanych z DMI w zakresie 2.3.19-2.3.28, która ustanowiła wzorzec później zamknięty przez domyślne wyłączenie DMI.'
+    inlineSources:
+    - label: CVE-2017-5638
+      url: https://nvd.nist.gov/vuln/detail/CVE-2017-5638
+    - label: FTC — Equifax settlement
+      url: https://www.ftc.gov/enforcement/refunds/equifax-data-breach-settlement
+    - label: CVE-2018-11776
+      url: https://nvd.nist.gov/vuln/detail/CVE-2018-11776
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: SCA dependency scanners are the most reliable Struts OGNL detector, since this is fundamentally a library-version problem with recurring CVEs.
+      pl: Skanery zależności SCA są najbardziej niezawodnym detektorem OGNL Struts, bo to fundamentalnie problem wersji biblioteki z powracającymi CVE.
+    sast:
+    - - CodeQL
+      - java/ognl-injection dataflow query — used by GitHub Security Lab to discover CVE-2018-11776 itself
+    - - Semgrep
+      - Rules for OGNL sinks (Ognl.getValue/setValue) and vulnerable Struts configuration
+    - - Checkmarx / Fortify SCA
+      - CWE-917 Expression Language Injection query packs covering OGNL sinks
+    - - Snyk / OWASP Dependency-Check
+      - SCA identifying vulnerable struts2-core versions — the most reliable detector for this library-CVE class
+    dast:
+    - - Metasploit
+      - struts2_content_type_ognl (CVE-2017-5638), struts2_namespace_ognl (CVE-2018-11776), struts_dmi_exec (CVE-2016-3081)
+    - - Nuclei
+      - Templates for the Struts S2-* CVE family
+    - - Burp Suite
+      - Manual %{7*7} canary probing across parameters, headers, and URL paths
+    - - Nessus / Qualys
+      - Vulnerability scanner plugins detecting known-vulnerable Struts versions
+    note:
+      en: <strong>Key signal:</strong> an outdated <code>struts2-core</code> in your dependency tree matters more than any code pattern — run an SCA scan first, then grep for direct <code>Ognl.getValue()</code>/<code>setValue()</code> calls fed by request data.
+      pl: <strong>Kluczowy sygnał:</strong> nieaktualne <code>struts2-core</code> w drzewie zależności ma większe znaczenie niż jakikolwiek wzorzec kodu — najpierw uruchom skan SCA, potem szukaj bezpośrednich wywołań <code>Ognl.getValue()</code>/<code>setValue()</code> zasilanych danymi żądania.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: OGNL injection shares its primary CWE with Log4Shell — both are expression-language injection, confirming the shared lineage between these two Java RCE classes.
+      pl: Wstrzyknięcie OGNL dzieli swoje główne CWE z Log4Shell — oba to wstrzyknięcie języka wyrażeń, potwierdzając wspólne pochodzenie tych dwóch klas RCE w Javie.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-917 — Expression Language Injection (same primary CWE as Log4Shell/JNDI Injection)
+      - CWE-20 — Improper Input Validation (secondary tag used on some Struts CVEs)
+    - std: OWASP
+      items:
+      - 'A03:2021 — Injection (also relevant: A06:2021 Vulnerable and Outdated Components, arguably the more precise root-cause category for Equifax specifically)'
+    - std: Regulatory aftermath (Equifax case study)
+      items:
+      - FTC + CFPB + 48 states/territories joint settlement — $575M-$700M range (July 22, 2019)
+      - Widely cited as the reference case for patch-management/known-vulnerable-component governance under PCI DSS Req. 6 and state breach-notification statutes
+    inlineSources:
+    - label: CWE-917 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/917.html
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: FTC — Equifax settlement
+      url: https://www.ftc.gov/enforcement/refunds/equifax-data-breach-settlement
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm active OGNL injection exploitation against a Struts application, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji OGNL injection przeciw aplikacji Struts, przejdź tę listę od góry.
+    steps:
+    - en: Treat the host as fully compromised if RCE is confirmed — rotate all credentials/secrets reachable from that process, especially any stored in cleartext internally
+      pl: Traktuj hosta jako w pełni skompromitowanego jeśli RCE jest potwierdzone — zrotuj wszystkie poświadczenia/sekrety osiągalne z tego procesu, zwłaszcza przechowywane w postaci jawnej wewnętrznie
+    - en: Check outbound connection logs and process history for signs of lateral movement into internal databases and systems
+      pl: Sprawdź logi połączeń wychodzących i historię procesów pod kątem oznak ruchu lateralnego do wewnętrznych baz danych i systemów
+    - en: Identify the exact Struts version and CVE exploited by correlating the request logs (Content-Type, URL path, parameters) with known payload signatures
+      pl: Ustal dokładną wersję Struts i wykorzystane CVE, korelując logi żądań (Content-Type, ścieżka URL, parametry) ze znanymi sygnaturami ładunków
+    - en: Upgrade Struts to the latest patched version immediately — do not rely on WAF rules or SecurityMemberAccess allow-lists alone
+      pl: Natychmiast zaktualizuj Struts do najnowszej załatanej wersji — nie polegaj wyłącznie na regułach WAF czy allowlistach SecurityMemberAccess
+    - en: Hunt for persistence — webshells, cron jobs, unexpected scheduled tasks planted during the compromise window
+      pl: Poluj na trwałość — webshelle, zadania cron, nieoczekiwane zaplanowane zadania podrzucone w oknie kompromitacji
+    - en: Sweep every Struts application in the organization for the same vulnerable version, not just the initially-found instance
+      pl: Przeskanuj każdą aplikację Struts w organizacji pod kątem tej samej podatnej wersji, nie tylko początkowo znalezionej instancji
+    - en: Notify per applicable data-breach obligations if personal data was exfiltrated — the Equifax case sets the regulatory expectation here
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli dane osobowe zostały eksfiltrowane — przypadek Equifax ustanawia tu oczekiwanie regulacyjne
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-917 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/917.html
+    - label: NVD — CVE-2017-5638
+      url: https://nvd.nist.gov/vuln/detail/CVE-2017-5638
+    - label: NVD — CVE-2018-11776
+      url: https://nvd.nist.gov/vuln/detail/CVE-2018-11776
+    - label: FTC — Equifax data breach settlement
+      url: https://www.ftc.gov/enforcement/refunds/equifax-data-breach-settlement
+    - label: GitHub Security Lab — OGNL injection in Apache Struts
+      url: https://securitylab.github.com/research/ognl-injection-apache-struts/
+    - label: Apache Struts security bulletins
+      url: https://struts.apache.org/security/
