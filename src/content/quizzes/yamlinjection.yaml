@@ -1,0 +1,93 @@
+threatId: "cat_1_research05"
+title:
+  en: YAML Injection / Unsafe Deserialization — knowledge check
+  pl: YAML Injection / Unsafe Deserialization — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Python code contain a YAML deserialization vulnerability?
+      pl: Czy ten kod w Pythonie zawiera podatność deserializacji YAML?
+    snippet:
+      lang: python
+      code: |
+        config = yaml.load(uploaded_file.read())
+    isVulnerable: true
+    cwe: CWE-502
+    explanation:
+      en: Bare yaml.load() without an explicit safe Loader honors object-construction tags like !!python/object/apply:, letting an attacker-supplied YAML file call arbitrary Python callables (e.g. os.system) during parsing.
+      pl: Goły yaml.load() bez jawnego bezpiecznego Loadera honoruje tagi tworzenia obiektów jak !!python/object/apply:, pozwalając plikowi YAML dostarczonemu przez atakującego wywołać dowolne wywoływalne Pythona (np. os.system) podczas parsowania.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Java code safe from the SnakeYAML CVE-2022-1471 vulnerability class?
+      pl: Czy ten kod w Javie jest bezpieczny od klasy podatności SnakeYAML CVE-2022-1471?
+    snippet:
+      lang: java
+      code: |
+        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
+        Object config = yaml.load(uploadedYamlString);
+    isVulnerable: false
+    cwe: CWE-502
+    explanation:
+      en: SafeConstructor restricts the loader to plain scalars, lists, and maps — it will not instantiate arbitrary Java types like ScriptEngineManager, so the ScriptEngineManager+URLClassLoader gadget chain behind CVE-2022-1471 has no path to execute.
+      pl: SafeConstructor ogranicza loader do zwykłych skalarów, list i map — nie utworzy instancji dowolnych typów Java jak ScriptEngineManager, więc łańcuch gadżetów ScriptEngineManager+URLClassLoader stojący za CVE-2022-1471 nie ma ścieżki do wykonania.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: Why is "YAML injection" considered a somewhat misleading name for the core RCE variants of this threat?
+      pl: Dlaczego "YAML injection" jest uznawane za nieco mylącą nazwę dla podstawowych wariantów RCE tego zagrożenia?
+    choices:
+      - id: a
+        label: { en: "There is no attacker-controlled syntax breakout — the YAML is well-formed and valid; the danger is that the parser is designed to instantiate objects from tags, which is fundamentally a deserialization problem (CWE-502)", pl: "Nie ma wyłamania ze składni kontrolowanego przez atakującego — YAML jest poprawnie sformułowany i ważny; niebezpieczeństwo w tym że parser jest zaprojektowany by tworzyć instancje obiektów z tagów, co jest fundamentalnie problemem deserializacji (CWE-502)" }
+      - id: b
+        label: { en: Because YAML files cannot actually be parsed by any programming language, pl: Bo pliki YAML w rzeczywistości nie mogą być parsowane przez żaden język programowania }
+      - id: c
+        label: { en: Because this vulnerability only ever affects YAML comments, never actual data, pl: Bo ta podatność dotyczy tylko komentarzy YAML, nigdy rzeczywistych danych }
+    correctChoiceIds: ["a"]
+    explanation:
+      en: Classic injection (SQL, command, template) relies on syntax breakout — attacker text escapes a data context into a code context. YAML deserialization RCE involves no breakout at all; the malicious document is perfectly valid YAML, and the parser does exactly what it was designed to do (turn a tag into a live object). The fix is therefore restricting which types the loader may construct, never escaping/sanitizing.
+      pl: Klasyczne wstrzyknięcie (SQL, polecenia, szablon) polega na wyłamaniu ze składni — tekst atakującego ucieka z kontekstu danych do kontekstu kodu. RCE deserializacji YAML nie wiąże się z żadnym wyłamaniem; złośliwy dokument jest całkowicie poprawnym YAML-em, a parser robi dokładnie to do czego został zaprojektowany (zamienia tag w żywy obiekt). Naprawa polega więc na ograniczeniu jakie typy loader może budować, nigdy na escapowaniu/sanityzacji.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: "A team disables inline ${{ }} interpolation of PR titles into GitHub Actions \"run:\" blocks, passing untrusted values through env vars instead. Which variant of this threat does that specifically defend against?"
+      pl: "Zespół wyłącza wstawianie interpolacji ${{ }} tytułów PR w bloki \"run:\" GitHub Actions, przekazując zamiast tego niezaufane wartości przez zmienne env. Przed którym wariantem tego zagrożenia to konkretnie broni?"
+    choices:
+      - id: a
+        label: { en: "The Ruby !ruby/object: deserialization RCE variant", pl: "Wariant RCE deserializacji Ruby !ruby/object:" }
+      - id: b
+        label: { en: "The CI/CD YAML script injection variant — the one variant in this threat that is genuinely syntax-breakout injection (CWE-78/94, OWASP A03:2021), not deserialization", pl: "Wariant wstrzyknięcia skryptu YAML CI/CD — jedyny wariant w tym zagrożeniu, który jest naprawdę wstrzyknięciem przez wyłamanie ze składni (CWE-78/94, OWASP A03:2021), nie deserializacją" }
+      - id: c
+        label: { en: The billion-laughs anchor/alias expansion DoS variant, pl: Wariant DoS z ekspansją kotwic/aliasów billion-laughs }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: The CI/CD variant is explicitly called out as mechanistically different from the rest of this threat — it's real shell/command injection via unsafe string interpolation of untrusted context, not tag-driven object deserialization. Passing values through env vars (referenced as "$VAR" rather than inlined) is GitHub's own recommended fix for exactly this variant, and has no bearing on the Ruby/Python/Java/.NET deserialization variants or the DoS variant.
+      pl: Wariant CI/CD jest wyraźnie oznaczony jako mechanistycznie inny od reszty tego zagrożenia — to prawdziwe wstrzyknięcie shell/polecenia przez niebezpieczną interpolację stringów niezaufanego kontekstu, nie deserializacja obiektów sterowana tagami. Przekazywanie wartości przez zmienne env (odwoływane jako "$VAR" zamiast wstawiane) to własna rekomendowana naprawa GitHuba dokładnie dla tego wariantu, i nie ma wpływu na warianty deserializacji Ruby/Python/Java/.NET ani wariant DoS.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: This Ruby config loader is injectable. Which variant actually fixes the YAML deserialization risk?
+      pl: Ten loader konfiguracji w Ruby jest podatny. Który wariant faktycznie naprawia ryzyko deserializacji YAML?
+    variants:
+      - id: v1
+        lang: ruby
+        code: |
+          # strip only the literal substring "!ruby/object" before loading
+          clean = user_input.gsub("!ruby/object", "")
+          data = YAML.unsafe_load(clean)
+      - id: v2
+        lang: ruby
+        code: |
+          data = YAML.safe_load(user_input, permitted_classes: [Date], aliases: false)
+      - id: v3
+        lang: ruby
+        code: |
+          # just validate the file extension is .yml before loading
+          raise "bad file" unless filename.end_with?(".yml")
+          data = YAML.unsafe_load(user_input)
+    correctVariantId: v2
+    explanation:
+      en: v2 uses safe_load with an explicit allowlist of permitted classes and aliases disabled — the loader structurally cannot instantiate arbitrary types regardless of what tags appear in the input. v1's substring blacklist is trivially bypassed by any other dangerous tag (e.g. !ruby/hash:, or the same tag with whitespace/case variations); v3's filename-extension check says nothing about the actual content and still calls unsafe_load on it, leaving the real deserialization sink completely open.
+      pl: v2 używa safe_load z jawną allowlistą dozwolonych klas i wyłączonymi aliasami — loader strukturalnie nie może utworzyć instancji dowolnych typów niezależnie od tego jakie tagi pojawią się w wejściu. Blacklista podciągu z v1 jest trywialnie omijana przez jakikolwiek inny niebezpieczny tag (np. !ruby/hash:, albo ten sam tag z wariacjami białych znaków/wielkości liter); kontrola rozszerzenia pliku z v3 nic nie mówi o faktycznej treści i wciąż wywołuje na niej unsafe_load, zostawiając prawdziwy sink deserializacji całkowicie otwarty.

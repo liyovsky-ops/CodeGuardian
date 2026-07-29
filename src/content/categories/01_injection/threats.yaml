@@ -669,26 +669,26 @@ threats:
 
     '
 - id: cat_1_research05
-  name: Yaml injection
-  severity: Medium
+  name: YAML Injection / Unsafe Deserialization
+  severity: Critical
   difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Yaml injection" wskazane w analizie arena.
+  confidence: POSSIBLE
+  cwe:
+  - CWE-502
+  - CWE-776
+  desc: To nie wstrzyknięcie przez wyłamanie ze składni — to deserializacja (CWE-502) w przebraniu YAML. Wiele parserów (Ruby !ruby/object:, Python !!python/object/apply:, Java SnakeYAML !!javax.script.ScriptEngineManager) tworzy instancje obiektów natywnych języka podczas parsowania niebezpiecznym loaderem — ta konstrukcja obiektu staje się bezpośrednią linią do wykonania kodu. CVE-2013-0156 (Rails) i CVE-2022-1471 (SnakeYAML, CVSS 9.8) to dwa flagowe incydenty.
+  desc_en: This isn't syntax-breakout injection — it's deserialization (CWE-502) wearing a YAML label. Many parsers (Ruby !ruby/object:, Python !!python/object/apply:, Java SnakeYAML !!javax.script.ScriptEngineManager) instantiate language-native objects during parsing with an unsafe loader — that object construction becomes a direct line to code execution. CVE-2013-0156 (Rails) and CVE-2022-1471 (SnakeYAML, CVSS 9.8) are the two headline incidents.
+  lang: python
+  vuln: '# VULNERABLE
+
+    config = yaml.load(uploaded_file.read())
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  safe: '# SECURE
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
+    config = yaml.safe_load(uploaded_file.read())
 
-    # Potrzebny dalszy research przed dodaniem przykładu
-
-    '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
-
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    config = yaml.load(uploaded_file.read(), Loader=yaml.SafeLoader)
 
     '
 - id: cat_1_research06

