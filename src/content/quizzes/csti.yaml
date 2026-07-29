@@ -1,0 +1,124 @@
+threatId: cat_1_research01
+title:
+  en: Client-Side Template Injection (CSTI) — knowledge check
+  pl: Client-Side Template Injection (CSTI) — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why did PortSwigger title the original CSTI research "XSS without HTML"?
+    pl: Dlaczego PortSwigger zatytułował oryginalne badanie CSTI "XSS bez HTML"?
+  choices:
+  - id: a
+    label:
+      en: The payload uses no HTML metacharacters (< or >) at all — it lives entirely inside the template engine's own expression syntax, so HTML-encoding the output does nothing to stop it
+      pl: Ładunek w ogóle nie używa metaznaków HTML (< ani >) — żyje całkowicie wewnątrz własnej składni wyrażeń silnika szablonów, więc kodowanie HTML wyjścia nic nie robi by go zatrzymać
+  - id: b
+    label:
+      en: It only works on pages that have no HTML at all, such as plain-text API responses
+      pl: Działa tylko na stronach które w ogóle nie mają HTML, takich jak odpowiedzi API w czystym tekście
+  - id: c
+    label:
+      en: It was renamed later to remove the word HTML for legal reasons
+      pl: Zostało później przemianowane by usunąć słowo HTML z powodów prawnych
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Classic XSS defenses HTML-encode <, >, and quotes. CSTI's {{ }} expressions contain none of those characters, so encoding never touches them — the framework itself evaluates the expression during its own compile pass, completely bypassing the standard XSS mitigation.
+    pl: Klasyczne obrony XSS kodują <, >, i cudzysłowy. Wyrażenia {{ }} CSTI nie zawierają żadnego z tych znaków, więc kodowanie nigdy ich nie dotyka — sam framework ewaluuje wyrażenie podczas własnego przejścia kompilacji, całkowicie omijając standardową mitygację XSS.
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: AngularJS 1.8.2 is in use (post sandbox-removal). Is this reflected input vulnerable to CSTI?
+    pl: Używany jest AngularJS 1.8.2 (po usunięciu sandboxa). Czy to odbite wejście jest podatne na CSTI?
+  snippet:
+    lang: html
+    code: "<body ng-app>\n  <div>Hello, <%= request.query.name %></div>\n</body>"
+  isVulnerable: true
+  cwe: CWE-1336
+  explanation:
+    en: Yes. Since AngularJS 1.6.0 removed the sandbox entirely, any {{ }} expression reflected into an ng-app-scoped region (name={{constructor.constructor('alert(document.cookie)')()}}) reaches the Function constructor directly with no escape needed.
+    pl: Tak. Odkąd AngularJS 1.6.0 całkowicie usunął sandbox, każde wyrażenie {{ }} odbite w regionie w zasięgu ng-app (name={{constructor.constructor('alert(document.cookie)')()}}) dosięga konstruktora Function bezpośrednio bez potrzeby ucieczki.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: What is the single most important reason "upgrade to the latest patched version" does not work as a defense against AngularJS CSTI, unlike most other injection classes?
+    pl: Jaki jest najważniejszy powód dla którego "zaktualizuj do najnowszej łatanej wersji" nie działa jako obrona przed CSTI w AngularJS, w przeciwieństwie do większości innych klas wstrzyknięć?
+  choices:
+  - id: a
+    label:
+      en: Google removed the expression sandbox entirely in 1.6.0 rather than fixing it (having concluded it was never a real security boundary), and AngularJS itself reached end-of-life in December 2021 with no further patches of any kind
+      pl: Google całkowicie usunął sandbox wyrażeń w 1.6.0 zamiast go naprawić (uznawszy że nigdy nie był prawdziwą granicą bezpieczeństwa), a sam AngularJS osiągnął koniec wsparcia w grudniu 2021 bez żadnych dalszych łatek
+  - id: b
+    label:
+      en: AngularJS never had any version numbering, so "latest version" is meaningless
+      pl: AngularJS nigdy nie miał żadnego numerowania wersji, więc "najnowsza wersja" jest bez sensu
+  - id: c
+    label:
+      en: AngularJS patches require a paid enterprise license that most projects don't have
+      pl: Łatki AngularJS wymagają płatnej licencji enterprise której większość projektów nie ma
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is why "migrate off AngularJS entirely" ranks #1 in the defense list at ~98% effectiveness rather than "upgrade" — there is no later, safer AngularJS version to upgrade to for this specific issue, and the framework will never receive another security patch of any kind.'
+    pl: 'To dlatego "migracja z AngularJS całkowicie" zajmuje #1 miejsce na liście obron przy ~98% skuteczności zamiast "aktualizacja" — nie istnieje żadna późniejsza, bezpieczniejsza wersja AngularJS do której można by zaktualizować dla tego konkretnego problemu, a framework nigdy nie otrzyma żadnej kolejnej łatki bezpieczeństwa.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A page deploys a strict CSP with script-src 'self' and no unsafe-eval, and also runs a vulnerable AngularJS 1.7 build. Does this CSP fully prevent expression-injection exploitation?
+    pl: Strona wdraża ścisłe CSP ze script-src 'self' i bez unsafe-eval, oraz uruchamia podatną wersję AngularJS 1.7. Czy to CSP w pełni zapobiega eksploatacji wstrzyknięcia wyrażenia?
+  snippet:
+    lang: html
+    code: <input autofocus ng-focus="$event.path|orderBy:'[].constructor.from([1],alert)'">
+  isVulnerable: true
+  cwe: CWE-1336
+  explanation:
+    en: No. This event/filter gadget chain reaches the Function constructor through Angular's own expression-execution path, not the browser's eval() — so a script-src/unsafe-eval restriction never sees it. This exact scenario is the basis of PortSwigger's own "sandbox escape and CSP" lab.
+    pl: Nie. Ten łańcuch gadżetów zdarzenie/filtr dosięga konstruktora Function przez własną ścieżkę wykonania wyrażeń Angulara, nie eval() przeglądarki — więc ograniczenie script-src/unsafe-eval nigdy tego nie widzi. Dokładnie ten scenariusz jest podstawą własnego laboratorium PortSwigger "sandbox escape and CSP".
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: Why is v-html misuse in Vue.js described as "mechanistically different" from the mustache constructor-chain injection variant, even though both can lead to full JS execution?
+    pl: Dlaczego nadużycie v-html w Vue.js jest opisane jako "mechanistycznie inne" od wariantu wstrzyknięcia łańcucha konstruktora mustache, mimo że oba mogą prowadzić do pełnego wykonania JS?
+  choices:
+  - id: a
+    label:
+      en: v-html directly renders raw HTML the caller already trusts as markup -- it is ordinary DOM XSS with no template-expression sandbox or evaluation step involved at all, whereas mustache injection requires the framework to actually compile and evaluate an expression
+      pl: v-html bezpośrednio renderuje surowy HTML który wywołujący już traktuje jako znacznik -- to zwykłe DOM XSS bez żadnego sandboxa wyrażenia szablonu czy kroku ewaluacji, podczas gdy wstrzyknięcie mustache wymaga by framework faktycznie skompilował i ewaluował wyrażenie
+  - id: b
+    label:
+      en: v-html only works in Internet Explorer, mustache injection only works in Chrome
+      pl: v-html działa tylko w Internet Explorer, wstrzyknięcie mustache działa tylko w Chrome
+  - id: c
+    label:
+      en: They are not actually different -- this is an error in the research
+      pl: W rzeczywistości nie są różne -- to błąd w badaniu
+  correctChoiceIds:
+  - a
+  explanation:
+    en: v-html is a direct unsafe-sink DOM XSS (the same class of bug as innerHTML misuse elsewhere), while mustache constructor-chain injection is a true template-expression-evaluation vulnerability requiring the framework's own compiler to process the payload as code. Both belong in this knowledge base's variant list, but they represent genuinely distinct root causes worth telling apart during triage.
+    pl: v-html to bezpośrednie DOM XSS przez niebezpieczny sink (ta sama klasa błędu co nadużycie innerHTML gdzie indziej), podczas gdy wstrzyknięcie łańcucha konstruktora mustache to prawdziwa podatność ewaluacji wyrażenia szablonu wymagająca by własny kompilator frameworka przetworzył ładunek jako kod. Oba należą do listy wariantów tej bazy wiedzy, ale reprezentują naprawdę odrębne przyczyny źródłowe warte rozróżnienia podczas triażu.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A Vue.js component renders untrusted comment text. Which variant actually fixes the risk while still allowing basic formatting?
+    pl: Komponent Vue.js renderuje niezaufany tekst komentarza. Który wariant faktycznie naprawia ryzyko wciąż pozwalając na podstawowe formatowanie?
+  variants:
+  - id: v1
+    lang: html
+    code: '<!-- strip only the literal substring "constructor" before binding -->
+
+      <div v-html="comment.replace(/constructor/g, '''')"></div>'
+  - id: v2
+    lang: html
+    code: <div v-html="DOMPurify.sanitize(comment)"></div>
+  - id: v3
+    lang: html
+    code: '<!-- only allow comments shorter than 500 characters -->
+
+      <div v-html="comment.slice(0, 500)"></div>'
+  correctVariantId: v2
+  explanation:
+    en: v2 runs the untrusted comment through a real sanitizer with an allowlist before it ever reaches v-html, removing dangerous tags/attributes/expressions regardless of exact wording. v1's substring blacklist targets one specific gadget name and is trivially bypassed by any other constructor-chain trick or an entirely unrelated payload like <img src=x onerror=alert(1)>. v3's length cap says nothing about the actual content and still binds raw, unsanitized HTML.
+    pl: v2 przepuszcza niezaufany komentarz przez prawdziwy sanitizer z allowlistą zanim w ogóle trafi do v-html, usuwając niebezpieczne tagi/atrybuty/wyrażenia niezależnie od dokładnego brzmienia. Blacklista podciągu z v1 celuje w jedną konkretną nazwę gadżetu i jest trywialnie omijana przez jakąkolwiek inną sztuczkę łańcucha konstruktora albo zupełnie niezwiązany ładunek jak <img src=x onerror=alert(1)>. Limit długości z v3 nic nie mówi o faktycznej treści i wciąż wiąże surowy, niesanityzowany HTML.

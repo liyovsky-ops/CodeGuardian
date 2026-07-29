@@ -27,6 +27,7 @@ import promptinjectionData from '../content/deepdives/promptinjection.yaml';
 import ognlData from '../content/deepdives/ognl.yaml';
 import yamlinjectionData from '../content/deepdives/yamlinjection.yaml';
 import htmlinjectionData from '../content/deepdives/htmlinjection.yaml';
+import cstiData from '../content/deepdives/csti.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -51,6 +52,7 @@ import promptinjectionQuiz from '../content/quizzes/promptinjection.yaml';
 import ognlQuiz from '../content/quizzes/ognl.yaml';
 import yamlinjectionQuiz from '../content/quizzes/yamlinjection.yaml';
 import htmlinjectionQuiz from '../content/quizzes/htmlinjection.yaml';
+import cstiQuiz from '../content/quizzes/csti.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -77,6 +79,7 @@ export const DEEPDIVES = {
   '1.17': ognlData, // OGNL Injection (Apache Struts)
   cat_1_research05: yamlinjectionData, // YAML Injection / Unsafe Deserialization
   '1.24': htmlinjectionData, // HTML Injection
+  cat_1_research01: cstiData, // Client-Side Template Injection (CSTI)
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -106,4 +109,5 @@ export const QUIZZES = {
   '1.17': ognlQuiz,
   cat_1_research05: yamlinjectionQuiz,
   '1.24': htmlinjectionQuiz,
+  cat_1_research01: cstiQuiz,
 };

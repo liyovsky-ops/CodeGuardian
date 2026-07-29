@@ -1,0 +1,401 @@
+meta:
+  id: csti
+  threatId: cat_1_research01
+  severity: Critical
+  color: '#f59e0b'
+  colorRgb: 245,158,11
+  cwe: CWE-1336
+  cvss: '8.8'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'Client-Side Template '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: Client-Side Template Injection (CSTI)
+  lead:
+    en: 'PortSwigger titled the paper that named this class "XSS without HTML" — and that''s the whole story. Untrusted input reflected into a client-side templating engine''s own expression syntax (AngularJS''s {{ }}) gets evaluated as code by the framework itself, bypassing HTML-encoding entirely since the payload never contains a < or >. AngularJS 1.x is the canonical case: its pre-1.6 "sandbox" was never a real security boundary (Google''s own words), researchers broke it repeatedly, and Google simply deleted it in 1.6.0 — meaning the only real fix for AngularJS specifically is migrating off a framework that reached end-of-life in December 2021.'
+    pl: 'PortSwigger nazwał artykuł który ukuł tę klasę "XSS bez HTML" — i to cała historia. Niezaufane wejście odbite we własnej składni wyrażeń silnika szablonów po stronie klienta (AngularJS {{ }}) jest ewaluowane jako kod przez sam framework, całkowicie omijając kodowanie HTML, bo ładunek nigdy nie zawiera < ani >. AngularJS 1.x to kanoniczny przypadek: jego "sandbox" sprzed 1.6 nigdy nie był prawdziwą granicą bezpieczeństwa (własnymi słowami Google), badacze wielokrotnie go łamali, a Google po prostu go usunął w 1.6.0 — co oznacza że jedyną prawdziwą naprawą dla AngularJS konkretnie jest migracja z frameworka który osiągnął koniec wsparcia w grudniu 2021.'
+  metrics:
+  - k: CWE-1336
+    v:
+      en: Weakness ID (dedicated)
+      pl: ID słabości (dedykowane)
+  - k: '8.8'
+    v: CVSS · Critical (typical full-compromise case)
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A03:2021
+    url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  - label: CWE-1336 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/1336.html
+  - label: 'PortSwigger Research — XSS without HTML: CSTI with AngularJS'
+    url: https://portswigger.net/research/xss-without-html-client-side-template-injection-with-angularjs
+  - label: PortSwigger Web Security Academy — Client-side template injection
+    url: https://portswigger.net/web-security/cross-site-scripting/contexts/client-side-template-injection
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laboratoria
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Six variants, from AngularJS''s sandboxed early years to Vue''s modern constructor-chain gadgets. Note what''s absent: modern Angular (2+) uses ahead-of-time compilation and is not vulnerable to this class the way AngularJS 1.x was — its real risk is bypassSecurityTrustHtml/[innerHTML] misuse, ordinary DOM XSS rather than live expression evaluation.'
+      pl: 'Sześć wariantów, od pierwszych, sandboxowanych lat AngularJS po nowoczesne gadżety łańcucha konstruktorów Vue. Warto zauważyć czego brakuje: nowoczesny Angular (2+) używa kompilacji ahead-of-time i nie jest podatny na tę klasę tak jak AngularJS 1.x — jego prawdziwym ryzykiem jest nadużycie bypassSecurityTrustHtml/[innerHTML], zwykłe DOM XSS, nie żywa ewaluacja wyrażeń.'
+    items:
+    - name: AngularJS pre-1.6 sandbox escape
+      sev: high
+      description:
+        en: AngularJS versions 1.2.24-1.5.8 evaluated {{ }} expressions inside a "sandbox" meant to block access to window/document/Function. Google stated it was never a real security boundary; each version needs its own escape payload since the sandbox internals changed release to release.
+        pl: Wersje AngularJS 1.2.24-1.5.8 ewaluowały wyrażenia {{ }} wewnątrz "sandboxa" mającego blokować dostęp do window/document/Function. Google stwierdził że nigdy nie był prawdziwą granicą bezpieczeństwa; każda wersja wymaga własnego ładunku ucieczki, bo wewnętrzna budowa sandboxa zmieniała się z wydania na wydanie.
+      payload: '{{''a''.constructor.prototype.charAt=[].join;$eval(''x=1} } };alert(1)//'');}}  (AngularJS 1.4.0-1.4.9)'
+    - name: AngularJS 1.6+ direct expression injection
+      sev: critical
+      description:
+        en: Google removed the sandbox entirely in AngularJS 1.6.0 (Dec 2016) after conceding it was unfixable. Any {{ }} expression reflected into an ng-app-scoped page now reaches the Function constructor directly, with zero escape gymnastics required.
+        pl: Google całkowicie usunął sandbox w AngularJS 1.6.0 (grudzień 2016) po uznaniu że jest nie do naprawienia. Każde wyrażenie {{ }} odbite na stronie w zasięgu ng-app teraz dosięga konstruktora Function bezpośrednio, bez żadnej gimnastyki ucieczki.
+      payload: '{{constructor.constructor(''alert(document.cookie)'')()}}'
+    - name: AngularJS CSP-bypass gadget chain
+      sev: high
+      description:
+        en: A strict CSP blocking inline <script>/eval doesn't stop Angular's own expression evaluator, since it isn't the browser's eval() in the CSP sense. Event-bound gadgets (ng-focus + the orderBy filter) reach the Function constructor through Angular's own execution path instead.
+        pl: Ścisłe CSP blokujące inline <script>/eval nie zatrzymuje własnego ewaluatora wyrażeń Angulara, bo nie jest to eval() przeglądarki w sensie CSP. Gadżety związane ze zdarzeniami (ng-focus + filtr orderBy) dosięgają konstruktora Function inną ścieżką wykonania, własną dla Angulara.
+      payload: <input autofocus ng-focus="$event.path|orderBy:'[].constructor.from([1],alert)'">
+    - name: Vue.js mustache constructor-chain injection
+      sev: critical
+      description:
+        en: Vue's {{ }} mustache interpolation is HTML-escaped by default and generally safe against reflection — but when untrusted input is compiled as template source itself (e.g. server-side rendering concatenating user text into markup Vue then mounts), the same constructor-chain trick that works on AngularJS reaches arbitrary JS.
+        pl: Interpolacja mustache {{ }} Vue jest domyślnie kodowana HTML i generalnie bezpieczna od zwykłego odbicia — ale gdy niezaufane wejście jest kompilowane jako samo źródło szablonu (np. renderowanie po stronie serwera sklejające tekst użytkownika w znacznik który Vue potem montuje), ta sama sztuczka łańcucha konstruktora co w AngularJS dosięga dowolnego JS.
+      payload: '{{constructor.constructor(''alert(1)'')()}}'
+    - name: Vue v-html unsafe binding
+      sev: high
+      description:
+        en: 'A mechanistically different variant from the mustache-injection cases above: binding untrusted HTML directly to v-html is ordinary DOM XSS (the sink renders raw markup, no expression-evaluation sandbox involved at all), not template-expression evaluation.'
+        pl: 'Wariant mechanistycznie inny od przypadków wstrzyknięcia mustache powyżej: związanie niezaufanego HTML bezpośrednio z v-html to zwykłe DOM XSS (sink renderuje surowy znacznik, bez żadnego zaangażowania sandboxa ewaluacji wyrażeń), nie ewaluacja wyrażenia szablonu.'
+      payload: <div v-html="userSuppliedHtml"></div>  <!-- userSuppliedHtml = <img src=x onerror=alert(1)> -->
+    - name: vue-template-compiler prototype pollution XSS (CVE-2024-6783)
+      sev: medium
+      description:
+        en: 'A distinct, single-source-verified variant: polluting Object.prototype.staticClass/staticStyle in the Vue 2 (EOL) template compiler leads to arbitrary JS during compilation. CVSS 4.8 (Moderate) specifically because it requires the attacker to already have some code-execution/injection foothold to pollute the prototype in the first place — a real but narrower-impact CVE than the reflection-based variants above, fixed by moving to Vue 3.'
+        pl: 'Odrębny, zweryfikowany przez jedno źródło wariant: zanieczyszczenie Object.prototype.staticClass/staticStyle w kompilatorze szablonów Vue 2 (EOL) prowadzi do dowolnego JS podczas kompilacji. CVSS 4.8 (Umiarkowane) konkretnie dlatego że wymaga od atakującego posiadania już jakiegoś przyczółka wykonania kodu/wstrzyknięcia by w ogóle zanieczyścić prototyp — realne, ale węższe w skutkach CVE niż warianty oparte na odbiciu powyżej, naprawione przez przejście na Vue 3.'
+      payload: Object.prototype.staticClass = '\'+alert(1)+\'' // then any vue-template-compiler compile() call executes it
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'AngularJS and Vue share the same root fix — keep untrusted input out of any region the framework compiles as a template, or bind it as data instead. Modern Angular shows the same lesson from the opposite direction: its default posture is safe, and the footgun is explicitly opting out of it.'
+      pl: 'AngularJS i Vue dzielą tę samą podstawową naprawę — trzymaj niezaufane wejście z dala od każdego regionu który framework kompiluje jako szablon, albo wiąż je jako dane. Nowoczesny Angular pokazuje tę samą lekcję z przeciwnej strony: jego domyślna postawa jest bezpieczna, a pułapka to jawne jej wyłączenie.'
+    languages:
+    - label: AngularJS
+      lang: html
+      vulnerable: "<!-- VULNERABLE: server reflects raw input into an ng-app-scoped page -->\n<body ng-app>\n  <div>Hello, {{ }}</div>   <!-- server writes: Hello, <%= request.query.name %> -->\n  <!-- name = {{constructor.constructor('alert(document.cookie)')()}} -->\n</body>"
+      safe: '<!-- SECURE: keep untrusted input out of the Angular-compiled region -->
+
+        <div ng-non-bindable><%= escapeHtml(request.query.name) %></div>
+
+        <!-- Best fix: migrate off end-of-life AngularJS entirely -->'
+    - label: Vue.js
+      lang: html
+      vulnerable: '<!-- VULNERABLE: unsafe HTML sink -->
+
+        <div v-html="userSuppliedHtml"></div>'
+      safe: '<!-- SECURE: text interpolation auto-escapes -->
+
+        <div v-text="userSuppliedHtml"></div>
+
+        <!-- or, if rich HTML is genuinely required: -->
+
+        <div v-html="DOMPurify.sanitize(userSuppliedHtml)"></div>'
+    - label: Angular (2+)
+      lang: typescript
+      vulnerable: '// VULNERABLE: explicitly defeats Angular''s built-in sanitizer
+
+        this.safeHtml = this.sanitizer.bypassSecurityTrustHtml(userInput);
+
+        // template: <div [innerHTML]="safeHtml"></div>'
+      safe: '// SECURE: let Angular sanitize automatically -- do not bypass it
+
+        // template: <div [innerHTML]="userInput"></div>  -- Angular auto-sanitizes this binding'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker distinguishes CSTI from ordinary reflected XSS and picks the right escape for the exact engine and version in front of them.
+      pl: Jak atakujący odróżnia CSTI od zwykłego odbitego XSS i dobiera właściwą ucieczkę dla dokładnego silnika i wersji przed sobą.
+    steps:
+    - title:
+        en: Fingerprint the engine with math probes
+        pl: Rozpoznaj silnik sondami matematycznymi
+      description:
+        en: 'Inject {{7*7}}, ${7*7}, #{7*7} and similar. A rendered 49 (rather than literal text) confirms an active templating engine and narrows the candidates by delimiter syntax.'
+        pl: 'Wstrzyknij {{7*7}}, ${7*7}, #{7*7} i podobne. Wyrenderowane 49 (zamiast dosłownego tekstu) potwierdza aktywny silnik szablonów i zawęża kandydatów wg składni ograniczników.'
+    - title:
+        en: Confirm client-side (not server-side) evaluation
+        pl: Potwierdź ewaluację po stronie klienta (nie serwera)
+      description:
+        en: 'Compare the raw HTTP response against the rendered DOM: if {{7*7}} appears literally in the network response but shows 49 once the page renders, evaluation happens in the browser -- this is CSTI, not SSTI.'
+        pl: 'Porównaj surową odpowiedź HTTP z wyrenderowanym DOM: jeśli {{7*7}} pojawia się dosłownie w odpowiedzi sieciowej ale pokazuje 49 po wyrenderowaniu strony, ewaluacja dzieje się w przeglądarce -- to CSTI, nie SSTI.'
+    - title:
+        en: Identify the exact framework and version
+        pl: Zidentyfikuj dokładny framework i wersję
+      description:
+        en: Check for ng-app/ng-model attributes and the loaded angular.js version string, or Vue devtools globals. The exact AngularJS version determines which sandbox-escape payload (if any) is required.
+        pl: Sprawdź atrybuty ng-app/ng-model i ciąg wersji załadowanego angular.js, albo globalne zmienne Vue devtools. Dokładna wersja AngularJS determinuje jaki ładunek ucieczki sandboxa (jeśli jakikolwiek) jest wymagany.
+    - title:
+        en: Escalate to arbitrary JS execution
+        pl: Eskaluj do dowolnego wykonania JS
+      description:
+        en: 'AngularJS 1.6+ or Vue: use the constructor-chain payload directly. Pre-1.6 AngularJS: apply the version-matched sandbox escape. Confirm with a low-noise probe (alert(1)) before moving to cookie/session theft.'
+        pl: 'AngularJS 1.6+ lub Vue: użyj bezpośrednio ładunku łańcucha konstruktora. AngularJS sprzed 1.6: zastosuj ucieczkę sandboxa dopasowaną do wersji. Potwierdź niegłośną sondą (alert(1)) przed przejściem do kradzieży ciasteczek/sesji.'
+    - title:
+        en: Work around CSP with event/filter gadgets if needed
+        pl: Obejdź CSP gadżetami zdarzeń/filtrów jeśli potrzeba
+      description:
+        en: If a strict CSP blocks the direct constructor-call payload, pivot to Angular's own execution path (ng-focus + orderBy filter chains) rather than trying to defeat the CSP itself.
+        pl: Jeśli ścisłe CSP blokuje bezpośredni ładunek wywołania konstruktora, przejdź na własną ścieżkę wykonania Angulara (łańcuchy ng-focus + filtr orderBy) zamiast próbować pokonać samo CSP.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'For AngularJS specifically, the honest #1 defense is migration -- the sandbox was proven unfixable by its own maintainer and deleted outright, and the framework itself has received no security patches since reaching end-of-life.'
+      pl: 'Dla AngularJS konkretnie, uczciwa obrona #1 to migracja -- sandbox został uznany za nie do naprawienia przez własnego opiekuna i całkowicie usunięty, a sam framework nie otrzymał żadnych łatek bezpieczeństwa odkąd osiągnął koniec wsparcia.'
+    items:
+    - rank: 1
+      eff: 98
+      kind: primary
+      label:
+        en: Migrate off end-of-life AngularJS
+        pl: Migracja z AngularJS po końcu wsparcia
+      note:
+        en: AngularJS reached End-of-Life on 31 December 2021 and receives no further patches. Since the sandbox was removed rather than fixed, there is no secure configuration for AngularJS 1.x that reflects untrusted input into a template-compiled region.
+        pl: AngularJS osiągnął koniec wsparcia 31 grudnia 2021 i nie otrzymuje dalszych łatek. Ponieważ sandbox został usunięty zamiast naprawiony, nie istnieje bezpieczna konfiguracja AngularJS 1.x która odbija niezaufane wejście w regionie kompilowanym jako szablon.
+    - rank: 2
+      eff: 92
+      kind: primary
+      label:
+        en: Never reflect untrusted input into a template-compiled region
+        pl: Nigdy nie odbijaj niezaufanego wejścia w regionie kompilowanym jako szablon
+      note:
+        en: Keep user data out of any DOM region scanned by the framework (ng-app/Vue-mounted); mark unavoidable regions ng-non-bindable / v-pre. Root-cause fix, framework-agnostic.
+        pl: Trzymaj dane użytkownika z dala od każdego regionu DOM skanowanego przez framework (ng-app/zamontowany przez Vue); oznacz nieuniknione regiony ng-non-bindable / v-pre. Naprawa przyczyny źródłowej, niezależna od frameworka.
+    - rank: 3
+      eff: 85
+      kind: strong
+      label:
+        en: Framework-native safe binding (avoid v-html/ng-bind-html/bypassSecurityTrustHtml)
+        pl: Bezpieczne wiązanie natywne frameworka (unikaj v-html/ng-bind-html/bypassSecurityTrustHtml)
+      note:
+        en: Use auto-escaping bindings (v-text, ng-bind, plain Angular [innerHTML]) and never opt out of a framework's default sanitizer for untrusted data. Strong, but only if developers never reach for the unsafe escape hatch.
+        pl: Używaj wiązań auto-escapujących (v-text, ng-bind, zwykły Angular [innerHTML]) i nigdy nie wyłączaj domyślnego sanitizera frameworka dla niezaufanych danych. Silne, ale tylko jeśli developerzy nigdy nie sięgną po niebezpieczny wyjątek.
+    - rank: 4
+      eff: 45
+      kind: mitigation
+      label:
+        en: Strict CSP without unsafe-eval
+        pl: Ścisłe CSP bez unsafe-eval
+      note:
+        en: Meaningful defense-in-depth, but documented gadget-chain payloads (ng-focus + orderBy) bypass CSP entirely by using Angular's own execution path rather than the browser's eval() -- never rely on CSP alone.
+        pl: Sensowna obrona w głąb, ale udokumentowane ładunki łańcucha gadżetów (ng-focus + orderBy) całkowicie omijają CSP używając własnej ścieżki wykonania Angulara zamiast eval() przeglądarki -- nigdy nie polegaj wyłącznie na CSP.
+    - rank: 5
+      eff: 25
+      kind: weak
+      label:
+        en: Input validation / blocklisting {{ }}
+        pl: Walidacja wejścia / blacklista {{ }}
+      note:
+        en: Brittle and easily bypassed via alternate delimiter syntax, encoding tricks, or entirely different sinks like v-html that don't use {{ }} at all. Last-resort supplementary layer only.
+        pl: Kruche i łatwe do ominięcia przez alternatywną składnię ograniczników, sztuczki kodowania, albo zupełnie inne sinki jak v-html które w ogóle nie używają {{ }}. Tylko ostateczna warstwa uzupełniająca.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: The foundational research, a hard framework-lifecycle deadline, and a real (if narrower-impact) CVE in Vue's own tooling.
+      pl: Fundamentalne badanie, twardy termin cyklu życia frameworka, i realne (choć o węższym wpływie) CVE we własnym narzędziu Vue.
+    items:
+    - org: PortSwigger Research (Gareth Heyes)
+      year: 2016
+      impact: '"XSS without HTML: Client-Side Template Injection with AngularJS"'
+      cost: Foundational publication that named and popularized the CSTI class
+      description:
+        en: Published 27 January 2016. Documents the sandbox-escape technique (overwriting charAt to corrupt AngularJS's identifier check, then calling $eval), privately reported to Google on 25 September 2015 and patched in AngularJS 1.5.0 on 15 January 2016, affecting versions 1.3.1-1.4.9. All research teams converged on Gareth Heyes as author -- not James Kettle, who authored the separate, earlier Server-Side Template Injection research.
+        pl: Opublikowane 27 stycznia 2016. Dokumentuje technikę ucieczki sandboxa (nadpisanie charAt by zepsuć kontrolę identyfikatora AngularJS, potem wywołanie $eval), zgłoszone prywatnie Google 25 września 2015 i naprawione w AngularJS 1.5.0 15 stycznia 2016, dotyczące wersji 1.3.1-1.4.9. Wszystkie zespoły badawcze zgodnie wskazały Garetha Heyesa jako autora -- nie Jamesa Kettle, który napisał osobne, wcześniejsze badanie nad Server-Side Template Injection.
+    - org: AngularJS (Google)
+      year: 2021
+      impact: Framework reached official End-of-Life
+      cost: No further security patches for any version, ever
+      description:
+        en: AngularJS's Long Term Support window closed on 31 December 2021. Combined with the 2016 sandbox removal, this makes "upgrade to a safe version" a dead end for AngularJS specifically -- migration off the framework is the only durable fix, which is why it tops the defense ranking.
+        pl: Okno długoterminowego wsparcia AngularJS zamknęło się 31 grudnia 2021. W połączeniu z usunięciem sandboxa w 2016, czyni to "aktualizację do bezpiecznej wersji" ślepym zaułkiem dla AngularJS konkretnie -- migracja z frameworka jest jedyną trwałą naprawą, dlatego zajmuje szczyt rankingu obron.
+    - org: Vue.js (vue-template-compiler)
+      year: 2024
+      impact: CVE-2024-6783, CVSS 4.8 (Moderate)
+      cost: XSS via prototype pollution of Object.prototype.staticClass/staticStyle
+      description:
+        en: Published 23 July 2024, affecting vue-template-compiler >=2.0.0 (Vue 2, itself EOL), fixed in Vue 3. Narrower in practice than the AngularJS-reflection variants above since exploitation requires the attacker to already have some code-execution or injection foothold to pollute the prototype in the first place.
+        pl: Opublikowane 23 lipca 2024, dotyczy vue-template-compiler >=2.0.0 (Vue 2, samo w EOL), naprawione w Vue 3. Węższe w praktyce niż warianty odbicia AngularJS powyżej, bo eksploatacja wymaga od atakującego posiadania już jakiegoś przyczółka wykonania kodu lub wstrzyknięcia by w ogóle zanieczyścić prototyp.
+    inlineSources:
+    - label: 'PortSwigger Research — XSS without HTML: CSTI with AngularJS'
+      url: https://portswigger.net/research/xss-without-html-client-side-template-injection-with-angularjs
+    - label: GHSA — CVE-2024-6783 (vue-template-compiler)
+      url: https://github.com/advisories/GHSA-g3ch-rx76-35fx
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Burp Suite ships a dedicated detection for this exact class; beyond that, tooling overlaps heavily with general XSS/unsafe-sink detection since CSTI escalates to the same impact.
+      pl: Burp Suite wysyła dedykowaną detekcję dla dokładnie tej klasy; poza tym narzędzia w dużej mierze pokrywają się z ogólną detekcją XSS/niebezpiecznych sinków, bo CSTI eskaluje do tego samego wpływu.
+    sast:
+    - - Semgrep / CodeQL
+      - General unsafe-sink rules for v-html, bypassSecurityTrustHtml, [innerHTML]; no confirmed dedicated first-party CSTI rule was found by any research pass -- flag as a coverage gap, not a false claim of full support
+    - - Software composition analysis (Snyk, Dependabot)
+      - Flags AngularJS itself as an unmaintained/EOL dependency -- the most reliable automated signal that CSTI risk exists at all in a given codebase
+    dast:
+    - - Burp Suite Scanner
+      - Built-in "Client-side template injection" check (KB issue 00200308), added alongside the 2016 research; maintains an updated AngularJS sandbox-escape payload list
+    - - ACSTIS (angularjs-csti-scanner)
+      - Dedicated open-source scanner automating AngularJS CSTI/sandbox-escape detection
+    - - Manual fingerprinting payloads
+      - '{{7*7}}, {{7-7}}, ${7*7}, #{7*7} per the methodology above, plus inspecting angular.version / Vue devtools globals to pin the exact framework and version'
+    note:
+      en: <strong>Key signal:</strong> the presence of an unmaintained AngularJS bundle at all is itself the strongest risk indicator, since the framework will never receive another security patch -- prioritize SCA-flagged AngularJS findings over waiting on a payload-level scanner hit.
+      pl: <strong>Kluczowy sygnał:</strong> sama obecność nieutrzymywanego pakietu AngularJS jest już najsilniejszym wskaźnikiem ryzyka, bo framework nigdy nie otrzyma kolejnej łatki bezpieczeństwa -- priorytetyzuj znaleziska SCA oznaczające AngularJS ponad czekaniem na trafienie skanera na poziomie ładunku.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: CSTI has a genuinely dedicated CWE (unlike plain HTML injection) -- but MITRE's own documentation flags real overlap with a neighboring weakness, which is disclosed here rather than resolved silently.
+      pl: CSTI ma naprawdę dedykowane CWE (w przeciwieństwie do zwykłego HTML injection) -- ale własna dokumentacja MITRE oznacza realny zachodzenie na siebie z sąsiednią słabością, co jest tu ujawnione zamiast po cichu rozstrzygnięte.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-1336 — Improper Neutralization of Special Elements Used in a Template Engine (primary; MITRE's own definition explicitly covers both server- and client-side template engines)
+      - CWE-917 — Expression Language Injection (closely related; MITRE's own documentation states the relationship between CWE-917 and CWE-1336 "needs to be further clarified" -- a genuine, MITRE-acknowledged ambiguity, not a research-team disagreement)
+      - CWE-79 — Cross-Site Scripting (the usual impact-level classification, since successful CSTI is XSS in the browser)
+      - CWE-94 — Code Injection (parent weakness of CWE-1336)
+    - std: OWASP
+      items:
+      - A03:2021 — Injection (current, primary mapping used throughout this knowledge base)
+      - 'Forward-looking note: OWASP Top 10:2025 (released November 2025) renumbers this category to A05:2025 — Injection, still covering the same CWE set; this deep-dive uses the 2021 numbering for consistency with the rest of the site''s existing compliance references.'
+    inlineSources:
+    - label: CWE-1336 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1336.html
+    - label: CWE-917 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/917.html
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: OWASP A05:2025
+      url: https://owasp.org/Top10/2025/A05_2025-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active CSTI exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji CSTI, przejdź tę listę od góry.
+    steps:
+    - en: Identify the exact client-side framework and version in use -- an AngularJS finding of any version means the underlying framework itself will never receive a security patch
+      pl: Zidentyfikuj dokładny framework po stronie klienta i używaną wersję -- znalezisko AngularJS w jakiejkolwiek wersji oznacza że sam framework nigdy nie otrzyma łatki bezpieczeństwa
+    - en: Treat any confirmed expression-evaluation as equivalent to full reflected XSS -- rotate session tokens/cookies reachable from the affected page
+      pl: Traktuj każdą potwierdzoną ewaluację wyrażenia jako równoważną pełnemu odbitemu XSS -- zrotuj tokeny sesji/ciasteczka osiągalne ze strony której to dotyczy
+    - en: Grep the codebase for every place untrusted input reaches an ng-app or Vue-compiled DOM region, or a v-html/bypassSecurityTrustHtml call -- this is rarely a single-instance bug
+      pl: Przeszukaj kod pod kątem każdego miejsca gdzie niezaufane wejście trafia do regionu DOM ng-app lub kompilowanego przez Vue, albo wywołania v-html/bypassSecurityTrustHtml -- to rzadko jest błąd jednorazowy
+    - en: For AngularJS specifically, do not attempt to patch in place -- plan a migration off the framework rather than chasing individual sandbox-escape payloads
+      pl: Dla AngularJS konkretnie, nie próbuj naprawiać w miejscu -- zaplanuj migrację z frameworka zamiast gonić za pojedynczymi ładunkami ucieczki sandboxa
+    - en: Verify CSP configuration and confirm it does not rely on script-src alone to stop this class -- add style/frame restrictions and monitor for the event/filter gadget-chain pattern specifically
+      pl: Zweryfikuj konfigurację CSP i potwierdź że nie polega wyłącznie na script-src by zatrzymać tę klasę -- dodaj ograniczenia style/frame i monitoruj konkretnie wzorzec łańcucha gadżetów zdarzenie/filtr
+    - en: Notify affected users per applicable disclosure obligations if session hijacking or data exfiltration was confirmed
+      pl: Powiadom dotkniętych użytkowników zgodnie z obowiązującymi wymogami ujawnienia jeśli potwierdzono przejęcie sesji lub eksfiltrację danych
+  labs:
+    title:
+      en: Practice labs
+      pl: Laboratoria praktyczne
+    lead:
+      en: PortSwigger's Web Security Academy has a topic dedicated to exactly this class, filed under Cross-Site Scripting contexts.
+      pl: Web Security Academy PortSwigger ma temat dedykowany dokładnie tej klasie, umieszczony pod kontekstami Cross-Site Scripting.
+    items:
+    - variant: AngularJS pre-1.6 sandbox escape
+      provider: PortSwigger Web Security Academy
+      label: Reflected XSS with AngularJS sandbox escape without strings
+      url: https://portswigger.net/web-security/cross-site-scripting/contexts/client-side-template-injection/lab-angular-sandbox-escape-without-strings
+      difficulty: Practitioner
+    - variant: AngularJS CSP-bypass gadget chain
+      provider: PortSwigger Web Security Academy
+      label: Reflected XSS with AngularJS sandbox escape and CSP
+      url: https://portswigger.net/web-security/cross-site-scripting/contexts/client-side-template-injection/lab-angular-sandbox-escape-and-csp
+      difficulty: Expert
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: OWASP A05:2025 Injection
+      url: https://owasp.org/Top10/2025/A05_2025-Injection/
+    - label: CWE-1336 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1336.html
+    - label: CWE-917 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/917.html
+    - label: 'PortSwigger Research — XSS without HTML: CSTI with AngularJS (Gareth Heyes, 2016)'
+      url: https://portswigger.net/research/xss-without-html-client-side-template-injection-with-angularjs
+    - label: PortSwigger Web Security Academy — Client-side template injection
+      url: https://portswigger.net/web-security/cross-site-scripting/contexts/client-side-template-injection
+    - label: GHSA — CVE-2024-6783 (vue-template-compiler)
+      url: https://github.com/advisories/GHSA-g3ch-rx76-35fx
+    - label: PortSwigger KB — Client-side template injection issue
+      url: https://portswigger.net/kb/issues/00200308_client-side-template-injection

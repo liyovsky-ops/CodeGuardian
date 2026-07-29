@@ -17,6 +17,7 @@ export const LEARNING_PATH = [
   '1.17', // OGNL Injection (Apache Struts)
   'cat_1_research05', // YAML Injection / Unsafe Deserialization
   '1.24', // HTML Injection
+  'cat_1_research01', // Client-Side Template Injection (CSTI)
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection
