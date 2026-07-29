@@ -22,6 +22,7 @@ import xssData from '../content/deepdives/xss.yaml';
 import pathtraversalData from '../content/deepdives/pathtraversal.yaml';
 import xxeData from '../content/deepdives/xxe.yaml';
 import protopollutionData from '../content/deepdives/protopollution.yaml';
+import jndiData from '../content/deepdives/jndi.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -41,6 +42,7 @@ import xssQuiz from '../content/quizzes/xss.yaml';
 import pathtraversalQuiz from '../content/quizzes/pathtraversal.yaml';
 import xxeQuiz from '../content/quizzes/xxe.yaml';
 import protopollutionQuiz from '../content/quizzes/protopollution.yaml';
+import jndiQuiz from '../content/quizzes/jndi.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -62,6 +64,7 @@ export const DEEPDIVES = {
   cat_1_research13: pathtraversalData, // Path Traversal / Directory Traversal
   cat_1_research11: xxeData, // XML External Entity (XXE) Injection
   cat_1_research18: protopollutionData, // Prototype Pollution
+  cat_1_research10: jndiData, // JNDI Injection (Log4Shell)
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -86,4 +89,5 @@ export const QUIZZES = {
   cat_1_research13: pathtraversalQuiz,
   cat_1_research11: xxeQuiz,
   cat_1_research18: protopollutionQuiz,
+  cat_1_research10: jndiQuiz,
 };

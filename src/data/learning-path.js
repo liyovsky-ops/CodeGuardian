@@ -12,6 +12,7 @@ export const LEARNING_PATH = [
   'cat_1_research13', // Path Traversal / Directory Traversal
   'cat_1_research11', // XML External Entity (XXE) Injection
   'cat_1_research18', // Prototype Pollution
+  'cat_1_research10', // JNDI Injection (Log4Shell)
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

