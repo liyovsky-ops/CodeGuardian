@@ -5,6 +5,8 @@ import { openDeepDivePage } from './deepdive-renderer.js';
 import { openQuizPage } from './quiz-renderer.js';
 import { markRead } from './progress.js';
 import { DEEPDIVES, QUIZZES } from '../data/threat-features.js';
+import { LEARNING_PATH } from '../data/learning-path.js';
+import { isUnlocked, prerequisiteFor } from './learning-path.js';
 
 function wireCollapsible() {
   $$('.threat-head').forEach((head) => {
@@ -115,6 +117,14 @@ function wireQuiz() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const threatId = btn.dataset.threatId;
+      if (LEARNING_PATH.includes(threatId) && !isUnlocked(threatId)) {
+        // eslint-disable-next-line no-alert
+        alert(
+          `Locked. Pass the quiz for threat ${prerequisiteFor(threatId)} (score ≥ 80%) to unlock this stage of the Learning Path.\n` +
+          `Zablokowane. Zalicz quiz zagrożenia ${prerequisiteFor(threatId)} (wynik ≥ 80%), żeby odblokować ten etap Ścieżki nauki.`
+        );
+        return;
+      }
       const data = QUIZZES[threatId];
       if (data) openQuizPage(data);
     });

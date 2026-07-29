@@ -702,3 +702,29 @@ pre.no-prism {
   border-color: rgba(124,106,247,0.5);
 }
 .deepdive-btn svg { flex-shrink: 0; }
+
+/* Practice ("Ćwicz") quiz button on threat cards — same visual language as .deepdive-btn */
+.quiz-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #2ea043;
+  background: rgba(46,160,67,0.1);
+  border: 1px solid rgba(46,160,67,0.25);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.quiz-btn:hover { background: rgba(46,160,67,0.22); border-color: rgba(46,160,67,0.5); }
+.quiz-btn svg { flex-shrink: 0; }
+.quiz-btn.locked {
+  color: var(--text-faint, #8a8a99);
+  background: rgba(128,128,128,0.08);
+  border-color: rgba(128,128,128,0.2);
+  cursor: not-allowed;
+}
+.quiz-btn.locked:hover { background: rgba(128,128,128,0.08); border-color: rgba(128,128,128,0.2); }

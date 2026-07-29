@@ -5,6 +5,8 @@ import { highlightElement } from './highlight.js';
 import { getLang } from '../i18n/index.js';
 import { UI } from '../i18n/ui.js';
 import { DEEPDIVES, QUIZZES } from '../data/threat-features.js';
+import { LEARNING_PATH } from '../data/learning-path.js';
+import { getStageStatus } from './learning-path.js';
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>
@@ -167,8 +169,15 @@ export function threatCard(t, cat) {
         <span>${lang === 'en' ? 'Deep-dive' : 'Szczegóły'}</span>
       </button>`
     : '';
+  const onPath = LEARNING_PATH.includes(t.id);
+  const locked = onPath && getStageStatus(t.id) === 'locked';
   const quizBtn = QUIZZES[t.id]
-    ? `<button class="quiz-btn" data-threat-id="${esc(t.id)}" title="${lang === 'en' ? 'Practice this threat' : 'Ćwicz to zagrożenie'}">
+    ? locked
+      ? `<button class="quiz-btn locked" data-threat-id="${esc(t.id)}" title="${lang === 'en' ? 'Locked — pass the previous stage in the Learning Path first' : 'Zablokowane — najpierw zalicz poprzedni etap Ścieżki nauki'}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>${lang === 'en' ? 'Locked' : 'Zablokowane'}</span>
+        </button>`
+      : `<button class="quiz-btn" data-threat-id="${esc(t.id)}" title="${lang === 'en' ? 'Practice this threat' : 'Ćwicz to zagrożenie'}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         <span>${lang === 'en' ? 'Practice' : 'Ćwicz'}</span>
       </button>`

@@ -155,6 +155,9 @@ function wireSubmit(panel, data) {
       <div class="quiz-verdict">${passed ? t('passed') : t('notPassed')}</div>`;
 
     recordQuizAttempt(data.threatId, score);
+    // Lets the Learning Path widget (and the catalog's lock icons on re-render)
+    // pick up a newly-unlocked next stage without a page reload.
+    document.dispatchEvent(new CustomEvent('cg:quiz-graded', { detail: { threatId: data.threatId, score } }));
     submitBtn.textContent = t('retry');
     resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });

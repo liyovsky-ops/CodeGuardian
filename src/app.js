@@ -17,6 +17,7 @@ import './deepdive.css';
 import { initGuidePage } from './modules/guide-page.js';
 import './guide-page.css';
 import { initProgressWidget } from './modules/progress-widget.js';
+import { initLearningPathWidget } from './modules/learning-path-widget.js';
 import './progress.css';
 
 import { CATEGORIES } from './data/index.js';
@@ -155,6 +156,10 @@ try {
   initAllQuizzes();
   initGuidePage();
   initProgressWidget(CATEGORIES);
+  initLearningPathWidget();
+  // Re-render the catalog when a quiz is passed, so a newly-unlocked stage's
+  // "Locked" button flips to "Practice" without needing a page reload.
+  document.addEventListener('cg:quiz-graded', render);
 } catch (err) {
   console.error('[CodeGuardian] Bootstrap failed:', err);
   const main = document.querySelector('main') || document.body;

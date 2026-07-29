@@ -121,6 +121,10 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
             <span id="progress-btn-label">My Progress</span>
           </button>
+          <button id="learning-path-btn" class="toggle-research-btn" title="Learning path">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13"/><path d="M4 19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2"/><path d="M8 7h8M8 11h8"/></svg>
+            <span id="learning-path-btn-label">Learning Path</span>
+          </button>
         </div>
         <div id="no-results" class="hidden" aria-live="polite">No threats match the filters.</div>
 
@@ -137,6 +141,17 @@
               <button id="progress-import" class="progress-action-btn">Import progress (.json)</button>
               <input id="progress-import-input" type="file" accept="application/json" class="hidden" />
             </div>
+          </div>
+        </div>
+
+        <div id="learning-path-panel" class="progress-panel hidden" role="dialog" aria-label="Learning path">
+          <div class="progress-panel-inner lp-panel-inner">
+            <div class="progress-panel-head">
+              <h3 id="learning-path-panel-title">Learning Path</h3>
+              <button id="learning-path-panel-close" class="progress-panel-close" aria-label="Close">×</button>
+            </div>
+            <p class="progress-note" id="learning-path-note">Ordered practice track through the threats with quizzes. Each stage unlocks once the previous quiz is passed (score ≥ 80%).</p>
+            <div id="learning-path-list" class="lp-list"></div>
           </div>
         </div>
 
