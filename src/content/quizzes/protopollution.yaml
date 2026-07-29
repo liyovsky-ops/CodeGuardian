@@ -1,0 +1,106 @@
+threatId: "cat_1_research18"
+title:
+  en: Prototype Pollution — knowledge check
+  pl: Prototype Pollution — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this recursive merge function contain a prototype pollution vulnerability?
+      pl: Czy ta rekurencyjna funkcja merge zawiera podatność prototype pollution?
+    snippet:
+      lang: javascript
+      code: |
+        function merge(target, source) {
+          for (const key in source) {
+            if (typeof source[key] === 'object' && source[key] !== null) {
+              if (!target[key]) target[key] = {};
+              merge(target[key], source[key]);
+            } else {
+              target[key] = source[key];
+            }
+          }
+          return target;
+        }
+    isVulnerable: true
+    cwe: CWE-1321
+    explanation:
+      en: The for...in loop follows any key, including "__proto__". When source is {"__proto__":{"polluted":"yes"}}, target["__proto__"] resolves to the shared Object.prototype, so the recursive assignment pollutes every object in the application.
+      pl: Pętla for...in podąża za każdym kluczem, w tym "__proto__". Gdy source to {"__proto__":{"polluted":"yes"}}, target["__proto__"] rozwiązuje się do współdzielonego Object.prototype, więc rekurencyjne przypisanie zanieczyszcza każdy obiekt w aplikacji.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Node.js code safe from prototype pollution?
+      pl: Czy ten kod w Node.js jest bezpieczny od prototype pollution?
+    snippet:
+      lang: javascript
+      code: |
+        const cache = new Map();
+        function setPreference(userKey, userVal) {
+          cache.set(userKey, userVal);
+        }
+    isVulnerable: false
+    cwe: CWE-1321
+    explanation:
+      en: Map keys are never property lookups on a shared prototype — a userKey of "__proto__" is just an ordinary string key stored in the Map's internal data structure, structurally immune to this vulnerability class.
+      pl: Klucze Map nigdy nie są odczytem właściwości na współdzielonym prototypie — userKey równy "__proto__" to zwykły klucz-string przechowywany w wewnętrznej strukturze danych Map, strukturalnie odporny na tę klasę podatności.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: A merge function blocks the literal key "__proto__" but is still exploitable. Which payload most likely bypasses it?
+      pl: Funkcja merge blokuje literalny klucz "__proto__", ale wciąż da się ją wykorzystać. Który ładunek najprawdopodobniej ją omija?
+    choices:
+      - id: a
+        label: { en: '{"admin": true}', pl: '{"admin": true}' }
+      - id: b
+        label: { en: '{"constructor":{"prototype":{"polluted":"yes"}}}', pl: '{"constructor":{"prototype":{"polluted":"yes"}}}' }
+      - id: c
+        label: { en: '{"toString": "hacked"}', pl: '{"toString": "hacked"}' }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: obj.constructor resolves to Object, and Object.prototype is its .prototype — the exact same shared prototype reachable via __proto__. This is precisely the bypass that defeated lodash's first fix and became CVE-2019-10744; blocking only __proto__ is insufficient.
+      pl: obj.constructor rozwiązuje się do Object, a Object.prototype to jego .prototype — dokładnie ten sam współdzielony prototyp osiągalny przez __proto__. To dokładnie to obejście, które pokonało pierwszą naprawę lodash i stało się CVE-2019-10744; blokowanie tylko __proto__ jest niewystarczające.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: Which OWASP Top 10 2021 category is the best evidence-backed mapping for prototype pollution (CWE-1321)?
+      pl: Która kategoria OWASP Top 10 2021 jest najlepiej popartym dowodami mapowaniem dla prototype pollution (CWE-1321)?
+    choices:
+      - id: a
+        label: { en: A03:2021 — Injection (CWE-1321's official listed category), pl: A03:2021 — Injection (oficjalnie wymieniona kategoria CWE-1321) }
+      - id: b
+        label: { en: A08:2021 — Software and Data Integrity Failures (via its parent CWE-915, an explicit member), pl: A08:2021 — Software and Data Integrity Failures (przez rodzica CWE-915, jawnego członka) }
+      - id: c
+        label: { en: A02:2021 — Cryptographic Failures, pl: A02:2021 — Cryptographic Failures }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: CWE-1321 has no direct OWASP 2021 category listing at all. Its parent, CWE-915, IS an explicit member of A08:2021's official CWE list, which is the strongest evidence-backed mapping. A03:2021 Injection is a common intuitive framing (attacker "injects" properties) but CWE-1321/915 are not actually in A03's official membership — that's a thematic guess, not an official mapping.
+      pl: CWE-1321 nie ma w ogóle bezpośredniego wpisu w kategorii OWASP 2021. Jego rodzic, CWE-915, JEST jawnym członkiem oficjalnej listy CWE dla A08:2021, co jest najsilniej popartym dowodami mapowaniem. A03:2021 Injection to powszechne intuicyjne ujęcie (atakujący "wstrzykuje" właściwości), ale CWE-1321/915 faktycznie nie są w oficjalnym członkostwie A03 — to domysł tematyczny, nie oficjalne mapowanie.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: This lodash-based config merge is injectable. Which variant actually fixes the prototype pollution?
+      pl: Ten merge configu oparty na lodash jest podatny. Który wariant faktycznie naprawia prototype pollution?
+    variants:
+      - id: v1
+        lang: javascript
+        code: |
+          // strip only the literal "__proto__" key before merging
+          delete userInput.__proto__;
+          const config = _.merge({}, userInput);
+      - id: v2
+        lang: javascript
+        code: |
+          // merge into a null-prototype target
+          const config = _.merge(Object.create(null), userInput);
+      - id: v3
+        lang: javascript
+        code: |
+          // just JSON.stringify and JSON.parse the input first
+          const cleaned = JSON.parse(JSON.stringify(userInput));
+          const config = _.merge({}, cleaned);
+    correctVariantId: v2
+    explanation:
+      en: v2 merges into an object with no prototype at all (Object.create(null)) — even if the merge tries to walk up to "the prototype," there isn't one reachable from config to pollute. v1's delete only handles the literal __proto__ key and is bypassed by constructor.prototype; v3's JSON round-trip is a common misconception — JSON.parse/stringify doesn't remove a nested "constructor" key, and the vulnerable merge into the plain {} target still pollutes the real, shared Object.prototype.
+      pl: v2 wykonuje merge do obiektu bez żadnego prototypu (Object.create(null)) — nawet jeśli merge próbuje wejść "do prototypu," nie ma żadnego osiągalnego z config, który dałoby się zanieczyścić. delete w v1 obsługuje tylko literalny klucz __proto__ i jest omijane przez constructor.prototype; przejście przez JSON w v3 to częste błędne przekonanie — JSON.parse/stringify nie usuwa zagnieżdżonego klucza "constructor", a podatny merge do zwykłego celu {} wciąż zanieczyszcza prawdziwy, współdzielony Object.prototype.

@@ -1,0 +1,487 @@
+meta:
+  id: protopollution
+  threatId: cat_1_research18
+  severity: Critical
+  color: '#f43f5e'
+  colorRgb: 244,63,94
+  cwe: CWE-1321
+  cvss: '9.1'
+  standard: OWASP A08:2021
+hero:
+  titleMain: 'Prototype '
+  titleGrad: Pollution
+  titleTail: ''
+  topbar: Prototype Pollution
+  lead:
+    en: 'Every plain JavaScript object shares one Object.prototype. A naive recursive merge/clone/extend function that copies attacker-controlled JSON without rejecting the keys __proto__ and constructor.prototype writes straight onto that shared prototype — polluting every object in the application, including ones created later. Impact depends entirely on the downstream "gadget" that reads an inherited property it didn''t expect: DoS, authorization bypass, or full RCE via a template-engine gadget chain (Kibana''s Timelion CVE-2019-7609 scored CVSS 10.0). The base lodash CVE-2019-10744 scores 9.1.'
+    pl: 'Każdy zwykły obiekt JavaScript dzieli jeden Object.prototype. Naiwna rekurencyjna funkcja merge/clone/extend, kopiująca niezaufany JSON bez odrzucania kluczy __proto__ i constructor.prototype, zapisuje wprost na tym współdzielonym prototypie — zanieczyszczając każdy obiekt w aplikacji, także te tworzone później. Skutek zależy całkowicie od dalszego "gadżetu", który odczytuje odziedziczoną właściwość, której się nie spodziewał: DoS, obejście autoryzacji, albo pełne RCE przez łańcuch gadżetów silnika szablonów (Kibana Timelion CVE-2019-7609 oceniono na CVSS 10.0). Bazowe lodash CVE-2019-10744 ocenia się na 9.1.'
+  metrics:
+  - k: CWE-1321
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '9.1'
+    v: CVSS · Critical
+  - k: A08:2021
+    v: OWASP Top 10
+  - k: '7'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A08:2021
+    url: https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/
+  - label: CWE-1321 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/1321.html
+  - label: PortSwigger Academy
+    url: https://portswigger.net/web-security/prototype-pollution
+  - label: PortSwigger Research — SSPP
+    url: https://portswigger.net/research/server-side-prototype-pollution
+sectionOrder:
+- overview
+- types
+- code
+- langrisks
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: langrisks
+  en: Library risks
+  pl: Ryzyka bibliotek
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laby praktyczne
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Seven ways the same shared-prototype write primitive is turned into real impact — from a client-side DOM XSS gadget to a chained server-side RCE.
+      pl: Siedem sposobów, w jakie ten sam prymityw zapisu na współdzielonym prototypie zamienia się w realny skutek — od gadżetu DOM XSS po stronie klienta po połączony w łańcuch RCE po stronie serwera.
+    items:
+    - name: Client-Side Pollution via __proto__
+      sev: high
+      description:
+        en: A browser-side merge/clone/extend utility processes attacker-influenced JSON (URL, postMessage), polluting Object.prototype — often chained into DOM XSS when a gadget reads the inherited property.
+        pl: Narzędzie merge/clone/extend po stronie przeglądarki przetwarza JSON pod wpływem atakującego (URL, postMessage), zanieczyszczając Object.prototype — często łączone w DOM XSS gdy gadżet odczytuje odziedziczoną właściwość.
+      payload: '{"__proto__":{"polluted":"yes"}}  →  ({}).polluted === "yes"'
+    - name: Server-Side Pollution → Denial of Service
+      sev: high
+      description:
+        en: Polluting a property that Node core or a hot code path reads internally crashes the process or hangs the event loop app-wide.
+        pl: Zanieczyszczenie właściwości odczytywanej wewnętrznie przez rdzeń Node lub gorącą ścieżkę kodu zawiesza proces lub blokuje event loop w całej aplikacji.
+      payload: '{"__proto__":{"status":500}}'
+    - name: Server-Side Pollution → Remote Code Execution
+      sev: critical
+      description:
+        en: Pollution reaches a template-engine or child_process gadget — e.g. EJS's outputFunctionName/escapeFunction, or polluted spawn options — turning a write primitive into arbitrary command execution.
+        pl: Zanieczyszczenie dosięga gadżetu silnika szablonów lub child_process — np. outputFunctionName/escapeFunction w EJS, albo zanieczyszczone opcje spawn — zamieniając prymityw zapisu w dowolne wykonanie poleceń.
+      payload: '{"__proto__":{"outputFunctionName":"x;process.mainModule.require(''child_process'').execSync(''id'');s"}}'
+    - name: Pollution via Query-String Parsers (qs)
+      sev: high
+      description:
+        en: Bracket-notation query parsers (qs, Express) expand a[__proto__][x]=y into nested objects, letting an unauthenticated GET/POST pollute the prototype.
+        pl: Parsery zapytań z notacją nawiasową (qs, Express) rozwijają a[__proto__][x]=y w zagnieżdżone obiekty, pozwalając nieuwierzytelnionemu GET/POST zanieczyścić prototyp.
+      payload: ?a[__proto__][polluted]=yes
+    - name: Property Injection / Authorization Bypass
+      sev: critical
+      description:
+        en: A later authorization check reads a flag (isAdmin, role) without hasOwnProperty — the inherited polluted value satisfies the check for any object.
+        pl: Późniejsza kontrola autoryzacji odczytuje flagę (isAdmin, role) bez hasOwnProperty — odziedziczona zanieczyszczona wartość spełnia kontrolę dla dowolnego obiektu.
+      payload: '{"__proto__":{"isAdmin":true}}'
+    - name: constructor.prototype Bypass
+      sev: high
+      description:
+        en: When a defense blocklists only the literal key __proto__, the same shared prototype is still reachable through constructor.prototype — exactly what defeated lodash's first fix (CVE-2019-10744).
+        pl: Gdy obrona blacklistuje tylko literalny klucz __proto__, ten sam współdzielony prototyp wciąż jest osiągalny przez constructor.prototype — dokładnie to pokonało pierwszą naprawę lodash (CVE-2019-10744).
+      payload: '{"constructor":{"prototype":{"polluted":"yes"}}}'
+    - name: Library-Specific Merge/Extend Gadgets
+      sev: high
+      description:
+        en: Historical CVEs in widely-used utility libraries — lodash merge/defaultsDeep, jQuery.extend(true, ...) — implement exactly the vulnerable recursive-merge pattern against real, deployed code.
+        pl: Historyczne CVE w szeroko używanych bibliotekach narzędziowych — lodash merge/defaultsDeep, jQuery.extend(true, ...) — realizują dokładnie ten podatny wzorzec rekurencyjnego merge w realnym, wdrożonym kodzie.
+      payload: _.merge({}, JSON.parse('{"__proto__":{"polluted":"yes"}}'))  (lodash < 4.17.12)
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The same fix everywhere: reject __proto__/constructor/prototype keys and iterate own-enumerable keys only — or sidestep the whole class by using Map instead of a plain object.'
+      pl: 'Ta sama naprawa wszędzie: odrzucaj klucze __proto__/constructor/prototype i iteruj tylko po własnych enumerowalnych kluczach — albo omiń całą klasę używając Map zamiast zwykłego obiektu.'
+    languages:
+    - label: Recursive merge
+      lang: javascript
+      vulnerable: "// VULNERABLE — follows any key, including __proto__\nfunction merge(target, source) {\n  for (const key in source) {\n    if (typeof source[key] === 'object' && source[key] !== null) {\n      if (!target[key]) target[key] = {};\n      merge(target[key], source[key]);\n    } else {\n      target[key] = source[key];\n    }\n  }\n  return target;\n}\nmerge({}, JSON.parse('{\"__proto__\":{\"polluted\":\"yes\"}}'));\n// ({}).polluted === \"yes\"  <- every object now has it"
+      safe: "// SECURE — block magic keys, iterate own keys only\nconst BAD = new Set(['__proto__', 'constructor', 'prototype']);\nfunction safeMerge(target, source) {\n  for (const key of Object.keys(source)) {\n    if (BAD.has(key)) continue;\n    const val = source[key];\n    if (val && typeof val === 'object') {\n      if (!Object.hasOwn(target, key)) target[key] = Object.create(null);\n      safeMerge(target[key], val);\n    } else {\n      target[key] = val;\n    }\n  }\n  return target;\n}"
+    - label: lodash
+      lang: javascript
+      vulnerable: '// VULNERABLE — lodash < 4.17.12
+
+        const _ = require(''lodash'');
+
+        _.defaultsDeep({}, JSON.parse(''{"constructor":{"prototype":{"polluted":"yes"}}}''));
+
+        console.log(({}).polluted); // "yes"'
+      safe: '// SECURE — upgrade to lodash >= 4.17.21, and/or merge into a null-prototype target
+
+        const _ = require(''lodash'');
+
+        const clean = _.merge(Object.create(null), userInput);
+
+        // no Object.prototype reachable from `clean` to pollute'
+    - label: Node.js hardening
+      lang: javascript
+      vulnerable: '// VULNERABLE — plain object store for user-controlled keys
+
+        const cache = {};
+
+        cache[userKey] = userVal;  // userKey = "__proto__" reaches the shared prototype'
+      safe: "// SECURE — Map has no prototype-chain lookup, plus a stripping JSON reviver\nconst cache = new Map();\ncache.set(userKey, userVal);       // \"__proto__\" is just an ordinary Map key\n\nconst parsed = JSON.parse(raw, (key, value) => {\n  if (key === '__proto__' || key === 'constructor' || key === 'prototype') return undefined;\n  return value;\n});\n// Run with: node --disable-proto=throw app.js"
+  langRisks:
+    title:
+      en: Library-specific risks
+      pl: Ryzyka specyficzne dla bibliotek
+    lead:
+      en: Prototype pollution has a long history of CVEs in exactly the utility libraries every JS project depends on — the fix is almost always "upgrade", but the underlying pattern recurs.
+      pl: Prototype pollution ma długą historię CVE dokładnie w bibliotekach narzędziowych, od których zależy każdy projekt JS — naprawa to niemal zawsze "zaktualizuj", ale leżący pod spodem wzorzec powraca.
+    rows:
+    - fw: lodash
+      api: _.merge / _.mergeWith / _.defaultsDeep / _.set
+      note:
+        en: Versions before 4.17.5 (CVE-2018-3721) and before 4.17.12 (CVE-2019-10744, via constructor.prototype) were pollutable. Upgrade to >= 4.17.21.
+        pl: Wersje sprzed 4.17.5 (CVE-2018-3721) i sprzed 4.17.12 (CVE-2019-10744, przez constructor.prototype) były podatne. Zaktualizuj do >= 4.17.21.
+    - fw: jQuery
+      api: $.extend(true, {}, source)
+      note:
+        en: Deep-extend with a source containing an enumerable __proto__ pollutes Object.prototype on versions before 3.4.0 (CVE-2019-11358) — widely inherited by CMSs embedding jQuery (Drupal, Backdrop).
+        pl: Głęboki extend ze źródłem zawierającym enumerowalne __proto__ zanieczyszcza Object.prototype na wersjach sprzed 3.4.0 (CVE-2019-11358) — szeroko odziedziczone przez CMS-y osadzające jQuery (Drupal, Backdrop).
+    - fw: qs (Express body/query parser)
+      api: a[__proto__][x]=y bracket notation
+      note:
+        en: Bracket-notation expansion historically built __proto__ paths from the query string, enabling unauthenticated pollution. Keep qs current and set query-parser limits.
+        pl: Rozwinięcie notacji nawiasowej historycznie budowało ścieżki __proto__ z query stringa, umożliwiając nieuwierzytelnione zanieczyszczenie. Aktualizuj qs i ustaw limity parsera zapytań.
+    - fw: EJS / Pug / Handlebars
+      api: compile options (outputFunctionName, escapeFunction, compileDebug)
+      note:
+        en: 'The classic RCE gadget: polluting a compile option the template engine reads-if-unset injects attacker JS into the compiled template function.'
+        pl: 'Klasyczny gadżet RCE: zanieczyszczenie opcji kompilacji odczytywanej-jeśli-nieustawionej przez silnik szablonów wstrzykuje JS atakującego do skompilowanej funkcji szablonu.'
+    - fw: ajv (schema validation)
+      api: 'additionalProperties: false'
+      note:
+        en: Strong defense when applied at every trust boundary before any merge — rejects payloads carrying __proto__ or unknown keys. Gaps remain wherever validation is skipped.
+        pl: Silna obrona gdy zastosowana na każdej granicy zaufania przed jakimkolwiek merge — odrzuca ładunki niosące __proto__ lub nieznane klucze. Luki pozostają wszędzie tam gdzie walidacja jest pominięta.
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from a confirmed write primitive to DoS, auth bypass, or RCE.
+      pl: Jak atakujący przechodzi od potwierdzonego prymitywu zapisu do DoS, obejścia autoryzacji lub RCE.
+    steps:
+    - title:
+        en: Map merge/clone/set endpoints
+        pl: Mapowanie endpointów merge/clone/set
+      description:
+        en: Enumerate JSON bodies, bracket-notation query strings, config/settings updates, and postMessage handlers that likely merge attacker data into an object.
+        pl: Wylicz ciała JSON, query stringi z notacją nawiasową, aktualizacje configu/ustawień i handlery postMessage, które prawdopodobnie łączą dane atakującego z obiektem.
+    - title:
+        en: Probe with the canonical payload
+        pl: Sonda z kanonicznym ładunkiem
+      description:
+        en: Send {"__proto__":{"polluted":"yes"}} (or bracket form) and check for ({}).polluted === "yes" client-side, or a non-destructive observable side effect server-side.
+        pl: Wyślij {"__proto__":{"polluted":"yes"}} (lub formę nawiasową) i sprawdź ({}).polluted === "yes" po stronie klienta, albo nie-destrukcyjny obserwowalny efekt uboczny po stronie serwera.
+    - title:
+        en: Bypass a __proto__-only filter
+        pl: Obejście filtra tylko-__proto__
+      description:
+        en: If __proto__ is blocked, retry with {"constructor":{"prototype":{...}}} — the same shared prototype through a different path.
+        pl: Jeśli __proto__ jest blokowane, spróbuj ponownie z {"constructor":{"prototype":{...}}} — ten sam współdzielony prototyp przez inną ścieżkę.
+    - title:
+        en: Find a gadget
+        pl: Znajdź gadżet
+      description:
+        en: 'Enumerate properties the app/framework reads-if-unset: auth flags (isAdmin) for bypass, hot-path properties for DoS, template-engine compile options or child_process spawn flags for RCE.'
+        pl: 'Wylicz właściwości odczytywane-jeśli-nieustawione przez aplikację/framework: flagi auth (isAdmin) dla obejścia, właściwości gorącej ścieżki dla DoS, opcje kompilacji silnika szablonów lub flagi spawn child_process dla RCE.'
+    - title:
+        en: Automate gadget discovery
+        pl: Automatyzacja odkrywania gadżetów
+      description:
+        en: Use PortSwigger's Server-Side Prototype Pollution Burp extension or DOM Invader to non-destructively probe and enumerate known gadget chains.
+        pl: Użyj rozszerzenia Burp Server-Side Prototype Pollution od PortSwigger lub DOM Invader, by nie-destrukcyjnie sondować i wyliczać znane łańcuchy gadżetów.
+    - title:
+        en: Weaponize
+        pl: Uzbrojenie
+      description:
+        en: 'Chain the confirmed gadget into full impact: DoS (crash the process), authorization bypass (inherited isAdmin), or RCE (template-engine/child_process gadget executing arbitrary commands).'
+        pl: 'Połącz potwierdzony gadżet w pełny skutek: DoS (zawieszenie procesu), obejście autoryzacji (odziedziczone isAdmin), lub RCE (gadżet silnika szablonów/child_process wykonujący dowolne polecenia).'
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Map/Set sidesteps the entire vulnerability class structurally — everything below it is mitigation of varying strength, not a root-cause fix.
+      pl: Map/Set strukturalnie omija całą klasę podatności — wszystko poniżej to obrona o różnej sile, nie naprawa źródłowa.
+    items:
+    - rank: 1
+      eff: 95
+      kind: primary
+      label:
+        en: Map/Set for user-controlled key/value data
+        pl: Map/Set dla danych klucz/wartość kontrolowanych przez użytkownika
+      note:
+        en: 'Structurally immune: Map keys are never property lookups, so __proto__ is an inert string key. Requires refactoring away from plain objects for attacker-influenced data.'
+        pl: 'Strukturalnie odporne: klucze Map nigdy nie są odczytem właściwości, więc __proto__ to obojętny klucz-string. Wymaga refaktoryzacji z dala od zwykłych obiektów dla danych pod wpływem atakującego.'
+    - rank: 2
+      eff: 90
+      kind: primary
+      label:
+        en: Object.freeze(Object.prototype)
+        pl: Object.freeze(Object.prototype)
+      note:
+        en: Cheap, app-wide mitigation applied once at startup — write attempts to the shared prototype silently fail (or throw in strict mode). Doesn't protect other prototypes (Array.prototype) unless also frozen.
+        pl: Tania, ogólnoaplikacyjna obrona zastosowana raz przy starcie — próby zapisu na współdzielonym prototypie cicho zawodzą (lub rzucają w strict mode). Nie chroni innych prototypów (Array.prototype), chyba że też zamrożone.
+    - rank: 3
+      eff: 85
+      kind: strong
+      label:
+        en: Explicit key blocking in merge/set functions
+        pl: Jawne blokowanie kluczy w funkcjach merge/set
+      note:
+        en: Reject __proto__, constructor, AND prototype at every recursion level, iterating own-enumerable keys only. Must cover all three keys — blocking only __proto__ is exactly what CVE-2019-10744 bypassed.
+        pl: Odrzucaj __proto__, constructor, ORAZ prototype na każdym poziomie rekurencji, iterując tylko po własnych enumerowalnych kluczach. Musi pokrywać wszystkie trzy klucze — blokowanie tylko __proto__ to dokładnie to, co ominęło CVE-2019-10744.
+    - rank: 4
+      eff: 82
+      kind: strong
+      label:
+        en: Node --disable-proto=throw
+        pl: Node --disable-proto=throw
+      note:
+        en: Neutralizes the __proto__ accessor route platform-wide with no code changes. Does NOT stop the constructor.prototype route — pair with key blocking or schema validation.
+        pl: Neutralizuje ścieżkę akcesora __proto__ w całej platformie bez zmian kodu. NIE zatrzymuje ścieżki constructor.prototype — połącz z blokowaniem kluczy lub walidacją schematu.
+    - rank: 5
+      eff: 80
+      kind: strong
+      label:
+        en: 'Schema validation (ajv, additionalProperties: false)'
+        pl: 'Walidacja schematu (ajv, additionalProperties: false)'
+      note:
+        en: Rejects payloads carrying __proto__ or unknown keys before they reach any merge — strong when applied at every trust boundary, gapped wherever validation is skipped.
+        pl: Odrzuca ładunki niosące __proto__ lub nieznane klucze zanim dotrą do jakiegokolwiek merge — silne gdy zastosowane na każdej granicy zaufania, dziurawe wszędzie tam gdzie walidacja jest pominięta.
+    - rank: 6
+      eff: 68
+      kind: mitigation
+      label:
+        en: Keep dependencies updated (lodash, qs, jQuery)
+        pl: Aktualizacja zależności (lodash, qs, jQuery)
+      note:
+        en: Closes known library CVEs but is reactive — protects only against already-disclosed gadgets/merge bugs, not your own vulnerable merge code.
+        pl: Zamyka znane CVE bibliotek, ale jest reaktywne — chroni tylko przed już ujawnionymi gadżetami/błędami merge, nie przed własnym podatnym kodem merge.
+    - rank: 7
+      eff: 40
+      kind: weak
+      label:
+        en: JSON.parse alone (common misconception)
+        pl: Sam JSON.parse (częste błędne przekonanie)
+      note:
+        en: JSON.parse creates an own, harmless __proto__ data property — it does not set the real prototype. But if that parsed object then feeds a vulnerable merge, pollution still happens. Not a defense by itself; add a stripping reviver.
+        pl: JSON.parse tworzy własną, niegroźną właściwość danych __proto__ — nie ustawia prawdziwego prototypu. Ale jeśli sparsowany obiekt zasila potem podatny merge, zanieczyszczenie i tak następuje. Sam w sobie nie jest obroną; dodaj reviver usuwający klucze.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: From two separate lodash CVEs (one bypassing the other's fix) to a CVSS 10.0 remote code execution in Kibana's Timelion visualizer.
+      pl: Od dwóch osobnych CVE w lodash (jedno omijające naprawę drugiego) po CVSS 10.0 zdalne wykonanie kodu w wizualizatorze Timelion Kibany.
+    items:
+    - org: lodash (first fix)
+      year: 2018
+      impact: CVE-2018-3721
+      cost: merge/mergeWith/defaultsDeep
+      description:
+        en: Prototype pollution in lodash versions before 4.17.5 via merge, mergeWith, and defaultsDeep, exploitable through __proto__. Fixed in 4.17.5.
+        pl: Prototype pollution w lodash w wersjach sprzed 4.17.5 przez merge, mergeWith i defaultsDeep, wykorzystywalne przez __proto__. Naprawione w 4.17.5.
+    - org: lodash (bypass of the fix)
+      year: 2019
+      impact: CVE-2019-10744, CVSS 9.1
+      cost: constructor.prototype bypass
+      description:
+        en: defaultsDeep remained pollutable in versions before 4.17.12 via {constructor:{prototype:{...}}} — a direct bypass of the earlier __proto__-only fix. The textbook case for why blocklisting only __proto__ is insufficient.
+        pl: defaultsDeep pozostawało podatne w wersjach sprzed 4.17.12 przez {constructor:{prototype:{...}}} — bezpośrednie obejście wcześniejszej naprawy tylko-__proto__. Podręcznikowy przypadek na to dlaczego blacklistowanie tylko __proto__ jest niewystarczające.
+    - org: jQuery
+      year: 2019
+      impact: CVE-2019-11358
+      cost: $.extend(true, ...)
+      description:
+        en: jQuery.extend(true, {}, source) pollutes Object.prototype when source carries an enumerable __proto__, affecting all jQuery before 3.4.0 — inherited by Drupal, Backdrop CMS, and many other products embedding jQuery.
+        pl: jQuery.extend(true, {}, source) zanieczyszcza Object.prototype gdy source niesie enumerowalne __proto__, dotykając wszystkich wersji jQuery sprzed 3.4.0 — odziedziczone przez Drupal, Backdrop CMS i wiele innych produktów osadzających jQuery.
+    - org: Kibana / Elastic (Timelion)
+      year: 2019
+      impact: CVE-2019-7609, CVSS 10.0
+      cost: Prototype pollution → RCE
+      description:
+        en: A prototype-pollution vector in the Timelion visualizer (Kibana before 5.6.15 and 6.6.1) let an attacker with Timelion access achieve arbitrary code execution as the Kibana process — a real, weaponized PP-to-RCE chain with public exploits.
+        pl: Wektor prototype pollution w wizualizatorze Timelion (Kibana sprzed 5.6.15 i 6.6.1) pozwalał atakującemu z dostępem do Timelion osiągnąć dowolne wykonanie kodu jako proces Kibany — realny, uzbrojony łańcuch PP-do-RCE z publicznymi exploitami.
+    inlineSources:
+    - label: CVE-2019-10744 (lodash)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-10744
+    - label: CVE-2019-11358 (jQuery)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-11358
+    - label: CVE-2019-7609 (Kibana)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-7609
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis traces tainted keys into prototype-mutating assignments; specialized scanners are essential since server-side pollution produces no visible response by default.
+      pl: Analiza statyczna śledzi zanieczyszczone klucze do przypisań mutujących prototyp; specjalizowane skanery są niezbędne, bo zanieczyszczenie po stronie serwera domyślnie nie daje żadnej widocznej odpowiedzi.
+    sast:
+    - - CodeQL
+      - js/prototype-pollution and js/prototype-polluting-assignment dataflow queries
+    - - Semgrep
+      - Rules flagging unsafe recursive merge/Object.assign patterns tagged CWE-1321
+    - - Snyk Code / Snyk Open Source
+      - SAST pattern detection plus vulnerable-dependency scanning (lodash/jQuery/qs)
+    - - ESLint security plugins
+      - Flags dangerous dynamic property assignment; partial, weaker coverage than CodeQL
+    dast:
+    - - PortSwigger Server-Side Prototype Pollution Scanner
+      - Burp extension — non-destructive property-injection probing + gadget enumeration
+    - - Burp DOM Invader
+      - Built-in client-side prototype pollution source/sink detection
+    - - ppmap
+      - Open-source client-side prototype pollution scanner/exploitation tool
+    - - ppfuzz
+      - Fast Rust-based client-side prototype pollution fuzzer
+    note:
+      en: <strong>Key signal:</strong> grep for recursive merge/clone/extend/set-by-path utilities that iterate with <code>for...in</code> or <code>Object.assign</code> without explicitly rejecting <code>__proto__</code>, <code>constructor</code>, and <code>prototype</code> keys.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj rekurencyjnych narzędzi merge/clone/extend/set-by-path iterujących przez <code>for...in</code> lub <code>Object.assign</code> bez jawnego odrzucania kluczy <code>__proto__</code>, <code>constructor</code> i <code>prototype</code>.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: CWE-1321 has no direct OWASP Top 10 2021 listing — but its parent CWE-915 is an explicit member of A08:2021, which is the evidence-backed mapping. A03:2021 is a common but not officially category-mapped alternative framing.
+      pl: CWE-1321 nie ma bezpośredniego wpisu w OWASP Top 10 2021 — ale jego rodzic CWE-915 jest jawnym członkiem A08:2021, co jest mapowaniem popartym dowodami. A03:2021 to powszechne, ale nie oficjalnie zmapowane alternatywne ujęcie.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-1321 — primary entry (Improperly Controlled Modification of Object Prototype Attributes)
+      - CWE-915 — parent weakness (Improperly Controlled Modification of Dynamically-Determined Object Attributes)
+      - CWE-471 — related (Modification of Assumed-Immutable Data)
+    - std: OWASP (disputed mapping — 2/3 independent research teams converged on this)
+      items:
+      - 'A08:2021 — Software and Data Integrity Failures (evidence-backed: CWE-915 is an explicit listed member of this category)'
+      - A03:2021 — Injection is a common secondary/thematic framing but CWE-1321/915 are NOT in A03's official CWE membership list
+    - std: CAPEC
+      items:
+      - CAPEC-77 — Manipulating User-Controlled Variables
+    inlineSources:
+    - label: CWE-1321 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1321.html
+    - label: CWE-915 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/915.html
+    - label: OWASP A08:2021
+      url: https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm active prototype pollution exploitation, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji prototype pollution, przejdź tę listę od góry.
+    steps:
+    - en: Restart affected Node processes — pollution persists in-memory until the process restarts
+      pl: Zrestartuj dotknięte procesy Node — zanieczyszczenie utrzymuje się w pamięci aż do restartu procesu
+    - en: Identify which gadget was reached (auth bypass, DoS, or RCE) by correlating logs with the pollution payload
+      pl: Ustal jaki gadżet został osiągnięty (obejście auth, DoS, czy RCE), korelując logi z ładunkiem zanieczyszczenia
+    - en: If RCE was achieved, treat the host as fully compromised — rotate all credentials/secrets reachable from that process
+      pl: Jeśli osiągnięto RCE, traktuj hosta jako w pełni skompromitowanego — zrotuj wszystkie poświadczenia/sekrety osiągalne z tego procesu
+    - en: 'Patch the root cause: reject __proto__/constructor/prototype in every merge, not just the exploited endpoint'
+      pl: 'Załataj przyczynę źródłową: odrzucaj __proto__/constructor/prototype w każdym merge, nie tylko na wykorzystanym endpoincie'
+    - en: Audit all dependencies (lodash, jQuery, qs) for known prototype pollution CVEs and update
+      pl: Przeaudytuj wszystkie zależności (lodash, jQuery, qs) pod kątem znanych CVE prototype pollution i zaktualizuj
+    - en: Apply Object.freeze(Object.prototype) and Node --disable-proto=throw as immediate hardening
+      pl: Zastosuj Object.freeze(Object.prototype) i Node --disable-proto=throw jako natychmiastowe wzmocnienie
+    - en: Sweep sibling endpoints with CodeQL/Semgrep for the same unguarded merge pattern
+      pl: Przeskanuj bliźniacze endpointy CodeQL/Semgrep pod kątem tego samego niezabezpieczonego wzorca merge
+  labs:
+    title:
+      en: Practice labs
+      pl: Laby praktyczne
+    lead:
+      en: Curated external labs to practice this exact attack — self-reported, not verified by Code Guardian.
+      pl: Kuratorowane zewnętrzne laby do przećwiczenia tego ataku — samodzielnie zgłaszane, nie weryfikowane przez Code Guardian.
+    items:
+    - variant: Client-Side Pollution via __proto__
+      provider: PortSwigger Web Security Academy
+      label: DOM XSS via client-side prototype pollution
+      url: https://portswigger.net/web-security/prototype-pollution/client-side/lab-prototype-pollution-dom-xss-via-client-side-prototype-pollution
+    - variant: Server-Side Pollution → Remote Code Execution
+      provider: PortSwigger Web Security Academy
+      label: Remote code execution via server-side prototype pollution
+      url: https://portswigger.net/web-security/prototype-pollution/server-side/lab-remote-code-execution-via-server-side-prototype-pollution
+    - variant: constructor.prototype Bypass
+      provider: PortSwigger Web Security Academy
+      label: Bypassing flawed input filters for server-side prototype pollution
+      url: https://portswigger.net/web-security/prototype-pollution/server-side/lab-bypassing-flawed-input-filters-for-server-side-prototype-pollution
+    - variant: Server-Side Pollution (blind detection)
+      provider: PortSwigger Web Security Academy
+      label: Detecting server-side prototype pollution without polluted property reflection
+      url: https://portswigger.net/web-security/prototype-pollution/server-side/lab-detecting-server-side-prototype-pollution-without-polluted-property-reflection
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A08:2021 Software and Data Integrity Failures
+      url: https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/
+    - label: CWE-1321 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1321.html
+    - label: CWE-915 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/915.html
+    - label: PortSwigger — Prototype pollution
+      url: https://portswigger.net/web-security/prototype-pollution
+    - label: PortSwigger Research — Server-side prototype pollution
+      url: https://portswigger.net/research/server-side-prototype-pollution
+    - label: NIST NVD — CWE-1321
+      url: https://nvd.nist.gov/vuln/search/results?cwe_id=CWE-1321
+    - label: CVE-2019-7609 (Kibana)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-7609
