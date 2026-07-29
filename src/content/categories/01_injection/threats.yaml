@@ -812,26 +812,35 @@ threats:
 
     '
 - id: cat_1_research11
-  name: Xml external entity (xxe) injection
-  severity: Medium
+  name: XML External Entity (XXE) Injection
+  severity: Critical
   difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xml external entity (xxe) injection" wskazane w analizie arena.
+  confidence: POSSIBLE
+  cwe:
+  - CWE-611
+  - CWE-827
+  - CWE-776
+  desc: Parser XML rozwiązujący encje zewnętrzne z niezaufanego wejścia — DOCTYPE deklarujący <!ENTITY x SYSTEM "file:///etc/passwd"> powoduje odczyt dowolnego pliku, a ten sam mechanizm może wskazywać na wewnętrzne URL-e (SSRF, metadane chmury) lub, przez encje parametryczne i zewnętrzny DTD atakującego, eksfiltrować dane w pełni ślepo (out-of-band). Realne łańcuchy (XXE → SSRF → przejęcie admina, jak w Zimbra CVE-2019-9670) eskalują do RCE.
+  desc_en: An XML parser resolving external entities from untrusted input — a DOCTYPE declaring <!ENTITY x SYSTEM "file:///etc/passwd"> reads an arbitrary file, and the same mechanism can target internal URLs (SSRF, cloud metadata) or, via parameter entities and an attacker-hosted external DTD, exfiltrate data fully blind (out-of-band). Real chains (XXE → SSRF → admin takeover, as in Zimbra CVE-2019-9670) escalate to RCE.
+  lang: java
+  vuln: '// VULNERABLE — default factory resolves DTDs & external entities
+
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+
+    Document doc = dbf.newDocumentBuilder().parse(input);
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  safe: '// SECURE — disallow DOCTYPE entirely
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 
-    # Potrzebny dalszy research przed dodaniem przykładu
+    dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
 
-    '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
+    dbf.setXIncludeAware(false);
 
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    dbf.setExpandEntityReferences(false);
+
+    Document doc = dbf.newDocumentBuilder().parse(input);
 
     '
 - id: cat_1_research12

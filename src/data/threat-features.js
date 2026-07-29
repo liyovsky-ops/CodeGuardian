@@ -20,6 +20,7 @@ import brokenauthData from '../content/deepdives/brokenauth.yaml';
 import graphqliData from '../content/deepdives/graphqli.yaml';
 import xssData from '../content/deepdives/xss.yaml';
 import pathtraversalData from '../content/deepdives/pathtraversal.yaml';
+import xxeData from '../content/deepdives/xxe.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -37,6 +38,7 @@ import brokenauthQuiz from '../content/quizzes/brokenauth.yaml';
 import graphqliQuiz from '../content/quizzes/graphqli.yaml';
 import xssQuiz from '../content/quizzes/xss.yaml';
 import pathtraversalQuiz from '../content/quizzes/pathtraversal.yaml';
+import xxeQuiz from '../content/quizzes/xxe.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -56,6 +58,7 @@ export const DEEPDIVES = {
   '2.1': brokenauthData,
   cat_1_research12: xssData, // XSS (Reflected/Stored/DOM/mXSS consolidated) — no clean numeric id in the catalog yet
   cat_1_research13: pathtraversalData, // Path Traversal / Directory Traversal
+  cat_1_research11: xxeData, // XML External Entity (XXE) Injection
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -78,4 +81,5 @@ export const QUIZZES = {
   '2.1': brokenauthQuiz,
   cat_1_research12: xssQuiz,
   cat_1_research13: pathtraversalQuiz,
+  cat_1_research11: xxeQuiz,
 };

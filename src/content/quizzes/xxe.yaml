@@ -1,0 +1,116 @@
+threatId: "cat_1_research11"
+title:
+  en: XML External Entity (XXE) Injection — knowledge check
+  pl: XML External Entity (XXE) Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+  - id: q1
+    type: vuln-or-not
+    prompt:
+      en: Does this Java XML parsing code contain an XXE vulnerability?
+      pl: Czy ten kod parsujący XML w Javie zawiera podatność XXE?
+    snippet:
+      lang: java
+      code: |
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        Document doc = dbf.newDocumentBuilder().parse(userSuppliedXml);
+    isVulnerable: true
+    cwe: CWE-611
+    explanation:
+      en: DocumentBuilderFactory resolves DTDs and external entities by default on every JDK version — there is no safe default here. Without setFeature("http://apache.org/xml/features/disallow-doctype-decl", true), any DOCTYPE with a SYSTEM entity is resolved.
+      pl: DocumentBuilderFactory domyślnie rozwiązuje DTD i encje zewnętrzne na każdej wersji JDK — nie ma tu bezpiecznej wartości domyślnej. Bez setFeature("http://apache.org/xml/features/disallow-doctype-decl", true), każdy DOCTYPE z encją SYSTEM jest rozwiązywany.
+  - id: q2
+    type: vuln-or-not
+    prompt:
+      en: Is this Python code safe from XXE?
+      pl: Czy ten kod w Pythonie jest bezpieczny od XXE?
+    snippet:
+      lang: python
+      code: |
+        from defusedxml.ElementTree import fromstring
+        root = fromstring(user_supplied_xml)
+    isVulnerable: false
+    cwe: CWE-611
+    explanation:
+      en: defusedxml is the officially recommended hardened wrapper for Python's XML libraries — it blocks external entity resolution, billion-laughs expansion, and XInclude by design, regardless of which underlying parser it wraps.
+      pl: defusedxml to oficjalnie rekomendowany wzmocniony wrapper dla bibliotek XML Pythona — z założenia blokuje rozwiązywanie encji zewnętrznych, ekspansję billion-laughs i XInclude, niezależnie od tego jaki parser leży pod spodem.
+  - id: q3
+    type: multiple-choice
+    prompt:
+      en: An XML endpoint never reflects any value back in its response, but you get an HTTP callback on your own server after submitting a crafted external DTD. What does this confirm?
+      pl: Endpoint XML nigdy nie odbija żadnej wartości w odpowiedzi, ale dostajesz callback HTTP na swój własny serwer po przesłaniu spreparowanego zewnętrznego DTD. Co to potwierdza?
+    choices:
+      - id: a
+        label: { en: The endpoint is safe — no data was disclosed, pl: Endpoint jest bezpieczny — żadne dane nie zostały ujawnione }
+      - id: b
+        label: { en: Blind (out-of-band) XXE — the parser resolves external entities even with zero reflection, pl: Ślepy (out-of-band) XXE — parser rozwiązuje encje zewnętrzne nawet bez żadnego odbicia }
+      - id: c
+        label: { en: The server has a WAF blocking the payload, pl: Serwer ma WAF blokujący ładunek }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: A callback hit proves the parser fetched your external DTD and resolved entities server-side — this is exactly how blind XXE is confirmed, and it's the foundation for the full nested-parameter-entity technique used to exfiltrate file contents into a callback URL.
+      pl: Trafienie callbacku dowodzi że parser pobrał Twój zewnętrzny DTD i rozwiązał encje po stronie serwera — dokładnie tak potwierdza się ślepe XXE, i to jest fundament pełnej techniki zagnieżdżonych encji parametrycznych używanej do eksfiltracji treści pliku do URL callbacku.
+  - id: q4
+    type: multiple-choice
+    prompt:
+      en: Which OWASP Top 10 2021 category does XXE fall under?
+      pl: Do której kategorii OWASP Top 10 2021 należy XXE?
+    choices:
+      - id: a
+        label: { en: "A4:2017 — XML External Entities (still its own category)", pl: "A4:2017 — XML External Entities (wciąż osobna kategoria)" }
+      - id: b
+        label: { en: A05:2021 — Security Misconfiguration, pl: A05:2021 — Security Misconfiguration }
+      - id: c
+        label: { en: A03:2021 — Injection, pl: A03:2021 — Injection }
+    correctChoiceIds: ["b"]
+    explanation:
+      en: XXE had its own standalone category in OWASP Top 10 2017 (A4:2017), but was merged into A05:2021 Security Misconfiguration in the 2021 revision — OWASP's own A05 page explicitly states this. It's not under Injection despite the mechanism resembling it.
+      pl: XXE miało własną osobną kategorię w OWASP Top 10 2017 (A4:2017), ale zostało wchłonięte przez A05:2021 Security Misconfiguration w rewizji 2021 — własna strona OWASP A05 wprost to stwierdza. Nie jest pod Injection mimo że mechanizm je przypomina.
+  - id: q5
+    type: pick-the-fix
+    prompt:
+      en: This .NET XML-parsing endpoint is injectable. Which variant actually fixes the XXE?
+      pl: Ten endpoint parsujący XML w .NET jest podatny. Który wariant faktycznie naprawia XXE?
+    variants:
+      - id: v1
+        lang: csharp
+        code: |
+          // strip the literal string "DOCTYPE" before parsing
+          var clean = userXml.Replace("DOCTYPE", "");
+          var doc = new XmlDocument();
+          doc.LoadXml(clean);
+      - id: v2
+        lang: csharp
+        code: |
+          var settings = new XmlReaderSettings {
+              DtdProcessing = DtdProcessing.Prohibit,
+              XmlResolver = null
+          };
+          using var reader = XmlReader.Create(new StringReader(userXml), settings);
+      - id: v3
+        lang: csharp
+        code: |
+          // only allow XML shorter than 10KB
+          if (userXml.Length > 10000) throw new Exception("too long");
+          var doc = new XmlDocument();
+          doc.LoadXml(userXml);
+    correctVariantId: v2
+    explanation:
+      en: v2 sets DtdProcessing.Prohibit and XmlResolver = null, which rejects DTDs and disables entity/external resolution outright — the correct root-cause fix. v1's string blacklist is trivially bypassed (case variation "DocType", or XInclude which needs no DOCTYPE at all); v3's length limit does nothing to stop entity resolution — a short payload can still declare and reference a dangerous external entity.
+      pl: v2 ustawia DtdProcessing.Prohibit i XmlResolver = null, co odrzuca DTD i całkowicie wyłącza rozwiązywanie encji/zewnętrznych — poprawna naprawa źródłowa. Blacklista stringowa z v1 jest trywialnie omijana (wariacja wielkości liter "DocType", albo XInclude który w ogóle nie wymaga DOCTYPE); limit długości w v3 niczego nie zatrzymuje — krótki ładunek wciąż może zadeklarować i odwołać się do niebezpiecznej encji zewnętrznej.
+  - id: q6
+    type: multiple-choice
+    prompt:
+      en: Why doesn't disabling external entities alone stop the "Billion Laughs" attack?
+      pl: Dlaczego samo wyłączenie encji zewnętrznych nie zatrzymuje ataku "Billion Laughs"?
+    choices:
+      - id: a
+        label: { en: Billion Laughs uses only internal entities nested exponentially — no external fetch is involved, pl: Billion Laughs używa tylko encji wewnętrznych zagnieżdżonych wykładniczo — żadne pobranie zewnętrzne nie jest zaangażowane }
+      - id: b
+        label: { en: It always uses a SYSTEM identifier pointing to a remote server, pl: Zawsze używa identyfikatora SYSTEM wskazującego na zdalny serwer }
+      - id: c
+        label: { en: It requires XInclude support, pl: Wymaga wsparcia dla XInclude }
+    correctChoiceIds: ["a"]
+    explanation:
+      en: Billion Laughs nests purely internal entities (<!ENTITY lol2 "&lol;&lol;...">) that reference each other exponentially — there's no SYSTEM/external URI anywhere in the chain. Stopping it requires disabling DOCTYPE processing entirely or capping entity expansion, not just blocking external references.
+      pl: Billion Laughs zagnieżdża czysto wewnętrzne encje (<!ENTITY lol2 "&lol;&lol;...">) odwołujące się do siebie wykładniczo — nigdzie w łańcuchu nie ma SYSTEM/URI zewnętrznego. Zatrzymanie tego wymaga całkowitego wyłączenia przetwarzania DOCTYPE lub ograniczenia ekspansji encji, nie tylko blokowania odwołań zewnętrznych.
