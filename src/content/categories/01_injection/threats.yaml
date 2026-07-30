@@ -570,19 +570,31 @@ threats:
   safe: "import subprocess\ndef ping(host):\n    subprocess.run([\"ping\", \"-c1\", host], shell=False, check=True)\n"
 - id: '1.28'
   name: XML Injection
-  severity: High
+  severity: Critical
   difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-91
-  - CWE-611
-  desc: 'Parser XML rozwija encje zewnętrzne/wstrzyknięte (XXE) — odczyt plików, SSRF, DoS.
+  - CWE-347
+  desc: 'Wstrzyknięcie znacznika/struktury XML (elementy, atrybuty, CDATA, komentarze) do dokumentu budowanego przez konkatenację stringów -- odrębne od XXE (encje zewnętrzne) i wstrzyknięcia XPath. W formie XML Signature Wrapping prowadzi do pełnego obejścia uwierzytelnienia (np. SAML).
 
     '
-  desc_en: The XML parser expands external/injected entities (XXE) — file read, SSRF, DoS.
-  lang: python
-  vuln: "import xml.etree.ElementTree as ET\ndef parse(data):\n    return ET.fromstring(data)  # rozwija encje zewnętrzne (XXE)\n"
-  safe: "from lxml import etree\ndef parse(data):\n    p = etree.XMLParser(resolve_entities=False, no_network=True)\n    return etree.fromstring(data, parser=p)\n"
+  desc_en: Injection of XML markup/structure (elements, attributes, CDATA, comments) into a document built by string concatenation -- distinct from XXE (external entities) and XPath injection. In its XML Signature Wrapping form, leads to full authentication bypass (e.g. SAML).
+  lang: java
+  vuln: '// VULNERABLE -- input becomes markup
+
+    String xml = "<user><name>" + name + "</name></user>";
+
+    // name = "</name><role>admin</role><name>x" injects a role element
+
+    '
+  safe: '// SECURE -- DOM builder writes a TEXT node, escapes automatically
+
+    Element nm = doc.createElement("name");
+
+    nm.setTextContent(name);
+
+    '
 - id: cat_1_research01
   name: Client-Side Template Injection (CSTI)
   severity: Critical

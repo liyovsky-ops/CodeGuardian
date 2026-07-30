@@ -1,0 +1,393 @@
+meta:
+  id: xmlinjection
+  threatId: '1.28'
+  severity: Critical
+  color: '#65a30d'
+  colorRgb: 101,163,13
+  cwe: CWE-91
+  cvss: '10.0'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'XML '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: XML Injection (generic markup injection, distinct from XXE)
+  lead:
+    en: 'Not XXE, and not XPath injection -- both already covered elsewhere in this knowledge base. This is the plain data/structure confusion at the heart of every injection class: an application builds an XML document by string concatenation, and attacker input containing <, ]]>, or <!-- is interpreted as markup rather than text. The same root cause, applied against a signed document, becomes XML Signature Wrapping (XSW) -- a genuinely critical, CVE-heavy class where a validator verifies one element''s signature while business logic silently processes a different, attacker-forged one. CVE-2024-45409 (ruby-saml/GitLab, CVSS 10.0) is the flagship modern incident.'
+    pl: 'Nie XXE, i nie wstrzyknięcie XPath -- oba już omówione gdzie indziej w tej bazie wiedzy. To zwykłe pomieszanie danych/struktury leżące u podstaw każdej klasy wstrzyknięcia: aplikacja buduje dokument XML przez konkatenację stringów, a wejście atakującego zawierające <, ]]>, albo <!-- jest interpretowane jako znacznik zamiast tekst. Ta sama przyczyna źródłowa, zastosowana przeciw podpisanemu dokumentowi, staje się XML Signature Wrapping (XSW) -- naprawdę krytyczna, bogata w CVE klasa gdzie walidator weryfikuje podpis jednego elementu podczas gdy logika biznesowa po cichu przetwarza inny, sfałszowany przez atakującego. CVE-2024-45409 (ruby-saml/GitLab, CVSS 10.0) to flagowy współczesny incydent.'
+  metrics:
+  - k: CWE-91
+    v:
+      en: Weakness ID (parent of CWE-643/CWE-652)
+      pl: ID słabości (rodzic CWE-643/CWE-652)
+  - k: '10.0'
+    v: CVSS · Critical (XSW ceiling, CVE-2024-45409)
+  - k: A03:2021
+    v: OWASP Top 10 (structural variants)
+  - k: '5'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: CWE-91 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/91.html
+  - label: CWE-347 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/347.html
+  - label: OWASP WSTG — Testing for XML Injection
+    url: https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/07-Testing_for_XML_Injection
+  - label: Somorovsky et al. — On Breaking SAML (USENIX Security 2012)
+    url: https://www.usenix.org/conference/usenixsecurity12/technical-sessions/presentation/somorovsky
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Five variants, escalating from simple sibling-element smuggling to full authentication bypass. Deliberately excluded: DOCTYPE/external-entity abuse (XXE, its own deep-dive) and XPath expression injection (its own deep-dive) -- mentioned only to draw the boundary.'
+      pl: 'Pięć wariantów, eskalujących od prostego przemytu elementu-rodzeństwa do pełnego obejścia uwierzytelnienia. Celowo wykluczone: nadużycie DOCTYPE/encji zewnętrznej (XXE, własny deep-dive) i wstrzyknięcie wyrażenia XPath (własny deep-dive) -- wspomniane tylko by wytyczyć granicę.'
+    items:
+    - name: XML tag/attribute injection (element smuggling)
+      sev: high
+      description:
+        en: A document built by string concatenation lets attacker input close the current element early and inject a sibling the schema/business logic never expected -- the direct XML analog of HTML injection and second-order parameter smuggling.
+        pl: Dokument zbudowany przez konkatenację stringów pozwala wejściu atakującego wcześnie zamknąć bieżący element i wstrzyknąć element-rodzeństwo którego schemat/logika biznesowa nigdy nie oczekiwały -- bezpośredni analog XML dla HTML injection i przemytu parametrów drugiego rzędu.
+      payload: 'mail field input: attacker@evil.example</mail><userid>0</userid><mail>x   ->   injects a duplicate <userid>0</userid> sibling'
+    - name: CDATA injection / escaping
+      sev: high
+      description:
+        en: 'Wrapping input in <![CDATA[ ... ]]> is not a valid escaping strategy: input containing the literal terminator ]]> closes the CDATA section early and re-enters live markup mode. This is a real, currently-patched bug class -- both @xmldom/xmldom and fast-xml-parser shipped fixes for exactly this in their builder/serializer code.'
+        pl: 'Owinięcie wejścia w <![CDATA[ ... ]]> nie jest poprawną strategią escapowania: wejście zawierające dosłowny terminator ]]> zamyka sekcję CDATA wcześnie i wraca do trybu żywego znacznika. To realna, wciąż łatana klasa błędu -- zarówno @xmldom/xmldom jak i fast-xml-parser wysłały łatki dokładnie na to w swoim kodzie budowniczego/serializatora.'
+      payload: ']]><role>admin</role><![CDATA[   (breaks out of a CDATA-wrapped field)'
+    - name: XML comment injection
+      sev: medium
+      description:
+        en: Injecting <!-- / --> comments out a legitimate element (e.g. a validation node or the real value of a field) so only the attacker's injected content remains active in the parsed tree.
+        pl: Wstrzyknięcie <!-- / --> komentuje legalny element (np. węzeł walidacji albo prawdziwą wartość pola) tak że w sparsowanym drzewie pozostaje aktywna tylko wstrzyknięta treść atakującego.
+      payload: 'password field: secret</password><!--   ...   next field: -->,<userid>0</userid>'
+    - name: Duplicate-element / attribute confusion (XML Parameter Pollution)
+      sev: high
+      description:
+        en: 'The XML sibling of HTTP Parameter Pollution: different parsers/libraries disagree on which of two same-named siblings or attributes wins (first vs. last in document order, namespace-aware vs. not). When a validation layer and a business-logic layer use different parsers on the same bytes, an attacker-injected duplicate can be validated as one value and consumed as another -- this exact parser-differential pattern is the structural engine underneath XML Signature Wrapping below.'
+        pl: 'Rodzeństwo XML dla HTTP Parameter Pollution: różne parsery/biblioteki nie zgadzają się co do tego które z dwóch tak samo nazwanych elementów-rodzeństwa lub atrybutów wygrywa (pierwszy vs ostatni w kolejności dokumentu, świadomy przestrzeni nazw vs nie). Gdy warstwa walidacji i warstwa logiki biznesowej używają różnych parserów na tych samych bajtach, wstrzyknięty przez atakującego duplikat może być zwalidowany jako jedna wartość a skonsumowany jako inna -- dokładnie ten wzorzec różnicy parserów jest silnikiem strukturalnym stojącym za XML Signature Wrapping poniżej.'
+      payload: <userid>0</userid>...<userid>500</userid>  -- validator reads the first, business logic reads the last (or vice versa)
+    - name: XML Signature Wrapping (XSW)
+      sev: critical
+      description:
+        en: 'The critical, CVE-documented ceiling of this class: an attacker takes any legitimately-signed XML document (e.g. a SAML assertion), duplicates/relocates elements so the signature-verification module validates the ORIGINAL untouched element by its Reference URI, while the business-logic layer that extracts the actual identity/data resolves a DIFFERENT, attacker-forged element -- full authentication bypass with a completely valid-looking signature. Somorovsky et al. (USENIX Security 2012) catalogued 8 canonical wrapping placements.'
+        pl: 'Krytyczny, udokumentowany w CVE sufit tej klasy: atakujący bierze dowolny prawidłowo podpisany dokument XML (np. asercję SAML), duplikuje/przemieszcza elementy tak że moduł weryfikacji podpisu waliduje ORYGINALNY nietknięty element po jego Reference URI, podczas gdy warstwa logiki biznesowej wydobywająca faktyczną tożsamość/dane rozwiązuje INNY, sfałszowany przez atakującego element -- pełne obejście uwierzytelnienia z całkowicie poprawnie wyglądającym podpisem. Somorovsky i in. (USENIX Security 2012) skatalogowali 8 kanonicznych rozmieszczeń wrapowania.'
+      payload: <Response><Assertion ID="evil"><Subject>admin</Subject>...</Assertion><Signature><Reference URI="#good"/>...</Signature><Extensions><Assertion ID="good"><Subject>attacker</Subject>...</Assertion></Extensions></Response>
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'Identical to every other injection class: never assemble the structured format with +/f-strings/string.Format. Use a DOM/builder API that writes to a text node, which forces automatic entity-escaping of < > & and correctly splits ]]> in CDATA sections.'
+      pl: 'Identycznie jak w każdej innej klasie wstrzyknięć: nigdy nie składaj sformatowanej struktury przez +/f-stringi/string.Format. Użyj API DOM/buildera który zapisuje do węzła tekstowego, co wymusza automatyczne escapowanie encji < > & i poprawnie dzieli ]]> w sekcjach CDATA.'
+    languages:
+    - label: Java
+      lang: java
+      vulnerable: '// VULNERABLE -- input becomes markup
+
+        String xml = "<user><name>" + name + "</name></user>";
+
+        // name = "</name><role>admin</role><name>x" injects a role element'
+      safe: '// SECURE -- DOM builder writes a TEXT node, escapes automatically
+
+        Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+
+        Element user = doc.createElement("user");
+
+        Element nm = doc.createElement("name");
+
+        nm.setTextContent(name); // ''<'', ''&'' etc. serialized as entities
+
+        user.appendChild(nm);
+
+        doc.appendChild(user);'
+    - label: Python
+      lang: python
+      vulnerable: '# VULNERABLE
+
+        xml = f"<user><name>{name}</name></user>"'
+      safe: '# SECURE -- lxml/ElementTree .text assignment escapes on serialize
+
+        from lxml import etree
+
+        user = etree.Element("user")
+
+        etree.SubElement(user, "name").text = name
+
+        xml = etree.tostring(user)'
+    - label: C# / .NET
+      lang: csharp
+      vulnerable: '// VULNERABLE -- InnerXml treats the string as markup
+
+        doc.InnerXml = "<user><name>" + name + "</name></user>";'
+      safe: '// SECURE -- InnerText / CreateTextNode escapes automatically
+
+        var user = doc.CreateElement("user");
+
+        var nm = doc.CreateElement("name");
+
+        nm.AppendChild(doc.CreateTextNode(name)); // never doc.InnerXml
+
+        user.AppendChild(nm);'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: The generic-injection methodology is a metacharacter probe; the XSW methodology is fundamentally different -- it exploits a mismatch between the component that verifies a signature and the component that reads the signed data.
+      pl: Metodyka generycznego wstrzyknięcia to sonda metaznakiem; metodyka XSW jest fundamentalnie inna -- wykorzystuje niezgodność między komponentem który weryfikuje podpis a komponentem który czyta podpisane dane.
+    steps:
+    - title:
+        en: Probe with XML metacharacters and watch for parse errors
+        pl: Sonduj metaznakami XML i obserwuj błędy parsowania
+      description:
+        en: Submit a lone <, ]]>, or <!-- and watch for 'not well-formed'/malformed-XML errors reflected in the response -- confirms the input reaches a concatenation-built document rather than an escaping builder.
+        pl: Wyślij pojedynczy <, ]]>, albo <!-- i obserwuj błędy 'nie dobrze sformowany'/zniekształcony XML odbite w odpowiedzi -- potwierdza że wejście dociera do dokumentu zbudowanego przez konkatenację zamiast escapującego buildera.
+    - title:
+        en: Craft a close-inject-reopen payload for the confirmed element context
+        pl: Skonstruuj ładunek zamknij-wstrzyknij-otwórz-ponownie dla potwierdzonego kontekstu elementu
+      description:
+        en: Determine the enclosing tag from error context, then supply </tag><injected>value</injected><tag> to add a sibling while keeping the overall document well-formed.
+        pl: Ustal otaczający tag z kontekstu błędu, potem dostarcz </tag><injected>value</injected><tag> by dodać element-rodzeństwo zachowując ogólną poprawność sformowania dokumentu.
+    - title:
+        en: For CDATA/comment sinks, lead with the terminator sequence
+        pl: Dla sinków CDATA/komentarza, zacznij od sekwencji terminatora
+      description:
+        en: Prepend ]]> to escape a CDATA wrapper, or <!-- / --> to comment out a legitimate node -- both re-enter live markup mode from a context the developer believed was inert.
+        pl: Poprzedź ]]> by uciec z wrappera CDATA, albo <!-- / --> by zakomentować legalny węzeł -- oba wracają do trybu żywego znacznika z kontekstu który developer uważał za obojętny.
+    - title:
+        en: 'For XSW: capture any validly-signed document, then iterate wrapping placements'
+        pl: 'Dla XSW: przechwyć dowolny prawidłowo podpisany dokument, potem iteruj rozmieszczenia wrapowania'
+      description:
+        en: Obtain any signed assertion/response (even the attacker's own low-privilege login), duplicate the signed element with forged content, and test the 8 canonical placements (sibling, wrapped-in-Extensions, nested, ID-collision) until signature verification passes on the original while identity-extraction resolves the forgery.
+        pl: Zdobądź dowolną podpisaną asercję/odpowiedź (nawet własne niskouprzywilejowane logowanie atakującego), zduplikuj podpisany element ze sfałszowaną treścią, przetestuj 8 kanonicznych rozmieszczeń (rodzeństwo, wrapowane w Extensions, zagnieżdżone, kolizja ID) aż weryfikacja podpisu przejdzie na oryginale podczas gdy wydobycie tożsamości rozwiąże fałszerstwo.
+    - title:
+        en: Escalate to the highest-impact reachable variant
+        pl: Eskaluj do osiągalnego wariantu o najwyższym wpływie
+      description:
+        en: Prefer authentication bypass (XSW) or duplicate-element business-logic confusion over mere content spoofing when both are reachable -- the impact ceiling differs by orders of magnitude.
+        pl: Preferuj obejście uwierzytelnienia (XSW) albo pomieszanie logiki biznesowej przez duplikat elementu ponad zwykłe podszywanie się pod treść gdy oba są osiągalne -- sufit wpływu różni się o rzędy wielkości.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: The generic-injection fix (never concatenate, always use a builder) does NOT stop XML Signature Wrapping -- XSW is a verification-logic bug, not an escaping bug, and needs its own dedicated defense at rank 3.
+      pl: Naprawa generycznego wstrzyknięcia (nigdy nie konkatenuj, zawsze używaj buildera) NIE zatrzymuje XML Signature Wrapping -- XSW to błąd logiki weryfikacji, nie błąd escapowania, i potrzebuje własnej dedykowanej obrony na miejscu 3.
+    items:
+    - rank: 1
+      eff: 92
+      kind: primary
+      label:
+        en: Never build XML by string concatenation -- use a DOM/builder API
+        pl: Nigdy nie buduj XML przez konkatenację stringów -- używaj API DOM/buildera
+      note:
+        en: Text-node assignment (setTextContent/.text/InnerText, never InnerXml/string interpolation) forces automatic entity-escaping. Eliminates variants (a)-(d) at the source. Does NOT address XSW.
+        pl: Przypisanie do węzła tekstowego (setTextContent/.text/InnerText, nigdy InnerXml/interpolacja stringów) wymusza automatyczne escapowanie encji. Eliminuje warianty (a)-(d) u źródła. NIE adresuje XSW.
+    - rank: 2
+      eff: 80
+      kind: strong
+      label:
+        en: Strict XSD schema validation rejecting unexpected/duplicate elements
+        pl: Ścisła walidacja schematu XSD odrzucająca nieoczekiwane/zduplikowane elementy
+      note:
+        en: Blocks element/attribute smuggling and much duplicate-element confusion, provided the schema is strict (bounded cardinality, no permissive xs:any). Weaker with permissive schemas.
+        pl: Blokuje przemyt elementu/atrybutu i wiele pomieszania duplikatów elementów, pod warunkiem że schemat jest ścisły (ograniczona krotność, bez permisywnego xs:any). Słabsze z permisywnymi schematami.
+    - rank: 3
+      eff: 90
+      kind: primary
+      label:
+        en: Correct C14N + verify the signature over the exact element business logic consumes (the XSW-specific fix)
+        pl: Poprawne C14N + weryfikacja podpisu na dokładnie tym elemencie który konsumuje logika biznesowa (naprawa specyficzna dla XSW)
+      note:
+        en: Process only the signed subtree by validated reference, reject documents with multiple/ambiguous assertions, and use one hardened parser end-to-end so verifier and consumer never see different trees from the same bytes (the root cause behind the 2025 ruby-saml parser-differential CVEs).
+        pl: Przetwarzaj tylko podpisane poddrzewo przez zwalidowaną referencję, odrzucaj dokumenty z wieloma/niejednoznacznymi asercjami, i używaj jednego utwardzonego parsera od początku do końca tak by weryfikator i konsument nigdy nie widzieli różnych drzew z tych samych bajtów (przyczyna źródłowa CVE różnicy parserów ruby-saml z 2025).
+    - rank: 4
+      eff: 20
+      kind: weak
+      label:
+        en: Disable external entities / secure parser configuration
+        pl: Wyłącz encje zewnętrzne / bezpieczna konfiguracja parsera
+      note:
+        en: Good shared hardening with the XXE deep-dive's defenses, but this is the fix for external-entity abuse, not for markup/structure injection or XSW -- include it, but do not treat it as a primary control here.
+        pl: Dobre wspólne utwardzenie z obronami deep-dive o XXE, ale to naprawa dla nadużycia encji zewnętrznej, nie dla wstrzyknięcia znacznika/struktury czy XSW -- uwzględnij, ale nie traktuj jako podstawowej kontroli tutaj.
+    - rank: 5
+      eff: 40
+      kind: weak
+      label:
+        en: Input validation / metacharacter blacklisting
+        pl: Walidacja wejścia / blacklista metaznaków
+      note:
+        en: Rejecting <, >, &, ]]>, <!-- helps but is bypassable via encoding tricks and does nothing against XSW. Defense-in-depth only, never the primary control.
+        pl: Odrzucanie <, >, &, ]]>, <!-- pomaga ale jest omijalne sztuczkami kodowania i nic nie robi przeciw XSW. Tylko obrona w głąb, nigdy podstawowa kontrola.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Two CVE-heavy XML Signature Wrapping incidents against real, widely-deployed SAML libraries, plus a 2026 real-world confirmation that plain CDATA injection is still being found and patched in mainstream XML libraries today.
+      pl: Dwa bogate w CVE incydenty XML Signature Wrapping przeciw realnym, szeroko wdrożonym bibliotekom SAML, plus potwierdzenie z 2026 że zwykłe wstrzyknięcie CDATA jest wciąż znajdowane i łatane w głównych bibliotekach XML dzisiaj.
+    items:
+    - org: ruby-saml / GitLab
+      year: 2024
+      impact: CVE-2024-45409, CVSS 10.0
+      cost: Full authentication bypass -- log in and act as any user
+      description:
+        en: An incorrect XPath selector meant the SAML response signature wasn't properly verified against the element business logic actually consumed -- textbook XML Signature Wrapping. Affected ruby-saml <=1.12.2 and 1.13.0-1.16.0, fixed 1.17.0; GitLab shipped emergency patches across five release lines. Reported actively exploited.
+        pl: Niepoprawny selektor XPath oznaczał że podpis odpowiedzi SAML nie był poprawnie zweryfikowany względem elementu który faktycznie konsumowała logika biznesowa -- podręcznikowy XML Signature Wrapping. Dotyczyło ruby-saml <=1.12.2 i 1.13.0-1.16.0, naprawione w 1.17.0; GitLab wysłał awaryjne łatki w pięciu liniach wydań. Zgłoszone jako aktywnie eksploatowane.
+    - org: samlify (Node.js)
+      year: 2025
+      impact: CVE-2025-47949, CVSS 9.9
+      cost: Authentication bypass -- ~200k weekly npm downloads at time of disclosure
+      description:
+        en: The library extracted identity from an unsigned section of the SAML response, letting an attacker wrap a forged assertion around a legitimately-signed one and authenticate as any user. Affected samlify <2.10.0, fixed in 2.10.0.
+        pl: Biblioteka wydobywała tożsamość z niepodpisanej sekcji odpowiedzi SAML, pozwalając atakującemu owinąć sfałszowaną asercję wokół prawidłowo podpisanej i uwierzytelnić się jako dowolny użytkownik. Dotyczyło samlify <2.10.0, naprawione w 2.10.0.
+    - org: '@xmldom/xmldom'
+      year: 2026
+      impact: CVE-2026-34601
+      cost: XML structure injection via unsafe CDATA serialization, confirming this remains a live bug class in mainstream libraries
+      description:
+        en: The library allowed a string containing the CDATA terminator ]]> to be inserted into a CDATASection node; XMLSerializer emitted it verbatim, letting attacker data become active markup in the serialized output. Fixed by making createCDATASection reject ]]> and having the serializer split affected CDATA sections. A parallel bug (GHSA-gh4j-gqv2-49f6) was found and fixed the same way in fast-xml-parser's XMLBuilder.
+        pl: Biblioteka pozwalała by string zawierający terminator CDATA ]]> był wstawiony do węzła CDATASection; XMLSerializer emitował go dosłownie, pozwalając danym atakującego stać się aktywnym znacznikiem w zserializowanym wyjściu. Naprawione przez uczynienie createCDATASection odrzucającym ]]> i sprawienie że serializator dzieli dotknięte sekcje CDATA. Równoległy błąd (GHSA-gh4j-gqv2-49f6) został znaleziony i naprawiony tym samym sposobem w XMLBuilder fast-xml-parser.
+    inlineSources:
+    - label: ProjectDiscovery — CVE-2024-45409 (ruby-saml/GitLab)
+      url: https://projectdiscovery.io/blog/ruby-saml-gitlab-auth-bypass
+    - label: GHSA — CVE-2025-47949 (samlify)
+      url: https://github.com/advisories/GHSA-r683-v43c-6xqv
+    - label: GHSA — xmldom CDATA injection (CVE-2026-34601)
+      url: https://github.com/advisories/GHSA-wh4c-j3r5-mjhp
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Generic structural injection is caught by ordinary SAST rules for the CWE-91 concatenation pattern; XML Signature Wrapping needs a dedicated tool, since it is a semantic verify-vs-consume mismatch that static analysis cannot see.
+      pl: Generyczne wstrzyknięcie strukturalne jest wyłapywane przez zwykłe reguły SAST dla wzorca konkatenacji CWE-91; XML Signature Wrapping potrzebuje dedykowanego narzędzia, bo to semantyczna niezgodność weryfikuj-vs-konsumuj której analiza statyczna nie widzi.
+    sast:
+    - - Semgrep / CodeQL / Fortify / Checkmarx
+      - Flag tainted data concatenated into XML strings (the CWE-91 pattern codified as SEI CERT IDS16-J for Java) -- solid coverage for variants (a)-(d)
+    dast:
+    - - SAML Raider (Burp Suite extension)
+      - The standard XSW testing tool -- automates all 8 canonical wrapping placements, plus SAML message editing and X.509 certificate management. Real, verified, in the official BApp Store
+    - - Burp Suite Scanner
+      - Built-in "XML injection" KB issue for the generic structural variants
+    - - Manual metacharacter fuzzing
+      - <, ]]>, <!-- probes against every field that feeds an XML/SOAP/SAML builder
+    note:
+      en: '<strong>Key signal:</strong> XSW specifically is a coverage gap for generic SAST/DAST scanners -- it requires domain-specific tooling (SAML Raider) or manual review of exactly one question: does the code that verifies the signature reference the SAME element that the code extracting identity/data reads?'
+      pl: '<strong>Kluczowy sygnał:</strong> XSW konkretnie to luka pokrycia dla generycznych skanerów SAST/DAST -- wymaga narzędzia specyficznego dla domeny (SAML Raider) albo ręcznego przeglądu dokładnie jednego pytania: czy kod weryfikujący podpis odwołuje się do TEGO SAMEGO elementu który czyta kod wydobywający tożsamość/dane?'
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: CWE-91's own title admits a naming confusion MITRE itself acknowledges; XML Signature Wrapping's compliance mapping is a genuine, unresolved judgment call across all three research passes rather than a clean answer.
+      pl: Własny tytuł CWE-91 przyznaje się do zamieszania nazewniczego które sam MITRE potwierdza; mapowanie zgodności XML Signature Wrapping to prawdziwy, nierozstrzygnięty osąd we wszystkich trzech przejściach badawczych zamiast czystej odpowiedzi.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-91 — XML Injection (aka Blind XPath Injection) -- primary for structural variants (a)-(d). MITRE's own maintenance notes acknowledge the "(aka Blind XPath Injection)" phrase in the title is a naming confusion, since the description covers generic markup neutralization, not specifically XPath
+      - CWE-91 is ChildOf CWE-74 (Injection); CWE-643 (XPath Injection, this knowledge base's own separate deep-dive) and CWE-652 (XQuery Injection) are BOTH children of CWE-91 -- confirming the taxonomic parent-child relationship this deep-dive's scoping note relies on
+      - CWE-611 (XXE) is a separate weakness entirely, covered in this knowledge base's own dedicated deep-dive -- MITRE explicitly warns CWE-91 is often confused with it
+      - CWE-347 — Improper Verification of Cryptographic Signature -- the correct primary CWE for XML Signature Wrapping specifically. There is no XML-specific CWE for XSW; its root cause is a verification-logic bug, not a neutralization failure
+    - std: OWASP
+      items:
+      - A03:2021 — Injection (structural variants a-d)
+      - 'XML Signature Wrapping: a genuine, unresolved judgment call across all three independent research passes, each landing differently -- A02:2021 Cryptographic Failures (it defeats a signature), A07:2021 Identification and Authentication Failures (the real-world impact is auth bypass), or some combination of both. Documented here as a live dispute rather than an artificially picked answer'
+    inlineSources:
+    - label: CWE-91 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/91.html
+    - label: CWE-347 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/347.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active XML injection or XSW exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia XML lub XSW, przejdź tę listę od góry.
+    steps:
+    - en: If XSW is confirmed, treat every session established via the affected auth flow since the vulnerability was introduced as potentially forged -- force credential/session rotation broadly
+      pl: Jeśli potwierdzono XSW, traktuj każdą sesję ustanowioną przez dotknięty przepływ uwierzytelnienia odkąd wprowadzono podatność jako potencjalnie sfałszowaną -- wymuś szeroką rotację poświadczeń/sesji
+    - en: Identify whether the signature verifier and the identity-extraction code use the same parser and resolve the same element by validated reference -- this is the exact question XSW exploits
+      pl: Ustal czy weryfikator podpisu i kod wydobywania tożsamości używają tego samego parsera i rozwiązują ten sam element przez zwalidowaną referencję -- to dokładnie pytanie które wykorzystuje XSW
+    - en: Grep the codebase for every place XML is built via string concatenation/interpolation rather than a DOM/builder API, not just the endpoint exploited
+      pl: Przeszukaj kod pod kątem każdego miejsca gdzie XML jest budowany przez konkatenację/interpolację stringów zamiast API DOM/buildera, nie tylko wykorzystanego endpointu
+    - en: Patch every unavoidable dynamic-XML call site with a text-node-based builder API, and reject documents containing multiple/ambiguous signed elements
+      pl: Załataj każde nieuniknione miejsce dynamicznego XML API buildera opartego na węźle tekstowym, i odrzucaj dokumenty zawierające wiele/niejednoznaczne podpisane elementy
+    - en: Upgrade any SAML/WS-Security library to a version patched against known XSW/parser-differential CVEs, and confirm C14N happens correctly before signature verification
+      pl: Zaktualizuj każdą bibliotekę SAML/WS-Security do wersji załatanej przeciw znanym CVE XSW/różnicy parserów, i potwierdź że C14N dzieje się poprawnie przed weryfikacją podpisu
+    - en: Notify per applicable data-breach obligations if accounts were impersonated or data was exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli konta zostały podszyte lub dane wyeksfiltrowane
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-91 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/91.html
+    - label: CWE-347 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/347.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: OWASP WSTG — Testing for XML Injection
+      url: https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/07-Testing_for_XML_Injection
+    - label: Somorovsky et al. — On Breaking SAML (USENIX Security 2012)
+      url: https://www.usenix.org/conference/usenixsecurity12/technical-sessions/presentation/somorovsky
+    - label: ProjectDiscovery — CVE-2024-45409 (ruby-saml/GitLab)
+      url: https://projectdiscovery.io/blog/ruby-saml-gitlab-auth-bypass
+    - label: GHSA — CVE-2025-47949 (samlify)
+      url: https://github.com/advisories/GHSA-r683-v43c-6xqv
+    - label: GHSA — xmldom CDATA injection (CVE-2026-34601)
+      url: https://github.com/advisories/GHSA-wh4c-j3r5-mjhp
+    - label: SAML Raider (Compass Security)
+      url: https://github.com/CompassSecurity/SAMLRaider
+    - label: PortSwigger Research — The Fragile Lock
+      url: https://portswigger.net/research/the-fragile-lock

@@ -1,0 +1,134 @@
+threatId: '1.28'
+title:
+  en: XML Injection — knowledge check
+  pl: XML Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: How does generic XML Injection differ from XXE (XML External Entity injection), both covered in this knowledge base?
+    pl: Czym generyczne XML Injection różni się od XXE (XML External Entity injection), oba omówione w tej bazie wiedzy?
+  choices:
+  - id: a
+    label:
+      en: Generic XML injection forges ordinary markup/structure (elements, attributes, CDATA, comments) with no DOCTYPE or entity declaration at all; XXE specifically abuses <!DOCTYPE>/<!ENTITY> parser features to read files, cause SSRF, or trigger DoS
+      pl: Generyczne XML injection fałszuje zwykły znacznik/strukturę (elementy, atrybuty, CDATA, komentarze) bez żadnej deklaracji DOCTYPE czy encji; XXE konkretnie nadużywa funkcji parsera <!DOCTYPE>/<!ENTITY> by odczytać pliki, spowodować SSRF, albo wywołać DoS
+  - id: b
+    label:
+      en: They are exactly the same attack under two different names
+      pl: To dokładnie ten sam atak pod dwiema różnymi nazwami
+  - id: c
+    label:
+      en: Generic XML injection only affects JSON APIs, never actual XML documents
+      pl: Generyczne XML injection dotyczy tylko API JSON, nigdy prawdziwych dokumentów XML
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is the scoping boundary that keeps this deep-dive distinct from the already-published XXE deep-dive: XXE is a parser-configuration problem (the parser is told to resolve external references), while generic XML injection is an output-encoding problem (the document is built by unsafe string concatenation) -- the same root cause as SQL injection or HTML injection, just applied to XML.'
+    pl: 'To granica zakresu która utrzymuje ten deep-dive odrębnym od już opublikowanego deep-dive o XXE: XXE to problem konfiguracji parsera (parserowi kazano rozwiązywać zewnętrzne referencje), podczas gdy generyczne XML injection to problem kodowania wyjścia (dokument jest budowany przez niebezpieczną konkatenację stringów) -- ta sama przyczyna źródłowa co wstrzyknięcie SQL czy HTML injection, tylko zastosowana do XML.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: Does wrapping user input in a CDATA section, as shown here, safely neutralize XML metacharacters?
+    pl: Czy owinięcie wejścia użytkownika w sekcję CDATA, jak pokazano tutaj, bezpiecznie neutralizuje metaznaki XML?
+  snippet:
+    lang: xml
+    code: <comment><![CDATA[USERINPUT]]></comment>
+  isVulnerable: true
+  cwe: CWE-91
+  explanation:
+    en: No -- CDATA is not a valid escaping strategy against attacker-controlled input. If USERINPUT contains the literal terminator ]]>, it closes the CDATA section early and re-enters live markup mode, letting the attacker inject real elements. This is a real, currently-patched bug class -- both @xmldom/xmldom (CVE-2026-34601) and fast-xml-parser shipped fixes for exactly this failure in their serializer code.
+    pl: Nie -- CDATA nie jest poprawną strategią escapowania przeciw wejściu kontrolowanemu przez atakującego. Jeśli USERINPUT zawiera dosłowny terminator ]]>, zamyka sekcję CDATA wcześnie i wraca do trybu żywego znacznika, pozwalając atakującemu wstrzyknąć prawdziwe elementy. To realna, wciąż łatana klasa błędu -- zarówno @xmldom/xmldom (CVE-2026-34601) jak i fast-xml-parser wysłały łatki dokładnie na tę wadę w swoim kodzie serializatora.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive treat CWE-91's own title, "XML Injection (aka Blind XPath Injection)", as a documented naming problem rather than an accurate description?
+    pl: Dlaczego ten deep-dive traktuje własny tytuł CWE-91, "XML Injection (aka Blind XPath Injection)", jako udokumentowany problem nazewniczy zamiast dokładny opis?
+  choices:
+  - id: a
+    label:
+      en: MITRE's own maintenance notes acknowledge the "(aka Blind XPath Injection)" phrase is confusing, since CWE-91's actual description covers generic markup neutralization broadly -- XPath injection is a separate CHILD weakness (CWE-643), not what the parent CWE-91 is fundamentally about
+      pl: Własne notatki utrzymania MITRE przyznają że fraza "(aka Blind XPath Injection)" jest myląca, bo faktyczny opis CWE-91 obejmuje szeroko generyczną neutralizację znacznika -- wstrzyknięcie XPath to osobna słabość-DZIECKO (CWE-643), nie to o czym fundamentalnie jest rodzic CWE-91
+  - id: b
+    label:
+      en: CWE-91 was completely withdrawn by MITRE and no longer exists
+      pl: CWE-91 zostało całkowicie wycofane przez MITRE i już nie istnieje
+  - id: c
+    label:
+      en: XPath injection and generic XML injection are actually unrelated weaknesses with no taxonomic connection at all
+      pl: Wstrzyknięcie XPath i generyczne XML injection są w rzeczywistości niepowiązanymi słabościami bez żadnego związku taksonomicznego
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is a real, MITRE-acknowledged naming confusion, verified directly against cwe.mitre.org rather than assumed: CWE-91 is the broad parent (ChildOf CWE-74 Injection), with CWE-643 (XPath Injection, this knowledge base''s own separate deep-dive) and CWE-652 (XQuery Injection) both as its children -- the title''s XPath reference describes one child, not the whole parent weakness.'
+    pl: 'To realne, potwierdzone przez MITRE zamieszanie nazewnicze, zweryfikowane bezpośrednio względem cwe.mitre.org zamiast założone: CWE-91 to szeroki rodzic (ChildOf CWE-74 Injection), z CWE-643 (wstrzyknięcie XPath, własny osobny deep-dive tej bazy wiedzy) i CWE-652 (wstrzyknięcie XQuery) oba jako jego dzieci -- odniesienie do XPath w tytule opisuje jedno dziecko, nie całą rodzicielską słabość.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A SAML service processes this response. The signature-verification module validates the element referenced by the Signature's Reference URI (#good), while a separate identity-extraction function simply takes the FIRST <Assertion> element in the document. Is this exploitable?
+    pl: Serwis SAML przetwarza tę odpowiedź. Moduł weryfikacji podpisu waliduje element wskazany przez Reference URI podpisu (#good), podczas gdy osobna funkcja wydobywania tożsamości po prostu bierze PIERWSZY element <Assertion> w dokumencie. Czy to jest eksploatowalne?
+  snippet:
+    lang: xml
+    code: "<Response>\n  <Assertion ID=\"evil\"><Subject>admin</Subject></Assertion>\n  <Signature><Reference URI=\"#good\"/>...</Signature>\n  <Assertion ID=\"good\"><Subject>attacker</Subject>...</Assertion>\n</Response>"
+  isVulnerable: true
+  cwe: CWE-347
+  explanation:
+    en: 'Yes -- this is a textbook XML Signature Wrapping (XSW) attack. The signature verifier checks the "good" assertion (Subject: attacker, legitimately signed) and confirms it is valid. But the identity-extraction function, taking the first <Assertion> by document order, reads the forged "evil" assertion instead and authenticates the request as admin. The signature is completely valid -- it was just verified against a different element than the one the application actually trusted.'
+    pl: 'Tak -- to podręcznikowy atak XML Signature Wrapping (XSW). Weryfikator podpisu sprawdza asercję "good" (Subject: attacker, prawidłowo podpisaną) i potwierdza że jest ważna. Ale funkcja wydobywania tożsamości, biorąc pierwszą <Assertion> wg kolejności dokumentu, czyta zamiast tego sfałszowaną asercję "evil" i uwierzytelnia żądanie jako admin. Podpis jest całkowicie ważny -- został po prostu zweryfikowany na innym elemencie niż ten któremu faktycznie zaufała aplikacja.'
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: 'Why does replacing string-concatenated XML building with a proper DOM/builder API (rank #1 defense) NOT protect against XML Signature Wrapping?'
+    pl: 'Dlaczego zastąpienie budowania XML przez konkatenację stringów właściwym API DOM/buildera (obrona #1) NIE chroni przed XML Signature Wrapping?'
+  choices:
+  - id: a
+    label:
+      en: XSW documents are already well-formed, correctly-escaped XML -- the vulnerability is a verification-LOGIC bug (the code that checks signatures reads a different element than the code that trusts the data), not an escaping/encoding failure at all
+      pl: Dokumenty XSW są już poprawnie sformowanym, poprawnie escapowanym XML -- podatność to błąd LOGIKI weryfikacji (kod sprawdzający podpisy czyta inny element niż kod który ufa danym), w ogóle nie błąd escapowania/kodowania
+  - id: b
+    label:
+      en: DOM builder APIs are always slower and less secure than string concatenation
+      pl: API buildera DOM są zawsze wolniejsze i mniej bezpieczne niż konkatenacja stringów
+  - id: c
+    label:
+      en: XSW cannot actually occur in real systems -- it is a purely theoretical attack
+      pl: XSW w rzeczywistości nie może wystąpić w prawdziwych systemach -- to czysto teoretyczny atak
+  correctChoiceIds:
+  - a
+  explanation:
+    en: This is why this deep-dive gives XSW its own dedicated rank-#3 defense (correct C14N plus verifying the signature over the exact element business logic consumes) rather than folding it into the generic-injection fix. CVE-2024-45409 (ruby-saml/GitLab, CVSS 10.0) is a real, actively-exploited proof this is not theoretical.
+    pl: 'Dlatego ten deep-dive daje XSW własną dedykowaną obronę na miejscu #3 (poprawne C14N plus weryfikacja podpisu na dokładnie tym elemencie który konsumuje logika biznesowa) zamiast wtapiać to w naprawę generycznego wstrzyknięcia. CVE-2024-45409 (ruby-saml/GitLab, CVSS 10.0) to realny, aktywnie eksploatowany dowód że to nie jest teoretyczne.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A Java service builds an XML profile document from a user-supplied name field. Which variant actually fixes the injection risk?
+    pl: Serwis Java buduje dokument profilu XML z dostarczonego przez użytkownika pola name. Który wariant faktycznie naprawia ryzyko wstrzyknięcia?
+  variants:
+  - id: v1
+    lang: java
+    code: '// strip only the literal substring "<role>" before concatenating
+
+      String clean = name.replace("<role>", "");
+
+      String xml = "<user><name>" + clean + "</name></user>";'
+  - id: v2
+    lang: java
+    code: 'Element user = doc.createElement("user");
+
+      Element nm = doc.createElement("name");
+
+      nm.setTextContent(name);
+
+      user.appendChild(nm);'
+  - id: v3
+    lang: java
+    code: '// only allow names shorter than 50 characters
+
+      if (name.length() > 50) throw new IllegalArgumentException();
+
+      String xml = "<user><name>" + name + "</name></user>";'
+  correctVariantId: v2
+  explanation:
+    en: v2 uses the DOM builder's setTextContent, which writes to a text node and forces the serializer to entity-escape <, >, and & regardless of content -- the string can never become markup. v1's substring blacklist targets one specific tag name and is trivially bypassed by any other injected element (<userid>0</userid>, a duplicate sibling, or a CDATA/comment breakout); v3's length cap says nothing about content and </name><role>admin</role><name>x is well under 50 characters.
+    pl: v2 używa setTextContent buildera DOM, który zapisuje do węzła tekstowego i wymusza by serializator escapował encjami <, >, i & niezależnie od treści -- string nigdy nie może stać się znacznikiem. Blacklista podciągu z v1 celuje w jedną konkretną nazwę tagu i jest trywialnie omijana jakimkolwiek innym wstrzykniętym elementem (<userid>0</userid>, duplikat rodzeństwa, albo ucieczka CDATA/komentarza); limit długości z v3 nic nie mówi o treści, a </name><role>admin</role><name>x ma dobrze poniżej 50 znaków.
