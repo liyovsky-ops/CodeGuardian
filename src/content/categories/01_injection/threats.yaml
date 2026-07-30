@@ -716,26 +716,32 @@ threats:
 
     '
 - id: cat_1_research06
-  name: Json injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Json injection" wskazane w analizie arena.
+  name: JSON Injection
+  severity: Critical
+  difficulty: Medium
+  confidence: POSSIBLE
+  cwe:
+  - CWE-502
+  - CWE-116
+  desc: 'Dwa mechanizmy: (1) strukturalne -- konkatenacja stringów budująca JSON pozwala wstrzyknąć nowe klucze przez nieoescapowany cudzysłów; (2) deserializacja polimorficzna -- @type/$type kontrolowany przez atakującego w fastjson/Jackson/Newtonsoft.Json pozwala utworzyć instancję dowolnej klasy, prowadząc do RCE.
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: 'Two mechanisms: (1) structural -- string concatenation building JSON allows injecting new keys via an unescaped quote; (2) polymorphic deserialization -- attacker-controlled @type/$type in fastjson/Jackson/Newtonsoft.Json allows instantiating an arbitrary class, leading to RCE.'
+  lang: java
+  vuln: '// VULNERABLE -- default typing honors attacker-supplied class names
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
+    ObjectMapper m = new ObjectMapper();
 
-    # Potrzebny dalszy research przed dodaniem przykładu
+    m.enableDefaultTyping();
+
+    Object o = m.readValue(untrustedJson, Object.class);
 
     '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
+  safe: '// SECURE -- bind to a concrete type
 
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    ObjectMapper m = new ObjectMapper();
+
+    Account a = m.readValue(untrustedJson, Account.class);
 
     '
 - id: cat_1_research07

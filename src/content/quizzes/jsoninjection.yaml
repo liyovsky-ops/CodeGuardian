@@ -1,0 +1,140 @@
+threatId: cat_1_research06
+title:
+  en: JSON Injection — knowledge check
+  pl: JSON Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive treat "structural JSON injection" and "polymorphic-deserialization RCE" as two genuinely different weaknesses rather than one topic?
+    pl: Dlaczego ten deep-dive traktuje "strukturalne wstrzyknięcie JSON" i "RCE deserializacji polimorficznej" jako dwie naprawdę różne słabości zamiast jednego tematu?
+  choices:
+  - id: a
+    label:
+      en: Structural injection is a syntax/data confusion at the serialization boundary with no object instantiation involved; deserialization RCE is tag-driven object instantiation (the same primitive as YAML's !!tag mechanism) -- different root causes, different CWEs, different fixes
+      pl: Wstrzyknięcie strukturalne to pomieszanie składni/danych na granicy serializacji bez zaangażowania tworzenia instancji obiektu; RCE deserializacji to tworzenie instancji obiektu sterowane tagiem (ten sam prymityw co mechanizm !!tag YAML) -- różne przyczyny źródłowe, różne CWE, różne naprawy
+  - id: b
+    label:
+      en: They are actually identical and the distinction is purely cosmetic
+      pl: W rzeczywistości są identyczne a rozróżnienie jest czysto kosmetyczne
+  - id: c
+    label:
+      en: Structural injection only happens in Java, deserialization RCE only happens in .NET
+      pl: Wstrzyknięcie strukturalne zdarza się tylko w Java, RCE deserializacji tylko w .NET
+  correctChoiceIds:
+  - a
+  explanation:
+    en: This mirrors exactly how this knowledge base's YAML Injection deep-dive separates its deserialization core from its mechanistically-different CI/CD script-injection variant -- never building JSON by concatenation fixes structural injection but does nothing against a library configured with enableDefaultTyping()/TypeNameHandling.All, and vice versa.
+    pl: To dokładnie odzwierciedla jak deep-dive o YAML Injection tej bazy wiedzy oddziela swój rdzeń deserializacji od mechanistycznie innego wariantu wstrzyknięcia skryptu CI/CD -- nigdy-nie-budowanie JSON przez konkatenację naprawia wstrzyknięcie strukturalne ale nic nie robi przeciw bibliotece skonfigurowanej z enableDefaultTyping()/TypeNameHandling.All, i odwrotnie.
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: Does this Java code contain a JSON deserialization vulnerability?
+    pl: Czy ten kod Java zawiera podatność deserializacji JSON?
+  snippet:
+    lang: java
+    code: 'ObjectMapper m = new ObjectMapper();
+
+      m.enableDefaultTyping();
+
+      Object o = m.readValue(untrustedJson, Object.class);'
+  isVulnerable: true
+  cwe: CWE-502
+  explanation:
+    en: Yes. enableDefaultTyping() honors a class name embedded in the untrusted JSON, letting an attacker name any class on the classpath -- exactly the mechanism behind CVE-2017-7525 and the ~30-CVE blacklist-bypass family that followed it, which is why Jackson later replaced this with an allowlist-based PolymorphicTypeValidator.
+    pl: Tak. enableDefaultTyping() honoruje nazwę klasy osadzoną w niezaufanym JSON, pozwalając atakującemu nazwać dowolną klasę w classpath -- dokładnie mechanizm stojący za CVE-2017-7525 i rodziną ~30 CVE obejść blacklisty które po nim nastąpiły, dlatego Jackson później zastąpił to PolymorphicTypeValidator opartym na allowliście.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Why is there no single CVE issued against Newtonsoft.Json itself for the TypeNameHandling RCE, unlike fastjson's and Jackson's dedicated CVE families?
+    pl: Dlaczego nie wydano żadnego pojedynczego CVE przeciw samemu Newtonsoft.Json za RCE TypeNameHandling, w przeciwieństwie do dedykowanych rodzin CVE fastjson i Jackson?
+  choices:
+  - id: a
+    label:
+      en: 'The dangerous behavior is a by-design, opt-in configuration (any TypeNameHandling value other than the default None) rather than a code defect -- popularized publicly at Black Hat USA 2017''s "Friday the 13th: JSON Attacks", with real-world impact instead showing up as CVEs against downstream products that shipped the setting insecurely'
+      pl: 'Niebezpieczne zachowanie to zamierzona, opcjonalna konfiguracja (jakakolwiek wartość TypeNameHandling inna niż domyślne None) zamiast defektu kodu -- spopularyzowana publicznie na Black Hat USA 2017 "Friday the 13th: JSON Attacks", z realnym wpływem pojawiającym się zamiast tego jako CVE przeciw produktom downstream które wysłały to ustawienie niebezpiecznie'
+  - id: b
+    label:
+      en: Newtonsoft.Json has never had any security issues of any kind
+      pl: Newtonsoft.Json nigdy nie miał żadnych problemów bezpieczeństwa jakiegokolwiek rodzaju
+  - id: c
+    label:
+      en: Microsoft refuses to acknowledge vulnerabilities in third-party .NET libraries
+      pl: Microsoft odmawia uznawania podatności w bibliotekach .NET stron trzecich
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes for this deep-dive converged on this identical honest finding: it''s a documented dangerous configuration, not a library bug, which is why Microsoft''s response was static-analysis rules (CA2326/CA2328) rather than a library patch.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze dla tego deep-dive zbiegły się na tym samym uczciwym ustaleniu: to udokumentowana niebezpieczna konfiguracja, nie błąd biblioteki, dlatego odpowiedzią Microsoft były reguły analizy statycznej (CA2326/CA2328) zamiast łatki biblioteki.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: An application builds a JSON response like this. Does this contain a structural JSON injection vulnerability?
+    pl: Aplikacja buduje odpowiedź JSON w ten sposób. Czy zawiera podatność strukturalnego wstrzyknięcia JSON?
+  snippet:
+    lang: java
+    code: String json = "{\"name\":\"" + name + "\",\"role\":\"user\"}";
+  isVulnerable: true
+  cwe: CWE-116
+  explanation:
+    en: Yes. If name contains a value like alice","role":"admin, the resulting document becomes {"name":"alice","role":"admin","role":"user"} -- a duplicate key whose winner depends on the parser, giving the attacker a real shot at privilege escalation with nothing more than a quote character. The fix is a serializer library (writeValueAsString), never string concatenation.
+    pl: Tak. Jeśli name zawiera wartość jak alice","role":"admin, wynikowy dokument staje się {"name":"alice","role":"admin","role":"user"} -- zduplikowany klucz którego zwycięzca zależy od parsera, dając atakującemu realną szansę na eskalację uprawnień przy pomocy niczego więcej niż znaku cudzysłowu. Naprawą jest biblioteka serializatora (writeValueAsString), nigdy konkatenacja stringów.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: Why is "historical JSON hijacking" (overriding the Array constructor to steal cross-origin JSON) included in this deep-dive despite being described as obsolete?
+    pl: Dlaczego "historyczne JSON hijacking" (nadpisanie konstruktora Array by ukraść JSON cross-origin) jest uwzględnione w tym deep-dive mimo że jest opisane jako przestarzałe?
+  choices:
+  - id: a
+    label:
+      en: It's documented for completeness as a real, verified historical attack, but explicitly labeled low-severity and obsolete since ES5 forbade the constructor-override technique and JSON.parse replaced eval-based parsing on every modern browser
+      pl: Jest udokumentowane dla kompletności jako prawdziwy, zweryfikowany historyczny atak, ale jawnie oznaczone jako niska powaga i przestarzałe odkąd ES5 zabronił techniki nadpisania konstruktora a JSON.parse zastąpił parsowanie oparte na eval w każdej nowoczesnej przeglądarce
+  - id: b
+    label:
+      en: It is still a critical, actively exploited vulnerability on all current browsers
+      pl: To wciąż krytyczna, aktywnie eksploatowana podatność na wszystkich obecnych przeglądarkach
+  - id: c
+    label:
+      en: This knowledge base fabricated this attack and it never actually existed
+      pl: Ta baza wiedzy zmyśliła ten atak i on w rzeczywistości nigdy nie istniał
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is the same transparency this knowledge base applies elsewhere: a real historical technique is documented honestly, with its current (non-)relevance stated plainly, rather than either omitting it or overstating its modern severity.'
+    pl: 'To ta sama przejrzystość którą ta baza wiedzy stosuje gdzie indziej: prawdziwa historyczna technika jest udokumentowana uczciwie, z jasno stwierdzoną obecną (nie)istotnością, zamiast albo ją pominąć albo przecenić jej współczesną powagę.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A Java service must deserialize an untrusted JSON payload into one of several known subtypes. Which variant actually fixes the deserialization RCE risk while preserving that flexibility?
+    pl: Serwis Java musi deserializować niezaufany ładunek JSON do jednego z kilku znanych podtypów. Który wariant faktycznie naprawia ryzyko RCE deserializacji zachowując tę elastyczność?
+  variants:
+  - id: v1
+    lang: java
+    code: '// strip only the literal substring "Runtime" before deserializing
+
+      String clean = untrustedJson.replace("Runtime", "");
+
+      ObjectMapper m = new ObjectMapper();
+
+      m.enableDefaultTyping();
+
+      Object o = m.readValue(clean, Object.class);'
+  - id: v2
+    lang: java
+    code: "PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()\n    .allowIfSubType(Animal.class)\n    .build();\nObjectMapper m = new ObjectMapper();\nm.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL);\nAnimal a = m.readValue(untrustedJson, Animal.class);"
+  - id: v3
+    lang: java
+    code: '// only allow payloads shorter than 500 characters
+
+      if (untrustedJson.length() > 500) throw new IllegalArgumentException();
+
+      ObjectMapper m = new ObjectMapper();
+
+      m.enableDefaultTyping();
+
+      Object o = m.readValue(untrustedJson, Object.class);'
+  correctVariantId: v2
+  explanation:
+    en: v2 uses activateDefaultTyping() with a PolymorphicTypeValidator that only permits subtypes of a known base class -- the deserializer structurally cannot instantiate a gadget class regardless of what the JSON claims. v1's substring blacklist targets one specific gadget name and is trivially bypassed by any other class on the classpath (java.net.URL, a Spring context class, dozens of others); v3's length cap says nothing about content and a working gadget payload is well under 500 characters.
+    pl: v2 używa activateDefaultTyping() z PolymorphicTypeValidator który dopuszcza tylko podtypy znanej klasy bazowej -- deserializator strukturalnie nie może utworzyć instancji klasy gadżetu niezależnie od tego co twierdzi JSON. Blacklista podciągu z v1 celuje w jedną konkretną nazwę gadżetu i jest trywialnie omijana jakąkolwiek inną klasą w classpath (java.net.URL, klasa kontekstu Spring, dziesiątki innych); limit długości z v3 nic nie mówi o treści, a działający ładunek gadżetu ma dobrze poniżej 500 znaków.

