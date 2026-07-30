@@ -441,15 +441,27 @@ threats:
   difficulty: Easy
   confidence: POSSIBLE
   cwe:
-  - CWE-94
   - CWE-95
-  desc: 'Nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji.
+  - CWE-94
+  desc: 'Nieufny input przekazany do eval/exec/Function/create_function jest wykonywany jako kod aplikacji -- pełny runtime hosta, bez sandboxa czy gramatyki do wyłamania się.
 
     '
-  desc_en: Untrusted input passed to eval/exec is executed as application code.
+  desc_en: Untrusted input passed to eval/exec/Function/create_function is executed as application code -- the full host runtime, no sandbox or grammar to break out of.
   lang: python
-  vuln: "def calc(expr):\n    return eval(expr)  # expr=\"__import__('os').system('rm -rf /')\"\n"
-  safe: "import ast, operator as op\nOPS={ast.Add:op.add, ast.Sub:op.sub, ast.Mult:op.mul, ast.Div:op.truediv}\ndef calc(expr):\n    def ev(n):\n        if isinstance(n, ast.Constant): return n.value\n        if isinstance(n, ast.BinOp): return OPS[type(n.op)](ev(n.left), ev(n.right))\n        raise ValueError('niedozwolone')\n    return ev(ast.parse(expr, mode='eval').body)\n"
+  vuln: '# VULNERABLE -- full interpreter on user input
+
+    value = eval(request.args["expr"])
+
+    # expr = "__import__(''os'').system(''id'')"
+
+    '
+  safe: '# SECURE -- literals only, executes nothing
+
+    import ast
+
+    value = ast.literal_eval(request.args["expr"])
+
+    '
 - id: '1.21'
   name: Command Injection (OS Commanding)
   severity: Critical
@@ -485,15 +497,15 @@ threats:
   difficulty: Easy
   confidence: POSSIBLE
   cwe:
-  - CWE-94
   - CWE-95
-  desc: 'Nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji.
+  - CWE-94
+  desc: 'To samo zagrożenie co "Code Injection" (1.20) -- jedna z wielu nazw dla tego samego rdzenia: nieufny input przekazany do eval/exec jest wykonywany jako kod aplikacji. Pełny deep-dive i quiz dostępne pod kartą Code Injection (1.20), żeby uniknąć duplikacji treści i rozdzielenia śledzenia postępu.
 
     '
-  desc_en: Untrusted input passed to eval/exec is executed as application code.
+  desc_en: 'The same threat as "Code Injection" (1.20) -- one of several names for the same core issue: untrusted input passed to eval/exec is executed as application code. The full deep-dive and quiz live under the Code Injection card (1.20) to avoid duplicating content and splitting progress tracking.'
   lang: python
   vuln: "def calc(expr):\n    return eval(expr)  # expr=\"__import__('os').system('rm -rf /')\"\n"
-  safe: "import ast, operator as op\nOPS={ast.Add:op.add, ast.Sub:op.sub, ast.Mult:op.mul, ast.Div:op.truediv}\ndef calc(expr):\n    def ev(n):\n        if isinstance(n, ast.Constant): return n.value\n        if isinstance(n, ast.BinOp): return OPS[type(n.op)](ev(n.left), ev(n.right))\n        raise ValueError('niedozwolone')\n    return ev(ast.parse(expr, mode='eval').body)\n"
+  safe: "import ast\ndef calc(expr):\n    return ast.literal_eval(expr)\n"
 - id: '1.24'
   name: HTML Injection
   severity: High

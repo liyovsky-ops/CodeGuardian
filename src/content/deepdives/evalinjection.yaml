@@ -1,0 +1,410 @@
+meta:
+  id: evalinjection
+  threatId: '1.20'
+  severity: Critical
+  color: '#7c3aed'
+  colorRgb: 124,58,237
+  cwe: CWE-95
+  cvss: '9.8'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'Code / Eval '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: Code Injection / Eval Injection
+  lead:
+    en: 'No sandbox to escape, no grammar ceiling to hit -- eval() and its siblings (exec(), Function(), create_function(), send with an untrusted method name) hand an attacker the entire host language runtime from the very first character. Where SSTI or Expression Language injection require breaking out of a deliberately restricted sub-language back into the real interpreter, a confirmed eval sink already IS the real interpreter. The most important real-world lesson here: vm2, the most popular JavaScript sandbox library (17M+ monthly downloads), was repeatedly broken and ultimately discontinued in 2023 -- proof that in-process sandboxing is hardening, not a boundary.'
+    pl: 'Żaden sandbox do ucieczki, żaden sufit gramatyki do napotkania -- eval() i jego odpowiedniki (exec(), Function(), create_function(), send z niezaufaną nazwą metody) dają atakującemu cały runtime języka hosta od pierwszego znaku. Tam gdzie SSTI czy wstrzyknięcie Expression Language wymagają wyłamania się z celowo ograniczonego pod-języka z powrotem do prawdziwego interpretera, potwierdzony sink eval JUŻ JEST prawdziwym interpreterem. Najważniejsza rzeczywista lekcja tutaj: vm2, najpopularniejsza biblioteka sandboxa JavaScript (17M+ pobrań miesięcznie), była wielokrotnie łamana i ostatecznie zarzucona w 2023 -- dowód że sandboxing w procesie to utwardzenie, nie granica.'
+  metrics:
+  - k: CWE-95
+    v:
+      en: Weakness ID (Variant of CWE-94)
+      pl: ID słabości (wariant CWE-94)
+  - k: '9.8'
+    v: CVSS · Critical
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A03:2021
+    url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  - label: CWE-95 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/95.html
+  - label: CWE-94 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/94.html
+  - label: Help Net Security — vm2 Sandbreak (CVE-2022-36067)
+    url: https://www.helpnetsecurity.com/2022/10/10/cve-2022-36067/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laboratoria
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Six variants spanning five languages -- all share the same core sink, but escalate through language-specific gadgets when builtins are stripped or a sandbox is interposed.
+      pl: Sześć wariantów w pięciu językach -- wszystkie dzielą ten sam bazowy sink, ale eskalują przez gadżety specyficzne dla języka gdy wbudowane funkcje są usunięte albo wstawiony jest sandbox.
+    items:
+    - name: Python eval()/exec() RCE
+      sev: critical
+      description:
+        en: eval() runs a single expression; exec() runs full statements, including imports and assignments. Even when __builtins__ is stripped to sandbox eval(), the object graph itself remains reachable, letting an attacker walk from any object back to subprocess/os.
+        pl: eval() wykonuje pojedyncze wyrażenie; exec() wykonuje pełne instrukcje, włącznie z importami i przypisaniami. Nawet gdy __builtins__ jest usunięte by osandboksować eval(), sam graf obiektów pozostaje osiągalny, pozwalając atakującemu przejść od dowolnego obiektu z powrotem do subprocess/os.
+      payload: '__import__(''os'').system(''id'')   |  sandbox-stripped: ().__class__.__bases__[0].__subclasses__()  # hunt for subprocess.Popen'
+    - name: JavaScript eval() / Function() RCE
+      sev: critical
+      description:
+        en: eval() and new Function() both compile and run a string with access to the enclosing global scope. In Node.js this reaches require directly; in the browser it's the classic DOM-based JavaScript-injection sink (alongside setTimeout/setInterval/execCommand with a string argument).
+        pl: eval() i new Function() oba kompilują i uruchamiają string z dostępem do otaczającego zakresu globalnego. W Node.js dosięga to require bezpośrednio; w przeglądarce to klasyczny sink DOM-based JavaScript-injection (obok setTimeout/setInterval/execCommand z argumentem stringowym).
+      payload: 'require(''child_process'').execSync(''id'').toString()   |  scope-limited: process.mainModule.require(''child_process'').execSync(''id'')'
+    - name: Node vm/vm2 sandbox escape
+      sev: critical
+      description:
+        en: 'Node''s own docs state the vm module is NOT a security boundary. vm2 was built and marketed specifically to be one, and was repeatedly broken anyway: CVE-2022-36067 ("Sandbreak", CVSS 10.0, unsanitized Promise callbacks) and CVE-2023-37466 (Symbol.species Promise-handler bypass, the escape that led the maintainer to discontinue the project entirely in 2023).'
+        pl: 'Własna dokumentacja Node stwierdza że moduł vm NIE jest granicą bezpieczeństwa. vm2 zostało zbudowane i reklamowane właśnie po to by nią być, i mimo to było wielokrotnie łamane: CVE-2022-36067 ("Sandbreak", CVSS 10.0, nieoczyszczone callbacki Promise) i CVE-2023-37466 (obejście handlera Promise przez Symbol.species, ucieczka która doprowadziła opiekuna do całkowitego porzucenia projektu w 2023).'
+      payload: this.constructor.constructor('return process')().mainModule.require('child_process').execSync('id')
+    - name: PHP eval() / assert() / create_function() RCE
+      sev: critical
+      description:
+        en: Classic eval($input) is direct code execution. Pre-PHP 8.0, assert() treated a string argument as PHP code to evaluate (an eval-equivalent, removed in 8.0), and create_function() built a function body via an internal eval() call (deprecated 7.2, removed 8.0) -- both are historical variants of the identical sink.
+        pl: Klasyczny eval($input) to bezpośrednie wykonanie kodu. Przed PHP 8.0, assert() traktował argument string jako kod PHP do ewaluacji (odpowiednik eval, usunięty w 8.0), a create_function() budował ciało funkcji przez wewnętrzne wywołanie eval() (przestarzałe w 7.2, usunięte w 8.0) -- oba to historyczne warianty identycznego sinka.
+      payload: 'eval("system(''id'');")   |  assert("system(''id'')")  # pre-8.0 only'
+    - name: Ruby eval / send with an untrusted method name
+      sev: high
+      description:
+        en: 'eval(input)/instance_eval(input) is the direct equivalent of every other language above. send/public_send with an attacker-supplied method name is a distinct, mass-assignment-adjacent variant: not eval of source text, but dynamic dispatch to ANY method the attacker names -- including instance_eval itself, chaining back to full code execution.'
+        pl: 'eval(input)/instance_eval(input) to bezpośredni odpowiednik każdego innego języka powyżej. send/public_send z nazwą metody dostarczoną przez atakującego to odrębny wariant, bliski mass-assignment: nie eval tekstu źródłowego, ale dynamiczne wywołanie DOWOLNEJ metody nazwanej przez atakującego -- włącznie z samym instance_eval, łączącym się z powrotem do pełnego wykonania kodu.'
+      payload: 'obj.send(params[:method])  # method = ''instance_eval'', then chain to `id`'
+    - name: Perl eval STRING RCE
+      sev: critical
+      description:
+        en: eval STRING compiles and runs the string as Perl source in the current scope -- MITRE's own CWE-95 canonical example uses exactly this construct fed by a CGI parameter.
+        pl: eval STRING kompiluje i uruchamia string jako kod źródłowy Perl w bieżącym zakresie -- własny kanoniczny przykład CWE-95 od MITRE używa dokładnie tej konstrukcji zasilanej parametrem CGI.
+      payload: 'system(''id'')  # supplied as the evaluated string'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: The fix is never a better sandbox around eval -- it's removing eval from the picture entirely, replacing it with a parser that has no grammar production for imports, calls, or attribute access.
+      pl: Naprawa to nigdy lepszy sandbox wokół eval -- to całkowite usunięcie eval z obrazu, zastąpienie go parserem który nie ma żadnej produkcji gramatyki dla importów, wywołań czy dostępu do atrybutów.
+    languages:
+    - label: Python
+      lang: python
+      vulnerable: '# VULNERABLE -- full interpreter on user input
+
+        value = eval(request.args["expr"])
+
+        # expr = "__import__(''os'').system(''id'')"'
+      safe: '# SECURE -- literals only, executes nothing
+
+        import ast
+
+        value = ast.literal_eval(request.args["expr"])
+
+        # For real arithmetic: a restricted-grammar library like simpleeval, never bare eval'
+    - label: JavaScript / Node.js
+      lang: javascript
+      vulnerable: '// VULNERABLE
+
+        const result = eval(req.body.formula);
+
+        // or: new Function(''return ''+req.body.formula)()'
+      safe: '// SECURE -- data: never eval JSON, parse it
+
+        const data = JSON.parse(req.body.payload);
+
+        // SECURE -- expressions: a dedicated parser with no runtime access
+
+        const { evaluate } = require(''mathjs'');
+
+        const result = evaluate(req.body.formula, scope);'
+    - label: PHP
+      lang: php
+      vulnerable: '// VULNERABLE
+
+        eval(''$result = '' . $_GET[''op''] . '';'');'
+      safe: '// SECURE -- whitelist lookup table, zero code generation
+
+        $ops = [''add'' => fn($a,$b) => $a+$b, ''sub'' => fn($a,$b) => $a-$b];
+
+        $op = $ops[$_GET[''op'']] ?? throw new InvalidArgumentException(''bad op'');
+
+        $result = $op((int)$_GET[''a''], (int)$_GET[''b'']);'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'The key fingerprint that separates this from SSTI/EL injection: a BARE math probe with no template delimiters at all evaluates directly, because there is no template engine standing between the input and the interpreter.'
+      pl: 'Kluczowy odcisk palca odróżniający to od SSTI/wstrzyknięcia EL: GOŁA sonda matematyczna bez żadnych ograniczników szablonu ewaluuje się bezpośrednio, bo między wejściem a interpreterem nie stoi żaden silnik szablonów.'
+    steps:
+    - title:
+        en: Identify the sink from error leakage or behavior
+        pl: Zidentyfikuj sink z wycieku błędu lub zachowania
+      description:
+        en: Stack traces naming eval, exec, Function, create_function, or an "&lt;eval&gt;"/"(eval)" frame marker are a direct tell.
+        pl: Ślady stosu wymieniające eval, exec, Function, create_function, albo znacznik ramki "&lt;eval&gt;"/"(eval)" to bezpośrednia wskazówka.
+    - title:
+        en: Fingerprint with a bare math probe
+        pl: Rozpoznaj gołą sondą matematyczną
+      description:
+        en: Submit 7*7 with NO delimiters (unlike {{7*7}}/#{7*7} for SSTI/EL). A rendered 49 with no template syntax needed at all confirms raw eval rather than a template engine.
+        pl: Wyślij 7*7 BEZ ograniczników (w odróżnieniu od {{7*7}}/#{7*7} dla SSTI/EL). Wyrenderowane 49 bez potrzeby żadnej składni szablonu potwierdza surowy eval zamiast silnika szablonów.
+    - title:
+        en: Confirm blind evaluation with a timing side-channel
+        pl: Potwierdź ślepą ewaluację kanałem czasowym
+      description:
+        en: When no output is reflected, inject a sleep primitive (time.sleep(5), execSync("sleep 5"), sleep(5)) and measure response delay.
+        pl: Gdy żadne wyjście nie jest odbite, wstrzyknij prymityw sleep (time.sleep(5), execSync("sleep 5"), sleep(5)) i zmierz opóźnienie odpowiedzi.
+    - title:
+        en: Escalate with the language-specific gadget
+        pl: Eskaluj gadżetem specyficznym dla języka
+      description:
+        en: 'Python: __import__(''os'').system(...), or walk ().__class__.__bases__[0].__subclasses__() if builtins are stripped. Node: require(''child_process'').execSync(...), or climb scope via this.constructor.constructor(''return process'')(). PHP: system()/shell_exec()/backticks. Ruby: `id`/%x{id}/system(''id'').'
+        pl: 'Python: __import__(''os'').system(...), albo przejście ().__class__.__bases__[0].__subclasses__() jeśli wbudowane funkcje są usunięte. Node: require(''child_process'').execSync(...), albo wspinaczka po zakresie przez this.constructor.constructor(''return process'')(). PHP: system()/shell_exec()/backticks. Ruby: `id`/%x{id}/system(''id'').'
+    - title:
+        en: Don't assume a sandbox holds
+        pl: Nie zakładaj że sandbox wytrzyma
+      description:
+        en: If a JS sandbox (vm/vm2/isolated-vm) is interposed, treat it as a speed bump, not a wall -- vm2's own history (Sandbreak, the Symbol.species bypass) shows in-process sandboxes get broken repeatedly.
+        pl: Jeśli wstawiony jest sandbox JS (vm/vm2/isolated-vm), traktuj go jako spowalniacz, nie ścianę -- własna historia vm2 (Sandbreak, obejście Symbol.species) pokazuje że sandboxy w procesie są łamane wielokrotnie.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'vm2''s own history is the single most important honesty check in this list: a purpose-built, widely-adopted (17M+ downloads/month) JavaScript sandbox was repeatedly broken and ultimately abandoned in 2023 -- sandboxing belongs in the middle of this ranking, not the top.'
+      pl: 'Własna historia vm2 to najważniejszy test uczciwości na tej liście: zbudowany celowo, szeroko przyjęty (17M+ pobrań/miesiąc) sandbox JavaScript był wielokrotnie łamany i ostatecznie porzucony w 2023 -- sandboxing należy do środka tego rankingu, nie na szczyt.'
+    items:
+    - rank: 1
+      eff: 99
+      kind: primary
+      label:
+        en: Never pass untrusted input to eval/exec/Function/create_function/send at all
+        pl: Nigdy nie przekazuj niezaufanego wejścia do eval/exec/Function/create_function/send
+      note:
+        en: Redesign to a fixed lookup table, enum, or dispatch map. The overwhelming majority of real eval-injection bugs exist because eval was reached for where a map would have done the job.
+        pl: Przeprojektuj na stałą tabelę wyszukiwania, enum, albo mapę dyspozycji. Zdecydowana większość realnych błędów wstrzyknięcia eval istnieje bo sięgnięto po eval tam gdzie mapa by wystarczyła.
+    - rank: 2
+      eff: 95
+      kind: primary
+      label:
+        en: Restricted-grammar / AST-based safe evaluation for genuine dynamic-expression needs
+        pl: Ograniczona gramatyka / bezpieczna ewaluacja oparta na AST dla prawdziwych potrzeb dynamicznych wyrażeń
+      note:
+        en: ast.literal_eval or simpleeval (Python), JSON.parse or mathjs (JS), a whitelist lookup table (PHP). Effective because the grammar has no production for imports, calls, or attribute access -- residual risk is nested-input DoS and parser bugs, not code execution.
+        pl: ast.literal_eval albo simpleeval (Python), JSON.parse albo mathjs (JS), tabela wyszukiwania whitelist (PHP). Skuteczne bo gramatyka nie ma produkcji dla importów, wywołań, czy dostępu do atrybutów -- pozostałe ryzyko to DoS przez zagnieżdżone wejście i błędy parsera, nie wykonanie kodu.
+    - rank: 3
+      eff: 55
+      kind: mitigation
+      label:
+        en: Sandboxing / process isolation -- hardening, not a boundary
+        pl: Sandboxing / izolacja procesu -- utwardzenie, nie granica
+      note:
+        en: Node's own docs say the vm module is not a security boundary; vm2 was purpose-built to be one and was still broken repeatedly (CVE-2022-36067, CVE-2023-37466) before being discontinued in 2023. Prefer OS/VM-level isolation (containers, seccomp, isolated-vm's V8 isolates) over in-process JS sandboxes, and never treat either as sufficient alone.
+        pl: Własna dokumentacja Node mówi że moduł vm nie jest granicą bezpieczeństwa; vm2 zostało zbudowane celowo by nią być i mimo to było wielokrotnie łamane (CVE-2022-36067, CVE-2023-37466) zanim zostało porzucone w 2023. Preferuj izolację na poziomie OS/VM (kontenery, seccomp, izolaty V8 isolated-vm) ponad sandboxy JS w procesie, i nigdy nie traktuj żadnego z nich jako wystarczającego samodzielnie.
+    - rank: 4
+      eff: 45
+      kind: mitigation
+      label:
+        en: Language-level function restrictions
+        pl: Ograniczenia funkcji na poziomie języka
+      note:
+        en: PHP's disable_functions cannot block eval() itself (it's a language construct, not a function) but can block system/exec/shell_exec/passthru/proc_open, raising the bar on post-eval escalation without closing the sink.
+        pl: disable_functions w PHP nie może zablokować samego eval() (to konstrukcja języka, nie funkcja), ale może zablokować system/exec/shell_exec/passthru/proc_open, podnosząc poprzeczkę dla eskalacji po eval bez zamykania sinka.
+    - rank: 5
+      eff: 20
+      kind: weak
+      label:
+        en: Input validation / keyword blacklisting
+        pl: Walidacja wejścia / blacklista słów kluczowych
+      note:
+        en: Routinely bypassed via encoding, attribute-chain traversal, or an entirely different gadget name -- vBulletin's own runMaths() had a regex filter in front of eval() and was still exploited (CVE-2019-16759). Never rely on this alone.
+        pl: Rutynowo omijane przez kodowanie, przejście łańcucha atrybutów, albo zupełnie inną nazwę gadżetu -- własny runMaths() vBulletin miał filtr regex przed eval() i mimo to został wykorzystany (CVE-2019-16759). Nigdy nie polegaj wyłącznie na tym.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: A sandbox saga that ended in project abandonment, and two mass-exploited real products -- one where a filter sat in front of eval() and was bypassed anyway.
+      pl: Saga sandboxa która skończyła się porzuceniem projektu, i dwa masowo eksploatowane realne produkty -- jeden gdzie filtr stał przed eval() i mimo to został ominięty.
+    items:
+    - org: vm2 (Node.js sandbox library)
+      year: 2022
+      impact: CVE-2022-36067 ("Sandbreak"), CVSS 10.0
+      cost: Full host RCE against 17.5M+ monthly downloads
+      description:
+        en: 'Discovered by Oxeye: async functions return a global Promise whose .then()/.catch() callbacks were not sanitized the way vm2''s own internal Promise implementation was, letting a sandboxed script escape to full host code execution. Patched in 3.9.11 -- but a second, unfixable escape (CVE-2023-37466, Symbol.species Promise-handler bypass) surfaced in July 2023 and led the maintainer to discontinue vm2 entirely, recommending isolated-vm instead.'
+        pl: 'Odkryte przez Oxeye: funkcje async zwracają globalny Promise, którego callbacki .then()/.catch() nie były oczyszczane tak jak własna wewnętrzna implementacja Promise vm2, pozwalając skryptowi w sandboxie uciec do pełnego wykonania kodu hosta. Załatane w 3.9.11 -- ale druga, nie do naprawienia ucieczka (CVE-2023-37466, obejście handlera Promise przez Symbol.species) pojawiła się w lipcu 2023 i doprowadziła opiekuna do całkowitego porzucenia vm2, rekomendując zamiast tego isolated-vm.'
+    - org: vBulletin
+      year: 2019
+      impact: CVE-2019-16759, CVSS 9.8, mass-exploited
+      cost: Unauthenticated RCE on 100,000+ forum sites
+      description:
+        en: The ajax/render/widget_php endpoint's widgetConfig[code] parameter flowed into a PHP eval() wrapper (runMaths-style filtering was in front of it, and still didn't stop exploitation). Affected vBulletin 5.0.0-5.5.4; fixed in 5.5.5/5.6.0. Metasploit modules and mass in-the-wild exploitation followed within days.
+        pl: Parametr widgetConfig[code] endpointu ajax/render/widget_php trafiał do wrappera PHP eval() (filtrowanie w stylu runMaths stało przed nim, i mimo to nie zatrzymało eksploatacji). Dotyczyło vBulletin 5.0.0-5.5.4; naprawione w 5.5.5/5.6.0. Moduły Metasploit i masowa eksploatacja w praktyce nastąpiły w ciągu kilku dni.
+    - org: PHPUnit
+      year: 2017
+      impact: CVE-2017-9841
+      cost: Unauthenticated RCE, still among the most-scanned CVEs years later
+      description:
+        en: Util/PHP/eval-stdin.php passes the raw HTTP POST body directly to eval() -- no authentication required, exploitable whenever /vendor is accidentally web-exposed. Affected PHPUnit &lt;4.8.28 and 5.x&lt;5.6.3. Automated scanners still probe for this exact path routinely, since forgotten /vendor directories remain common.
+        pl: Util/PHP/eval-stdin.php przekazuje surowe ciało POST HTTP bezpośrednio do eval() -- bez wymaganego uwierzytelnienia, eksploatowalne gdziekolwiek /vendor jest przypadkowo wystawione publicznie. Dotyczyło PHPUnit &lt;4.8.28 i 5.x&lt;5.6.3. Automatyczne skanery wciąż rutynowo sondują dokładnie tę ścieżkę, bo zapomniane katalogi /vendor pozostają powszechne.
+    inlineSources:
+    - label: Help Net Security — vm2 Sandbreak (CVE-2022-36067)
+      url: https://www.helpnetsecurity.com/2022/10/10/cve-2022-36067/
+    - label: Unit 42 — vBulletin CVE-2019-16759 exploitation
+      url: https://unit42.paloaltonetworks.com/exploits-in-the-wild-for-vbulletin-pre-auth-rce-vulnerability-cve-2019-16759/
+    - label: PHPUnit CVE-2017-9841 advisory
+      url: https://github.com/advisories/GHSA-r7c9-c69m-rph8
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Eval sinks are among the easiest injection classes to catch statically -- the function names themselves (eval, exec, Function, create_function) are a small, greppable, near-complete list per language.
+      pl: Sinki eval są jednymi z najłatwiejszych klas wstrzyknięć do wyłapania statycznie -- same nazwy funkcji (eval, exec, Function, create_function) to mała, łatwa do wyszukania, niemal kompletna lista per język.
+    sast:
+    - - Bandit (Python)
+      - B307 flags eval() directly (recommends ast.literal_eval), B102 flags exec()
+    - - Semgrep
+      - Registry rules across Python/JS/PHP for eval/exec/Function/create_function taint sinks
+    - - CodeQL
+      - py/code-injection and js/code-injection taint-tracking queries from remote sources to eval-family sinks
+    - - ESLint (JavaScript)
+      - no-eval and no-implied-eval (catches string args to setTimeout/setInterval), no-new-func
+    - - Psalm / PHPStan (PHP)
+      - Psalm's TaintedEval taint-analysis sink; security-focused rulesets flag eval/assert/create_function/preg_replace with the /e modifier
+    dast:
+    - - Burp Suite Scanner
+      - Generic "code injection" active-scan check using math-probe and timing techniques
+    - - Manual bare math-probe fingerprinting
+      - 7*7 with NO template delimiters -- the differentiator from SSTI/EL injection probes like {{7*7}}/#{7*7}
+    note:
+      en: <strong>Key signal:</strong> unlike most injection classes, the sink function names here are a short, near-exhaustive per-language list -- grep for eval/exec/Function(/create_function/send with tainted arguments and you have found nearly every instance in a codebase.
+      pl: <strong>Kluczowy sygnał:</strong> w odróżnieniu od większości klas wstrzyknięć, nazwy funkcji sinka są tu krótką, niemal wyczerpującą listą per język -- szukaj eval/exec/Function(/create_function/send ze skażonymi argumentami, a znajdziesz niemal każdą instancję w kodzie.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: A clean mapping, confirmed identically by all three research passes -- unlike several other topics in this knowledge base, there is no genuine dispute here.
+      pl: Czyste mapowanie, potwierdzone identycznie przez wszystkie trzy przejścia badawcze -- w przeciwieństwie do kilku innych tematów w tej bazie wiedzy, tutaj nie ma prawdziwego sporu.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-95 — Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection') -- Variant-level, the precise mapping for this deep-dive's scope
+      - CWE-94 — Improper Control of Generation of Code ('Code Injection') -- direct parent, Base-level
+      - CWE-917 (Expression Language Injection) and CWE-1336 (template-engine injection) are neighboring children of CWE-94, covered separately -- kept distinct from this deep-dive since EL/template engines are deliberately restricted sub-languages, not raw eval
+    - std: OWASP
+      items:
+      - A03:2021 — Injection
+    inlineSources:
+    - label: CWE-95 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/95.html
+    - label: CWE-94 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/94.html
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active eval-injection exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia eval, przejdź tę listę od góry.
+    steps:
+    - en: Treat the host as fully compromised if RCE is confirmed -- rotate all credentials/secrets reachable from that process
+      pl: Traktuj hosta jako w pełni skompromitowanego jeśli RCE jest potwierdzone -- zrotuj wszystkie poświadczenia/sekrety osiągalne z tego procesu
+    - en: Identify the exact sink (eval/exec/Function/create_function/send) and whether a sandbox (vm/vm2) was interposed, since a broken sandbox is not a mitigating factor
+      pl: Zidentyfikuj dokładny sink (eval/exec/Function/create_function/send) i czy wstawiony był sandbox (vm/vm2), bo złamany sandbox nie jest czynnikiem łagodzącym
+    - en: Grep the entire codebase for every eval/exec/Function/create_function/send call site, not just the one exploited -- this is a short, near-exhaustive list per language
+      pl: Przeszukaj całą bazę kodu pod kątem każdego miejsca wywołania eval/exec/Function/create_function/send, nie tylko tego które zostało wykorzystane -- to krótka, niemal wyczerpująca lista per język
+    - en: Replace every unavoidable dynamic-evaluation call site with a restricted-grammar parser (ast.literal_eval/simpleeval/mathjs/lookup table), never a tighter blacklist
+      pl: Zastąp każde nieuniknione miejsce dynamicznej ewaluacji parserem o ograniczonej gramatyce (ast.literal_eval/simpleeval/mathjs/tabela wyszukiwania), nigdy ciaśniejszą blacklistą
+    - en: If a JS sandbox library was in use, confirm it is not vm2 (discontinued) and migrate to isolated-vm or OS-level isolation regardless of exploitation outcome
+      pl: Jeśli używana była biblioteka sandboxa JS, potwierdź że to nie vm2 (porzucone) i migruj do isolated-vm albo izolacji na poziomie OS niezależnie od wyniku eksploatacji
+    - en: Notify per applicable data-breach obligations if data was exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli dane zostały eksfiltrowane
+  labs:
+    title:
+      en: Practice labs
+      pl: Laboratoria praktyczne
+    lead:
+      en: PortSwigger has no dedicated standalone eval-injection lab, but one real, verified lab reaches an eval-based RCE gadget in Node.js via a different entry vector (prototype pollution) -- honestly labeled as such rather than presented as a direct match.
+      pl: PortSwigger nie ma dedykowanego samodzielnego laboratorium wstrzyknięcia eval, ale jedno realne, zweryfikowane laboratorium dosięga gadżetu RCE opartego na eval w Node.js przez inny wektor wejścia (zanieczyszczenie prototypu) -- uczciwie oznaczone jako takie, nie przedstawione jako bezpośrednie dopasowanie.
+    items:
+    - variant: Node.js eval-based RCE gadget (reached via prototype pollution, not direct injection)
+      provider: PortSwigger Web Security Academy
+      label: Remote code execution via server-side prototype pollution
+      url: https://portswigger.net/web-security/prototype-pollution/server-side/lab-remote-code-execution-via-server-side-prototype-pollution
+      difficulty: Expert
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: CWE-95 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/95.html
+    - label: CWE-94 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/94.html
+    - label: Help Net Security — vm2 Sandbreak (CVE-2022-36067)
+      url: https://www.helpnetsecurity.com/2022/10/10/cve-2022-36067/
+    - label: Unit 42 — vBulletin CVE-2019-16759 exploitation
+      url: https://unit42.paloaltonetworks.com/exploits-in-the-wild-for-vbulletin-pre-auth-rce-vulnerability-cve-2019-16759/
+    - label: PHPUnit CVE-2017-9841 advisory
+      url: https://github.com/advisories/GHSA-r7c9-c69m-rph8
+    - label: Bandit B307 (eval)
+      url: https://bandit.readthedocs.io/en/latest/plugins/b307_eval.html
+    - label: PortSwigger — DOM-based JavaScript injection
+      url: https://portswigger.net/web-security/dom-based/javascript-injection

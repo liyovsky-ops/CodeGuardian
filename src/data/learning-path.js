@@ -20,6 +20,7 @@ export const LEARNING_PATH = [
   'cat_1_research01', // Client-Side Template Injection (CSTI)
   '1.16', // Expression Language Injection (Java EL / Spring SpEL)
   'cat_1_research08', // Argument Injection
+  '1.20', // Code Injection / Eval Injection (merged; 1.23 is the same threat, cross-referenced)
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

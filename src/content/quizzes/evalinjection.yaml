@@ -1,0 +1,134 @@
+threatId: '1.20'
+title:
+  en: Code Injection / Eval Injection — knowledge check
+  pl: Code Injection / Eval Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why is a confirmed eval() sink considered more immediately dangerous than a confirmed SSTI (Server-Side Template Injection) sink?
+    pl: Dlaczego potwierdzony sink eval() jest uznawany za bardziej bezpośrednio niebezpieczny niż potwierdzony sink SSTI (Server-Side Template Injection)?
+  choices:
+  - id: a
+    label:
+      en: A template engine is a deliberately restricted sub-language that must first be escaped/broken out of to reach the host runtime; eval() already IS the host runtime from the first character, with no escape step needed
+      pl: Silnik szablonów to celowo ograniczony pod-język który trzeba najpierw obejść/z którego trzeba się wyłamać by dosięgnąć runtime hosta; eval() JUŻ JEST runtime hosta od pierwszego znaku, bez potrzeby żadnego kroku ucieczki
+  - id: b
+    label:
+      en: eval() only exists in Python, so it affects fewer applications
+      pl: eval() istnieje tylko w Pythonie, więc dotyczy mniej aplikacji
+  - id: c
+    label:
+      en: They are equally dangerous in every respect with no meaningful distinction
+      pl: Są równie niebezpieczne pod każdym względem bez żadnej istotnej różnicy
+  correctChoiceIds:
+  - a
+  explanation:
+    en: This is the core mechanism distinction in this deep-dive. SSTI/EL injection exploitation (e.g. Jinja2's {{ ''.__class__.__mro__... }} gadget chains, SpEL's T() type references) is fundamentally about escalating from a restricted template/expression grammar back to the full language. eval() skips that step entirely -- __import__('os').system(...) works directly, no gadget hunt required.
+    pl: To podstawowe rozróżnienie mechanizmu w tym deep-dive. Eksploatacja SSTI/wstrzyknięcia EL (np. łańcuchy gadżetów Jinja2 {{ ''.__class__.__mro__... }}, referencje typów T() SpEL) fundamentalnie polega na eskalacji z ograniczonej gramatyki szablonu/wyrażenia z powrotem do pełnego języka. eval() całkowicie pomija ten krok -- __import__('os').system(...) działa bezpośrednio, bez potrzeby polowania na gadżety.
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: Does this Node.js code, running inside a vm2 sandbox, provide meaningful protection against RCE for untrusted input?
+    pl: Czy ten kod Node.js, działający wewnątrz sandboxa vm2, zapewnia sensowną ochronę przed RCE dla niezaufanego wejścia?
+  snippet:
+    lang: javascript
+    code: 'const { VM } = require("vm2");
+
+      const vm = new VM();
+
+      vm.run(userSuppliedCode);'
+  isVulnerable: true
+  cwe: CWE-95
+  explanation:
+    en: No -- treat it as vulnerable. vm2 was purpose-built and marketed specifically as a security boundary, and was still broken repeatedly (CVE-2022-36067 "Sandbreak", CVSS 10.0; CVE-2023-37466, which led the maintainer to discontinue the project entirely in 2023). Node's own documentation states its vm module is not a security boundary at all. Sandboxing is hardening, not a substitute for never evaluating untrusted input in the first place.
+    pl: Nie -- traktuj to jako podatne. vm2 zostało zbudowane celowo i reklamowane właśnie jako granica bezpieczeństwa, i mimo to było wielokrotnie łamane (CVE-2022-36067 "Sandbreak", CVSS 10.0; CVE-2023-37466, które doprowadziło opiekuna do całkowitego porzucenia projektu w 2023). Własna dokumentacja Node stwierdza że jego moduł vm w ogóle nie jest granicą bezpieczeństwa. Sandboxing to utwardzenie, nie substytut dla nigdy-nie-ewaluowania niezaufanego wejścia w pierwszej kolejności.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: 'A Python service strips __builtins__ before calling eval(user_input, {''__builtins__'': {}}). Is this a complete fix?'
+    pl: 'Serwis Python usuwa __builtins__ przed wywołaniem eval(user_input, {''__builtins__'': {}}). Czy to kompletna naprawa?'
+  choices:
+  - id: a
+    label:
+      en: No -- the object graph itself remains reachable; an attacker can walk from any expression via ().__class__.__bases__[0].__subclasses__() to find subprocess.Popen or similar, regardless of stripped builtins
+      pl: Nie -- sam graf obiektów pozostaje osiągalny; atakujący może przejść od dowolnego wyrażenia przez ().__class__.__bases__[0].__subclasses__() by znaleźć subprocess.Popen lub podobne, niezależnie od usuniętych builtins
+  - id: b
+    label:
+      en: Yes -- stripping __builtins__ makes eval() completely safe for any untrusted input
+      pl: Tak -- usunięcie __builtins__ czyni eval() całkowicie bezpiecznym dla dowolnego niezaufanego wejścia
+  - id: c
+    label:
+      en: This question is irrelevant since Python does not have an eval() function
+      pl: To pytanie jest nieistotne bo Python nie ma funkcji eval()
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is exactly the classic Python eval-sandbox-escape technique documented in this deep-dive''s attack variants: stripping builtins blocks direct name lookups like __import__, but every Python object still carries its class hierarchy, so an attacker can climb from any accessible object back to a dangerous class. The correct fix is ast.literal_eval or a restricted-grammar library, never a partially-stripped eval().'
+    pl: 'To dokładnie klasyczna technika ucieczki z sandboxa eval Pythona udokumentowana w wariantach ataku tego deep-dive: usunięcie builtins blokuje bezpośrednie wyszukiwanie nazw jak __import__, ale każdy obiekt Pythona wciąż niesie swoją hierarchię klas, więc atakujący może wspiąć się od dowolnego dostępnego obiektu z powrotem do niebezpiecznej klasy. Poprawną naprawą jest ast.literal_eval albo biblioteka o ograniczonej gramatyce, nigdy częściowo-usunięty eval().'
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: Why did input validation (a regex filter) fail to stop the real-world vBulletin CVE-2019-16759 attack, despite sitting in front of the eval() call?
+    pl: Dlaczego walidacja wejścia (filtr regex) nie zdołała zatrzymać rzeczywistego ataku vBulletin CVE-2019-16759, mimo że stała przed wywołaniem eval()?
+  choices:
+  - id: a
+    label:
+      en: Blacklist-style filters are routinely bypassed with alternate syntax or encoding -- the filter did not close the eval() sink itself, only made naive payloads harder, which is exactly why validation ranks lowest (~20%) among defenses in this deep-dive
+      pl: Filtry w stylu blacklisty są rutynowo omijane alternatywną składnią lub kodowaniem -- filtr nie zamknął samego sinka eval(), tylko utrudnił naiwne ładunki, co jest dokładnie powodem dla którego walidacja zajmuje najniższe miejsce (~20%) wśród obron w tym deep-dive
+  - id: b
+    label:
+      en: vBulletin never actually had any input validation at all
+      pl: vBulletin nigdy tak naprawdę nie miał żadnej walidacji wejścia
+  - id: c
+    label:
+      en: The vulnerability had nothing to do with eval() and was a SQL injection instead
+      pl: Podatność nie miała nic wspólnego z eval() i była zamiast tego wstrzyknięciem SQL
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This CVE is the concrete real-world proof for this deep-dive''s lowest-ranked defense: the widgetConfig[code] parameter passed through a runMaths()-style filter before reaching eval(), and attackers still achieved unauthenticated RCE across 100,000+ sites. The sink itself (eval on a filtered-but-not-eliminated string) remained the vulnerability.'
+    pl: 'To CVE jest konkretnym rzeczywistym dowodem dla najniżej ocenianej obrony w tym deep-dive: parametr widgetConfig[code] przechodził przez filtr w stylu runMaths() zanim trafił do eval(), a atakujący i tak osiągnęli nieuwierzytelnione RCE na ponad 100 000 stron. Sam sink (eval na przefiltrowanym-ale-nie-wyeliminowanym stringu) pozostał podatnością.'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: Is this Ruby code vulnerable to arbitrary method dispatch, even though it never calls eval() directly?
+    pl: Czy ten kod Ruby jest podatny na dowolne wywołanie metody, mimo że nigdy bezpośrednio nie wywołuje eval()?
+  snippet:
+    lang: ruby
+    code: obj.send(params[:method])
+  isVulnerable: true
+  cwe: CWE-95
+  explanation:
+    en: 'Yes. This is the mass-assignment-adjacent variant covered in this deep-dive: send bypasses even private-method protection and lets an attacker invoke ANY method by name, including instance_eval itself -- chaining straight back to full code execution without ever touching a literal eval() call site. The fix is public_send combined with an explicit allowlist of permitted method names.'
+    pl: 'Tak. To wariant bliski mass-assignment omówiony w tym deep-dive: send omija nawet ochronę metod prywatnych i pozwala atakującemu wywołać DOWOLNĄ metodę po nazwie, włącznie z samym instance_eval -- łącząc się wprost z powrotem do pełnego wykonania kodu bez dotknięcia choćby jednego dosłownego miejsca wywołania eval(). Naprawą jest public_send połączone z jawną allowlistą dozwolonych nazw metod.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A JavaScript service must evaluate a user-supplied math formula. Which variant actually fixes the code-injection risk?
+    pl: Serwis JavaScript musi ewaluować dostarczony przez użytkownika wzór matematyczny. Który wariant faktycznie naprawia ryzyko wstrzyknięcia kodu?
+  variants:
+  - id: v1
+    lang: javascript
+    code: '// strip only the literal substring "require" before evaluating
+
+      const clean = formula.replace(/require/g, "");
+
+      const result = eval(clean);'
+  - id: v2
+    lang: javascript
+    code: 'const { evaluate } = require("mathjs");
+
+      const result = evaluate(formula, scope);'
+  - id: v3
+    lang: javascript
+    code: '// only allow formulas shorter than 30 characters
+
+      if (formula.length > 30) throw new Error("too long");
+
+      const result = eval(formula);'
+  correctVariantId: v2
+  explanation:
+    en: v2 uses a dedicated math-expression parser whose grammar has no production for require, Function, or attribute/property access at all -- it structurally cannot reach code execution regardless of input. v1's substring blacklist only targets the literal word "require" and is trivially bypassed by any other gadget (process.mainModule.require, this.constructor.constructor(...), or simply concatenating the string at runtime); v3's length cap says nothing about content and require('child_process').execSync('id') is well under 30 characters once minified/aliased.
+    pl: v2 używa dedykowanego parsera wyrażeń matematycznych którego gramatyka w ogóle nie ma produkcji dla require, Function, czy dostępu do atrybutu/właściwości -- strukturalnie nie może dosięgnąć wykonania kodu niezależnie od wejścia. Blacklista podciągu z v1 celuje tylko w dosłowne słowo "require" i jest trywialnie omijana jakimkolwiek innym gadżetem (process.mainModule.require, this.constructor.constructor(...), albo zwykłe sklejenie stringa w runtime); limit długości z v3 nic nie mówi o treści, a require('child_process').execSync('id') ma dobrze poniżej 30 znaków po zminifikowaniu/aliasowaniu.
