@@ -1,0 +1,379 @@
+meta:
+  id: imapinjection
+  threatId: '1.27'
+  severity: High
+  color: '#c026d3'
+  colorRgb: 192,38,211
+  cwe: CWE-93
+  cvss: '8.1'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'IMAP '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: IMAP Injection (IMAP Command Injection)
+  lead:
+    en: 'The SMTP header injection of the IMAP world -- and a genuinely live threat, not a historical footnote: the newest confirmed incident is from this year. A webmail backend that string-concatenates a search term or message UID into a raw IMAP command line lets an attacker embed a CRLF that terminates the intended command early and starts an entirely new, fully attacker-controlled command in the same authenticated session. RFC 3501''s own literal syntax ({<byte-count>}\r\n<data>) is the protocol''s built-in fix -- explicitly designed to carry arbitrary octets, including embedded CRLF, as inert data. The catalog''s previous content for this entry described unrelated OS command injection; this deep-dive corrects the scope.'
+    pl: 'SMTP header injection świata IMAP -- i naprawdę żywe zagrożenie, nie historyczny przypis: najnowszy potwierdzony incydent pochodzi z tego roku. Backend webmail który konkatenuje string termin wyszukiwania albo UID wiadomości w surową linię polecenia IMAP pozwala atakującemu osadzić CRLF które wcześnie kończy zamierzone polecenie i zaczyna zupełnie nowe, w pełni kontrolowane przez atakującego polecenie w tej samej uwierzytelnionej sesji. Własna składnia literału RFC 3501 ({<liczba-bajtów>}\r\n<dane>) to wbudowana naprawa protokołu -- jawnie zaprojektowana by nosić dowolne oktety, włącznie z osadzonym CRLF, jako obojętne dane. Poprzednia treść tego wpisu katalogowego opisywała niepowiązane wstrzyknięcie polecenia OS; ten deep-dive koryguje zakres.'
+  metrics:
+  - k: CWE-93
+    v:
+      en: Weakness ID (conceptual fit; real CVEs split CWE-77/88)
+      pl: ID słabości (dopasowanie koncepcyjne; realne CVE dzielą CWE-77/88)
+  - k: '8.1'
+    v: CVSS · High (representative, disputed vs. NVD -- see incidents)
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: RFC 3501 — Internet Message Access Protocol
+    url: https://datatracker.ietf.org/doc/html/rfc3501
+  - label: OWASP WSTG-INPV-10 — Testing for IMAP/SMTP Injection
+    url: https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/10-Testing_for_IMAP_SMTP_Injection
+  - label: CAPEC-183 — IMAP/SMTP Command Injection
+    url: https://capec.mitre.org/data/definitions/183.html
+  - label: NVD — CVE-2026-35538 (Roundcube)
+    url: https://nvd.nist.gov/vuln/detail/CVE-2026-35538
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Six variants, from the classic CRLF command-append to library-level bugs found in production IMAP clients as recently as this year.
+      pl: Sześć wariantów, od klasycznego dołączenia polecenia przez CRLF po błędy na poziomie biblioteki znalezione w produkcyjnych klientach IMAP jeszcze w tym roku.
+    items:
+    - name: CRLF injection appending a new IMAP command
+      sev: critical
+      description:
+        en: The textbook case. A newline embedded in untrusted input terminates the current command line early; the bytes after it are parsed as a brand-new, fully attacker-controlled tagged command in the same authenticated session -- OWASP's own canonical example injects a CAPABILITY probe followed by a second FETCH.
+        pl: Podręcznikowy przypadek. Znak nowej linii osadzony w niezaufanym wejściu wcześnie kończy bieżącą linię polecenia; bajty po nim są parsowane jako zupełnie nowe, w pełni kontrolowane przez atakującego oznaczone polecenie w tej samej uwierzytelnionej sesji -- własny kanoniczny przykład OWASP wstrzykuje sondę CAPABILITY po której następuje drugi FETCH.
+      payload: message_id=4791 BODY[HEADER]%0d%0aV100 CAPABILITY%0d%0aV101 FETCH 4791
+    - name: Quoted-string / argument breakout within a single command
+      sev: medium
+      description:
+        en: 'No CRLF needed: injecting a closing quote alters the arguments of the SAME command, changing search/filter logic. This is the exact mechanism NVD classified as argument injection (CWE-88) in the real Roundcube CVE-2026-35538, distinct from the CRLF-append variant.'
+        pl: 'CRLF nie jest potrzebny: wstrzyknięcie zamykającego cudzysłowu zmienia argumenty TEGO SAMEGO polecenia, zmieniając logikę wyszukiwania/filtra. To dokładnie mechanizm który NVD sklasyfikował jako wstrzyknięcie argumentu (CWE-88) w realnym CVE-2026-35538 Roundcube, odrębny od wariantu dołączenia przez CRLF.'
+      payload: x" HEADER FROM "victim   ->   SEARCH SUBJECT "x" HEADER FROM "victim"
+    - name: Destructive mailbox manipulation via injected STORE + EXPUNGE
+      sev: critical
+      description:
+        en: Injected commands run with the victim's own session privileges, so the impact isn't limited to disclosure. The real, weaponized Roundcube payload flags every message in the mailbox as deleted in a single request.
+        pl: Wstrzyknięte polecenia działają z uprawnieniami sesji ofiary, więc wpływ nie jest ograniczony do ujawnienia. Realny, uzbrojony ładunek Roundcube oznacza każdą wiadomość w skrzynce jako usuniętą w jednym żądaniu.
+      payload: _filter=UNSEEN%0d%0aA099 STORE 1:* +FLAGS (\Deleted)
+    - name: Persistent unauthorized access via injected SETACL
+      sev: high
+      description:
+        en: Beyond a one-shot read/delete, an injected SETACL command grants the attacker's own account (or an attacker-chosen identifier) standing access rights to the victim's mailbox or folder -- a persistence mechanism that survives the original session.
+        pl: Poza jednorazowym odczytem/usunięciem, wstrzyknięte polecenie SETACL przyznaje własnemu kontu atakującego (albo identyfikatorowi wybranemu przez atakującego) stałe prawa dostępu do skrzynki lub folderu ofiary -- mechanizm trwałości który przetrwa oryginalną sesję.
+      payload: A100 SETACL INBOX attacker lrswipkxtea
+    - name: DoS via malformed literal / incomplete continuation validation
+      sev: medium
+      description:
+        en: A raw argument that smuggles an invalid literal-continuation marker can make the server misinterpret the next line as a continuation of the current one rather than a new command, hanging the connection until timeout -- a real, patched 2026 vulnerability in Ruby's net-imap library.
+        pl: Surowy argument przemycający nieprawidłowy znacznik kontynuacji literału może sprawić że serwer błędnie zinterpretuje kolejną linię jako kontynuację bieżącej zamiast nowego polecenia, zawieszając połączenie do timeoutu -- realna, załatana podatność 2026 w bibliotece net-imap Ruby.
+      payload: argument containing a malformed {0}/{0+} literal marker that the parser fails to match correctly
+    - name: Library-level injection via unvalidated non-String arguments
+      sev: high
+      description:
+        en: Even a library that correctly quotes/encodes ordinary String arguments can still be exploitable if a DIFFERENT argument type bypasses that validation path entirely -- exactly what happened when Ruby net-imap validated Strings but let Symbol (IMAP flag) arguments reach the socket completely unvalidated.
+        pl: Nawet biblioteka która poprawnie cytuje/koduje zwykłe argumenty String wciąż może być eksploatowalna jeśli INNY typ argumentu całkowicie omija tę ścieżkę walidacji -- dokładnie to co się stało gdy Ruby net-imap walidował Stringi ale pozwolił argumentom Symbol (flaga IMAP) dotrzeć do gniazda zupełnie niezwalidowanym.
+      payload: imap.uid_store(uid, :"\\Seen\r\nA200 LOGOUT", [])  -- a crafted Symbol flag argument
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: The protocol's own literal syntax is the true fix -- announce the exact byte count up front, and the server reads that many bytes as opaque data, never as command syntax, regardless of what they contain.
+      pl: Własna składnia literału protokołu to prawdziwa naprawa -- ogłoś z góry dokładną liczbę bajtów, a serwer odczyta tyle bajtów jako obojętne dane, nigdy jako składnię polecenia, niezależnie od tego co zawierają.
+    languages:
+    - label: PHP
+      lang: php
+      vulnerable: '// VULNERABLE -- quoted-string concatenation
+
+        $term = $_GET[''q''];   // attacker: UNSEEN\r\nA002 STORE 1:* +FLAGS (\Deleted)
+
+        fputs($imap, "A001 SEARCH SUBJECT \"$term\"\r\n");'
+      safe: '// SECURE -- length-prefixed literal carries the bytes opaquely
+
+        $term = $_GET[''q''];
+
+        $len = strlen($term);
+
+        fputs($imap, "A001 SEARCH SUBJECT {" . $len . "}\r\n");
+
+        fgets($imap);              // read the "+ " continuation prompt
+
+        fputs($imap, $term . "\r\n");   // embedded CRLF is now inert data'
+    - label: Ruby (net-imap)
+      lang: ruby
+      vulnerable: '# VULNERABLE (pre-0.4.24/0.5.14/0.6.4) -- Symbol flag arguments bypassed validation
+
+        imap.uid_store(uid, flag_symbol, [])  # flag_symbol crafted with embedded CRLF'
+      safe: '# SECURE -- patched net-imap validates String AND Symbol arguments
+
+        # gem ''net-imap'', ''>= 0.6.4''
+
+        imap.uid_store(uid, :Seen, [])   # only well-formed flags are ever accepted'
+    - label: Python (imaplib)
+      lang: python
+      vulnerable: '# VULNERABLE on unpatched interpreters (CVE-2025-15366) --
+
+        # IMAP4._command() concatenated arguments without checking for control characters
+
+        imap.search(None, user_term)   # user_term = ''ALL\r\nA002 LOGOUT'''
+      safe: "# SECURE -- patched Python rejects control characters outright;\n# on any unpatched interpreter, validate yourself first\nif any(c in user_term for c in '\\r\\n'):\n    raise ValueError('illegal control character in IMAP argument')\nimap.search(None, user_term)"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: Reflected IMAP server errors are the single most reliable discovery signal -- a vulnerable app frequently leaks the raw command template it built, handing the attacker the exact injection point.
+      pl: Odbite błędy serwera IMAP to pojedynczy najbardziej niezawodny sygnał odkrycia -- podatna aplikacja często wycieka surowy szablon polecenia który zbudowała, dając atakującemu dokładny punkt wstrzyknięcia.
+    steps:
+    - title:
+        en: Find the sink
+        pl: Znajdź sink
+      description:
+        en: Webmail search/filter fields, message UID/ID parameters, and folder create/rename features are the classic candidates -- anywhere user input feeds an IMAP command.
+        pl: Pola wyszukiwania/filtra webmail, parametry UID/ID wiadomości, i funkcje tworzenia/zmiany nazwy folderu to klasyczni kandydaci -- wszędzie gdzie wejście użytkownika zasila polecenie IMAP.
+    - title:
+        en: Probe and read reflected IMAP errors
+        pl: Sonduj i czytaj odbite błędy IMAP
+      description:
+        en: 'Submit special characters (\ '' " @ # ! |) and watch for the raw IMAP server error bleeding into the response -- it frequently discloses the exact command template being built.'
+        pl: 'Wyślij znaki specjalne (\ '' " @ # ! |) i obserwuj czy surowy błąd serwera IMAP przecieka do odpowiedzi -- często ujawnia dokładny szablon budowanego polecenia.'
+    - title:
+        en: Craft the header/body/footer CRLF payload
+        pl: Skonstruuj ładunek CRLF header/body/footer
+      description:
+        en: URL-encode %0d%0a, close out the intended command, inject a new tagged command, then re-open a trailing fragment so the original command still parses -- keeping the app from erroring out.
+        pl: Zakoduj URL %0d%0a, zamknij zamierzone polecenie, wstrzyknij nowe oznaczone polecenie, potem otwórz z powrotem końcowy fragment tak by oryginalne polecenie wciąż się parsowało -- utrzymując aplikację od błędu.
+    - title:
+        en: Confirm with a benign observable command
+        pl: Potwierdź niegroźnym obserwowalnym poleceniem
+      description:
+        en: Inject CAPABILITY or NOOP first and look for its distinct tagged response before attempting anything state-changing.
+        pl: Wstrzyknij najpierw CAPABILITY albo NOOP i szukaj jego odrębnej oznaczonej odpowiedzi zanim spróbujesz czegokolwiek zmieniającego stan.
+    - title:
+        en: Escalate to destructive or persistence commands
+        pl: Eskaluj do poleceń destrukcyjnych lub trwałości
+      description:
+        en: STORE +FLAGS (\Deleted) plus EXPUNGE for destruction, FETCH/COPY for exfiltration, or SETACL for standing unauthorized access that outlives the original session.
+        pl: STORE +FLAGS (\Deleted) plus EXPUNGE dla destrukcji, FETCH/COPY dla eksfiltracji, albo SETACL dla stałego nieautoryzowanego dostępu który przetrwa oryginalną sesję.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: The protocol's literal syntax is the genuine parameterized-query equivalent for IMAP -- but as the 2026 Ruby net-imap incident shows, even a library that correctly encodes one argument type can still be undone by a different, unvalidated one.
+      pl: Składnia literału protokołu to prawdziwy odpowiednik sparametryzowanego zapytania dla IMAP -- ale jak pokazuje incydent Ruby net-imap z 2026, nawet biblioteka która poprawnie koduje jeden typ argumentu wciąż może zostać cofnięta przez inny, niezwalidowany.
+    items:
+    - rank: 1
+      eff: 97
+      kind: primary
+      label:
+        en: Use IMAP literal syntax for all untrusted arguments
+        pl: Używaj składni literału IMAP dla wszystkich niezaufanych argumentów
+      note:
+        en: RFC 3501 explicitly designed {<byte-count>}\r\n<data> to carry arbitrary octets including embedded CRLF as opaque data the server never re-parses as syntax -- the genuine protocol-level equivalent of a parameterized SQL query.
+        pl: RFC 3501 jawnie zaprojektował {<liczba-bajtów>}\r\n<dane> by nosić dowolne oktety włącznie z osadzonym CRLF jako obojętne dane których serwer nigdy nie re-parsuje jako składni -- prawdziwy odpowiednik sparametryzowanego zapytania SQL na poziomie protokołu.
+    - rank: 2
+      eff: 88
+      kind: strong
+      label:
+        en: Use a well-vetted, patched IMAP client library
+        pl: Używaj sprawdzonej, załatanej biblioteki klienta IMAP
+      note:
+        en: Necessary but not sufficient on its own -- mature libraries and webmail products (net-imap, Roundcube, historically SquirrelMail) have all shipped exactly this bug class. Verify the specific version against known CVEs, don't just trust the library's reputation.
+        pl: Konieczne, ale samo w sobie niewystarczające -- dojrzałe biblioteki i produkty webmail (net-imap, Roundcube, historycznie SquirrelMail) wszystkie wysłały dokładnie tę klasę błędu. Zweryfikuj konkretną wersję względem znanych CVE, nie ufaj tylko reputacji biblioteki.
+    - rank: 3
+      eff: 80
+      kind: strong
+      label:
+        en: Reject CR/LF and quote characters as defense-in-depth
+        pl: Odrzucaj znaki CR/LF i cudzysłowu jako obronę w głąb
+      note:
+        en: 'Effective against the CRLF-append variant, but does not by itself stop the quoted-string/argument-breakout variant (CWE-88) unless quotes and delimiters are also constrained -- pair with #1, never rely on this alone.'
+        pl: 'Skuteczne przeciw wariantowi dołączenia przez CRLF, ale samo w sobie nie zatrzymuje wariantu wyłamania stringu cudzysłowu/argumentu (CWE-88) chyba że cudzysłowy i ograniczniki są też ograniczone -- połącz z #1, nigdy nie polegaj wyłącznie na tym.'
+    - rank: 4
+      eff: 40
+      kind: mitigation
+      label:
+        en: Least-privilege IMAP account scoping
+        pl: Ograniczenie konta IMAP do najmniejszych uprawnień
+      note:
+        en: 'Containment, not prevention: injected commands run with the victim''s own session privileges regardless, so this limits cross-account/ACL blast radius rather than stopping the injection itself.'
+        pl: 'Ograniczenie skutków, nie zapobieganie: wstrzyknięte polecenia i tak działają z uprawnieniami sesji ofiary, więc to ogranicza zasięg między kontami/ACL zamiast zatrzymać samo wstrzyknięcie.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Two independent research passes converged on identical CVE numbers for the newest incident, including the exact same NVD-vs-researcher severity dispute -- strong triangulated evidence this class remains live in actively-maintained production software, not just a 2006-era historical curiosity.
+      pl: Dwa niezależne przejścia badawcze zbiegły się w identycznych numerach CVE dla najnowszego incydentu, włącznie z dokładnie tym samym sporem o powagę NVD-vs-badacz -- silny, triangulowany dowód że ta klasa pozostaje żywa w aktywnie utrzymywanym oprogramowaniu produkcyjnym, nie tylko historyczną ciekawostką z 2006.
+    items:
+    - org: Roundcube Webmail
+      year: 2026
+      impact: CVE-2026-35538
+      cost: NVD rates it 3.1 Low (CWE-88); the discovering researcher (Ostorlab) rates real-world impact 8.1 High -- a genuine, documented severity dispute
+      description:
+        en: The _filter parameter in the mail search feature reached the IMAP command stream after only strip_tags()+trim(), which does not touch \r\n. The weaponized payload (UNSEEN%0d%0aA099 STORE 1:* +FLAGS (\Deleted)) flags an entire mailbox as deleted in one request. Affected versions before 1.5.14 and 1.6.0-1.6.13; fixed in 1.5.14/1.6.14/1.7-RC5.
+        pl: Parametr _filter w funkcji wyszukiwania poczty docierał do strumienia poleceń IMAP po zaledwie strip_tags()+trim(), co nie dotyka \r\n. Uzbrojony ładunek (UNSEEN%0d%0aA099 STORE 1:* +FLAGS (\Deleted)) oznacza całą skrzynkę jako usuniętą w jednym żądaniu. Dotyczyło wersji sprzed 1.5.14 i 1.6.0-1.6.13; naprawione w 1.5.14/1.6.14/1.7-RC5.
+    - org: Ruby net-imap gem
+      year: 2026
+      impact: CVE-2026-42258
+      cost: CVSS 5.8, affecting a widely-used IMAP client library across the Ruby ecosystem
+      description:
+        en: The library correctly validated and encoded ordinary String arguments -- but Symbol arguments (used for IMAP flags like :Seen) reached the socket completely unvalidated, so a crafted Symbol containing whitespace or CRLF injected new commands. A precise illustration that partial input validation is not the same as complete input validation.
+        pl: Biblioteka poprawnie walidowała i kodowała zwykłe argumenty String -- ale argumenty Symbol (używane dla flag IMAP jak :Seen) docierały do gniazda zupełnie niezwalidowane, więc spreparowany Symbol zawierający białe znaki albo CRLF wstrzykiwał nowe polecenia. Precyzyjna ilustracja że częściowa walidacja wejścia to nie to samo co kompletna walidacja wejścia.
+    - org: SquirrelMail
+      year: 2006
+      impact: CVE-2006-0377
+      cost: Confirmed via Gentoo GLSA 200603-09
+      description:
+        en: sqimap_mailbox_select() did not strip newlines from the mailbox/subject parameters, allowing arbitrary IMAP command injection -- demonstrating this exact bug class has been documented in real webmail software for two decades, not a novel concern.
+        pl: sqimap_mailbox_select() nie usuwał znaków nowej linii z parametrów mailbox/subject, pozwalając na dowolne wstrzyknięcie polecenia IMAP -- demonstrując że dokładnie ta klasa błędu jest udokumentowana w prawdziwym oprogramowaniu webmail od dwóch dekad, nie jest nowatorskim zagadnieniem.
+    inlineSources:
+    - label: NVD — CVE-2026-35538 (Roundcube)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2026-35538
+    - label: GHSA — CVE-2026-42258 (Ruby net-imap)
+      url: https://github.com/ruby/net-imap/security/advisories/GHSA-75xq-5h9v-w6px
+    - label: Gentoo GLSA 200603-09 (SquirrelMail CVE-2006-0377)
+      url: https://security.gentoo.org/glsa/200603-09
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: 'A confirmed, real coverage gap: no mainstream DAST scanner ships a dedicated IMAP-injection check (Burp''s own KB covers SMTP header injection, not IMAP), and detection today is overwhelmingly manual, per OWASP''s own dedicated test case.'
+      pl: 'Potwierdzona, realna luka pokrycia: żaden główny skaner DAST nie wysyła dedykowanej kontroli wstrzyknięcia IMAP (własne KB Burp obejmuje SMTP header injection, nie IMAP), a wykrywanie dziś jest zdecydowanie ręczne, zgodnie z własnym dedykowanym przypadkiem testowym OWASP.'
+    sast:
+    - - Generic CRLF/taint rules (Semgrep/CodeQL)
+      - Can flag untrusted data flowing into a raw socket write (fputs/fwrite) or an IMAP client library sink if custom rules are written -- no widely-shipped, IMAP-specific ruleset exists
+    dast:
+    - - OWASP WSTG-INPV-10
+      - The authoritative manual testing methodology for this exact class -- not an automated scanner rule
+    - - SCA / dependency scanners (Dependabot, bundler-audit, osv.dev)
+      - The most effective automated detection available today -- reliably flag known-CVE versions of net-imap, Roundcube, and similar libraries
+    - - Vendor IPS/WAF signatures
+      - Point signatures exist for specific incidents (e.g. Juniper and FortiGuard both ship a Roundcube-IMAP-command-injection rule) -- detection of known payloads, not general coverage
+    note:
+      en: <strong>Key signal:</strong> since no dedicated scanner check exists, prioritize manual review (per WSTG-INPV-10) of every webmail search/filter/UID parameter that reaches a raw IMAP command, and keep IMAP client library versions current against the CVE list above.
+      pl: <strong>Kluczowy sygnał:</strong> ponieważ nie istnieje dedykowana kontrola skanera, priorytetyzuj ręczny przegląd (wg WSTG-INPV-10) każdego parametru wyszukiwania/filtra/UID webmail który dociera do surowego polecenia IMAP, i utrzymuj aktualne wersje biblioteki klienta IMAP względem powyższej listy CVE.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: No dedicated 'IMAP injection' CWE exists -- exactly the same situation as SMTP injection, confirmed identically by all three research passes. Real CVE assignments split across two different CWEs depending on the exact mechanism, a genuine nuance documented here rather than picking one.
+      pl: Nie istnieje dedykowane CWE "IMAP injection" -- dokładnie ta sama sytuacja co wstrzyknięcie SMTP, potwierdzone identycznie przez wszystkie trzy przejścia badawcze. Realne przypisania CVE dzielą się na dwa różne CWE zależnie od dokładnego mechanizmu, prawdziwy niuans udokumentowany tu zamiast wybrania jednego.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-93 — Improper Neutralization of CRLF Sequences ('CRLF Injection') -- the conceptually best-fitting parent for the CRLF-append variant, and the mapping most analysts cite
+      - CWE-77 — Improper Neutralization of Special Elements used in a Command -- what NVD actually assigned to the Python imaplib (CVE-2025-15366) and Ruby net-imap (CVE-2026-42258) CVEs
+      - CWE-88 — Argument Injection -- what NVD actually assigned to the Roundcube quoted-string-breakout CVE (CVE-2026-35538), reflecting that specific variant's exact mechanism
+      - CWE-147 (Improper Neutralization of Input Terminators) is conceptually applicable but not the mapping any real IMAP-injection CVE has actually used
+    - std: OWASP
+      items:
+      - A03:2021 — Injection; formal test case WSTG-INPV-10 ("Testing for IMAP/SMTP Injection")
+    inlineSources:
+    - label: CWE-93 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/93.html
+    - label: CWE-77 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/77.html
+    - label: CWE-88 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/88.html
+    - label: CAPEC-183 — IMAP/SMTP Command Injection
+      url: https://capec.mitre.org/data/definitions/183.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active IMAP command injection exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia polecenia IMAP, przejdź tę listę od góry.
+    steps:
+    - en: Check for destructive commands first (STORE +FLAGS (\Deleted), EXPUNGE) -- deleted mail may be recoverable only briefly depending on the mail server's retention behavior
+      pl: Sprawdź najpierw polecenia destrukcyjne (STORE +FLAGS (\Deleted), EXPUNGE) -- usunięta poczta może być odzyskiwalna tylko krótko w zależności od zachowania retencji serwera pocztowego
+    - en: Check IMAP ACLs on affected mailboxes/folders for unexpected grants (SETACL abuse) -- revoke any unrecognized standing access
+      pl: Sprawdź ACL IMAP na dotkniętych skrzynkach/folderach pod kątem nieoczekiwanych nadań (nadużycie SETACL) -- odwołaj wszelki nierozpoznany stały dostęp
+    - en: Grep the codebase for every place user input reaches a raw IMAP command (search/filter/UID/folder-name parameters), not just the one exploited
+      pl: Przeszukaj kod pod kątem każdego miejsca gdzie wejście użytkownika dociera do surowego polecenia IMAP (parametry wyszukiwania/filtra/UID/nazwy folderu), nie tylko tego które zostało wykorzystane
+    - en: Verify the IMAP client library version against known CVEs (net-imap, Roundcube, or equivalent) and patch immediately regardless of whether it was the confirmed vector
+      pl: Zweryfikuj wersję biblioteki klienta IMAP względem znanych CVE (net-imap, Roundcube, albo równoważne) i natychmiast załataj niezależnie od tego czy była potwierdzonym wektorem
+    - en: Switch every unavoidable dynamic-argument call site to IMAP literal syntax rather than a tighter blacklist
+      pl: Przełącz każde nieuniknione miejsce dynamicznego argumentu na składnię literału IMAP zamiast ciaśniejszej blacklisty
+    - en: Notify per applicable data-breach obligations if mail contents were exfiltrated or destroyed
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli zawartość poczty została wyeksfiltrowana lub zniszczona
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: RFC 3501 — Internet Message Access Protocol
+      url: https://datatracker.ietf.org/doc/html/rfc3501
+    - label: OWASP WSTG-INPV-10
+      url: https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/10-Testing_for_IMAP_SMTP_Injection
+    - label: CAPEC-183 — IMAP/SMTP Command Injection
+      url: https://capec.mitre.org/data/definitions/183.html
+    - label: CWE-93 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/93.html
+    - label: CWE-77 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/77.html
+    - label: CWE-88 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/88.html
+    - label: NVD — CVE-2026-35538 (Roundcube)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2026-35538
+    - label: GHSA — CVE-2026-42258 (Ruby net-imap)
+      url: https://github.com/ruby/net-imap/security/advisories/GHSA-75xq-5h9v-w6px
+    - label: Gentoo GLSA 200603-09 (SquirrelMail CVE-2006-0377)
+      url: https://security.gentoo.org/glsa/200603-09

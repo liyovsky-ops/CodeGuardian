@@ -556,18 +556,31 @@ threats:
   safe: "app.get('/promote', (req, res) => {\n  const role = req.query.role;\n  if (Array.isArray(role)) return res.status(400).send('duplicate parameter');\n  if (!['user','editor'].includes(role)) return res.status(400).end();\n  db.setRole(req.user.id, role);\n});\n"
 - id: '1.27'
   name: IMAP Injection
-  severity: Critical
-  difficulty: Easy
+  severity: High
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
-  - CWE-78
-  desc: 'Nieufny input trafia do polecenia powłoki — atakujący wykonuje dowolne komendy.
+  - CWE-93
+  - CWE-88
+  desc: 'Konkatenacja niezaufanego wejścia (np. terminu wyszukiwania) do surowego polecenia IMAP pozwala wstrzyknąć CRLF kończący polecenie wcześnie i uruchamiający nowe, dowolne polecenie IMAP w tej samej uwierzytelnionej sesji -- np. STORE +FLAGS (\Deleted) niszczące pocztę.
 
     '
-  desc_en: Untrusted input reaches a shell command — an attacker executes arbitrary commands.
-  lang: python
-  vuln: "import os\ndef ping(host):\n    os.system(\"ping -c1 \" + host)  # host=\"x; rm -rf /\"\n"
-  safe: "import subprocess\ndef ping(host):\n    subprocess.run([\"ping\", \"-c1\", host], shell=False, check=True)\n"
+  desc_en: Concatenating untrusted input (e.g. a search term) into a raw IMAP command allows injecting a CRLF that terminates the command early and starts a new, arbitrary IMAP command in the same authenticated session -- e.g. STORE +FLAGS (\Deleted) destroying mail.
+  lang: php
+  vuln: '$term = $_GET[''q''];
+
+    fputs($imap, "A001 SEARCH SUBJECT \"$term\"\r\n"); // term="UNSEEN\r\nA002 STORE 1:* +FLAGS (\\Deleted)"
+
+    '
+  safe: '$len = strlen($term);
+
+    fputs($imap, "A001 SEARCH SUBJECT {" . $len . "}\r\n");
+
+    fgets($imap);
+
+    fputs($imap, $term . "\r\n"); // literal syntax: embedded CRLF is inert data
+
+    '
 - id: '1.28'
   name: XML Injection
   severity: Critical

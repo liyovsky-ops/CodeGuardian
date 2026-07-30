@@ -1,0 +1,133 @@
+threatId: '1.27'
+title:
+  en: IMAP Injection — knowledge check
+  pl: IMAP Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why is IMAP's literal syntax ({<byte-count>}\r\n<data>) considered the genuine parameterized-query equivalent for this protocol, rather than just another escaping trick?
+    pl: Dlaczego składnia literału IMAP ({<liczba-bajtów>}\r\n<dane>) jest uznawana za prawdziwy odpowiednik sparametryzowanego zapytania dla tego protokołu, a nie tylko kolejną sztuczkę escapowania?
+  choices:
+  - id: a
+    label:
+      en: RFC 3501 explicitly defines the literal to carry arbitrary octets -- including embedded CR and LF -- as opaque data that the server reads by a pre-announced byte count and never re-parses as command syntax
+      pl: RFC 3501 jawnie definiuje literał by nosił dowolne oktety -- włącznie z osadzonym CR i LF -- jako obojętne dane które serwer czyta wg wcześniej ogłoszonej liczby bajtów i nigdy nie re-parsuje jako składni polecenia
+  - id: b
+    label:
+      en: It works by silently stripping all CRLF characters before sending the command
+      pl: Działa przez ciche usuwanie wszystkich znaków CRLF przed wysłaniem polecenia
+  - id: c
+    label:
+      en: IMAP servers ignore literals entirely, so they can never be a security concern
+      pl: Serwery IMAP całkowicie ignorują literały, więc nigdy nie mogą stanowić problemu bezpieczeństwa
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is the same structural principle as parameterized SQL: the data plane and the syntax plane are fully separated by the protocol itself. Because the server commits to reading exactly N bytes before interpreting anything, an embedded CRLF inside those N bytes can never terminate the command early -- it''s just data, not a fifth byte-count-defying command boundary.'
+    pl: 'To ta sama zasada strukturalna co sparametryzowany SQL: płaszczyzna danych i płaszczyzna składni są w pełni oddzielone przez sam protokół. Ponieważ serwer zobowiązuje się odczytać dokładnie N bajtów zanim cokolwiek zinterpretuje, osadzony CRLF wewnątrz tych N bajtów nigdy nie może wcześnie zakończyć polecenia -- to po prostu dane, nie piąta granica polecenia przeczącą liczbie bajtów.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: Does this PHP code contain an IMAP injection vulnerability?
+    pl: Czy ten kod PHP zawiera podatność wstrzyknięcia IMAP?
+  snippet:
+    lang: php
+    code: '$term = $_GET[''q''];
+
+      fputs($imap, "A001 SEARCH SUBJECT \"$term\"\r\n");'
+  isVulnerable: true
+  cwe: CWE-93
+  explanation:
+    en: Yes. A value like UNSEEN\r\nA002 STORE 1:* +FLAGS (\Deleted) terminates the SEARCH command at the embedded CRLF and starts an entirely new tagged command, run in the same authenticated session -- exactly the weaponized payload used in the real Roundcube CVE-2026-35538 incident.
+    pl: Tak. Wartość jak UNSEEN\r\nA002 STORE 1:* +FLAGS (\Deleted) kończy polecenie SEARCH na osadzonym CRLF i zaczyna zupełnie nowe oznaczone polecenie, uruchomione w tej samej uwierzytelnionej sesji -- dokładnie uzbrojony ładunek użyty w realnym incydencie Roundcube CVE-2026-35538.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: The real CVE-2026-42258 in Ruby's net-imap library shows a library that correctly validated ordinary String arguments still being exploitable. Why?
+    pl: Realny CVE-2026-42258 w bibliotece Ruby net-imap pokazuje bibliotekę która poprawnie walidowała zwykłe argumenty String wciąż jako eksploatowalną. Dlaczego?
+  choices:
+  - id: a
+    label:
+      en: A different argument type -- Symbol, used for IMAP flags -- reached the socket completely unvalidated, bypassing the exact same protection that correctly covered String arguments
+      pl: Inny typ argumentu -- Symbol, używany dla flag IMAP -- docierał do gniazda zupełnie niezwalidowany, omijając dokładnie tę samą ochronę która poprawnie pokrywała argumenty String
+  - id: b
+    label:
+      en: The library never actually validated any argument type at all
+      pl: Biblioteka w rzeczywistości nigdy nie walidowała żadnego typu argumentu
+  - id: c
+    label:
+      en: Ruby's Symbol type cannot contain special characters, so this scenario is impossible
+      pl: Typ Symbol Rubiego nie może zawierać znaków specjalnych, więc ten scenariusz jest niemożliwy
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is a precise illustration of why partial input validation is not the same as complete input validation: the fix (patched in 0.4.24/0.5.14/0.6.4) extends the exact same validation path to Symbol arguments, closing the gap without touching the String-argument handling that already worked correctly.'
+    pl: 'To precyzyjna ilustracja dlaczego częściowa walidacja wejścia to nie to samo co kompletna walidacja wejścia: naprawa (załatana w 0.4.24/0.5.14/0.6.4) rozszerza dokładnie tę samą ścieżkę walidacji na argumenty Symbol, zamykając lukę bez dotykania obsługi argumentów String która już działała poprawnie.'
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: Why does this knowledge base use CWE-93 as the primary mapping for IMAP injection, even though the real CVE-2026-35538 (Roundcube) and CVE-2026-42258 (Ruby net-imap) were actually assigned different CWEs by NVD?
+    pl: Dlaczego ta baza wiedzy używa CWE-93 jako podstawowego mapowania dla wstrzyknięcia IMAP, mimo że realne CVE-2026-35538 (Roundcube) i CVE-2026-42258 (Ruby net-imap) zostały faktycznie przypisane do różnych CWE przez NVD?
+  choices:
+  - id: a
+    label:
+      en: There is no dedicated 'IMAP injection' CWE -- exactly like SMTP injection -- so real CVE assignments split across CWE-77 (net-imap, Python imaplib) and CWE-88 (Roundcube's argument-breakout variant) depending on the exact mechanism, while CWE-93 remains the conceptually best-fitting parent most analysts cite
+      pl: Nie istnieje dedykowane CWE "IMAP injection" -- dokładnie jak wstrzyknięcie SMTP -- więc realne przypisania CVE dzielą się na CWE-77 (net-imap, Python imaplib) i CWE-88 (wariant wyłamania argumentu Roundcube) zależnie od dokładnego mechanizmu, podczas gdy CWE-93 pozostaje koncepcyjnie najlepiej dopasowanym rodzicem cytowanym przez większość analityków
+  - id: b
+    label:
+      en: NVD made a clerical error and CWE-93 is actually the correct assignment for both CVEs
+      pl: NVD popełnił błąd urzędniczy i CWE-93 jest w rzeczywistości poprawnym przypisaniem dla obu CVE
+  - id: c
+    label:
+      en: CWE-93 was only created after both CVEs were published, so it couldn't have been used at the time
+      pl: CWE-93 zostało utworzone dopiero po opublikowaniu obu CVE, więc nie mogło być użyte w tamtym czasie
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is a genuine, documented nuance rather than an inconsistency to paper over: CWE-77 fits the CRLF-append mechanism (a new command is injected via a special element), while CWE-88 fits the quoted-string-breakout mechanism (existing command arguments are altered) -- both are real, defensible NVD choices for their specific CVE, and CWE-93 sits above both as the class-level concept.'
+    pl: 'To prawdziwy, udokumentowany niuans zamiast niespójności do zatuszowania: CWE-77 pasuje do mechanizmu dołączenia przez CRLF (nowe polecenie jest wstrzyknięte przez specjalny element), podczas gdy CWE-88 pasuje do mechanizmu wyłamania stringu cudzysłowu (istniejące argumenty polecenia są zmieniane) -- oba są prawdziwymi, obronialnymi wyborami NVD dla ich konkretnego CVE, a CWE-93 znajduje się nad oboma jako koncepcja na poziomie klasy.'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: An application rejects any input containing \r or \n before building an IMAP SEARCH command, but still concatenates the raw value inside double quotes. Is this fully protected against IMAP injection?
+    pl: Aplikacja odrzuca każde wejście zawierające \r albo \n przed zbudowaniem polecenia SEARCH IMAP, ale wciąż konkatenuje surową wartość wewnątrz podwójnych cudzysłowów. Czy jest to w pełni chronione przed wstrzyknięciem IMAP?
+  isVulnerable: true
+  cwe: CWE-88
+  explanation:
+    en: No. Rejecting CR/LF stops the CRLF-append variant, but a value containing a bare " (quote character) can still break out of the quoted-string argument and alter the search/filter logic within the same command -- the exact mechanism NVD classified as CWE-88 argument injection in the real Roundcube CVE-2026-35538. CR/LF rejection is defense-in-depth, not a complete fix by itself.
+    pl: Nie. Odrzucenie CR/LF zatrzymuje wariant dołączenia przez CRLF, ale wartość zawierająca goły " (znak cudzysłowu) wciąż może wyłamać się z argumentu string w cudzysłowie i zmienić logikę wyszukiwania/filtra w ramach tego samego polecenia -- dokładnie mechanizm który NVD sklasyfikował jako wstrzyknięcie argumentu CWE-88 w realnym CVE-2026-35538 Roundcube. Odrzucenie CR/LF to obrona w głąb, nie kompletna naprawa sama w sobie.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A webmail backend must run an IMAP SEARCH using a user-supplied term. Which variant actually fixes the injection risk?
+    pl: Backend webmail musi uruchomić SEARCH IMAP używając terminu dostarczonego przez użytkownika. Który wariant faktycznie naprawia ryzyko wstrzyknięcia?
+  variants:
+  - id: v1
+    lang: php
+    code: '// strip only the literal substring "STORE" before concatenating
+
+      $clean = str_ireplace("STORE", "", $term);
+
+      fputs($imap, "A001 SEARCH SUBJECT \"$clean\"\r\n");'
+  - id: v2
+    lang: php
+    code: '$len = strlen($term);
+
+      fputs($imap, "A001 SEARCH SUBJECT {" . $len . "}\r\n");
+
+      fgets($imap);
+
+      fputs($imap, $term . "\r\n");'
+  - id: v3
+    lang: php
+    code: '// only allow search terms shorter than 20 characters
+
+      if (strlen($term) > 20) throw new InvalidArgumentException();
+
+      fputs($imap, "A001 SEARCH SUBJECT \"$term\"\r\n");'
+  correctVariantId: v2
+  explanation:
+    en: v2 uses the IMAP literal syntax, announcing the exact byte count before sending the data -- the server reads exactly that many bytes as opaque data, so any embedded CRLF or quote character is completely inert regardless of content. v1's substring blacklist targets one specific command name and is trivially bypassed by any other injected command (LOGOUT, SETACL, EXPUNGE) or by case/whitespace tricks; v3's length cap says nothing about content and UNSEEN\r\nA002 LOGOUT is well under 20 characters.
+    pl: v2 używa składni literału IMAP, ogłaszając dokładną liczbę bajtów przed wysłaniem danych -- serwer odczytuje dokładnie tyle bajtów jako obojętne dane, więc jakikolwiek osadzony CRLF czy znak cudzysłowu jest całkowicie obojętny niezależnie od treści. Blacklista podciągu z v1 celuje w jedną konkretną nazwę polecenia i jest trywialnie omijana jakimkolwiek innym wstrzykniętym poleceniem (LOGOUT, SETACL, EXPUNGE) albo sztuczkami wielkości liter/białych znaków; limit długości z v3 nic nie mówi o treści, a UNSEEN\r\nA002 LOGOUT ma dobrze poniżej 20 znaków.
