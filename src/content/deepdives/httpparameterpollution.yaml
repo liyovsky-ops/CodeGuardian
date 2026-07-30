@@ -1,0 +1,403 @@
+meta:
+  id: httpparameterpollution
+  threatId: '1.26'
+  severity: High
+  color: '#ea580c'
+  colorRgb: 234,88,12
+  cwe: CWE-235
+  cvss: '8.1'
+  standard: OWASP A04:2021
+hero:
+  titleMain: 'HTTP Parameter '
+  titleGrad: Pollution
+  titleTail: ''
+  topbar: HTTP Parameter Pollution (HPP) / Server-Side Parameter Pollution
+  lead:
+    en: 'The HTTP spec never defined what a server must do when the same parameter name appears twice -- so every framework picked its own rule (first wins, last wins, comma-concatenate, or silently becomes an array), and a request that passes through multiple components (WAF, proxy, app, backend API) can have each one disagree about which copy is real. "HTTP Parameter Injection" is not a separate catalog entry -- all three independent research passes confirmed it is either a loose synonym for HPP, or PortSwigger''s own "Server-Side Parameter Pollution": injecting encoded &, =, or # delimiters into input that gets embedded unencoded into a backend request, letting an attacker add, override, or truncate parameters the application never intended to expose.'
+    pl: 'Specyfikacja HTTP nigdy nie zdefiniowała co serwer musi zrobić gdy ta sama nazwa parametru pojawia się dwukrotnie -- więc każdy framework wybrał własną regułę (pierwszy wygrywa, ostatni wygrywa, konkatenacja przecinkiem, albo po cichu staje się tablicą), a żądanie przechodzące przez wiele komponentów (WAF, proxy, aplikacja, backend API) może mieć każdy z nich niezgodny co do tego która kopia jest prawdziwa. "HTTP Parameter Injection" to nie osobny wpis katalogowy -- wszystkie trzy niezależne przejścia badawcze potwierdziły że to albo luźny synonim HPP, albo własne "Server-Side Parameter Pollution" PortSwigger: wstrzyknięcie zakodowanych ograniczników &, =, albo # do wejścia które trafia nieoescapowane do żądania backendowego, pozwalając atakującemu dodać, nadpisać, albo obciąć parametry których aplikacja nigdy nie zamierzała ujawnić.'
+  metrics:
+  - k: CWE-235
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '8.1'
+    v: CVSS · High (typical authz-bypass case)
+  - k: A04:2021
+    v: OWASP Top 10 (official CWE mapping)
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: CWE-235 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/235.html
+  - label: CAPEC-460 (MITRE)
+    url: https://capec.mitre.org/data/definitions/460.html
+  - label: OWASP WSTG — Testing for HTTP Parameter Pollution
+    url: https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/04-Testing_for_HTTP_Parameter_Pollution
+  - label: PortSwigger — Server-side parameter pollution
+    url: https://portswigger.net/web-security/api-testing/server-side-parameter-pollution
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laboratoria
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Six variants spanning the two sub-families: classic duplicate-parameter HPP (same name twice) and Server-Side Parameter Pollution / "parameter injection" (delimiter injection into a backend request).'
+      pl: 'Sześć wariantów obejmujących dwie pod-rodziny: klasyczne HPP z duplikatem parametru (ta sama nazwa dwukrotnie) i Server-Side Parameter Pollution / "wstrzyknięcie parametru" (wstrzyknięcie ogranicznika do żądania backendowego).'
+    items:
+    - name: Client-side HPP (reflected/stored)
+      sev: medium
+      description:
+        en: User input reflected unencoded into a generated link/form/action lets an attacker inject an extra &param=value that pollutes a DIFFERENT request the victim's browser later makes (e.g. rewriting a logout/redirect/share link). Burp Scanner classifies this as its own KB issue, separate from server-side HPP.
+        pl: Wejście użytkownika odbite nieoescapowane w wygenerowanym linku/formularzu/action pozwala atakującemu wstrzyknąć dodatkowe &param=value które zanieczyszcza INNE żądanie które przeglądarka ofiary wykona później (np. przepisanie linku logout/redirect/udostępnij). Burp Scanner klasyfikuje to jako własny problem KB, osobny od HPP po stronie serwera.
+      payload: 'input: %26action%3Ddelete  ->  reflected into: <a href="/act?id=123&action=delete">'
+    - name: Server-side HPP -> WAF/filter bypass
+      sev: high
+      description:
+        en: A WAF/validator inspects one parameter instance; the backend concatenates or picks a different one. Classic ASP.NET-targeted payload splits an attack signature across duplicate parameters so no single copy trips the filter, relying on ASP.NET's comma-concatenation to reassemble it downstream.
+        pl: WAF/walidator sprawdza jedną instancję parametru; backend konkatenuje lub wybiera inną. Klasyczny ładunek celujący w ASP.NET dzieli sygnaturę ataku na duplikaty parametrów tak że żadna pojedyncza kopia nie uruchamia filtra, polegając na konkatenacji przecinkiem ASP.NET by złożyć ją z powrotem downstream.
+      payload: '?page=select 1&page=2,3 from table   (ASP.NET concatenates to: page=select 1,2,3 from table)'
+    - name: Server-side HPP -> authorization / business-logic bypass
+      sev: critical
+      description:
+        en: 'The security/ownership check reads one instance of a parameter; the operation that follows reads a different one. The canonical documented case is Google''s Blogger blogID bug (di Paola/Carettoni''s original research): validation checked the first blogID, the add-author operation used the second.'
+        pl: 'Kontrola bezpieczeństwa/własności czyta jedną instancję parametru; następująca po niej operacja czyta inną. Kanoniczny udokumentowany przypadek to błąd blogID Google Blogger (oryginalne badanie di Paola/Carettoni): walidacja sprawdzała pierwszy blogID, operacja dodania autora używała drugiego.'
+      payload: security_token=attackertoken&blogID=attackerblogid&blogID=victimblogid&authorsList=attacker@evil.example&ok=Invite
+    - name: 'Server-Side Parameter Pollution: inject/override a backend parameter'
+      sev: high
+      description:
+        en: The app embeds user input unencoded into a server-side request to an internal API. Encoded delimiters (%26, %3D) let an attacker add or override parameters in that downstream request that were never exposed to the client -- PortSwigger's own naming for this specific, currently-live vulnerability class.
+        pl: Aplikacja osadza wejście użytkownika nieoescapowane w żądaniu server-side do wewnętrznego API. Zakodowane ograniczniki (%26, %3D) pozwalają atakującemu dodać lub nadpisać parametry w tym żądaniu downstream które nigdy nie były wystawione klientowi -- własne nazewnictwo PortSwigger dla tej konkretnej, wciąż aktualnej klasy podatności.
+      payload: 'name=peter%26foo=xyz   ->   internal request becomes: /users/search?name=peter&foo=xyz&publicProfile=true'
+    - name: 'Server-Side Parameter Pollution: truncate with #'
+      sev: critical
+      description:
+        en: A URL-encoded fragment delimiter (%23) truncates everything the server appends to a backend query after the injection point -- dropping a trailing restriction (e.g. &field=summary) or even an appended API key, letting the attacker's request reach a broader or more privileged internal endpoint than intended.
+        pl: Zakodowany URL ogranicznik fragmentu (%23) obcina wszystko co serwer dołącza do zapytania backendowego po punkcie wstrzyknięcia -- usuwając końcowe ograniczenie (np. &field=summary) albo nawet dołączony klucz API, pozwalając żądaniu atakującego dosięgnąć szerszego lub bardziej uprzywilejowanego endpointu wewnętrznego niż zamierzono.
+      payload: name=peter%23   ->   internal request /users/search?name=peter is truncated before &field=summary is appended
+    - name: Array-vs-scalar type confusion (Node.js qs / PHP)
+      sev: high
+      description:
+        en: 'The dominant MODERN manifestation, per all three research passes: Express''s default qs parser and PHP''s [] syntax silently turn a duplicate parameter into an array instead of a string. A check like if (req.query.role === ''admin'') never matches an array, silently bypassing the intended guard, while downstream code that coerces or indexes the array may still grant access.'
+        pl: 'Dominująca WSPÓŁCZESNA manifestacja, wg wszystkich trzech przejść badawczych: domyślny parser qs Express i składnia [] PHP po cichu zamieniają duplikat parametru w tablicę zamiast string. Kontrola jak if (req.query.role === ''admin'') nigdy nie dopasowuje tablicy, po cichu omijając zamierzoną ochronę, podczas gdy kod downstream który wymusza typ lub indeksuje tablicę może wciąż przyznać dostęp.'
+      payload: ?role=user&role=admin  ->  req.query.role === ['user','admin']  (Express/qs default)
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The fix is always the same shape: decide the canonical value of each parameter once, explicitly reject the type/multiplicity you didn''t expect, and never let a downstream layer silently reinterpret what an earlier layer already validated.'
+      pl: 'Naprawa ma zawsze ten sam kształt: zdecyduj kanoniczną wartość każdego parametru raz, jawnie odrzuć typ/wielokrotność której nie oczekiwałeś, i nigdy nie pozwól by warstwa downstream po cichu reinterpretowała to co wcześniejsza warstwa już zwalidowała.'
+    languages:
+    - label: Node.js / Express
+      lang: javascript
+      vulnerable: "// VULNERABLE -- role is a STRING for ?role=user\n// but an ARRAY ['user','admin'] for ?role=user&role=admin\napp.get('/promote', (req, res) => {\n  if (req.query.role === 'admin') return res.status(403).end(); // array never === 'admin' -> bypassed\n  db.setRole(req.user.id, req.query.role);\n});"
+      safe: "// SECURE -- reject arrays explicitly, then allow-list\napp.get('/promote', (req, res) => {\n  const role = req.query.role;\n  if (Array.isArray(role)) return res.status(400).send('duplicate parameter');\n  if (!['user','editor'].includes(role)) return res.status(400).end();\n  db.setRole(req.user.id, role);\n});"
+    - label: PHP
+      lang: php
+      vulnerable: '// VULNERABLE -- ?id=1&id=2 silently yields "2" (last wins);
+
+        // ?id[]=1&id[]=2 yields an array -- either way, type/value is attacker-chosen
+
+        $id = $_GET[''id''];
+
+        $stmt = $db->query("SELECT * FROM accounts WHERE id = $id");'
+      safe: "// SECURE -- reject arrays, validate type, parametrize\nif (!isset($_GET['id']) || is_array($_GET['id'])) {\n    http_response_code(400); exit('invalid parameter');\n}\n$id = filter_var($_GET['id'], FILTER_VALIDATE_INT);\nif ($id === false) { http_response_code(400); exit; }\n$stmt = $db->prepare('SELECT * FROM accounts WHERE id = ?');\n$stmt->execute([$id]);"
+    - label: Java (Servlet)
+      lang: java
+      vulnerable: '// VULNERABLE -- validator uses getParameter() (first value),
+
+        // business logic uses getParameterValues() (full array) -- they can disagree
+
+        String roleChecked = request.getParameter("role");        // first: "user"
+
+        if (!isAllowed(roleChecked)) throw new ForbiddenException();
+
+        String[] allRoles = request.getParameterValues("role");    // ["user","admin"]
+
+        applyRole(allRoles[allRoles.length - 1]);                   // uses last: "admin"'
+      safe: '// SECURE -- read once, reject multiplicity, use that single value everywhere
+
+        String[] values = request.getParameterValues("role");
+
+        if (values == null || values.length != 1) throw new BadRequestException("duplicate parameter");
+
+        String role = values[0];
+
+        if (!isAllowed(role)) throw new ForbiddenException();
+
+        applyRole(role);'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'The core technique is a three-request diff: send the parameter once, twice with a distinguishable second value, and compare which layer of the response reflects which copy.'
+      pl: 'Podstawowa technika to porównanie trzech żądań: wyślij parametr raz, dwukrotnie z rozróżnialną drugą wartością, i porównaj która warstwa odpowiedzi odzwierciedla którą kopię.'
+    steps:
+    - title:
+        en: Baseline with the OWASP three-request method
+        pl: Ustal bazę metodą trzech żądań OWASP
+      description:
+        en: Send ?p=v1, then ?p=HPP_TEST, then ?p=v1&p=HPP_TEST. Diff the three responses to see which copy the app acted on.
+        pl: Wyślij ?p=v1, potem ?p=HPP_TEST, potem ?p=v1&p=HPP_TEST. Porównaj trzy odpowiedzi by zobaczyć na której kopii zadziałała aplikacja.
+    - title:
+        en: Fingerprint the stack's duplicate-handling rule
+        pl: Rozpoznaj regułę obsługi duplikatów stosu
+      description:
+        en: ASP.NET concatenates with a comma, PHP/Rails/Django take the last, Java servlets/Flask/Go take the first via their scalar getter, Express/qs/Zope return an array -- the result tells you the target stack.
+        pl: ASP.NET konkatenuje przecinkiem, PHP/Rails/Django biorą ostatni, serwlety Java/Flask/Go biorą pierwszy przez swój getter skalarny, Express/qs/Zope zwracają tablicę -- wynik mówi jaki jest stos docelowy.
+    - title:
+        en: Hunt for a layer disagreement
+        pl: Poszukaj niezgodności między warstwami
+      description:
+        en: Put a benign value in one instance and a dangerous one in another; if a validation/WAF layer passes the request but the backend acts on the dangerous copy (or vice versa), the split is confirmed.
+        pl: Umieść niegroźną wartość w jednej instancji a niebezpieczną w innej; jeśli warstwa walidacji/WAF przepuszcza żądanie ale backend działa na niebezpiecznej kopii (albo odwrotnie), niezgodność jest potwierdzona.
+    - title:
+        en: 'For SSPP: probe for backend-request injection with encoded delimiters'
+        pl: 'Dla SSPP: sonduj wstrzyknięcie żądania backendowego zakodowanymi ogranicznikami'
+      description:
+        en: Inject %26newparam=x (add), %26existingparam=y (override), or %23 (truncate) into every field, watching for new backend behavior, changed data scope, or errors revealing a dropped server-appended parameter.
+        pl: Wstrzyknij %26newparam=x (dodaj), %26existingparam=y (nadpisz), albo %23 (obetnij) do każdego pola, obserwując nowe zachowanie backendu, zmieniony zakres danych, albo błędy ujawniające usunięty parametr dołączony przez serwer.
+    - title:
+        en: Escalate to the highest-impact reachable variant
+        pl: Eskaluj do osiągalnego wariantu o najwyższym wpływie
+      description:
+        en: Target security-relevant parameters first (role, userId, blogID, amount) for authz bypass; use split payloads against comma-concatenating stacks for WAF bypass; use %23 truncation to strip a server-enforced restriction.
+        pl: Celuj najpierw w parametry istotne dla bezpieczeństwa (role, userId, blogID, amount) dla obejścia autoryzacji; użyj podzielonych ładunków przeciw stosom konkatenującym przecinkiem dla obejścia WAF; użyj obcięcia %23 by usunąć ograniczenie wymuszane przez serwer.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Every real defense here is a variant of "decide the canonical value once, explicitly, and reject anything you did not expect" -- the vulnerability exists precisely because different layers silently made that decision differently.
+      pl: Każda realna obrona tutaj jest wariantem "zdecyduj kanoniczną wartość raz, jawnie, i odrzuć wszystko czego nie oczekiwałeś" -- podatność istnieje dokładnie dlatego że różne warstwy po cichu podjęły tę decyzję inaczej.
+    items:
+    - rank: 1
+      eff: 92
+      kind: primary
+      label:
+        en: Consistent parsing/canonicalization across every layer, reject unexpected duplicates
+        pl: Spójne parsowanie/kanonikalizacja w każdej warstwie, odrzucaj nieoczekiwane duplikaty
+      note:
+        en: Normalize at the edge and ensure the WAF, the app, and any backend all read the SAME instance -- or reject the request outright when a parameter appears more times than expected.
+        pl: Normalizuj na krawędzi i zapewnij że WAF, aplikacja i jakikolwiek backend wszystkie czytają TĘ SAMĄ instancję -- albo odrzuć żądanie wprost gdy parametr pojawia się więcej razy niż oczekiwano.
+    - rank: 2
+      eff: 88
+      kind: primary
+      label:
+        en: Explicit array-vs-scalar type validation
+        pl: Jawna walidacja typu tablica-vs-skalar
+      note:
+        en: Array.isArray()/is_array() rejection on any parameter expected to be scalar, combined with strict schema validation (Joi/Zod/Pydantic) that forbids duplicates outright. Directly closes the dominant modern manifestation (Node qs / PHP []).
+        pl: Odrzucenie Array.isArray()/is_array() na dowolnym parametrze oczekiwanym jako skalar, połączone ze ścisłą walidacją schematu (Joi/Zod/Pydantic) która wprost zabrania duplikatów. Bezpośrednio zamyka dominującą współczesną manifestację (Node qs / PHP []).
+    - rank: 3
+      eff: 85
+      kind: strong
+      label:
+        en: Encode user input before embedding it in any server-side/downstream request
+        pl: Koduj wejście użytkownika przed osadzeniem go w jakimkolwiek żądaniu server-side/downstream
+      note:
+        en: 'The specific fix for Server-Side Parameter Pollution: URL-encode & = # before building an internal API request, or pass parameters via a structured client (params object/array) rather than string-concatenating a URL.'
+        pl: 'Konkretna naprawa dla Server-Side Parameter Pollution: koduj URL & = # przed zbudowaniem żądania wewnętrznego API, albo przekazuj parametry przez strukturalnego klienta (obiekt/tablica params) zamiast sklejać string URL.'
+    - rank: 4
+      eff: 55
+      kind: mitigation
+      label:
+        en: WAF rules that normalize or reject duplicate parameters
+        pl: Reguły WAF normalizujące lub odrzucające duplikaty parametrów
+      note:
+        en: Meaningful defense-in-depth, but the WAF is frequently the very component on the wrong side of the mismatch -- a WAF that parses duplicates differently from the origin server can itself be bypassed (the classic ASP.NET comma-concatenation case).
+        pl: Sensowna obrona w głąb, ale WAF jest często właśnie tym komponentem po złej stronie niezgodności -- WAF który parsuje duplikaty inaczej niż serwer źródłowy może sam zostać ominięty (klasyczny przypadek konkatenacji przecinkiem ASP.NET).
+    - rank: 5
+      eff: 40
+      kind: weak
+      label:
+        en: Relying on framework defaults alone, without auditing them
+        pl: Poleganie wyłącznie na domyślnych ustawieniach frameworka, bez ich audytu
+      note:
+        en: Knowing your framework's first/last/array rule is necessary awareness, but insufficient alone -- it doesn't validate business intent or guarantee every other component in the request path agrees with that same rule.
+        pl: Znajomość reguły pierwszy/ostatni/tablica frameworka to konieczna świadomość, ale sama w sobie niewystarczająca -- nie waliduje intencji biznesowej ani nie gwarantuje że każdy inny komponent na ścieżce żądania zgadza się z tą samą regułą.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: MITRE's own canonical CWE-235 example, a CVE where the NVD description literally names HPP as the mechanism, and the foundational research incident that gave this class its name.
+      pl: Własny kanoniczny przykład CWE-235 od MITRE, CVE gdzie opis NVD dosłownie nazywa HPP jako mechanizm, i fundamentalny incydent badawczy który dał tej klasie jej nazwę.
+    items:
+    - org: Multiple gateway/security products
+      year: 2003
+      impact: CVE-2003-1014
+      cost: MITRE's own cited Observed Example on the CWE-235 page itself
+      description:
+        en: Multiple gateway/security products allowed restriction bypass using multiple MIME fields with the same name, interpreted differently by clients versus the gateway enforcing the restriction -- the exact cross-component parsing disagreement this weakness class is built on.
+        pl: Wiele produktów gateway/bezpieczeństwa pozwalało na obejście ograniczenia przez wiele pól MIME o tej samej nazwie, interpretowanych inaczej przez klientów niż przez gateway wymuszający ograniczenie -- dokładnie ta niezgodność parsowania między komponentami na której zbudowana jest ta klasa słabości.
+    - org: CUPS (Common Unix Printing System)
+      year: 2009
+      impact: CVE-2009-2820
+      cost: NVD's own description explicitly names HTTP Parameter Pollution as the mechanism
+      description:
+        en: The kerberos parameter to the admin web interface was not sanitized before generating dynamic HTML. Submitting it twice (kerberos=onmouseover=alert(1)&kerberos) bypassed the sanitization checkpoint, which validated only the second (empty) occurrence, while the first, unsanitized occurrence was reflected into the page -- a combination of attribute injection and HPP. Fixed in CUPS 1.4.2.
+        pl: Parametr kerberos do webowego interfejsu admina nie był sanityzowany przed generowaniem dynamicznego HTML. Wysłanie go dwukrotnie (kerberos=onmouseover=alert(1)&kerberos) omijało punkt kontrolny sanityzacji, który walidował tylko drugie (puste) wystąpienie, podczas gdy pierwsze, niesanityzowane wystąpienie było odbite na stronie -- połączenie wstrzyknięcia atrybutu i HPP. Naprawione w CUPS 1.4.2.
+    - org: Google Blogger
+      year: 2009
+      impact: Authorization bypass via duplicate blogID
+      cost: The foundational incident from HPP's original research paper
+      description:
+        en: 'From di Paola and Carettoni''s original OWASP AppSec EU 2009 research (elaborated at Black Hat US 2011 by Balduzzi et al.): an add-author request''s ownership check validated the first blogID parameter while the actual add-author operation used the second, letting an attacker add themselves as an author on someone else''s blog.'
+        pl: 'Z oryginalnego badania di Paola i Carettoniego na OWASP AppSec EU 2009 (rozwiniętego na Black Hat US 2011 przez Balduzziego i in.): kontrola własności żądania dodania autora walidowała pierwszy parametr blogID podczas gdy faktyczna operacja dodania autora używała drugiego, pozwalając atakującemu dodać siebie jako autora na cudzym blogu.'
+    inlineSources:
+    - label: CWE-235 Observed Example (CVE-2003-1014)
+      url: https://cwe.mitre.org/data/definitions/235.html
+    - label: Tenable — CUPS kerberos Parameter XSS (CVE-2009-2820)
+      url: https://www.tenable.com/plugins/nessus/42468
+    - label: di Paola & Carettoni — HTTP Parameter Pollution (OWASP AppSec EU 2009)
+      url: https://owasp.org/www-pdf-archive/AppsecEU09_CarettoniDiPaola_v0.8.pdf
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: This is fundamentally a DAST/manual-testing finding, not a SAST one -- the vulnerability lives in runtime disagreement between components, which static analysis of a single codebase cannot see.
+      pl: To fundamentalnie znalezisko DAST/testów manualnych, nie SAST -- podatność żyje w niezgodności czasu wykonania między komponentami, czego analiza statyczna pojedynczej bazy kodu nie może zobaczyć.
+    sast:
+    - - Semgrep / CodeQL
+      - No dedicated, first-class HPP rule/query confirmed by any research pass -- generic taint rules can catch the adjacent pattern of unencoded input concatenated into a downstream URL (the SSPP root cause), but not cross-component parsing disagreement itself
+    dast:
+    - - Burp Suite Param Miner
+      - PortSwigger's dedicated extension for discovering hidden/duplicate parameters and response-delta HPP behavior -- the primary practical detection tool
+    - - Burp Suite Scanner
+      - Built-in "Client-side HTTP parameter pollution (reflected/stored)" KB issues, detected automatically during a scan
+    - - Manual three-request diff testing
+      - The OWASP WSTG baseline method (send once, send with a distinguishable second value, send both) applied to every parameter across every layer in the request path
+    note:
+      en: <strong>Key signal:</strong> because no static tool reliably catches this class, prioritize manual testing on any endpoint whose request passes through more than one component (CDN/WAF -> reverse proxy -> app -> internal API) -- that component boundary is exactly where parsing disagreements live.
+      pl: <strong>Kluczowy sygnał:</strong> ponieważ żadne narzędzie statyczne nie wyłapuje niezawodnie tej klasy, priorytetyzuj testy manualne na każdym endpoincie którego żądanie przechodzi przez więcej niż jeden komponent (CDN/WAF -> reverse proxy -> aplikacja -> wewnętrzne API) -- ta granica komponentów jest dokładnie tam gdzie żyją niezgodności parsowania.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'The OWASP category is a genuine, verifiable nuance worth stating plainly: MITRE''s own official CWE-to-OWASP mapping places this under A04:2021 Insecure Design, not the Injection category most practitioners instinctively reach for -- and OWASP Top 10:2025 moves it again, to an entirely new category.'
+      pl: 'Kategoria OWASP to prawdziwy, weryfikowalny niuans wart jasnego stwierdzenia: własne oficjalne mapowanie CWE-na-OWASP MITRE umieszcza to pod A04:2021 Insecure Design, nie kategorią Injection do której instynktownie sięga większość praktyków -- a OWASP Top 10:2025 przenosi to ponownie, do zupełnie nowej kategorii.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-235 — Improper Handling of Extra Parameters (primary; Variant-level, ChildOf CWE-233 Improper Handling of Parameters)
+      - 'CAPEC-460 — HTTP Parameter Pollution (HPP), the umbrella attack pattern -- maps to three CWEs: CWE-235 (this deep-dive), CWE-147 (Improper Neutralization of Input Terminators), and CWE-88 (Argument Injection, covered separately in this knowledge base''s own dedicated deep-dive)'
+    - std: OWASP
+      items:
+      - 'A04:2021 — Insecure Design. Verified directly against MITRE''s own CWE-235 page: CWE-235 is officially a MemberOf the ''OWASP Top Ten 2021 Category A04:2021 - Insecure Design'' taxonomy mapping -- not A03 Injection, despite HPP''s mechanistically injection-like character (OWASP''s own WSTG files the test under Input Validation Testing, which is why A03 is the common instinctive guess)'
+      - OWASP Top 10:2025 moves CWE-235 again, to a newly created 'A10:2025 — Mishandling of Exceptional Conditions' category -- distinct from both A03 Injection and A04 Insecure Design, confirming this weakness has genuinely resisted a single stable Top-10 home across three consecutive editions
+    inlineSources:
+    - label: CWE-235 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/235.html
+    - label: CAPEC-460 (MITRE)
+      url: https://capec.mitre.org/data/definitions/460.html
+    - label: OWASP A04:2021 Insecure Design
+      url: https://owasp.org/Top10/2021/A04_2021-Insecure_Design/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active HPP/SSPP exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji HPP/SSPP, przejdź tę listę od góry.
+    steps:
+    - en: Identify every component the affected request passes through (CDN, WAF, reverse proxy, app, internal API) and determine which one actually acted on the malicious parameter copy
+      pl: Zidentyfikuj każdy komponent przez który przechodzi dotknięte żądanie (CDN, WAF, reverse proxy, aplikacja, wewnętrzne API) i ustal który faktycznie zadziałał na złośliwej kopii parametru
+    - en: If authorization was bypassed, treat every action taken under the elevated/incorrect identity as potentially unauthorized and audit accordingly
+      pl: Jeśli autoryzacja została ominięta, traktuj każdą akcję podjętą pod podniesioną/niepoprawną tożsamością jako potencjalnie nieautoryzowaną i odpowiednio przeaudytuj
+    - en: Grep the codebase for every place a parameter is read without explicit array-vs-scalar type checking, not just the endpoint exploited
+      pl: Przeszukaj kod pod kątem każdego miejsca gdzie parametr jest czytany bez jawnego sprawdzenia typu tablica-vs-skalar, nie tylko wykorzystanego endpointu
+    - en: For SSPP specifically, audit every place user input is concatenated into a server-side/internal request URL rather than passed via a structured client
+      pl: Dla SSPP konkretnie, przeaudytuj każde miejsce gdzie wejście użytkownika jest sklejane w URL żądania server-side/wewnętrznego zamiast przekazywane przez strukturalnego klienta
+    - en: Ensure the WAF/proxy layer and the origin application parse duplicate parameters identically, or reject requests with unexpected duplicates at the edge
+      pl: Upewnij się że warstwa WAF/proxy i aplikacja źródłowa parsują duplikaty parametrów identycznie, albo odrzuć żądania z nieoczekiwanymi duplikatami na krawędzi
+    - en: Notify per applicable data-breach obligations if data was exfiltrated or accounts were taken over
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli dane zostały eksfiltrowane lub konta przejęte
+  labs:
+    title:
+      en: Practice labs
+      pl: Laboratoria praktyczne
+    lead:
+      en: PortSwigger has no lab titled simply "HTTP Parameter Pollution," but its Server-Side Parameter Pollution topic (API Testing track) has two genuine, verified labs covering exactly the delimiter-injection sub-family.
+      pl: PortSwigger nie ma laboratorium zatytułowanego po prostu "HTTP Parameter Pollution", ale jego temat Server-Side Parameter Pollution (ścieżka API Testing) ma dwa prawdziwe, zweryfikowane laboratoria obejmujące dokładnie pod-rodzinę wstrzyknięcia ogranicznika.
+    items:
+    - variant: Server-Side Parameter Pollution -- query string
+      provider: PortSwigger Web Security Academy
+      label: Exploiting server-side parameter pollution in a query string
+      url: https://portswigger.net/web-security/api-testing/server-side-parameter-pollution
+      difficulty: Practitioner
+    - variant: Server-Side Parameter Pollution -- REST URL
+      provider: PortSwigger Web Security Academy
+      label: Exploiting server-side parameter pollution in a REST URL
+      url: https://portswigger.net/web-security/api-testing/server-side-parameter-pollution
+      difficulty: Expert
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-235 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/235.html
+    - label: CAPEC-460 (MITRE)
+      url: https://capec.mitre.org/data/definitions/460.html
+    - label: OWASP A04:2021 Insecure Design
+      url: https://owasp.org/Top10/2021/A04_2021-Insecure_Design/
+    - label: OWASP WSTG — Testing for HTTP Parameter Pollution
+      url: https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/04-Testing_for_HTTP_Parameter_Pollution
+    - label: PortSwigger — Server-side parameter pollution
+      url: https://portswigger.net/web-security/api-testing/server-side-parameter-pollution
+    - label: di Paola & Carettoni — HTTP Parameter Pollution (OWASP AppSec EU 2009)
+      url: https://owasp.org/www-pdf-archive/AppsecEU09_CarettoniDiPaola_v0.8.pdf
+    - label: Tenable — CUPS kerberos Parameter XSS (CVE-2009-2820)
+      url: https://www.tenable.com/plugins/nessus/42468

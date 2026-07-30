@@ -542,28 +542,18 @@ threats:
   safe: "# BEZPIECZNE — walidacja + odrzucenie CR/LF\nfrom flask import request, abort, redirect\n@app.route('/r')\ndef r():\n    url = request.args.get('url', '')\n    if '\\r' in url or '\\n' in url:\n        abort(400)\n    return redirect(url)  # framework dodatkowo sanitizuje\n"
 - id: '1.26'
   name: HTTP Parameter Pollution
-  severity: Medium
+  severity: High
   difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-235
-  desc: 'Zduplikowane parametry są różnie interpretowane przez warstwy aplikacji, co pozwala obejść walidację/WAF.
+  desc: 'Ta sama nazwa parametru dostarczona wielokrotnie jest różnie interpretowana przez warstwy aplikacji (WAF, proxy, backend) -- pozwala obejść walidację/WAF, obejść autoryzację, albo wstrzyknąć/nadpisać parametry w żądaniu backendowym (Server-Side Parameter Pollution).
 
     '
-  desc_en: Duplicated parameters are interpreted differently by application layers, allowing validation or WAF bypass.
+  desc_en: The same parameter name supplied multiple times is interpreted differently by application layers (WAF, proxy, backend) -- enabling validation/WAF bypass, authorization bypass, or injecting/overriding parameters in a backend request (Server-Side Parameter Pollution).
   lang: javascript
-  vuln: '// ?role=user&role=admin — bierze ostatni
-
-    const role = req.query.role; // może być tablicą lub admin
-
-    '
-  safe: 'const raw = req.query.role;
-
-    const role = Array.isArray(raw) ? raw[0] : raw;
-
-    if (![''user''].includes(role)) return res.sendStatus(400);
-
-    '
+  vuln: "app.get('/promote', (req, res) => {\n  if (req.query.role === 'admin') return res.status(403).end(); // array from ?role=user&role=admin never matches\n  db.setRole(req.user.id, req.query.role);\n});\n"
+  safe: "app.get('/promote', (req, res) => {\n  const role = req.query.role;\n  if (Array.isArray(role)) return res.status(400).send('duplicate parameter');\n  if (!['user','editor'].includes(role)) return res.status(400).end();\n  db.setRole(req.user.id, role);\n});\n"
 - id: '1.27'
   name: IMAP Injection
   severity: Critical
@@ -1039,26 +1029,24 @@ threats:
 
     '
 - id: cat_1_research21
-  name: Http parameter injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Http parameter injection" wskazane w analizie arena.
+  name: HTTP Parameter Injection
+  severity: High
+  difficulty: Medium
+  confidence: POSSIBLE
+  cwe:
+  - CWE-235
+  - CWE-88
+  desc: 'To samo zagrożenie co "HTTP Parameter Pollution" (1.26) -- wszystkie trzy niezależne badania potwierdziły że to luźny synonim/wariant tej samej klasy (znany też jako Server-Side Parameter Pollution), nie osobna klasa. Pełny deep-dive i quiz dostępne pod kartą HTTP Parameter Pollution (1.26).
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: The same threat as "HTTP Parameter Pollution" (1.26) -- all three independent research passes confirmed this is a loose synonym/variant of the same class (also known as Server-Side Parameter Pollution), not a separate class. The full deep-dive and quiz live under the HTTP Parameter Pollution card (1.26).
+  lang: javascript
+  vuln: 'fetch(`http://internal-api/users/search?name=${name}&publicProfile=true`);
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
-
-    # Potrzebny dalszy research przed dodaniem przykładu
+    // name = ''peter%23'' truncates everything after # in the backend request
 
     '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
-
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+  safe: 'fetch(`http://internal-api/users/search?name=${encodeURIComponent(name)}&publicProfile=true`);
 
     '
 - id: cat_1_research22

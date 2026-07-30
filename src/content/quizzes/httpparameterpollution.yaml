@@ -1,0 +1,137 @@
+threatId: '1.26'
+title:
+  en: HTTP Parameter Pollution — knowledge check
+  pl: HTTP Parameter Pollution — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why does this knowledge base treat "HTTP Parameter Injection" as merged into HTTP Parameter Pollution rather than as a separate threat entry?
+    pl: Dlaczego ta baza wiedzy traktuje "HTTP Parameter Injection" jako scalone z HTTP Parameter Pollution zamiast jako osobny wpis zagrożenia?
+  choices:
+  - id: a
+    label:
+      en: All three independent research passes confirmed it is not an independently standardized class -- it is either a loose synonym for HPP, or PortSwigger's own "Server-Side Parameter Pollution," which the company explicitly says is sometimes just called HPP to avoid confusion
+      pl: Wszystkie trzy niezależne przejścia badawcze potwierdziły że to nie jest niezależnie ustandaryzowana klasa -- to albo luźny synonim HPP, albo własne "Server-Side Parameter Pollution" PortSwigger, o którym firma wprost mówi że czasem jest po prostu nazywane HPP by uniknąć zamieszania
+  - id: b
+    label:
+      en: HTTP Parameter Injection does not actually exist as an attack technique
+      pl: HTTP Parameter Injection w rzeczywistości nie istnieje jako technika ataku
+  - id: c
+    label:
+      en: The two terms have completely unrelated root causes and were merged only to save space
+      pl: Te dwa terminy mają całkowicie niezwiązane przyczyny źródłowe i zostały scalone tylko by zaoszczędzić miejsce
+  correctChoiceIds:
+  - a
+  explanation:
+    en: CAPEC-460 (the umbrella HPP attack pattern) itself maps to CWE-88 (Argument Injection) alongside CWE-235 -- confirming the "injection" framing and the "pollution" framing describe the same attack-pattern family from two angles, not two unrelated classes.
+    pl: Sam CAPEC-460 (parasolowy wzorzec ataku HPP) mapuje się do CWE-88 (Argument Injection) obok CWE-235 -- potwierdzając że ramowanie "injection" i ramowanie "pollution" opisują tę samą rodzinę wzorca ataku z dwóch kątów, nie dwie niezwiązane klasy.
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: Does this Express.js code contain an HPP-exploitable authorization check?
+    pl: Czy ten kod Express.js zawiera podatną na HPP kontrolę autoryzacji?
+  snippet:
+    lang: javascript
+    code: "app.get('/promote', (req, res) => {\n  if (req.query.role === 'admin') return res.status(403).end();\n  db.setRole(req.user.id, req.query.role);\n});"
+  isVulnerable: true
+  cwe: CWE-235
+  explanation:
+    en: Yes. With Express's default qs parser, ?role=user&role=admin makes req.query.role an ARRAY (['user','admin']), which never strictly equals the string 'admin' -- silently bypassing the check -- while db.setRole() still receives the array and downstream code may coerce or index into it, granting the admin role anyway.
+    pl: Tak. Z domyślnym parserem qs Express, ?role=user&role=admin sprawia że req.query.role jest TABLICĄ (['user','admin']), która nigdy nie jest ściśle równa stringowi 'admin' -- po cichu omijając kontrolę -- podczas gdy db.setRole() wciąż otrzymuje tablicę, a kod downstream może ją wymusić na typ lub zindeksować, i tak przyznając rolę admin.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Per MITRE's own official CWE-to-OWASP taxonomy mapping, which OWASP Top 10:2021 category is CWE-235 (the primary CWE for HPP) officially a member of?
+    pl: Zgodnie z własnym oficjalnym mapowaniem taksonomii CWE-do-OWASP MITRE, do jakiej kategorii OWASP Top 10:2021 CWE-235 (podstawowe CWE dla HPP) jest oficjalnie przypisane?
+  choices:
+  - id: a
+    label:
+      en: A04:2021 -- Insecure Design, not A03 Injection despite HPP's mechanistically injection-like character
+      pl: A04:2021 -- Insecure Design, nie A03 Injection mimo mechanistycznie przypominającego wstrzyknięcie charakteru HPP
+  - id: b
+    label:
+      en: A03:2021 -- Injection
+      pl: A03:2021 -- Injection
+  - id: c
+    label:
+      en: A01:2021 -- Broken Access Control
+      pl: A01:2021 -- Broken Access Control
+  correctChoiceIds:
+  - a
+  explanation:
+    en: This is a verifiable fact on CWE-235's own MITRE page, not a judgment call -- and it's a genuine surprise, since OWASP's own WSTG files the HPP test under "Input Validation Testing," which is exactly why A03 Injection is the common instinctive guess. OWASP Top 10:2025 moves it yet again, to a brand-new category (Mishandling of Exceptional Conditions), confirming this weakness has resisted a stable Top-10 home across three editions.
+    pl: To weryfikowalny fakt na własnej stronie MITRE dla CWE-235, nie osąd -- i to prawdziwe zaskoczenie, bo własny WSTG OWASP umieszcza test HPP pod "Input Validation Testing", co jest dokładnie powodem dla którego A03 Injection jest częstym instynktownym zgadnięciem. OWASP Top 10:2025 przenosi to jeszcze raz, do zupełnie nowej kategorii (Mishandling of Exceptional Conditions), potwierdzając że ta słabość opierała się stabilnemu domowi w Top-10 przez trzy edycje.
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: 'A backend embeds a user-supplied name field into an internal API call: fetch(`http://internal-api/users/search?name=${name}&publicProfile=true`). Is name=peter%23 (URL-encoded #) a genuine attack against this code?'
+    pl: 'Backend osadza dostarczone przez użytkownika pole name w wywołaniu wewnętrznego API: fetch(`http://internal-api/users/search?name=${name}&publicProfile=true`). Czy name=peter%23 (zakodowany URL #) jest prawdziwym atakiem na ten kod?'
+  isVulnerable: true
+  cwe: CWE-235
+  explanation:
+    en: 'Yes -- this is Server-Side Parameter Pollution. %23 decodes to # (a fragment delimiter), so the internal request becomes .../search?name=peter#&publicProfile=true -- everything after # is truncated by the URL parser, dropping the &publicProfile=true restriction the server intended to enforce and letting the attacker''s search reach a broader scope than intended.'
+    pl: 'Tak -- to Server-Side Parameter Pollution. %23 dekoduje się do # (ogranicznik fragmentu), więc żądanie wewnętrzne staje się .../search?name=peter#&publicProfile=true -- wszystko po # jest obcinane przez parser URL, usuwając ograniczenie &publicProfile=true które serwer zamierzał wymusić, i pozwalając wyszukiwaniu atakującego dosięgnąć szerszego zakresu niż zamierzono.'
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: 'Why does a WAF rule that normalizes duplicate parameters rank only #4 (moderate, ~55%) among the defenses in this deep-dive, rather than #1?'
+    pl: 'Dlaczego reguła WAF normalizująca duplikaty parametrów zajmuje tylko #4 miejsce (umiarkowane, ~55%) wśród obron w tym deep-dive, zamiast #1?'
+  choices:
+  - id: a
+    label:
+      en: The WAF is frequently the very component on the wrong side of the parsing mismatch -- if it interprets duplicate parameters differently from the origin server, an attacker can exploit that exact disagreement to bypass the WAF itself (the classic ASP.NET comma-concatenation case)
+      pl: WAF jest często właśnie tym komponentem po złej stronie niezgodności parsowania -- jeśli interpretuje duplikaty parametrów inaczej niż serwer źródłowy, atakujący może wykorzystać dokładnie tę niezgodność by ominąć sam WAF (klasyczny przypadek konkatenacji przecinkiem ASP.NET)
+  - id: b
+    label:
+      en: WAFs are always completely bypassable and provide zero value against any attack
+      pl: WAF-y są zawsze całkowicie do ominięcia i nie dają żadnej wartości przeciw jakiemukolwiek atakowi
+  - id: c
+    label:
+      en: HPP cannot occur when a WAF is present, so the ranking is purely theoretical
+      pl: HPP nie może wystąpić gdy obecny jest WAF, więc ranking jest czysto teoretyczny
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is the exact mechanism behind the WAF/filter-bypass attack variant in this deep-dive: a validator inspecting one parameter instance while the backend concatenates or reads another means the WAF''s own parsing choice can become the vulnerability, not the fix.'
+    pl: 'To dokładnie mechanizm stojący za wariantem ataku obejścia WAF/filtra w tym deep-dive: walidator sprawdzający jedną instancję parametru podczas gdy backend konkatenuje lub czyta inną oznacza że własny wybór parsowania WAF może stać się podatnością, nie naprawą.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A Java servlet must read a single "role" parameter and enforce it consistently. Which variant actually fixes the HPP risk?
+    pl: Serwlet Java musi odczytać pojedynczy parametr "role" i konsekwentnie go wymusić. Który wariant faktycznie naprawia ryzyko HPP?
+  variants:
+  - id: v1
+    lang: java
+    code: 'String roleChecked = request.getParameter("role");
+
+      if (!isAllowed(roleChecked)) throw new ForbiddenException();
+
+      String[] allRoles = request.getParameterValues("role");
+
+      applyRole(allRoles[allRoles.length - 1]);'
+  - id: v2
+    lang: java
+    code: 'String[] values = request.getParameterValues("role");
+
+      if (values == null || values.length != 1) throw new BadRequestException("duplicate parameter");
+
+      String role = values[0];
+
+      if (!isAllowed(role)) throw new ForbiddenException();
+
+      applyRole(role);'
+  - id: v3
+    lang: java
+    code: '// only allow role values shorter than 10 characters
+
+      String role = request.getParameter("role");
+
+      if (role.length() > 10) throw new BadRequestException();
+
+      applyRole(role);'
+  correctVariantId: v2
+  explanation:
+    en: 'v2 reads the full array once, rejects the request outright if the parameter was supplied more than once, and validates/applies the SAME single value everywhere. v1 is the actual vulnerable pattern from this deep-dive''s code example: it checks getParameter() (the first value) but applies getParameterValues() (the last value) -- the exact split that enables authorization bypass. v3''s length cap does nothing to prevent a second "role" instance from being read differently by two parts of the code.'
+    pl: 'v2 czyta pełną tablicę raz, wprost odrzuca żądanie jeśli parametr został dostarczony więcej niż raz, i waliduje/stosuje TĘ SAMĄ pojedynczą wartość wszędzie. v1 to faktyczny podatny wzorzec z przykładu kodu tego deep-dive: sprawdza getParameter() (pierwszą wartość) ale stosuje getParameterValues() (ostatnią wartość) -- dokładnie ten rozdźwięk który umożliwia obejście autoryzacji. Limit długości z v3 nic nie robi by zapobiec odczytaniu drugiej instancji "role" inaczej przez dwie części kodu.'

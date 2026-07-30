@@ -21,6 +21,7 @@ export const LEARNING_PATH = [
   '1.16', // Expression Language Injection (Java EL / Spring SpEL)
   'cat_1_research08', // Argument Injection
   '1.20', // Code Injection / Eval Injection (merged; 1.23 is the same threat, cross-referenced)
+  '1.26', // HTTP Parameter Pollution (merged; cat_1_research21 is the same threat, cross-referenced)
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection
