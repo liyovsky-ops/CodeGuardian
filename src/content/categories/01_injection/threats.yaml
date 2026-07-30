@@ -1100,26 +1100,27 @@ threats:
 
     '
 - id: cat_1_research24
-  name: Zip slip injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Zip slip injection" wskazane w analizie arena.
+  name: Zip Slip
+  severity: High
+  difficulty: Medium
+  confidence: POSSIBLE
+  cwe:
+  - CWE-22
+  desc: 'Wariant Path Traversal: wpisy archiwum (zip/tar) z nazwami jak ../../evil.sh pozwalają zapisać pliki poza katalogiem docelowym ekstrakcji. To samo zagrożenie co Path Traversal (cat_1_research13) w kontekście archiwów -- pełny deep-dive (włącznie z realnym incydentem Snyk 2018) dostępny pod kartą Path Traversal.
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: 'A Path Traversal variant: archive (zip/tar) entries named like ../../evil.sh let extraction write files outside the intended destination directory. The same threat as Path Traversal (cat_1_research13) in an archive context -- the full deep-dive (including the real 2018 Snyk incident) lives under the Path Traversal card.'
+  lang: java
+  vuln: '// VULNERABLE -- entry name used as-is
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
-
-    # Potrzebny dalszy research przed dodaniem przykładu
+    File out = new File(destDir, entry.getName()); // entry.getName() = "../../../evil.sh"
 
     '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
+  safe: '// SECURE -- resolve and verify the entry stays inside destDir
 
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    File out = new File(destDir, entry.getName()).getCanonicalFile();
+
+    if (!out.toPath().startsWith(destDir.toPath())) throw new IOException("Zip Slip detected");
 
     '
 - id: cat_1_research25
