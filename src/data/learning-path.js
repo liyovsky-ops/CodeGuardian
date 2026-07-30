@@ -24,6 +24,7 @@ export const LEARNING_PATH = [
   '1.26', // HTTP Parameter Pollution (merged; cat_1_research21 is the same threat, cross-referenced)
   '1.28', // XML Injection (generic markup injection + XSW, distinct from XXE/XPath)
   'cat_1_research02', // XSLT Injection (merged; cat_1_research17 is the same threat, cross-referenced)
+  '1.19', // XQuery Injection
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

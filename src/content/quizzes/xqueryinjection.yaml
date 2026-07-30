@@ -1,0 +1,129 @@
+threatId: '1.19'
+title:
+  en: XQuery Injection — knowledge check
+  pl: XQuery Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why can XQuery injection reach a higher severity ceiling than classic XPath injection?
+    pl: Dlaczego wstrzyknięcie XQuery może osiągnąć wyższy sufit powagi niż klasyczne wstrzyknięcie XPath?
+  choices:
+  - id: a
+    label:
+      en: XQuery is a full, Turing-complete functional language whose native XML databases (BaseX, eXist-db, MarkLogic) ship extension modules for file I/O and OS command execution, while XPath is a constrained node-selection language with no such reach
+      pl: XQuery to pełny, Turing-zupełny język funkcyjny którego natywne bazy danych XML (BaseX, eXist-db, MarkLogic) dostarczają moduły rozszerzeń do I/O plików i wykonania poleceń OS, podczas gdy XPath to ograniczony język selekcji węzłów bez takiego zasięgu
+  - id: b
+    label:
+      en: XQuery and XPath are actually the exact same language with no meaningful difference
+      pl: XQuery i XPath to w rzeczywistości dokładnie ten sam język bez żadnej istotnej różnicy
+  - id: c
+    label:
+      en: XPath injection has been completely fixed by all major processors, while XQuery injection has not
+      pl: Wstrzyknięcie XPath zostało całkowicie naprawione przez wszystkie główne procesory, podczas gdy wstrzyknięcie XQuery nie
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'BaseX''s proc:system() namespace is the clearest example: it runs a real OS command from inside a query with no gadget chain, something plain XPath simply has no mechanism to do. This is the same relationship SSTI has to plain HTML templating -- the extension mechanism is what raises the ceiling, not the injection technique itself.'
+    pl: 'Przestrzeń nazw proc:system() BaseX to najjaśniejszy przykład: uruchamia prawdziwe polecenie OS z wnętrza zapytania bez łańcucha gadżetów, coś czego zwykły XPath po prostu nie ma mechanizmu by zrobić. To ta sama relacja co SSTI ma do zwykłego szablonowania HTML -- mechanizm rozszerzeń podnosi sufit, nie sama technika wstrzyknięcia.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: Does this Java code contain an XQuery injection vulnerability?
+    pl: Czy ten kod Java zawiera podatność wstrzyknięcia XQuery?
+  snippet:
+    lang: java
+    code: 'String q = "for $u in //user[name=''" + name + "''] return $u";
+
+      XQPreparedExpression e = conn.prepareExpression(q);
+
+      e.executeQuery();'
+  isVulnerable: true
+  cwe: CWE-652
+  explanation:
+    en: Yes. A name value of ' or '1'='1 turns the predicate into //user[name='' or '1'='1'], a tautology matching every user -- the exact same structural bug as SQL injection, fixed by declaring an external variable and binding the value separately rather than concatenating it into the query string.
+    pl: Tak. Wartość name równa ' or '1'='1 zamienia predykat w //user[name='' or '1'='1'], tautologię pasującą do każdego użytkownika -- dokładnie ten sam strukturalny błąd co wstrzyknięcie SQL, naprawiony przez zadeklarowanie zmiennej zewnętrznej i powiązanie wartości osobno zamiast konkatenowania jej do stringa zapytania.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive present the incidents section as an honest gap rather than listing named product CVEs, unlike most other deep-dives in this knowledge base?
+    pl: Dlaczego ten deep-dive przedstawia sekcję incydentów jako uczciwą lukę zamiast wymieniać nazwane CVE produktów, w przeciwieństwie do większości innych deep-dive w tej bazie wiedzy?
+  choices:
+  - id: a
+    label:
+      en: All three independent research passes searched NVD and CVE aggregators and genuinely found no confirmed, named product CVE for XQuery injection specifically -- this is reported honestly as a thin, largely academic area rather than a fabricated incident
+      pl: Wszystkie trzy niezależne przejścia badawcze przeszukały NVD i agregatory CVE i naprawdę nie znalazły żadnego potwierdzonego, nazwanego CVE produktu specyficznie dla wstrzyknięcia XQuery -- jest to zgłoszone uczciwie jako wąski, głównie akademicki obszar zamiast zmyślonego incydentu
+  - id: b
+    label:
+      en: XQuery injection is not a real vulnerability class and this entire deep-dive is purely theoretical
+      pl: Wstrzyknięcie XQuery nie jest prawdziwą klasą podatności i cały ten deep-dive jest czysto teoretyczny
+  - id: c
+    label:
+      en: CVE databases refuse to accept XQuery-related vulnerability reports
+      pl: Bazy danych CVE odmawiają przyjmowania zgłoszeń podatności związanych z XQuery
+  correctChoiceIds:
+  - a
+  explanation:
+    en: The mechanism, extension-function capabilities, and impact are all real and well-documented (matching the vendor docs for BaseX/eXist/MarkLogic) -- what's genuinely thin is the named-incident record, likely because native XML databases have a much smaller deployment footprint than SQL. Reporting this honestly, with real academic research (the 2011 Balisage paper) standing in for a product CVE, is more useful than inventing false severity.
+    pl: Mechanizm, zdolności funkcji rozszerzeń i wpływ są wszystkie realne i dobrze udokumentowane (zgodne z dokumentacją dostawców BaseX/eXist/MarkLogic) -- to co naprawdę jest wąskie to rejestr nazwanych incydentów, prawdopodobnie dlatego że natywne bazy danych XML mają znacznie mniejszy ślad wdrożenia niż SQL. Uczciwe zgłoszenie tego, z prawdziwym badaniem akademickim (artykuł Balisage z 2011) zastępującym CVE produktu, jest bardziej użyteczne niż wymyślanie fałszywej powagi.
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A team fixes their main query-building code to use bound external variables everywhere, but one admin-only diagnostic endpoint still calls MarkLogic's xdmp:eval() by concatenating a user-supplied filter string into the evaluated expression. Is this endpoint still vulnerable?
+    pl: Zespół naprawia swój główny kod budowania zapytań by wszędzie używał powiązanych zmiennych zewnętrznych, ale jeden endpoint diagnostyczny tylko-dla-admina wciąż wywołuje xdmp:eval() MarkLogic konkatenując dostarczony przez użytkownika string filtra do ewaluowanego wyrażenia. Czy ten endpoint jest wciąż podatny?
+  isVulnerable: true
+  cwe: CWE-652
+  explanation:
+    en: Yes. xdmp:eval() (like eXist's util:eval() or Saxon's saxon:evaluate()) parses its string argument as fresh XQuery at runtime -- concatenating untrusted input into that argument re-opens exactly the injection surface that parameterization elsewhere in the codebase closed. This is why this deep-dive ranks "avoid dynamic-eval extension functions entirely" as its own dedicated, second-highest defense rather than assuming parameterization alone covers every code path.
+    pl: Tak. xdmp:eval() (podobnie jak util:eval() eXist czy saxon:evaluate() Saxon) parsuje swój argument string jako świeży XQuery w czasie wykonania -- konkatenowanie niezaufanego wejścia do tego argumentu ponownie otwiera dokładnie tę powierzchnię wstrzyknięcia którą zamknęła parametryzacja gdzie indziej w kodzie. Dlatego ten deep-dive ocenia "całkowicie unikaj funkcji rozszerzeń dynamicznej ewaluacji" jako własną, dedykowaną, drugą najważniejszą obronę zamiast zakładać że sama parametryzacja pokrywa każdą ścieżkę kodu.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: An attacker wants to perform a time-based blind XQuery injection attack, expecting a SQL-style SLEEP() function. What does this deep-dive say about that assumption?
+    pl: Atakujący chce przeprowadzić atak ślepego wstrzyknięcia XQuery opartego na czasie, oczekując funkcji w stylu SQL SLEEP(). Co ten deep-dive mówi o tym założeniu?
+  choices:
+  - id: a
+    label:
+      en: XQuery has no standard time-delay function analogous to SQL's SLEEP() -- time-based blind techniques must instead rely on an artificially heavy computation or a processor-specific extension function, a genuine gap from SQLi confirmed by all three independent research passes
+      pl: XQuery nie ma standardowej funkcji opóźnienia czasowego analogicznej do SLEEP() SQL -- techniki ślepe oparte na czasie muszą zamiast tego polegać na sztucznie ciężkich obliczeniach albo funkcji rozszerzenia specyficznej dla procesora, prawdziwa luka względem SQLi potwierdzona przez wszystkie trzy niezależne przejścia badawcze
+  - id: b
+    label:
+      en: XQuery's built-in xq:sleep() function works identically to SQL's SLEEP() on every processor
+      pl: Wbudowana funkcja xq:sleep() XQuery działa identycznie do SLEEP() SQL na każdym procesorze
+  - id: c
+    label:
+      en: Time-based blind injection is completely impossible in XQuery under any circumstances
+      pl: Ślepe wstrzyknięcie oparte na czasie jest całkowicie niemożliwe w XQuery w jakichkolwiek okolicznościach
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is exactly the honesty this deep-dive''s blind-injection variant surfaces: the W3C XQuery spec has no native sleep primitive, so an attacker must fall back to a deliberately expensive computation (e.g. a large recursive range) or a processor-specific extension -- boolean-based blind injection remains the reliable, portable technique instead.'
+    pl: 'To dokładnie uczciwość którą ujawnia wariant ślepego wstrzyknięcia tego deep-dive: specyfikacja W3C XQuery nie ma natywnego prymitywu sleep, więc atakujący musi wrócić do celowo kosztownych obliczeń (np. duży rekurencyjny zakres) albo rozszerzenia specyficznego dla procesora -- ślepe wstrzyknięcie oparte na boolean pozostaje zamiast tego niezawodną, przenośną techniką.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A BaseX-backed service must look up a user by name from untrusted input. Which variant actually fixes the injection risk?
+    pl: Serwis oparty na BaseX musi wyszukać użytkownika po nazwie z niezaufanego wejścia. Który wariant faktycznie naprawia ryzyko wstrzyknięcia?
+  variants:
+  - id: v1
+    lang: java
+    code: '// strip only the literal substring "or" before concatenating
+
+      String clean = name.replace("or", "");
+
+      new XQuery("for $u in //user[name=''" + clean + "''] return $u").execute(context);'
+  - id: v2
+    lang: java
+    code: "try (QueryProcessor proc = new QueryProcessor(\n        \"declare variable $n external; //user[name=$n]\", context)) {\n  proc.bind(\"n\", name);\n  Value result = proc.value();\n}"
+  - id: v3
+    lang: java
+    code: '// only allow names shorter than 30 characters
+
+      if (name.length() > 30) throw new IllegalArgumentException();
+
+      new XQuery("for $u in //user[name=''" + name + "''] return $u").execute(context);'
+  correctVariantId: v2
+  explanation:
+    en: v2 declares $n as an external variable in the fixed query text and binds the untrusted value to it via QueryProcessor.bind() -- the value can never be parsed as query syntax regardless of its content. v1's substring blacklist targets one specific keyword and is trivially bypassed by any other tautology (' or '1'='1 doesn't even contain the word "or" written that way in every dialect, and case/whitespace tricks defeat it anyway); v3's length cap says nothing about content and ' or '1'='1 is well under 30 characters.
+    pl: v2 deklaruje $n jako zmienną zewnętrzną w stałym tekście zapytania i wiąże niezaufaną wartość z nią przez QueryProcessor.bind() -- wartość nigdy nie może zostać sparsowana jako składnia zapytania niezależnie od jej treści. Blacklista podciągu z v1 celuje w jedno konkretne słowo kluczowe i jest trywialnie omijana jakąkolwiek inną tautologią (' or '1'='1 nie zawsze nawet zawiera słowo "or" zapisane dokładnie tak w każdym dialekcie, a sztuczki wielkości liter/białych znaków i tak ją pokonują); limit długości z v3 nic nie mówi o treści, a ' or '1'='1 ma dobrze poniżej 30 znaków.
