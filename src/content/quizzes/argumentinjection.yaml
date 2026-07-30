@@ -1,0 +1,127 @@
+threatId: cat_1_research08
+title:
+  en: Argument Injection — knowledge check
+  pl: Argument Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: This Python code passes arguments as an array with shell=False (the default). Is it safe from argument injection?
+    pl: Ten kod w Pythonie przekazuje argumenty jako tablicę z shell=False (domyślne). Czy jest bezpieczny przed wstrzyknięciem argumentu?
+  snippet:
+    lang: python
+    code: subprocess.run(["git", "clone", url, dest])
+  isVulnerable: true
+  cwe: CWE-88
+  explanation:
+    en: No. Avoiding a shell string fully stops command injection, but git's own argument parser still runs on this clean array -- a url like "--upload-pack=touch /tmp/pwned" is parsed by git as a flag, not a positional URL, achieving RCE with zero shell metacharacters. This is the single most important teaching point in this deep-dive.
+    pl: Nie. Uniknięcie stringa powłoki w pełni zatrzymuje wstrzyknięcie polecenia, ale własny parser argumentów gita wciąż działa na tej czystej tablicy -- url jak "--upload-pack=touch /tmp/pwned" jest parsowany przez git jako flaga, nie pozycyjny URL, osiągając RCE bez ani jednego metaznaku powłoki. To pojedynczy najważniejszy punkt dydaktyczny tego deep-dive.
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: What is the core distinction between argument injection (CWE-88) and OS command injection (CWE-78)?
+    pl: Jaka jest podstawowa różnica między wstrzyknięciem argumentu (CWE-88) a wstrzyknięciem polecenia OS (CWE-78)?
+  choices:
+  - id: a
+    label:
+      en: Command injection breaks out to a shell using metacharacters (;, |, `); argument injection needs no shell at all -- attacker data is parsed as a flag by the target program's own option parser
+      pl: Wstrzyknięcie polecenia wyłamuje się do powłoki używając metaznaków (;, |, `); wstrzyknięcie argumentu w ogóle nie wymaga powłoki -- dane atakującego są parsowane jako flaga przez własny parser opcji programu docelowego
+  - id: b
+    label:
+      en: They are the same vulnerability with two different names
+      pl: To ta sama podatność pod dwiema różnymi nazwami
+  - id: c
+    label:
+      en: Argument injection only affects Windows, command injection only affects Linux
+      pl: Wstrzyknięcie argumentu dotyczy tylko Windows, wstrzyknięcie polecenia tylko Linux
+  correctChoiceIds:
+  - a
+  explanation:
+    en: This is why removing the shell (argv arrays, execve, ProcessBuilder) fully defeats command injection but does nothing against argument injection -- the target program's parser is a second, independent interpreter that runs regardless of whether a shell was ever involved.
+    pl: Dlatego usunięcie powłoki (tablice argv, execve, ProcessBuilder) w pełni pokonuje wstrzyknięcie polecenia, ale nic nie robi przeciw wstrzyknięciu argumentu -- parser programu docelowego to drugi, niezależny interpreter który działa niezależnie od tego czy powłoka kiedykolwiek była zaangażowana.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Why is CVE-2024-4577 (php-cgi on Windows) notable given that the same class of bug (CVE-2012-1823) was already patched in 2012?
+    pl: Dlaczego CVE-2024-4577 (php-cgi na Windows) jest istotny, skoro ta sama klasa błędu (CVE-2012-1823) była już załatana w 2012?
+  choices:
+  - id: a
+    label:
+      en: Windows' "Best-Fit" codepage mapping silently converts a Unicode soft hyphen (0xAD) to an ASCII hyphen after PHP's own escaping runs, resurrecting the identical -d argument injection on default XAMPP-on-Windows installs 12 years later
+      pl: Mapowanie stron kodowych Windows "Best-Fit" po cichu konwertuje unikodowy miękki łącznik (0xAD) na ASCII myślnik po tym jak zadziała własne escapowanie PHP, wskrzeszając identyczne wstrzyknięcie argumentu -d na domyślnych instalacjach XAMPP-na-Windows 12 lat później
+  - id: b
+    label:
+      en: It is an unrelated, brand-new vulnerability class with no connection to the 2012 bug
+      pl: To niepowiązana, zupełnie nowa klasa podatności bez związku z błędem z 2012
+  - id: c
+    label:
+      en: CVE-2012-1823 was never actually patched
+      pl: CVE-2012-1823 nigdy tak naprawdę nie zostało załatane
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is a concrete lesson for defense #2 in this deep-dive (reject leading-dash input): a naive dash check that only looks at the literal ASCII hyphen can be bypassed by any character the underlying OS/locale silently normalizes to a hyphen -- validation needs to happen after encoding normalization, not before.'
+    pl: 'To konkretna lekcja dla obrony #2 w tym deep-dive (odrzucaj wejście z myślnikiem na początku): naiwne sprawdzanie myślnika które patrzy tylko na dosłowny ASCII myślnik może być ominięte przez jakikolwiek znak który bazowy OS/locale po cichu normalizuje do myślnika -- walidacja musi nastąpić po normalizacji kodowania, nie przed.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A privileged nightly cron job runs `tar czf backup.tgz *` inside a directory that regular users can write files into. Is this exploitable, given that no shell metacharacters are involved in the tar command itself?
+    pl: Uprzywilejowane nocne zadanie cron uruchamia `tar czf backup.tgz *` wewnątrz katalogu do którego zwykli użytkownicy mogą zapisywać pliki. Czy to jest eksploatowalne, biorąc pod uwagę że w samym poleceniu tar nie ma żadnych metaznaków powłoki?
+  isVulnerable: true
+  cwe: CWE-88
+  explanation:
+    en: Yes. An attacker creates files literally named --checkpoint=1 and --checkpoint-action=exec=sh evil.sh in that writable directory. The shell's own wildcard (*) expansion hands those filenames to tar as argv elements, and tar -- following a real, documented feature -- executes the script as whichever user runs the cron job, often root.
+    pl: Tak. Atakujący tworzy pliki dosłownie nazwane --checkpoint=1 i --checkpoint-action=exec=sh evil.sh w tym zapisywalnym katalogu. Własna ekspansja wildcard (*) powłoki przekazuje te nazwy plików do tara jako elementy argv, a tar -- zgodnie z realną, udokumentowaną funkcją -- wykonuje skrypt jako ten użytkownik który uruchamia zadanie cron, często root.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: Per MITRE's CWE hierarchy, what is CWE-88's (Argument Injection) actual parent-child relationship with CWE-78 (OS Command Injection)?
+    pl: Zgodnie z hierarchią CWE MITRE, jaka jest faktyczna relacja rodzic-dziecko CWE-88 (Argument Injection) z CWE-78 (OS Command Injection)?
+  choices:
+  - id: a
+    label:
+      en: They are siblings -- both are ChildOf CWE-77 (Command Injection), not parent/child of each other, even though they are commonly chained in real exploits
+      pl: Są rodzeństwem -- oba są ChildOf CWE-77 (Command Injection), nie są wobec siebie rodzic/dziecko, mimo że są powszechnie łączone w rzeczywistych eksploitach
+  - id: b
+    label:
+      en: CWE-78 is the direct parent of CWE-88
+      pl: CWE-78 jest bezpośrednim rodzicem CWE-88
+  - id: c
+    label:
+      en: CWE-20 (Improper Input Validation) is the formal parent of both
+      pl: CWE-20 (Improper Input Validation) jest formalnym rodzicem obu
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes confirmed this identically against MITRE''s current CWE-88 page: the direct parent is CWE-77, with CWE-78 as a sibling weakness under the same parent -- correcting a common assumption that CWE-20 formally sits above CWE-88 in the hierarchy (CWE-20 is discussed only as a related root cause in CWE-88''s mitigation guidance, not listed as a ChildOf parent).'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze potwierdziły to identycznie względem aktualnej strony CWE-88 MITRE: bezpośredni rodzic to CWE-77, a CWE-78 to słabość-rodzeństwo pod tym samym rodzicem -- korygując częste założenie że CWE-20 formalnie znajduje się nad CWE-88 w hierarchii (CWE-20 jest omawiane tylko jako powiązana przyczyna źródłowa we wskazówkach mitygacji CWE-88, nie wymienione jako rodzic ChildOf).'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A Node.js service clones a user-supplied git repository URL. Which variant actually fixes the argument-injection risk?
+    pl: Serwis Node.js klonuje dostarczony przez użytkownika URL repozytorium git. Który wariant faktycznie naprawia ryzyko wstrzyknięcia argumentu?
+  variants:
+  - id: v1
+    lang: javascript
+    code: '// strip only the literal substring "upload-pack" before cloning
+
+      const clean = url.replace("upload-pack", "");
+
+      execFile("git", ["clone", clean, dest], cb);'
+  - id: v2
+    lang: javascript
+    code: 'if (url.startsWith("-")) throw new Error("invalid repository URL");
+
+      execFile("git", ["clone", "--", url, dest], cb);'
+  - id: v3
+    lang: javascript
+    code: '// only allow URLs shorter than 200 characters
+
+      if (url.length > 200) throw new Error("url too long");
+
+      execFile("git", ["clone", url, dest], cb);'
+  correctVariantId: v2
+  explanation:
+    en: v2 both rejects any value starting with a dash AND inserts a literal -- separator, so even an unanticipated flag name cannot be parsed as an option -- it must be treated as the positional URL. v1's substring blacklist targets one specific flag name and is trivially bypassed by any other option (--exec=, --config=alias...!cmd, or a hostname-based ssh://-oProxyCommand= payload); v3's length cap says nothing about content and --upload-pack=touch /tmp/pwned is well under 200 characters.
+    pl: v2 zarówno odrzuca każdą wartość zaczynającą się od myślnika JAK I wstawia dosłowny separator --, więc nawet nieprzewidziana nazwa flagi nie może być sparsowana jako opcja -- musi być potraktowana jako pozycyjny URL. Blacklista podciągu z v1 celuje w jedną konkretną nazwę flagi i jest trywialnie omijana przez jakąkolwiek inną opcję (--exec=, --config=alias...!cmd, albo ładunek oparty na hoście ssh://-oProxyCommand=); limit długości z v3 nic nie mówi o treści, a --upload-pack=touch /tmp/pwned ma dobrze poniżej 200 znaków.

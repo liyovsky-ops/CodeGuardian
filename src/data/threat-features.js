@@ -29,6 +29,7 @@ import yamlinjectionData from '../content/deepdives/yamlinjection.yaml';
 import htmlinjectionData from '../content/deepdives/htmlinjection.yaml';
 import cstiData from '../content/deepdives/csti.yaml';
 import elinjectionData from '../content/deepdives/elinjection.yaml';
+import argumentinjectionData from '../content/deepdives/argumentinjection.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -55,6 +56,7 @@ import yamlinjectionQuiz from '../content/quizzes/yamlinjection.yaml';
 import htmlinjectionQuiz from '../content/quizzes/htmlinjection.yaml';
 import cstiQuiz from '../content/quizzes/csti.yaml';
 import elinjectionQuiz from '../content/quizzes/elinjection.yaml';
+import argumentinjectionQuiz from '../content/quizzes/argumentinjection.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -83,6 +85,7 @@ export const DEEPDIVES = {
   '1.24': htmlinjectionData, // HTML Injection
   cat_1_research01: cstiData, // Client-Side Template Injection (CSTI)
   '1.16': elinjectionData, // Expression Language Injection (Java EL / Spring SpEL)
+  cat_1_research08: argumentinjectionData, // Argument Injection
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -114,4 +117,5 @@ export const QUIZZES = {
   '1.24': htmlinjectionQuiz,
   cat_1_research01: cstiQuiz,
   '1.16': elinjectionQuiz,
+  cat_1_research08: argumentinjectionQuiz,
 };

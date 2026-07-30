@@ -738,28 +738,25 @@ threats:
 
     '
 - id: cat_1_research08
-  name: Argument injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Argument injection" wskazane w analizie arena.
+  name: Argument Injection
+  severity: Critical
+  difficulty: Hard
+  confidence: POSSIBLE
+  cwe:
+  - CWE-88
+  desc: 'Wstrzyknięcie dodatkowych, nieoczekiwanych flag/argumentów do wywołania programu przez argv (bez powłoki) -- np. --upload-pack= w git albo --checkpoint-action=exec= w tar -- prowadzi do wykonania kodu mimo braku metaznaków powłoki.
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: Injection of extra, unexpected flags/arguments into a program invocation via argv (no shell involved) -- e.g. --upload-pack= in git or --checkpoint-action=exec= in tar -- leads to code execution despite no shell metacharacters being present.
+  lang: python
+  vuln: '# VULNERABLE -- no shell, but url can still be a flag
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
+    subprocess.run(["git", "clone", url, dest])
 
-    # Potrzebny dalszy research przed dodaniem przykładu
-
-    '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
-
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    # url = "--upload-pack=touch /tmp/pwned"  ->  RCE
 
     '
+  safe: "# SECURE -- reject leading dash AND insert \"--\" before positionals\nif url.startswith(\"-\"):\n    raise ValueError(\"refusing option-like URL\")\nsubprocess.run([\"git\", \"clone\", \"--\", url, dest])\n"
 - id: cat_1_research09
   name: Stored xss
   severity: Medium
