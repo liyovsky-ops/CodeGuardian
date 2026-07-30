@@ -1,0 +1,135 @@
+threatId: cat_1_research02
+title:
+  en: XSLT Injection — knowledge check
+  pl: XSLT Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive call XSLT injection the "SSTI of the XML world," with a higher severity ceiling than XXE?
+    pl: Dlaczego ten deep-dive nazywa wstrzyknięcie XSLT "SSTI świata XML", z wyższym sufitem powagi niż XXE?
+  choices:
+  - id: a
+    label:
+      en: XSLT is a full transformation language with vendor-specific extension mechanisms that bind stylesheet namespaces directly to host-runtime classes/functions -- reaching RCE with no gadget chain, where XXE tops out at file read/SSRF/DoS
+      pl: XSLT to pełny język transformacji z mechanizmami rozszerzeń specyficznymi dla dostawcy które wiążą przestrzenie nazw arkusza stylów bezpośrednio z klasami/funkcjami runtime hosta -- osiągając RCE bez łańcucha gadżetów, gdzie XXE osiąga sufit przy odczycie pliku/SSRF/DoS
+  - id: b
+    label:
+      en: XSLT and XXE are actually the exact same attack technique
+      pl: XSLT i XXE to w rzeczywistości dokładnie ta sama technika ataku
+  - id: c
+    label:
+      en: XSLT only affects client-side browsers, never servers
+      pl: XSLT dotyczy tylko przeglądarek po stronie klienta, nigdy serwerów
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Xalan''s http://xml.apache.org/xalan/java/java.lang.Runtime namespace is the clearest example: declaring it as a stylesheet namespace makes rt:getRuntime() and rt:exec(...) real, callable JVM methods. No deserialization gadget or memory-corruption bug is needed -- the extension mechanism was designed to do exactly this.'
+    pl: 'Przestrzeń nazw http://xml.apache.org/xalan/java/java.lang.Runtime Xalana to najjaśniejszy przykład: zadeklarowanie jej jako przestrzeni nazw arkusza stylów czyni rt:getRuntime() i rt:exec(...) prawdziwymi, wywoływalnymi metodami JVM. Nie jest potrzebny żaden gadżet deserializacji ani błąd uszkodzenia pamięci -- mechanizm rozszerzeń został zaprojektowany dokładnie po to.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: Does this Java code contain an XSLT injection vulnerability?
+    pl: Czy ten kod Java zawiera podatność wstrzyknięcia XSLT?
+  snippet:
+    lang: java
+    code: 'TransformerFactory tf = TransformerFactory.newInstance();
+
+      Transformer t = tf.newTransformer(new StreamSource(userStylesheet));
+
+      t.transform(xmlSource, result);'
+  isVulnerable: true
+  cwe: CWE-91
+  explanation:
+    en: Yes. TransformerFactory does not enable FEATURE_SECURE_PROCESSING by default, so extension functions and document() remain reachable to a user-supplied stylesheet -- this is exactly the root cause behind both the real Apache Wicket (CVE-2024-36522) and HtmlUnit (CVE-2023-49093) RCE incidents.
+    pl: Tak. TransformerFactory domyślnie nie włącza FEATURE_SECURE_PROCESSING, więc funkcje rozszerzeń i document() pozostają osiągalne dla dostarczonego przez użytkownika arkusza stylów -- to dokładnie przyczyna źródłowa stojąca za realnymi incydentami RCE Apache Wicket (CVE-2024-36522) i HtmlUnit (CVE-2023-49093).
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive use CWE-91 rather than CWE-1336 (the template-engine CWE used elsewhere in this knowledge base for Client-Side Template Injection)?
+    pl: Dlaczego ten deep-dive używa CWE-91 zamiast CWE-1336 (CWE silnika szablonów użyte gdzie indziej w tej bazie wiedzy dla Client-Side Template Injection)?
+  choices:
+  - id: a
+    label:
+      en: All three independent research passes checked MITRE's own enumerated example list for CWE-1336 and confirmed XSLT is never named there (only Twig, Jinja2, JSP, FreeMarker and similar), while NVD itself classified the real CVE-2022-22834 incident under CWE-91
+      pl: Wszystkie trzy niezależne przejścia badawcze sprawdziły własną listę wymienionych przykładów MITRE dla CWE-1336 i potwierdziły że XSLT nigdy nie jest tam wymienione (tylko Twig, Jinja2, JSP, FreeMarker i podobne), podczas gdy sam NVD sklasyfikował realny incydent CVE-2022-22834 pod CWE-91
+  - id: b
+    label:
+      en: CWE-1336 was withdrawn by MITRE and no longer exists
+      pl: CWE-1336 zostało wycofane przez MITRE i już nie istnieje
+  - id: c
+    label:
+      en: XSLT injection has nothing at all to do with XML, so no XML-family CWE applies
+      pl: Wstrzyknięcie XSLT nie ma w ogóle nic wspólnego z XML, więc żadne CWE z rodziny XML się nie stosuje
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is a clean corrective finding, not a judgment call: despite XSLT being conceptually template-like, checking MITRE''s actual CWE-1336 page directly (rather than assuming the analogy holds) shows XSLT is genuinely absent from its scope, while CWE-91 (shared with this knowledge base''s generic XML Injection deep-dive) is the mapping NVD actually used.'
+    pl: 'To czysta korygująca konkluzja, nie osąd: mimo że XSLT jest koncepcyjnie podobne do szablonu, sprawdzenie faktycznej strony CWE-1336 MITRE bezpośrednio (zamiast założenia że analogia się utrzymuje) pokazuje że XSLT jest naprawdę nieobecne w jego zakresie, podczas gdy CWE-91 (dzielone z deep-dive o generycznym XML Injection tej bazy wiedzy) to mapowanie którego faktycznie użył NVD.'
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: An attacker fingerprints an XSLT endpoint and gets system-property('xsl:vendor') = "Microsoft" back. Which extension mechanism should they try for RCE?
+    pl: Atakujący rozpoznaje endpoint XSLT i otrzymuje z powrotem system-property('xsl:vendor') = "Microsoft". Którego mechanizmu rozszerzeń powinien spróbować dla RCE?
+  choices:
+  - id: a
+    label:
+      en: An embedded <msxsl:script> block containing inline C#/VB, which only runs if the application loaded the stylesheet with XsltSettings.EnableScript or XsltSettings.TrustedXslt
+      pl: Osadzony blok <msxsl:script> zawierający inline C#/VB, który uruchamia się tylko jeśli aplikacja załadowała arkusz stylów z XsltSettings.EnableScript albo XsltSettings.TrustedXslt
+  - id: b
+    label:
+      en: The Xalan xmlns:rt="http://xml.apache.org/xalan/java/java.lang.Runtime" namespace binding
+      pl: Wiązanie przestrzeni nazw Xalan xmlns:rt="http://xml.apache.org/xalan/java/java.lang.Runtime"
+  - id: c
+    label:
+      en: PHP's php:function('system', ...) via registerPHPFunctions()
+      pl: php:function('system', ...) PHP przez registerPHPFunctions()
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Each vendor exposes a completely different extension mechanism, which is exactly why fingerprinting comes before escalation in the methodology: Xalan/Saxon use Java-class-binding namespaces, PHP uses php:function via registerPHPFunctions(), and .NET''s XslCompiledTransform uses embedded msxsl:script -- attempting the wrong one wastes the attempt entirely.'
+    pl: 'Każdy dostawca udostępnia zupełnie inny mechanizm rozszerzeń, dlatego dokładnie rozpoznanie poprzedza eskalację w metodyce: Xalan/Saxon używają przestrzeni nazw wiązania klas Java, PHP używa php:function przez registerPHPFunctions(), a XslCompiledTransform .NET używa osadzonego msxsl:script -- próba niewłaściwego całkowicie marnuje próbę.'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: A PHP application calls $proc->registerPHPFunctions() with no argument (no allowlist) before importing a stylesheet that a user can influence. Is a stylesheet using xmlns:php="http://php.net/xsl" and php:function('passthru','id') a genuine attack against this configuration?
+    pl: Aplikacja PHP wywołuje $proc->registerPHPFunctions() bez argumentu (bez allowlisty) przed zaimportowaniem arkusza stylów na który użytkownik może wpłynąć. Czy arkusz stylów używający xmlns:php="http://php.net/xsl" i php:function('passthru','id') jest prawdziwym atakiem na tę konfigurację?
+  isVulnerable: true
+  cwe: CWE-91
+  explanation:
+    en: Yes. registerPHPFunctions() called with no allowlist exposes every callable PHP function to the php:function() extension bridge -- passthru('id') runs a shell command directly, achieving RCE. The fix is to never call registerPHPFunctions() on a stylesheet that isn't fully trusted, or pass an explicit, tiny allowlist array if some function access is genuinely required.
+    pl: Tak. registerPHPFunctions() wywołane bez allowlisty wystawia każdą wywoływalną funkcję PHP mostkowi rozszerzeń php:function() -- passthru('id') uruchamia polecenie powłoki bezpośrednio, osiągając RCE. Naprawą jest nigdy nie wywoływać registerPHPFunctions() na arkuszu stylów który nie jest w pełni zaufany, albo przekazać jawną, małą tablicę allowlist jeśli dostęp do jakiejś funkcji jest naprawdę wymagany.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A .NET service transforms untrusted XML using a stylesheet parameter supplied by users. Which variant actually fixes the RCE/file-read risk?
+    pl: Serwis .NET transformuje niezaufany XML używając parametru arkusza stylów dostarczonego przez użytkowników. Który wariant faktycznie naprawia ryzyko RCE/odczytu pliku?
+  variants:
+  - id: v1
+    lang: csharp
+    code: '// strip only the literal substring "msxsl:script" before loading
+
+      var clean = userStylesheet.Replace("msxsl:script", "");
+
+      var xslt = new XslCompiledTransform();
+
+      xslt.Load(clean, XsltSettings.TrustedXslt, new XmlUrlResolver());'
+  - id: v2
+    lang: csharp
+    code: 'var xslt = new XslCompiledTransform();
+
+      xslt.Load(trustedServerStylesheet, XsltSettings.Default, null);'
+  - id: v3
+    lang: csharp
+    code: '// only allow stylesheets shorter than 2000 characters
+
+      if (userStylesheet.Length > 2000) throw new ArgumentException();
+
+      var xslt = new XslCompiledTransform();
+
+      xslt.Load(userStylesheet, XsltSettings.TrustedXslt, new XmlUrlResolver());'
+  correctVariantId: v2
+  explanation:
+    en: 'v2 does two things at once: it stops accepting a user-supplied stylesheet at all (using a fixed, server-owned one instead), and even if it had to load dynamic content, XsltSettings.Default disables both scripting and document() by default with a null resolver blocking external fetches. v1''s substring blacklist targets one specific tag and is trivially bypassed by whitespace/case tricks or an entirely different extension (document() file read, for instance); v3''s length cap says nothing about content and a working msxsl:script payload is well under 2000 characters.'
+    pl: 'v2 robi dwie rzeczy naraz: przestaje w ogóle akceptować dostarczony przez użytkownika arkusz stylów (używając zamiast tego stałego, należącego do serwera), a nawet gdyby musiał załadować dynamiczną treść, XsltSettings.Default domyślnie wyłącza zarówno skrypty jak i document() z null resolverem blokującym zewnętrzne pobrania. Blacklista podciągu z v1 celuje w jeden konkretny tag i jest trywialnie omijana sztuczkami białych znaków/wielkości liter albo zupełnie innym rozszerzeniem (odczyt pliku document(), na przykład); limit długości z v3 nic nie mówi o treści, a działający ładunek msxsl:script ma dobrze poniżej 2000 znaków.'

@@ -33,6 +33,7 @@ import argumentinjectionData from '../content/deepdives/argumentinjection.yaml';
 import evalinjectionData from '../content/deepdives/evalinjection.yaml';
 import httpparameterpollutionData from '../content/deepdives/httpparameterpollution.yaml';
 import xmlinjectionData from '../content/deepdives/xmlinjection.yaml';
+import xsltinjectionData from '../content/deepdives/xsltinjection.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -63,6 +64,7 @@ import argumentinjectionQuiz from '../content/quizzes/argumentinjection.yaml';
 import evalinjectionQuiz from '../content/quizzes/evalinjection.yaml';
 import httpparameterpollutionQuiz from '../content/quizzes/httpparameterpollution.yaml';
 import xmlinjectionQuiz from '../content/quizzes/xmlinjection.yaml';
+import xsltinjectionQuiz from '../content/quizzes/xsltinjection.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -95,6 +97,7 @@ export const DEEPDIVES = {
   '1.20': evalinjectionData, // Code Injection (merged with Eval Injection -- see 1.23's catalog note)
   '1.26': httpparameterpollutionData, // HTTP Parameter Pollution (merged with HTTP Parameter Injection -- see cat_1_research21's catalog note)
   '1.28': xmlinjectionData, // XML Injection (generic markup injection + XSW, distinct from XXE/XPath)
+  cat_1_research02: xsltinjectionData, // XSLT Injection (merged with XSL Injection -- see cat_1_research17's catalog note)
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -130,4 +133,5 @@ export const QUIZZES = {
   '1.20': evalinjectionQuiz,
   '1.26': httpparameterpollutionQuiz,
   '1.28': xmlinjectionQuiz,
+  cat_1_research02: xsltinjectionQuiz,
 };

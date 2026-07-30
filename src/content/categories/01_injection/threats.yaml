@@ -619,26 +619,23 @@ threats:
 
     '
 - id: cat_1_research02
-  name: Xslt injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xslt injection" wskazane w analizie arena.
+  name: XSLT Injection
+  severity: Critical
+  difficulty: Hard
+  confidence: POSSIBLE
+  cwe:
+  - CWE-91
+  desc: 'Kontrola atakującego nad arkuszem stylów XSLT stosowanym przez procesor server-side (Xalan/Saxon/libxslt/.NET) -- eskaluje przez document() do odczytu pliku/SSRF, a przez mechanizmy rozszerzeń specyficzne dla dostawcy (Xalan Java, PHP registerPHPFunctions, .NET msxsl:script) do pełnego RCE.
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: Attacker control over an XSLT stylesheet applied by a server-side processor (Xalan/Saxon/libxslt/.NET) -- escalates through document() to file read/SSRF, and through vendor-specific extension mechanisms (Xalan Java, PHP registerPHPFunctions, .NET msxsl:script) to full RCE.
+  lang: xml
+  vuln: "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"\n  xmlns:rt=\"http://xml.apache.org/xalan/java/java.lang.Runtime\"&gt;\n  <xsl:template match=\"/\">\n    <xsl:variable name=\"r\" select=\"rt:getRuntime()\"/>\n    <xsl:variable name=\"p\" select=\"rt:exec($r,'id')\"/>\n  </xsl:template>\n</xsl:stylesheet>\n"
+  safe: '// SECURE (Java) -- disable extension functions before transforming
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
+    tf.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
 
-    # Potrzebny dalszy research przed dodaniem przykładu
-
-    '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
-
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    tf.setAttribute("http://www.oracle.com/xml/jaxp/properties/enableExtensionFunctions", false);
 
     '
 - id: cat_1_research03
@@ -959,26 +956,21 @@ threats:
 
     '
 - id: cat_1_research17
-  name: Xsl injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Xsl injection" wskazane w analizie arena.
+  name: XSL Injection
+  severity: Critical
+  difficulty: Hard
+  confidence: POSSIBLE
+  cwe:
+  - CWE-91
+  desc: 'To samo zagrożenie co "XSLT Injection" (cat_1_research02) -- "XSL" i "XSLT" to ta sama technologia, wszystkie trzy niezależne badania potwierdziły że to nie osobna klasa. Pełny deep-dive i quiz dostępne pod kartą XSLT Injection.
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
-
-    # To zagrożenie pojawił się tylko u jednego modelu AI
-
-    # Potrzebny dalszy research przed dodaniem przykładu
+  desc_en: The same threat as "XSLT Injection" (cat_1_research02) -- "XSL" and "XSLT" are the same technology; all three independent research passes confirmed this is not a separate class. The full deep-dive and quiz live under the XSLT Injection card.
+  lang: xml
+  vuln: '<xsl:value-of select="php:function(''passthru'',''id'')" xmlns:php="http://php.net/xsl"/>
 
     '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
-
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+  safe: '// SECURE -- never call registerPHPFunctions() on an untrusted stylesheet
 
     '
 - id: cat_1_research18
