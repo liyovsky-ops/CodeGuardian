@@ -1,0 +1,121 @@
+threatId: '1.16'
+title:
+  en: Expression Language Injection (Java EL / Spring SpEL) — knowledge check
+  pl: Expression Language Injection (Java EL / Spring SpEL) — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why is CVE-2022-22965 ("Spring4Shell") deliberately NOT used as a headline example in this deep-dive about Expression Language Injection?
+    pl: Dlaczego CVE-2022-22965 ("Spring4Shell") celowo NIE jest użyty jako flagowy przykład w tym deep-dive o Expression Language Injection?
+  choices:
+  - id: a
+    label:
+      en: Its root cause is Spring MVC/WebFlux data binding to class.module.classLoader properties on JDK 9+ -- a data-binding/ClassLoader issue, not SpEL/EL string evaluation, despite being commonly miscategorized as such
+      pl: Jego przyczyna źródłowa to data binding Spring MVC/WebFlux do właściwości class.module.classLoader na JDK 9+ -- problem data-binding/ClassLoader, nie ewaluacja stringu SpEL/EL, mimo że jest powszechnie błędnie kategoryzowany jako taki
+  - id: b
+    label:
+      en: Spring4Shell was never a real vulnerability -- it was a hoax
+      pl: Spring4Shell nigdy nie było prawdziwą podatnością -- to był fałszywy alarm
+  - id: c
+    label:
+      en: It only affects a framework version so old that no one uses it anymore
+      pl: Dotyczy tylko tak starej wersji frameworka że nikt jej już nie używa
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes converged on this same correction: Spring''s own advisory describes CVE-2022-22965 as RCE "via data binding," requiring JDK 9+, Tomcat, and WAR deployment -- a completely different mechanism from parsing an attacker string as a SpEL/EL expression. Using it as a core EL-injection example would repeat a common, real miscategorization.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zbiegły się w tej samej korekcie: własne ogłoszenie Springa opisuje CVE-2022-22965 jako RCE "przez data binding," wymagające JDK 9+, Tomcat i wdrożenia WAR -- zupełnie inny mechanizm niż parsowanie stringu atakującego jako wyrażenia SpEL/EL. Użycie go jako podstawowego przykładu wstrzyknięcia EL powielałoby częstą, realną błędną kategoryzację.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: Does this Java code contain an Expression Language injection vulnerability?
+    pl: Czy ten kod w Javie zawiera podatność Expression Language injection?
+  snippet:
+    lang: java
+    code: 'Expression e = new SpelExpressionParser().parseExpression(request.getParameter("q"));
+
+      Object v = e.getValue(new StandardEvaluationContext());'
+  isVulnerable: true
+  cwe: CWE-917
+  explanation:
+    en: Yes. The attacker-controlled parameter q becomes the SpEL expression text itself, evaluated against a full StandardEvaluationContext -- which exposes T() type references, constructors, and static method calls. A payload like T(java.lang.Runtime).getRuntime().exec("id") achieves RCE directly.
+    pl: Tak. Kontrolowany przez atakującego parametr q staje się samym tekstem wyrażenia SpEL, ewaluowanym względem pełnego StandardEvaluationContext -- który udostępnia referencje typów T(), konstruktory i wywołania metod statycznych. Ładunek jak T(java.lang.Runtime).getRuntime().exec("id") osiąga RCE bezpośrednio.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: What does SimpleEvaluationContext concretely remove from SpEL that StandardEvaluationContext allows?
+    pl: Co konkretnie SimpleEvaluationContext usuwa z SpEL, co StandardEvaluationContext dopuszcza?
+  choices:
+  - id: a
+    label:
+      en: Java type references (T()), constructor invocation (new), and bean references (@bean) -- restricting evaluation to read-only or read-write data-binding on a supplied root object
+      pl: Referencje typów Java (T()), wywołanie konstruktora (new) i referencje bean (@bean) -- ograniczając ewaluację do wiązania danych tylko-do-odczytu lub odczytu-zapisu na dostarczonym obiekcie root
+  - id: b
+    label:
+      en: 'All arithmetic operators, so #{1+1} no longer works at all'
+      pl: 'Wszystkie operatory arytmetyczne, więc #{1+1} w ogóle już nie działa'
+  - id: c
+    label:
+      en: Nothing meaningful -- it is purely a performance optimization with no security effect
+      pl: Nic istotnego -- to czysto optymalizacja wydajności bez wpływu na bezpieczeństwo
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Every SpEL RCE gadget in this deep-dive (T(java.lang.Runtime), new ProcessBuilder(...), @bean method calls) depends on features StandardEvaluationContext exposes. SimpleEvaluationContext removes exactly those, which is why it ranks #2 in the defense list at ~92% effectiveness -- the single most important concrete Spring-specific control.'
+    pl: 'Każdy gadżet RCE SpEL w tym deep-dive (T(java.lang.Runtime), new ProcessBuilder(...), wywołania metod @bean) zależy od funkcji które udostępnia StandardEvaluationContext. SimpleEvaluationContext usuwa dokładnie te, dlatego zajmuje #2 miejsce na liście obron przy ~92% skuteczności -- pojedyncza najważniejsza konkretna kontrola specyficzna dla Springa.'
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: What is the single most reliable way to distinguish which expression engine (SpEL vs Java/Jakarta EL vs OGNL) is running behind a suspected injection point?
+    pl: Jaki jest najbardziej niezawodny sposób odróżnienia, który silnik wyrażeń (SpEL vs Java/Jakarta EL vs OGNL) działa za podejrzanym punktem wstrzyknięcia?
+  choices:
+  - id: a
+    label:
+      en: Error-message package prefixes -- org.springframework.expression.spel.* for SpEL, javax.el.*/jakarta.el.* for Java EL, ognl.* for OGNL -- combined with syntax tells like T() (SpEL-only) or @Class@method() (OGNL-only)
+      pl: Prefiksy pakietów w komunikatach błędów -- org.springframework.expression.spel.* dla SpEL, javax.el.*/jakarta.el.* dla Java EL, ognl.* dla OGNL -- w połączeniu ze wskazówkami składniowymi jak T() (tylko SpEL) albo @Class@method() (tylko OGNL)
+  - id: b
+    label:
+      en: All three engines produce byte-for-byte identical error messages, so they cannot be distinguished remotely
+      pl: Wszystkie trzy silniki produkują identyczne co do bajtu komunikaty błędów, więc nie da się ich odróżnić zdalnie
+  - id: c
+    label:
+      en: The HTTP response status code always differs between the three engines
+      pl: Kod statusu HTTP odpowiedzi zawsze różni się między tymi trzema silnikami
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This matters because each engine exposes a different gadget surface for the same underlying CWE-917 weakness: SpEL''s T()/new/@bean gadgets don''t exist in plain Java EL, which instead needs reflective forName/getMethod/invoke chains or the EL 3.0 ImportHandler; OGNL uses its own distinct @Class@method() syntax (covered in the separate OGNL deep-dive).'
+    pl: 'To ma znaczenie bo każdy silnik udostępnia inną powierzchnię gadżetów dla tej samej bazowej słabości CWE-917: gadżety T()/new/@bean SpEL nie istnieją w zwykłym Java EL, który zamiast tego potrzebuje łańcuchów refleksji forName/getMethod/invoke albo ImportHandler EL 3.0; OGNL używa własnej odrębnej składni @Class@method() (omówionej w osobnym deep-dive o OGNL).'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: 'A Spring app disables the Actuator gateway endpoint entirely (management.endpoint.gateway.enabled: false) but still runs an unpatched Spring Cloud Function version vulnerable to CVE-2022-22963. Is the app still exploitable via the routing-expression header?'
+    pl: 'Aplikacja Spring całkowicie wyłącza endpoint Actuator gateway (management.endpoint.gateway.enabled: false), ale wciąż działa na niezałatanej wersji Spring Cloud Function podatnej na CVE-2022-22963. Czy aplikacja jest wciąż eksploatowalna przez nagłówek routing-expression?'
+  isVulnerable: true
+  cwe: CWE-917
+  explanation:
+    en: Yes. CVE-2022-22963 (Spring Cloud Function) and CVE-2022-22947 (Spring Cloud Gateway) are two independent vulnerabilities in two different Spring Cloud components, sharing only the same unsafe-SpEL root cause -- disabling the Gateway Actuator endpoint closes CVE-2022-22947's specific entry point but has no effect on the separate routing-expression header sink in Spring Cloud Function, which needs its own patch (>=3.1.7/3.2.3).
+    pl: Tak. CVE-2022-22963 (Spring Cloud Function) i CVE-2022-22947 (Spring Cloud Gateway) to dwie niezależne podatności w dwóch różnych komponentach Spring Cloud, dzielące tylko tę samą przyczynę źródłową niebezpiecznego SpEL -- wyłączenie endpointu Actuator Gateway zamyka konkretny punkt wejścia CVE-2022-22947, ale nie ma wpływu na osobny sink nagłówka routing-expression w Spring Cloud Function, który potrzebuje własnej łatki (>=3.1.7/3.2.3).
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A Spring service must evaluate a small, dynamic user-supplied expression against a data object. Which variant actually fixes the RCE risk while preserving that functionality?
+    pl: Serwis Spring musi ewaluować mały, dynamiczny dostarczony przez użytkownika wyrażenie względem obiektu danych. Który wariant faktycznie naprawia ryzyko RCE zachowując tę funkcjonalność?
+  variants:
+  - id: v1
+    lang: java
+    code: "// strip only the literal substring \"Runtime\" before evaluating\nString clean = userInput.replace(\"Runtime\", \"\");\nObject v = new SpelExpressionParser().parseExpression(clean)\n    .getValue(new StandardEvaluationContext());"
+  - id: v2
+    lang: java
+    code: 'EvaluationContext ctx = SimpleEvaluationContext.forReadOnlyDataBinding().build();
+
+      Object v = new SpelExpressionParser().parseExpression(userInput).getValue(ctx, dataObject);'
+  - id: v3
+    lang: java
+    code: "// only allow expressions shorter than 50 characters\nif (userInput.length() > 50) throw new IllegalArgumentException();\nObject v = new SpelExpressionParser().parseExpression(userInput)\n    .getValue(new StandardEvaluationContext());"
+  correctVariantId: v2
+  explanation:
+    en: v2 uses SimpleEvaluationContext, which structurally removes T() type references, constructors, and bean references regardless of exact wording -- so even an unblocked expression cannot reach Runtime.exec() or any other Java class by any name. v1's substring blacklist is trivially bypassed by reflection (''.getClass().forName('java.lang.Run'+'time')) or any other gadget name; v3's length cap says nothing about content and T(java.lang.Runtime).getRuntime().exec('id') is well under 50 characters.
+    pl: v2 używa SimpleEvaluationContext, który strukturalnie usuwa referencje typów T(), konstruktory i referencje bean niezależnie od dokładnego brzmienia -- więc nawet niezablokowane wyrażenie nie może dosięgnąć Runtime.exec() ani żadnej innej klasy Java pod żadną nazwą. Blacklista podciągu z v1 jest trywialnie omijana refleksją (''.getClass().forName('java.lang.Run'+'time')) albo jakąkolwiek inną nazwą gadżetu; limit długości z v3 nic nie mówi o treści, a T(java.lang.Runtime).getRuntime().exec('id') ma dobrze poniżej 50 znaków.

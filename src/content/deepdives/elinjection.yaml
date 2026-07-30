@@ -1,0 +1,389 @@
+meta:
+  id: elinjection
+  threatId: '1.16'
+  severity: Critical
+  color: '#dc2626'
+  colorRgb: 220,38,38
+  cwe: CWE-917
+  cvss: '9.8'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'Expression Language '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: Expression Language Injection (Java EL / Spring SpEL)
+  lead:
+    en: 'The same weakness family as OGNL and Log4Shell''s JNDI lookup (CWE-917), but its own distinct technologies: Java''s Unified EL (javax.el/jakarta.el, used by JSP/JSF) and Spring''s SpEL. Both are safe when the expression is a fixed, developer-authored string and only the data varies -- and become RCE the moment attacker input becomes the expression text itself. Spring Cloud Function''s routing-expression header (CVE-2022-22963) and Spring Cloud Gateway''s actuator endpoint (CVE-2022-22947) are the two clean, unambiguous 2022 incidents; Spring4Shell (CVE-2022-22965) is deliberately NOT covered here as a core example, since all three research passes independently confirmed it is a data-binding/ClassLoader issue, not EL evaluation -- a common miscategorization this deep-dive corrects rather than repeats.'
+    pl: 'Ta sama rodzina słabości co OGNL i lookup JNDI Log4Shell (CWE-917), ale własne, odrębne technologie: ujednolicone EL Javy (javax.el/jakarta.el, używane przez JSP/JSF) i SpEL Springa. Oba są bezpieczne gdy wyrażenie jest stałym, autorstwa developera stringiem i zmieniają się tylko dane -- i stają się RCE w momencie gdy wejście atakującego staje się samym tekstem wyrażenia. Nagłówek routing-expression Spring Cloud Function (CVE-2022-22963) i endpoint actuator Spring Cloud Gateway (CVE-2022-22947) to dwa czyste, jednoznaczne incydenty z 2022 roku; Spring4Shell (CVE-2022-22965) celowo NIE jest tu omówiony jako podstawowy przykład, bo wszystkie trzy przejścia badawcze niezależnie potwierdziły że to problem data-binding/ClassLoader, nie ewaluacji EL -- częsta błędna kategoryzacja którą ten deep-dive koryguje zamiast powielać.'
+  metrics:
+  - k: CWE-917
+    v:
+      en: Weakness ID
+      pl: ID słabości
+  - k: '9.8'
+    v: CVSS · Critical
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '5'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: OWASP A03:2021
+    url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  - label: CWE-917 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/917.html
+  - label: Spring — CVE-2022-22963 advisory
+    url: https://spring.io/security/cve-2022-22963/
+  - label: Spring — CVE-2022-22947 advisory
+    url: https://spring.io/security/cve-2022-22947/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Five variants across Java EL and Spring SpEL. Deliberately excluded: Spring4Shell (CVE-2022-22965) -- all three independent research passes confirmed its root cause is Spring MVC/WebFlux data binding to class.module.classLoader properties on JDK 9+, not EL/SpEL string evaluation. It is mentioned once, explicitly, as the boundary case that shows why this distinction matters.'
+      pl: 'Pięć wariantów w Java EL i Spring SpEL. Celowo wykluczony: Spring4Shell (CVE-2022-22965) -- wszystkie trzy niezależne przejścia badawcze potwierdziły że jego przyczyna źródłowa to data binding Spring MVC/WebFlux do właściwości class.module.classLoader na JDK 9+, nie ewaluacja EL/SpEL. Wspomniany raz, jawnie, jako przypadek graniczny pokazujący dlaczego to rozróżnienie ma znaczenie.'
+    items:
+    - name: Spring SpEL RCE via unsafe SpelExpressionParser
+      sev: critical
+      description:
+        en: 'The generic anti-pattern underlying most SpEL CVEs: application code parses an attacker-controlled string as a SpEL expression and evaluates it against a full StandardEvaluationContext, which exposes Java type references, constructors, and static method calls.'
+        pl: 'Generyczny anty-wzorzec stojący za większością CVE SpEL: kod aplikacji parsuje kontrolowany przez atakującego string jako wyrażenie SpEL i ewaluuje je względem pełnego StandardEvaluationContext, który udostępnia referencje typów Java, konstruktory i wywołania metod statycznych.'
+      payload: T(java.lang.Runtime).getRuntime().exec('id')
+    - name: Spring Cloud Function routing-expression RCE (CVE-2022-22963)
+      sev: critical
+      description:
+        en: 'The cleanest, unambiguous SpEL-injection incident of 2022: the spring.cloud.function.routing-expression HTTP header was evaluated directly against a StandardEvaluationContext with no authentication required. CVSS 9.8, fixed in 3.1.7/3.2.3.'
+        pl: 'Najczystszy, jednoznaczny incydent wstrzyknięcia SpEL z 2022: nagłówek HTTP spring.cloud.function.routing-expression był ewaluowany bezpośrednio względem StandardEvaluationContext bez wymaganego uwierzytelnienia. CVSS 9.8, naprawione w 3.1.7/3.2.3.'
+      payload: 'spring.cloud.function.routing-expression: T(java.lang.Runtime).getRuntime().exec(new String[]{"/bin/sh","-c","id"})'
+    - name: Spring Cloud Gateway actuator SpEL RCE (CVE-2022-22947)
+      sev: critical
+      description:
+        en: An unauthenticated POST to the exposed Actuator endpoint /actuator/gateway/routes with a route filter containing a SpEL expression, evaluated the same way. CVSS reflects a scope-changed critical (10.0-class) vector since it crosses from the Actuator context into full RCE; fixed in 3.1.1/3.0.7.
+        pl: Nieuwierzytelniony POST do wystawionego endpointu Actuator /actuator/gateway/routes z filtrem trasy zawierającym wyrażenie SpEL, ewaluowane w ten sam sposób. CVSS odzwierciedla krytyczny wektor ze zmianą zakresu (klasa 10.0), bo przechodzi z kontekstu Actuator do pełnego RCE; naprawione w 3.1.1/3.0.7.
+      payload: POST /actuator/gateway/routes/new-route  {"filters":[{"name":"AddResponseHeader","args":{"name":"Result","value":"#{new String(T(org.springframework.util.StreamUtils).copyToByteArray(T(java.lang.Runtime).getRuntime().exec(\"id\").getInputStream()))}"}}], ...}
+    - name: JSF/JSP EL injection via reflected double-evaluation
+      sev: high
+      description:
+        en: 'Unescaped user input reaches a JSP/Facelets attribute that is itself EL-evaluated a second time, so a payload like ${...} executes even though the developer never intended to evaluate user text as an expression. Historical example: CVE-2011-2730 (Spring JSP tag double-evaluation, information disclosure).'
+        pl: 'Nieoescapowane wejście użytkownika trafia do atrybutu JSP/Facelets który sam jest ewaluowany po raz drugi jako EL, więc ładunek jak ${...} wykonuje się mimo że developer nigdy nie zamierzał ewaluować tekstu użytkownika jako wyrażenia. Historyczny przykład: CVE-2011-2730 (podwójna ewaluacja tagów JSP Springa, ujawnienie informacji).'
+      payload: ${''.getClass().forName('java.lang.Runtime').getMethod('exec',String.class).invoke(''.getClass().forName('java.lang.Runtime').getMethod('getRuntime').invoke(null),'id')}
+    - name: javax.el / JSF stack EL injection (CVE-2018-14667, RichFaces)
+      sev: critical
+      description:
+        en: Unauthenticated EL injection in JBoss RichFaces 3.x via org.ajax4jsf.resource.UserResource$UriData -- a real, marquee javax.el incident on the JSF stack, unlike the more famous but mechanistically-different Spring4Shell. CVSS 9.8, CISA KEV-listed as exploited in the wild.
+        pl: Nieuwierzytelnione wstrzyknięcie EL w JBoss RichFaces 3.x przez org.ajax4jsf.resource.UserResource$UriData -- realny, flagowy incydent javax.el na stosie JSF, w przeciwieństwie do bardziej znanego, ale mechanistycznie innego Spring4Shell. CVSS 9.8, wpisany do CISA KEV jako eksploatowany w praktyce.
+      payload: EL expression embedded in the UriData resource parameter, evaluated unauthenticated server-side (see CVE-2018-14667 analysis for the exact resource-mapping chain)
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The fix is identical in spirit to every other injection class: never let untrusted input become the code/expression being parsed. Spring''s SimpleEvaluationContext is the one concrete, EL-specific control worth knowing by name.'
+      pl: 'Naprawa jest w duchu identyczna jak w każdej innej klasie wstrzyknięć: nigdy nie pozwól by niezaufane wejście stało się parsowanym kodem/wyrażeniem. SimpleEvaluationContext Springa to jedna konkretna, specyficzna dla EL kontrola warta znajomości z nazwy.'
+    languages:
+    - label: Spring SpEL
+      lang: java
+      vulnerable: '// VULNERABLE -- attacker string IS the expression, full StandardEvaluationContext
+
+        Expression e = new SpelExpressionParser().parseExpression(userInput);
+
+        Object v = e.getValue(new StandardEvaluationContext());'
+      safe: '// SECURE -- SimpleEvaluationContext strips T(), new, and @bean references,
+
+        // restricting SpEL to a read-only data-binding subset
+
+        EvaluationContext ctx = SimpleEvaluationContext.forReadOnlyDataBinding().build();
+
+        Object v = new SpelExpressionParser().parseExpression(userInput).getValue(ctx);
+
+        // Best: don''t parse user input as SpEL at all -- map choices to a fixed allowlist'
+    - label: Java EL (javax.el / jakarta.el)
+      lang: java
+      vulnerable: '// VULNERABLE -- user string parsed and evaluated as EL
+
+        ELProcessor elp = new ELProcessor();
+
+        String result = String.valueOf(elp.eval(request.getParameter("expr")));'
+      safe: '// SECURE -- never evaluate untrusted input as EL; treat it as data
+
+        String field = request.getParameter("sort");
+
+        String column = ALLOWED_COLUMNS.contains(field) ? field : "id"; // fixed allowlist, no eval'
+    - label: JSP / JSTL (output escaping)
+      lang: jsp
+      vulnerable: '<!-- VULNERABLE: attribute value gets EL-evaluated a second time -->
+
+        <h:outputText value="Hello ${param.name}"/>   <!-- name = ${7*7} executes -->'
+      safe: '<!-- SECURE: c:out escapes and does not re-evaluate the value as EL -->
+
+        <c:out value="${param.name}"/>'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: Fingerprinting the exact EL engine matters more here than in most injection classes, since SpEL, Java EL, and OGNL each expose a different gadget surface for the same underlying weakness.
+      pl: Rozpoznanie dokładnego silnika EL ma tu większe znaczenie niż w większości klas wstrzyknięć, bo SpEL, Java EL i OGNL każdy udostępnia inną powierzchnię gadżetów dla tej samej bazowej słabości.
+    steps:
+    - title:
+        en: Probe for evaluation with arithmetic payloads
+        pl: Sonduj ewaluację ładunkami arytmetycznymi
+      description:
+        en: 'Inject ${7*7}, #{7*7}. A rendered 49 confirms server-side EL evaluation rather than literal reflection.'
+        pl: 'Wstrzyknij ${7*7}, #{7*7}. Wyrenderowane 49 potwierdza ewaluację EL po stronie serwera zamiast dosłownego odbicia.'
+    - title:
+        en: Fingerprint the exact engine via syntax and error messages
+        pl: Rozpoznaj dokładny silnik przez składnię i komunikaty błędów
+      description:
+        en: SpEL accepts T(...) type references and throws org.springframework.expression.spel.* exceptions; Java/Jakarta EL has no T() and throws javax.el.*/jakarta.el.* ELException; OGNL uses @Class@method() syntax and throws ognl.*. Error-message package prefixes are the most reliable discriminator.
+        pl: SpEL akceptuje referencje typów T(...) i rzuca wyjątki org.springframework.expression.spel.*; Java/Jakarta EL nie ma T() i rzuca javax.el.*/jakarta.el.* ELException; OGNL używa składni @Class@method() i rzuca ognl.*. Prefiksy pakietów w komunikatach błędów są najbardziej niezawodnym rozróżnieniem.
+    - title:
+        en: Escalate to RCE with the engine-specific gadget
+        pl: Eskaluj do RCE gadżetem specyficznym dla silnika
+      description:
+        en: 'SpEL: T(java.lang.Runtime).getRuntime().exec(...) or new ProcessBuilder(...).start(). Java EL: reflective forName/getMethod/invoke chains, or the ImportHandler (EL 3.0+) to import a class directly.'
+        pl: 'SpEL: T(java.lang.Runtime).getRuntime().exec(...) albo new ProcessBuilder(...).start(). Java EL: łańcuchy refleksji forName/getMethod/invoke, albo ImportHandler (EL 3.0+) by bezpośrednio zaimportować klasę.'
+    - title:
+        en: Retrieve command output through the response
+        pl: Odzyskaj wyjście polecenia przez odpowiedź
+      description:
+        en: Wrap the exec() call output with a stream-reading helper (e.g. StreamUtils.copyToByteArray) and interpolate the result back into a response header or body, since the raw Process object alone gives no visible output.
+        pl: Owiń wyjście wywołania exec() pomocnikiem do odczytu strumienia (np. StreamUtils.copyToByteArray) i wstaw wynik z powrotem do nagłówka lub ciała odpowiedzi, bo sam surowy obiekt Process nie daje żadnego widocznego wyjścia.
+    - title:
+        en: Bypass naive filters via concatenation or reflection
+        pl: Omiń naiwne filtry przez konkatenację lub refleksję
+      description:
+        en: Split flagged keywords across string concatenation ('Ru'+'ntime'), or route through reflection/forName instead of a literal class name. This defeats signature-based WAFs but not a properly restricted SimpleEvaluationContext, which removes the T()/new/bean gadgets structurally.
+        pl: Podziel oflagowane słowa kluczowe przez konkatenację stringów ('Ru'+'ntime'), albo przejdź przez refleksję/forName zamiast dosłownej nazwy klasy. To pokonuje WAF-y oparte na sygnaturach, ale nie właściwie ograniczony SimpleEvaluationContext, który strukturalnie usuwa gadżety T()/new/bean.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'SimpleEvaluationContext is the single most important concrete Spring-specific control: it structurally removes the type-reference, constructor, and bean-reference gadgets that every SpEL RCE payload relies on.'
+      pl: 'SimpleEvaluationContext to pojedyncza najważniejsza konkretna kontrola specyficzna dla Springa: strukturalnie usuwa gadżety referencji typu, konstruktora i referencji bean, na których polega każdy ładunek RCE SpEL.'
+    items:
+    - rank: 1
+      eff: 99
+      kind: primary
+      label:
+        en: Never evaluate untrusted input as an EL/SpEL expression
+        pl: Nigdy nie ewaluuj niezaufanego wejścia jako wyrażenia EL/SpEL
+      note:
+        en: Map user choices to a fixed, developer-authored allowlist of expressions instead of building or parsing expression strings from input. The only complete architectural fix.
+        pl: Mapuj wybory użytkownika na stałą, autorstwa developera allowlistę wyrażeń zamiast budować lub parsować stringi wyrażeń z wejścia. Jedyna kompletna naprawa architektoniczna.
+    - rank: 2
+      eff: 92
+      kind: primary
+      label:
+        en: 'Spring: use SimpleEvaluationContext, never StandardEvaluationContext, on untrusted input'
+        pl: 'Spring: używaj SimpleEvaluationContext, nigdy StandardEvaluationContext, na niezaufanym wejściu'
+      note:
+        en: SimpleEvaluationContext structurally excludes Java type references (T()), constructor invocation (new), and bean references (@bean), restricting SpEL to read-only or read-write data-binding on a supplied root object. StandardEvaluationContext exposes the full language that every RCE gadget above depends on.
+        pl: SimpleEvaluationContext strukturalnie wyklucza referencje typów Java (T()), wywołanie konstruktora (new) i referencje bean (@bean), ograniczając SpEL do wiązania danych tylko-do-odczytu lub odczytu-zapisu na dostarczonym obiekcie root. StandardEvaluationContext udostępnia pełny język od którego zależy każdy powyższy gadżet RCE.
+    - rank: 3
+      eff: 90
+      kind: strong
+      label:
+        en: Patch to fixed versions for known CVEs
+        pl: Aktualizacja do wersji z łatką dla znanych CVE
+      note:
+        en: Spring Cloud Function >=3.1.7/3.2.3, Spring Cloud Gateway >=3.1.1/3.0.7, RichFaces migrated off entirely (EOL). Closes the specific known incident but does 0% against novel unsafe SpEL/EL usage written in-house.
+        pl: Spring Cloud Function >=3.1.7/3.2.3, Spring Cloud Gateway >=3.1.1/3.0.7, RichFaces całkowicie zmigrowane (EOL). Zamyka konkretny znany incydent, ale robi 0% przeciw nowemu niebezpiecznemu użyciu SpEL/EL napisanemu wewnętrznie.
+    - rank: 4
+      eff: 80
+      kind: strong
+      label:
+        en: Lock down or disable exposed Actuator endpoints
+        pl: Zablokuj lub wyłącz wystawione endpointy Actuator
+      note:
+        en: 'management.endpoint.gateway.enabled: false (or equivalent authentication) closes the specific attack surface CVE-2022-22947 used, independent of the underlying SpEL patch.'
+        pl: 'management.endpoint.gateway.enabled: false (lub równoważne uwierzytelnienie) zamyka konkretną powierzchnię ataku którą wykorzystał CVE-2022-22947, niezależnie od bazowej łatki SpEL.'
+    - rank: 5
+      eff: 25
+      kind: weak
+      label:
+        en: WAF / signature-based filtering
+        pl: WAF / filtrowanie oparte na sygnaturach
+      note:
+        en: Catches naive literal payloads like T(java.lang.Runtime) but is routinely defeated by string concatenation, reflection, or Unicode tricks. Detection/defense-in-depth only, never a substitute for SimpleEvaluationContext.
+        pl: Wyłapuje naiwne dosłowne ładunki jak T(java.lang.Runtime), ale jest rutynowo pokonywane przez konkatenację stringów, refleksję lub sztuczki Unicode. Tylko detekcja/obrona w głąb, nigdy zamiennik SimpleEvaluationContext.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Two clean, unambiguous 2022 Spring Cloud SpEL RCEs and one CISA KEV-listed javax.el/JSF incident -- deliberately not Spring4Shell, which all three research passes confirmed is a different mechanism entirely.
+      pl: Dwa czyste, jednoznaczne RCE SpEL Spring Cloud z 2022 i jeden wpisany do CISA KEV incydent javax.el/JSF -- celowo nie Spring4Shell, co do którego wszystkie trzy przejścia badawcze potwierdziły zupełnie inny mechanizm.
+    items:
+    - org: Spring Cloud Function
+      year: 2022
+      impact: CVE-2022-22963, CVSS 9.8
+      cost: Unauthenticated RCE via HTTP header, actively exploited
+      description:
+        en: 'Disclosed 29 March 2022: the spring.cloud.function.routing-expression HTTP header was evaluated directly as SpEL against a full StandardEvaluationContext with no authentication. Affected <=3.1.6 and 3.2.0-3.2.2, fixed 3.1.7/3.2.3. The cleanest, most unambiguous SpEL-injection incident in this deep-dive.'
+        pl: 'Ujawnione 29 marca 2022: nagłówek HTTP spring.cloud.function.routing-expression był ewaluowany bezpośrednio jako SpEL względem pełnego StandardEvaluationContext bez uwierzytelnienia. Dotyczyło <=3.1.6 i 3.2.0-3.2.2, naprawione w 3.1.7/3.2.3. Najczystszy, najbardziej jednoznaczny incydent wstrzyknięcia SpEL w tym deep-dive.'
+    - org: Spring Cloud Gateway
+      year: 2022
+      impact: CVE-2022-22947, CVSS critical (scope-changed vector)
+      cost: Unauthenticated RCE via exposed Actuator endpoint
+      description:
+        en: An unauthenticated POST to /actuator/gateway/routes with a route filter containing a SpEL expression achieved RCE the same way as CVE-2022-22963 -- confirming the routing-expression pattern was not an isolated mistake but a recurring unsafe-SpEL habit across the Spring Cloud family that same month. Fixed in 3.1.1/3.0.7.
+        pl: Nieuwierzytelniony POST do /actuator/gateway/routes z filtrem trasy zawierającym wyrażenie SpEL osiągnął RCE tym samym sposobem co CVE-2022-22963 -- potwierdzając że wzorzec routing-expression nie był odizolowaną pomyłką, tylko powracającym nawykiem niebezpiecznego SpEL w całej rodzinie Spring Cloud tego samego miesiąca. Naprawione w 3.1.1/3.0.7.
+    - org: JBoss RichFaces
+      year: 2018
+      impact: CVE-2018-14667, CVSS 9.8, CISA KEV-listed
+      cost: Unauthenticated RCE via javax.el injection, confirmed exploited in the wild
+      description:
+        en: EL injection via org.ajax4jsf.resource.UserResource$UriData in RichFaces 3.x -- a real, marquee javax.el/JSF-stack incident, added to CISA's Known Exploited Vulnerabilities catalog in 2023 confirming active exploitation. RichFaces 3.x is end-of-life; the only real fix is migration.
+        pl: Wstrzyknięcie EL przez org.ajax4jsf.resource.UserResource$UriData w RichFaces 3.x -- realny, flagowy incydent javax.el/stosu JSF, dodany do katalogu CISA Known Exploited Vulnerabilities w 2023 potwierdzając aktywną eksploatację. RichFaces 3.x jest w końcu wsparcia; jedyną prawdziwą naprawą jest migracja.
+    inlineSources:
+    - label: Spring — CVE-2022-22963 advisory
+      url: https://spring.io/security/cve-2022-22963/
+    - label: Spring — CVE-2022-22947 advisory
+      url: https://spring.io/security/cve-2022-22947/
+    - label: CVE-2018-14667 RichFaces EL Injection RCE analysis
+      url: https://github.com/Cryin/Paper/blob/master/CVE-2018-14667%20-%20JBoss%20RichFaces%20EL%20Injection%20RCE%20Analysis.md
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Mainstream SAST tools carry dedicated EL/SpEL injection rules by name; Burp Suite detects it live but PortSwigger Web Security Academy has no hands-on lab for this specific class (confirmed by all three research passes).
+      pl: Główne narzędzia SAST mają dedykowane reguły wstrzyknięcia EL/SpEL po nazwie; Burp Suite wykrywa to na żywo, ale Web Security Academy PortSwigger nie ma praktycznego laboratorium dla tej konkretnej klasy (potwierdzone przez wszystkie trzy przejścia badawcze).
+    sast:
+    - - Semgrep
+      - Community Java rules flag SpelExpressionParser.parseExpression/parseRaw called on tainted data and recommend SimpleEvaluationContext
+    - - CodeQL
+      - Dedicated java/spel-expression-injection query (security-severity 9.3) plus Jakarta EL sink modeling for ELProcessor/ValueExpression/MethodExpression
+    - - Find Security Bugs (SpotBugs plugin)
+      - SPEL_INJECTION and related EL-injection detectors for Java bytecode
+    - - Fortify SCA
+      - 'Dedicated "Expression Language Injection: Spring" dataflow category'
+    dast:
+    - - Burp Suite Scanner
+      - Built-in "Expression Language injection" issue (KB 00100f20) actively probes with arithmetic payloads
+    - - OWASP ZAP
+      - Alert 90025 "Expression Language Injection"
+    - - Manual fingerprinting
+      - ${7*7}/#{7*7} probes plus error-message package prefixes (spel/javax.el/jakarta.el/ognl) to pin the exact engine before escalating
+    note:
+      en: <strong>Key signal:</strong> grep for SpelExpressionParser/ELProcessor.eval calls where the parsed string traces back to any HTTP-derived input (headers, params, route/filter config) -- this is a small, greppable set of sinks compared to most injection classes, since only a handful of Spring/JSF APIs actually parse expression text.
+      pl: <strong>Kluczowy sygnał:</strong> szukaj wywołań SpelExpressionParser/ELProcessor.eval gdzie sparsowany string sięga do jakiegokolwiek wejścia pochodzącego z HTTP (nagłówki, parametry, konfiguracja trasy/filtra) -- to mały, łatwy do wyszukania zbiór sinków w porównaniu do większości klas wstrzyknięć, bo tylko garstka API Spring/JSF faktycznie parsuje tekst wyrażenia.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: CWE-917's exact parent weakness genuinely differs between MITRE's Research Concepts view and the popular belief that CWE-94 is the parent -- documented here per 2/3 research consensus rather than silently picking a side.
+      pl: Dokładny rodzic słabości CWE-917 naprawdę różni się między widokiem Research Concepts MITRE a popularnym przekonaniem że CWE-94 jest rodzicem -- udokumentowane tu wg konsensusu 2/3 badań zamiast po cichu wybrać stronę.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-917 — Improper Neutralization of Special Elements used in an Expression Language Statement (primary, correct for both javax.el/jakarta.el and Spring SpEL)
+      - CWE-917's parent, per MITRE's current Research Concepts view, is CWE-77 (Command Injection), sitting under the CWE-74 Injection pillar -- CWE-94 (Code Injection) is a sibling weakness under that same pillar, not the parent, despite being the commonly-repeated (and here, corrected) belief
+      - CWE-94 — Code Injection (related sibling; the correct mapping for Spring4Shell/CVE-2022-22965's data-binding root cause, deliberately NOT this deep-dive's primary CWE)
+    - std: OWASP
+      items:
+      - A03:2021 — Injection
+    inlineSources:
+    - label: CWE-917 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/917.html
+    - label: CWE-77 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/77.html
+    - label: CWE-94 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/94.html
+    - label: OWASP A03:2021
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active EL/SpEL exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji EL/SpEL, przejdź tę listę od góry.
+    steps:
+    - en: Treat the host as fully compromised if RCE is confirmed -- rotate all credentials/secrets reachable from that process
+      pl: Traktuj hosta jako w pełni skompromitowanego jeśli RCE jest potwierdzone -- zrotuj wszystkie poświadczenia/sekrety osiągalne z tego procesu
+    - en: Identify the exact engine (SpEL vs Java EL vs OGNL) from error messages or the affected component, since the fix and CVE lineage differ per engine
+      pl: Zidentyfikuj dokładny silnik (SpEL vs Java EL vs OGNL) z komunikatów błędów lub dotkniętego komponentu, bo naprawa i historia CVE różnią się dla każdego silnika
+    - en: Grep the codebase for every SpelExpressionParser/ELProcessor call site where the parsed string traces to HTTP input, not just the one exploited -- this is rarely a single-instance bug
+      pl: Przeszukaj kod pod kątem każdego miejsca wywołania SpelExpressionParser/ELProcessor gdzie sparsowany string sięga do wejścia HTTP, nie tylko tego które zostało wykorzystane -- to rzadko jest błąd jednorazowy
+    - en: Switch every unavoidable dynamic-evaluation call site to SimpleEvaluationContext and patch to the fixed library version
+      pl: Przełącz każde nieuniknione miejsce dynamicznej ewaluacji na SimpleEvaluationContext i zaktualizuj do wersji biblioteki z łatką
+    - en: Audit and lock down exposed Actuator/management endpoints regardless of whether CVE-2022-22947 specifically was the entry point
+      pl: Przeaudytuj i zablokuj wystawione endpointy Actuator/management niezależnie od tego czy konkretnie CVE-2022-22947 był punktem wejścia
+    - en: Check outbound connection and process-execution logs for unexpected exec()/ProcessBuilder activity originating from the application process
+      pl: Sprawdź logi połączeń wychodzących i wykonania procesów pod kątem nieoczekiwanej aktywności exec()/ProcessBuilder pochodzącej z procesu aplikacji
+    - en: Notify per applicable data-breach obligations if data was exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli dane zostały eksfiltrowane
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: CWE-917 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/917.html
+    - label: CWE-77 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/77.html
+    - label: CWE-94 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/94.html
+    - label: Spring — CVE-2022-22963 advisory
+      url: https://spring.io/security/cve-2022-22963/
+    - label: Spring — CVE-2022-22947 advisory
+      url: https://spring.io/security/cve-2022-22947/
+    - label: Spring — CVE-2022-22965 advisory (Spring4Shell, excluded from scope, referenced for contrast)
+      url: https://spring.io/security/cve-2022-22965/
+    - label: CVE-2018-14667 RichFaces EL Injection RCE analysis
+      url: https://github.com/Cryin/Paper/blob/master/CVE-2018-14667%20-%20JBoss%20RichFaces%20EL%20Injection%20RCE%20Analysis.md
+    - label: Spring SimpleEvaluationContext javadoc
+      url: https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/expression/spel/support/SimpleEvaluationContext.html
+    - label: PortSwigger KB — Expression Language injection issue
+      url: https://portswigger.net/kb/issues/00100f20_expression-language-injection
