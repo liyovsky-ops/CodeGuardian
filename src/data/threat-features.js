@@ -41,6 +41,7 @@ import svginjectionData from '../content/deepdives/svginjection.yaml';
 import regexinjectionData from '../content/deepdives/regexinjection.yaml';
 import perlopeninjectionData from '../content/deepdives/perlopeninjection.yaml';
 import nullbyteinjectionData from '../content/deepdives/nullbyteinjection.yaml';
+import sparqlinjectionData from '../content/deepdives/sparqlinjection.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -79,6 +80,7 @@ import svginjectionQuiz from '../content/quizzes/svginjection.yaml';
 import regexinjectionQuiz from '../content/quizzes/regexinjection.yaml';
 import perlopeninjectionQuiz from '../content/quizzes/perlopeninjection.yaml';
 import nullbyteinjectionQuiz from '../content/quizzes/nullbyteinjection.yaml';
+import sparqlinjectionQuiz from '../content/quizzes/sparqlinjection.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -119,6 +121,7 @@ export const DEEPDIVES = {
   cat_1_research16: regexinjectionData, // Regex Injection / ReDoS
   cat_1_research22: perlopeninjectionData, // Perl open() Injection
   cat_1_research25: nullbyteinjectionData, // Null Byte Injection
+  cat_1_research27: sparqlinjectionData, // SPARQL Injection
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -162,4 +165,5 @@ export const QUIZZES = {
   cat_1_research16: regexinjectionQuiz,
   cat_1_research22: perlopeninjectionQuiz,
   cat_1_research25: nullbyteinjectionQuiz,
+  cat_1_research27: sparqlinjectionQuiz,
 };

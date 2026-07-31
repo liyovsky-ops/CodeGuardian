@@ -1197,26 +1197,31 @@ threats:
 
     '
 - id: cat_1_research27
-  name: Sparql injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Sparql injection" wskazane w analizie arena.
+  name: SPARQL Injection
+  severity: Critical
+  difficulty: Medium
+  confidence: POSSIBLE
+  cwe:
+  - CWE-943
+  desc: 'Semantyczno-webowy odpowiednik SQL injection: aplikacja skleja stringiem nieufne wejście do zapytania SPARQL zamiast związać je jako parametr, pozwalając atakującemu wstrzyknąć UNION/FILTER/wzorce trójki i czytać dane z grafów nazwanych których zapytanie nie miało ujawniać. SERVICE (zapytania federacyjne) dodaje powierzchnię podobną do SSRF. Publiczny rejestr CVE dla tej klasy jest szczupły -- najbardziej cytowane CVE "SPARQL Injection" (CVE-2019-6986) jest oficjalnie klasyfikowane jako ReDoS, nie eksfiltracja danych.
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: 'The semantic-web analogue of SQL injection: an application string-concatenates untrusted input into a SPARQL query instead of binding it as a parameter, letting an attacker inject UNION/FILTER/triple patterns and read data across named graphs the query was never meant to expose. SERVICE (federated queries) adds an SSRF-like surface. The public CVE record for this class is thin -- the most-cited "SPARQL Injection" CVE (CVE-2019-6986) is officially classified as a ReDoS, not data exfiltration.'
+  lang: java
+  vuln: 'String name = request.getParameter("name");
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
+    String q = "SELECT ?b WHERE { ?p foaf:name \"" + name + "\" . ?p ex:building ?b . }";
 
-    # Potrzebny dalszy research przed dodaniem przykładu
+    Query query = QueryFactory.create(q);   // injectable string concat
 
     '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
+  safe: 'ParameterizedSparqlString pss = new ParameterizedSparqlString();
 
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    pss.setCommandText("SELECT ?b WHERE { ?p foaf:name ?name . ?p ex:building ?b . }");
+
+    pss.setLiteral("name", request.getParameter("name"));  // SPARQL-aware escaping
+
+    Query query = QueryFactory.create(pss.asQuery());
 
     '
 - id: cat_1_research28

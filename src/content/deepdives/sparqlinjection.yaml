@@ -1,0 +1,372 @@
+meta:
+  id: sparqlinjection
+  threatId: cat_1_research27
+  severity: Critical
+  color: '#0c4a6e'
+  colorRgb: 12,74,110
+  cwe: CWE-943
+  cvss: '9.8'
+  standard: OWASP A03:2021 (via CWE-74 family)
+hero:
+  titleMain: 'SPARQL '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: SPARQL Injection (RDF Triple Store / Semantic Web Query Injection)
+  lead:
+    en: 'The semantic-web analogue of SQL injection: when an application string-concatenates untrusted input into a SPARQL query instead of binding it as a parameter, an attacker can break out of a literal or IRI position and inject triple patterns, FILTER, UNION, or OPTIONAL clauses -- widening a graph-pattern match to read data across named graphs the query was never meant to expose. All three independent research passes converged on an honest finding worth stating plainly: the public CVE record for textbook SPARQL injection is genuinely thin, and the single most-cited "SPARQL Injection"-titled CVE is officially classified by NVD as a denial-of-service, not data exfiltration -- a reminder that a vulnerability''s name and its official classification can diverge.'
+    pl: 'Semantyczno-webowy odpowiednik wstrzyknięcia SQL: gdy aplikacja skleja stringiem nieufne wejście do zapytania SPARQL zamiast związać je jako parametr, atakujący może wyłamać się z pozycji literału albo IRI i wstrzyknąć wzorce trójki, klauzule FILTER, UNION, albo OPTIONAL -- rozszerzając dopasowanie wzorca grafu by odczytać dane z grafów nazwanych których zapytanie nigdy nie miało ujawniać. Wszystkie trzy niezależne przejścia badawcze zbiegły się na uczciwym ustaleniu wartym jasnego stwierdzenia: publiczny rejestr CVE dla podręcznikowego wstrzyknięcia SPARQL jest naprawdę szczupły, a jedyne najczęściej cytowane CVE zatytułowane "SPARQL Injection" jest oficjalnie sklasyfikowane przez NVD jako denial-of-service, nie eksfiltracja danych -- przypomnienie że nazwa podatności i jej oficjalna klasyfikacja mogą się rozjeżdżać.'
+  metrics:
+  - k: CWE-943
+    v:
+      en: Weakness ID (query-logic family)
+      pl: ID słabości (rodzina logiki zapytań)
+  - k: '9.8'
+    v: CVSS · Critical (CVE-2012-5872, ARC2 -- blind SQLi via SPARQL comments)
+  - k: A03:2021
+    v:
+      en: OWASP Top 10 (via injection family)
+      pl: OWASP Top 10 (przez rodzinę injection)
+  - k: SERVICE
+    v:
+      en: Federated query -- SSRF-like surface
+      pl: Zapytanie federacyjne -- powierzchnia podobna do SSRF
+  sources:
+  - label: CWE-943 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/943.html
+  - label: W3C SPARQL 1.1 Federated Query
+    url: https://www.w3.org/TR/sparql11-federated-query/
+  - label: Apache Jena — ParameterizedSparqlString
+    url: https://jena.apache.org/documentation/query/parameterized-sparql-strings.html
+  - label: CVE-2019-6986 (NVD)
+    url: https://nvd.nist.gov/vuln/detail/CVE-2019-6986
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: SPARQL matches graph patterns rather than relational rows, so exfiltration widens a pattern or crosses named graphs instead of appending a UNION SELECT across table columns -- the same injection idea, a genuinely different data model.
+      pl: SPARQL dopasowuje wzorce grafu zamiast wierszy relacyjnych, więc eksfiltracja rozszerza wzorzec albo przekracza grafy nazwane zamiast dołączać UNION SELECT przez kolumny tabeli -- ten sam pomysł wstrzyknięcia, naprawdę inny model danych.
+    items:
+    - name: UNION-based cross-graph exfiltration
+      sev: critical
+      description:
+        en: Closing an injected literal/pattern and appending a UNION block widens the match to arbitrary triples, or crosses into other named graphs entirely (GRAPH ?g { ?s ?p ?o }) -- the graph-model equivalent of a cross-table UNION SELECT.
+        pl: Zamknięcie wstrzykniętego literału/wzorca i dołączenie bloku UNION rozszerza dopasowanie do dowolnych trójek, albo przechodzi do zupełnie innych grafów nazwanych (GRAPH ?g { ?s ?p ?o }) -- odpowiednik modelu grafu dla cross-table UNION SELECT.
+      payload: 'Pablo" } UNION { ?s ?p ?o } #   -- closes the literal, widens the match to the entire graph, comments out the tail'
+    - name: FILTER-based logic bypass
+      sev: high
+      description:
+        en: Injecting an always-true FILTER, or truncating away an intended restrictive FILTER/triple pattern, neutralizes an access constraint the query was meant to enforce.
+        pl: Wstrzyknięcie zawsze-prawdziwego FILTER, albo obcięcie zamierzonego restrykcyjnego FILTER/wzorca trójki, neutralizuje ograniczenie dostępu które zapytanie miało wymuszać.
+      payload: 'Pablo" . ?p ex:secret ?v . FILTER(1=1) #'
+    - name: Comment-based truncation
+      sev: high
+      description:
+        en: 'SPARQL''s comment syntax is # to end of line (verified against the W3C SPARQL 1.1 Query grammar) -- unlike SQL, there is no -- or /* */ block comment. Appending # discards the rest of the original template (a trailing LIMIT, closing brace, or access FILTER).'
+        pl: 'Składnia komentarza SPARQL to # do końca linii (zweryfikowane względem gramatyki W3C SPARQL 1.1 Query) -- w przeciwieństwie do SQL, nie ma komentarza -- ani blokowego /* */. Dołączenie # odrzuca resztę oryginalnego szablonu (końcowy LIMIT, zamykający nawias, albo FILTER dostępu).'
+      payload: 'Pablo" } #   -- everything the template appended after this point is discarded'
+    - name: Boolean / blind SPARQL injection
+      sev: high
+      description:
+        en: When output isn't reflected directly, a conditional FILTER(regex(...)) or ASK-style true/false oracle lets an attacker extract data character-by-character by observing whether a result comes back -- the same technique underlies CVE-2019-6986's exploitation via injected FILTER regex.
+        pl: Gdy output nie jest odbity bezpośrednio, warunkowy FILTER(regex(...)) albo wyrocznia prawda/fałsz w stylu ASK pozwala atakującemu wyekstrahować dane znak po znaku przez obserwację czy wynik wraca -- ta sama technika leży u podstaw eksploatacji CVE-2019-6986 przez wstrzyknięty FILTER regex.
+      payload: 'Pablo" . ?p ex:password ?pw . FILTER(regex(?pw, "^a")) #  -- toggle the guessed prefix, observe presence/absence of a result'
+    - name: SERVICE-based SSRF (federated query abuse)
+      sev: high
+      description:
+        en: 'Verified directly against the W3C SPARQL 1.1 Federated Query spec: SERVICE dereferences a URI and folds the remote response into the working data set. An injected SERVICE <attacker-url> clause coerces the triple store into making an outbound request to an attacker-chosen endpoint -- SSRF-equivalent behavior, though the spec itself never uses the word "SSRF". All three research passes confirmed the mechanism but found no CVE proving this exploited in the wild -- flagged here as spec-supported and plausible, not incident-proven.'
+        pl: 'Zweryfikowane bezpośrednio względem specyfikacji W3C SPARQL 1.1 Federated Query: SERVICE dereferencjonuje URI i wtapia zdalną odpowiedź w roboczy zbiór danych. Wstrzyknięta klauzula SERVICE <attacker-url> zmusza magazyn trójek do wykonania żądania wychodzącego do endpointu wybranego przez atakującego -- zachowanie równoważne SSRF, mimo że sama specyfikacja nigdy nie używa słowa "SSRF". Wszystkie trzy przejścia badawcze potwierdziły mechanizm ale nie znalazły CVE dowodzącego wykorzystania w praktyce -- oflagowane tutaj jako wspierane specyfikacją i wiarygodne, nie udowodnione incydentem.'
+      payload: 'Pablo" } UNION { SERVICE <http://169.254.169.254/latest/meta-data/> { ?s ?p ?o } } #  -- feasibility depends on federation being enabled and unrestricted'
+    - name: SPARQL Update (SPARUL) injection on a non-read-only endpoint
+      sev: critical
+      description:
+        en: The W3C SPARQL 1.1 Update spec's own Security Considerations explicitly warn that co-locating a query and update service requires guarding against injection reaching the update interface -- an injection point on a writable endpoint can reach INSERT DATA / DELETE / DROP, an integrity/availability impact with no read-only equivalent.
+        pl: Własne Security Considerations specyfikacji W3C SPARQL 1.1 Update jawnie ostrzegają że współlokowanie usługi zapytań i aktualizacji wymaga ochrony przed wstrzyknięciem docierającym do interfejsu aktualizacji -- punkt wstrzyknięcia na zapisywalnym endpoincie może dosięgnąć INSERT DATA / DELETE / DROP, wpływ na integralność/dostępność bez odpowiednika tylko-do-odczytu.
+      payload: ; INSERT DATA { <http://evil/> <http://evil/p> "pwned" } ;  -- only reachable if the injection point sits on a writable/update-capable endpoint
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: Jena's ParameterizedSparqlString and rdflib's initBindings are the closest SPARQL equivalents to a SQL prepared statement -- both are genuinely effective, and both explicitly warn (in their own documentation) that they are not a complete guarantee.
+      pl: ParameterizedSparqlString Jeny i initBindings rdflib to najbliższe odpowiedniki SPARQL dla przygotowanego zapytania SQL -- oba są naprawdę skuteczne, i oba jawnie ostrzegają (we własnej dokumentacji) że nie są kompletną gwarancją.
+    languages:
+    - label: Java (Apache Jena)
+      lang: java
+      vulnerable: "String name = request.getParameter(\"name\");\nString q = \"PREFIX foaf: <http://xmlns.com/foaf/0.1/> \" +\n           \"SELECT ?b WHERE { ?p foaf:name \\\"\" + name + \"\\\" . ?p ex:building ?b . }\";\nQuery query = QueryFactory.create(q);   // injectable string concat"
+      safe: "String name = request.getParameter(\"name\");\nParameterizedSparqlString pss = new ParameterizedSparqlString();\npss.setCommandText(\n    \"PREFIX foaf: <http://xmlns.com/foaf/0.1/> \" +\n    \"SELECT ?b WHERE { ?p foaf:name ?name . ?p ex:building ?b . }\");\npss.setLiteral(\"name\", name);   // SPARQL-aware escaping, not raw concat\n// NOTE (verified in Jena's own docs): \"by no means foolproof... works purely\n// at the textual level\" -- still validate IRIs passed via setIri() separately.\nQuery query = QueryFactory.create(pss.asQuery());"
+    - label: Python (rdflib, local graph)
+      lang: python
+      vulnerable: 'name = request.args[''name'']
+
+        q = f''SELECT ?b WHERE {{ ?p foaf:name "{name}" . ?p ex:building ?b . }}''
+
+        graph.query(q)   # injectable f-string concat'
+      safe: "from rdflib.plugins.sparql import prepareQuery\nfrom rdflib import Literal\nq = prepareQuery(\n    'SELECT ?b WHERE { ?p foaf:name ?name . ?p ex:building ?b . }',\n    initNs={'foaf': FOAF})\ngraph.query(q, initBindings={'name': Literal(name)})\n# binds into the parsed algebra, not text -- but only for LOCAL rdflib graphs;\n# SPARQLWrapper against a REMOTE endpoint has no equivalent, so validate/escape manually there."
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: The same error-based and boolean-differential techniques used for SQL injection apply here, adapted to SPARQL syntax and the graph-pattern data model.
+      pl: Te same techniki oparte na błędach i różnicach boolowskich używane dla wstrzyknięcia SQL stosują się tutaj, przystosowane do składni SPARQL i modelu danych wzorca grafu.
+    steps:
+    - title:
+        en: Fingerprint the endpoint and engine
+        pl: Rozpoznaj endpoint i silnik
+      description:
+        en: Look for /sparql, /query, Fuseki's /ds/query, parameters carrying an IRI or literal (?uri=, ?name=), and characteristic content types (application/sparql-results+json). Error banners distinguish Jena/Fuseki, Virtuoso, Blazegraph, GraphDB.
+        pl: Szukaj /sparql, /query, /ds/query Fuseki, parametrów niosących IRI albo literał (?uri=, ?name=), i charakterystycznych typów treści (application/sparql-results+json). Banery błędów odróżniają Jena/Fuseki, Virtuoso, Blazegraph, GraphDB.
+    - title:
+        en: Error-based differential probing
+        pl: Sondowanie różnicowe oparte na błędach
+      description:
+        en: 'Inject a single ", }, or # and watch for parser errors (QueryParseException, malformed-query 400s) versus normal responses -- a differential between a lone quote and a doubled quote strongly signals literal-context injection.'
+        pl: 'Wstrzyknij pojedynczy ", }, albo # i obserwuj błędy parsera (QueryParseException, zniekształcone zapytanie 400) w porównaniu do normalnych odpowiedzi -- różnica między pojedynczym cudzysłowem a podwojonym silnie sygnalizuje wstrzyknięcie w kontekście literału.'
+    - title:
+        en: Confirm structural control
+        pl: Potwierdź kontrolę strukturalną
+      description:
+        en: 'Append } UNION { ?s ?p ?o } # and check whether the result set widens dramatically -- proof the attacker now controls query structure, not just a data value.'
+        pl: 'Dołącz } UNION { ?s ?p ?o } # i sprawdź czy zbiór wyników drastycznie się rozszerza -- dowód że atakujący kontroluje teraz strukturę zapytania, nie tylko wartość danych.'
+    - title:
+        en: Blind extraction when output is not reflected
+        pl: Ślepa ekstrakcja gdy output nie jest odbity
+      description:
+        en: Use FILTER(regex(...)) or ASK-style true/false oracles, toggling a guessed value and observing presence/absence of a result, to extract data character-by-character.
+        pl: Użyj FILTER(regex(...)) albo wyroczni prawda/fałsz w stylu ASK, przełączając zgadywaną wartość i obserwując obecność/brak wyniku, by wyekstrahować dane znak po znaku.
+    - title:
+        en: Probe capability boundaries
+        pl: Sonduj granice możliwości
+      description:
+        en: Test whether the endpoint accepts Update verbs (INSERT DATA) and whether SERVICE federation is enabled (inject a SERVICE call to an out-of-band collaborator host and watch for a callback) to escalate beyond read access.
+        pl: Przetestuj czy endpoint akceptuje czasowniki Update (INSERT DATA) i czy federacja SERVICE jest włączona (wstrzyknij wywołanie SERVICE do hosta out-of-band collaborator i obserwuj callback) by eskalować poza dostęp odczytu.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'Parameterization is the primary defense here exactly as in SQL injection, but with a documented ceiling: the SPARQL ecosystem''s own binding APIs explicitly warn they operate at the textual level and are not a complete guarantee.'
+      pl: 'Parametryzacja jest tu główną obroną dokładnie jak we wstrzyknięciu SQL, ale z udokumentowanym sufitem: własne API wiązania ekosystemu SPARQL jawnie ostrzegają że działają na poziomie tekstowym i nie są kompletną gwarancją.'
+    items:
+    - rank: 1
+      eff: 85
+      kind: primary
+      label:
+        en: Parameterized queries / bind values (ParameterizedSparqlString, initBindings)
+        pl: Parametryzowane zapytania / związane wartości (ParameterizedSparqlString, initBindings)
+      note:
+        en: The primary defense, verified as effective by all three research passes -- but Jena's own documentation explicitly states its ParameterizedSparqlString "is by no means foolproof because it works purely at the textual level" and does not understand variable scope in subqueries. rdflib's initBindings genuinely binds into the parsed algebra, but only for local graphs -- SPARQLWrapper against a remote endpoint has no equivalent mechanism at all.
+        pl: Główna obrona, zweryfikowana jako skuteczna przez wszystkie trzy przejścia badawcze -- ale własna dokumentacja Jeny jawnie stwierdza że jej ParameterizedSparqlString "nie jest w żaden sposób niezawodna ponieważ działa czysto na poziomie tekstowym" i nie rozumie zasięgu zmiennych w podzapytaniach. initBindings rdflib naprawdę wiąże w sparsowanej algebrze, ale tylko dla lokalnych grafów -- SPARQLWrapper przeciw zdalnemu endpointowi nie ma żadnego odpowiedniego mechanizmu.
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: Strict validation/allowlisting of values that must enter query structure (IRIs especially)
+        pl: Ścisła walidacja/allowlisting wartości które muszą wejść w strukturę zapytania (szczególnie IRI)
+      note:
+        en: 'Essential companion to #1: IRIs, prefixes, and graph names frequently can''t be cleanly bound and are the exact case Jena''s own docs warn requires independent validation. Given the tooling gaps versus SQL prepared statements, this is often the practical front-line control, not just a backstop.'
+        pl: 'Niezbędny towarzysz #1: IRI, prefiksy, i nazwy grafów często nie mogą być czysto związane i są dokładnie przypadkiem który własna dokumentacja Jeny ostrzega że wymaga niezależnej walidacji. Biorąc pod uwagę luki w narzędziach względem przygotowanych zapytań SQL, to jest często praktyczna kontrola pierwszej linii, nie tylko siatka bezpieczeństwa.'
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Disable SPARQL Update / separate query and update services
+        pl: Wyłącz SPARQL Update / oddziel usługi zapytań i aktualizacji
+      note:
+        en: The W3C SPARQL 1.1 Update spec's own Security Considerations warn about this exact co-location risk. Eliminates the write/destroy impact class entirely on read-only deployments -- doesn't stop read exfiltration but removes the worst outcomes.
+        pl: Własne Security Considerations specyfikacji W3C SPARQL 1.1 Update ostrzegają dokładnie przed tym ryzykiem współlokowania. Całkowicie eliminuje klasę wpływu zapis/zniszczenie na wdrożeniach tylko-do-odczytu -- nie zatrzymuje eksfiltracji odczytu ale usuwa najgorsze skutki.
+    - rank: 4
+      eff: 65
+      kind: strong
+      label:
+        en: Disable or allowlist SERVICE (federated query)
+        pl: Wyłącz albo allowlistuj SERVICE (zapytanie federacyjne)
+      note:
+        en: Directly removes the SSRF-equivalent surface confirmed against the W3C Federated Query spec. Effectiveness depends on the engine's support for restricting SERVICE targets -- verify per product rather than assuming a uniform control exists.
+        pl: Bezpośrednio usuwa powierzchnię równoważną SSRF potwierdzoną względem specyfikacji W3C Federated Query. Skuteczność zależy od wsparcia silnika dla ograniczania celów SERVICE -- zweryfikuj per produkt zamiast zakładać że istnieje jednolita kontrola.
+    - rank: 5
+      eff: 55
+      kind: strong
+      label:
+        en: Least privilege on the triple store + network egress controls
+        pl: Najmniejsze uprawnienia na magazynie trójek + kontrole wyjścia sieciowego
+      note:
+        en: Segregate which named graphs the query identity can read, and block the triple store's outbound access to internal ranges/metadata IPs -- limits blast radius rather than preventing injection.
+        pl: Segreguj które grafy nazwane tożsamość zapytania może odczytać, i zablokuj dostęp wychodzący magazynu trójek do wewnętrznych zakresów/IP metadanych -- ogranicza promień rażenia zamiast zapobiegać wstrzyknięciu.
+    - rank: 6
+      eff: 40
+      kind: weak
+      label:
+        en: Query cost/complexity limits and timeouts
+        pl: Limity kosztu/złożoności zapytania i timeouty
+      note:
+        en: Blunts the DoS variant (unbounded ?s ?p ?o patterns, ReDoS via injected FILTER regex as in CVE-2019-6986) but is availability-focused only and does nothing against read exfiltration.
+        pl: Łagodzi wariant DoS (nieograniczone wzorce ?s ?p ?o, ReDoS przez wstrzyknięty FILTER regex jak w CVE-2019-6986) ale jest skupione wyłącznie na dostępności i nic nie robi przeciw eksfiltracji odczytu.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'An honest gap, documented rather than inflated: all three research passes independently found the public CVE record for textbook SPARQL injection genuinely thin compared to SQL injection, and the two clearest real CVEs each carry a surprising nuance worth stating plainly.'
+      pl: 'Uczciwa luka, udokumentowana zamiast zawyżona: wszystkie trzy przejścia badawcze niezależnie znalazły że publiczny rejestr CVE dla podręcznikowego wstrzyknięcia SPARQL jest naprawdę szczupły w porównaniu do wstrzyknięcia SQL, a dwa najjaśniejsze prawdziwe CVE niosą zaskakujący niuans wart jasnego stwierdzenia.'
+    items:
+    - org: ARC2 (PHP SPARQL library)
+      year: 2012
+      impact: CVE-2012-5872 -- CVSS 9.8 Critical, CWE-89
+      cost: Blind SQL injection via SPARQL comments
+      description:
+        en: ARC2 (through 2011-12-01) compiles SPARQL into SQL against its backing database. An attacker exploiting getTriplePatternSQL via comments in a SPARQL WHERE clause reaches blind SQL injection against that backend -- a SPARQL-surface entry point weaponized into a classic SQL-injection impact, confirmed directly against NVD.
+        pl: ARC2 (do 2011-12-01) kompiluje SPARQL do SQL względem swojej bazy danych. Atakujący eksploatujący getTriplePatternSQL przez komentarze w klauzuli WHERE SPARQL osiąga ślepe wstrzyknięcie SQL przeciw temu backendowi -- punkt wejścia na powierzchni SPARQL uzbrojony w klasyczny wpływ wstrzyknięcia SQL, potwierdzone bezpośrednio względem NVD.
+    - org: VIVO Vitro (DuraSpace)
+      year: 2019
+      impact: CVE-2019-6986 -- CVSS 7.5 High, CWE-77 + CWE-400 (not CWE-943)
+      cost: Fixed in 1.11.0
+      description:
+        en: 'The single most-cited "SPARQL Injection"-titled CVE, and a genuine surprise: an attacker executes arbitrary SPARQL via the uri parameter using crafted FILTER regex, but the demonstrated impact is a regular expression denial of service, not data theft -- and NVD classifies it CWE-77 (Command Injection) + CWE-400 (Uncontrolled Resource Consumption), NOT this deep-dive''s primary CWE-943. All three research passes independently caught and flagged this discrepancy.'
+        pl: 'Jedyne najczęściej cytowane CVE zatytułowane "SPARQL Injection", i prawdziwe zaskoczenie: atakujący wykonuje dowolny SPARQL przez parametr uri używając spreparowanego FILTER regex, ale zademonstrowany wpływ to denial of service przez wyrażenie regularne, nie kradzież danych -- a NVD klasyfikuje to CWE-77 (Command Injection) + CWE-400 (Uncontrolled Resource Consumption), NIE głównym CWE-943 tego deep-dive. Wszystkie trzy przejścia badawcze niezależnie wychwyciły i oflagowały tę rozbieżność.'
+    - org: Apache Jena (adjacent, not classic injection)
+      year: 2023
+      impact: CVE-2023-32200 -- CVSS 8.8
+      cost: Fixed in 4.9.0
+      description:
+        en: Jena 3.7.0-4.8.0 allowed JavaScript execution via SPARQL custom script functions -- CWE-917 (Expression Language Injection), an RCE-class issue where SPARQL is the delivery vector, not a string-concatenation SPARQL injection. Included with this explicit caveat rather than conflated with the topic's core mechanism, exactly as all three research passes insisted.
+        pl: Jena 3.7.0-4.8.0 pozwalała na wykonanie JavaScript przez niestandardowe funkcje skryptowe SPARQL -- CWE-917 (Expression Language Injection), problem klasy RCE gdzie SPARQL jest mechanizmem dostarczenia, nie wstrzyknięciem SPARQL przez konkatenację stringów. Uwzględnione z tym jawnym zastrzeżeniem zamiast pomylone z głównym mechanizmem tematu, dokładnie jak nalegały wszystkie trzy przejścia badawcze.
+    inlineSources:
+    - label: CVE-2012-5872 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2012-5872
+    - label: CVE-2019-6986 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-6986
+    - label: CVE-2023-32200 advisory (GHSA-j927-w6g7-7c7w)
+      url: https://github.com/advisories/GHSA-j927-w6g7-7c7w
+    - label: Orduña et al. -- Identifying Security Issues in the Semantic Web (foundational research)
+      url: https://morelab.deusto.es/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: No mainstream, dedicated SPARQL-injection scanner exists -- sqlmap does not understand SPARQL grammar, and all three research passes independently found nothing equivalent. Testing here is predominantly a manual, proxy-driven discipline.
+      pl: Nie istnieje żaden główny, dedykowany skaner wstrzyknięcia SPARQL -- sqlmap nie rozumie gramatyki SPARQL, i wszystkie trzy przejścia badawcze niezależnie nie znalazły niczego równoważnego. Testowanie tutaj to głównie manualna dyscyplina oparta na proxy.
+    sast:
+    - - Generic taint-tracking SAST (Semgrep/CodeQL)
+      - Catches the vulnerable shape (untrusted input concatenated into a query string builder) even without a SPARQL-specific rule -- no dedicated SPARQL-injection rule set was found by any research pass
+    - - Framework API review
+      - Auditing for raw string concatenation into QueryFactory.create()/sparql.setQuery() versus ParameterizedSparqlString/initBindings usage is effectively the practical static check
+    dast:
+    - - Burp Suite (Repeater + Intruder + Collaborator)
+      - Manual payload crafting via Repeater, automated blind character-by-character extraction via Intruder, and out-of-band SERVICE/SSRF confirmation via Collaborator -- none SPARQL-aware, all supplied SPARQL payloads manually
+    - - OWASP ZAP
+      - Equivalent general-purpose proxy/fuzzing capability, no SPARQL-specific module
+    - - Error-based differential probing
+      - 'Manually injecting a lone ", }, or # and comparing parser error responses against normal ones -- the practical entry-level confirmation technique'
+    note:
+      en: <strong>Key signal:</strong> because no automated scanner understands SPARQL grammar, prioritize manual review of any endpoint that visibly builds a query string from request parameters -- this is a DAST/manual-testing finding much like HTTP Parameter Pollution elsewhere in this knowledge base, not something a scan will surface on its own.
+      pl: <strong>Kluczowy sygnał:</strong> ponieważ żaden automatyczny skaner nie rozumie gramatyki SPARQL, priorytetyzuj manualny przegląd każdego endpointu który widocznie buduje string zapytania z parametrów żądania -- to znalezisko DAST/testów manualnych podobnie jak HTTP Parameter Pollution gdzie indziej w tej bazie wiedzy, nie coś co skan ujawni samodzielnie.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'CWE-943 is the correct mapping precisely because no SPARQL-specific CWE exists -- verified directly at MITRE, its own page names SQL/LDAP/XQuery/DQL/NoSQL as examples but never SPARQL. All three research passes independently confirmed the same OWASP nuance: CWE-943 is not itself formally enumerated in A03:2021''s mapped-CWE list, though its parent and siblings are.'
+      pl: 'CWE-943 jest poprawnym mapowaniem dokładnie dlatego że nie istnieje żaden CWE specyficzny dla SPARQL -- zweryfikowane bezpośrednio na MITRE, jego własna strona wymienia SQL/LDAP/XQuery/DQL/NoSQL jako przykłady ale nigdy SPARQL. Wszystkie trzy przejścia badawcze niezależnie potwierdziły ten sam niuans OWASP: CWE-943 samo w sobie nie jest formalnie wyliczone na liście zmapowanych CWE A03:2021, choć jego rodzic i rodzeństwo są.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-943 — Improper Neutralization of Special Elements in Data Query Logic (primary). ChildOf CWE-74 (Injection); ParentOf CWE-89 (SQL), CWE-90 (LDAP), CWE-643 (XPath), CWE-652 (XQuery) -- the same shared parent this knowledge base uses for its other non-SQL query-language injection deep-dives. MITRE's own page never names SPARQL, consistent with SPARQL having no dedicated CWE of its own.
+      - CVE-2012-5872 (ARC2) is tagged CWE-89 rather than CWE-943, because its confirmed impact is SQL injection against ARC2's backing database, not the SPARQL layer itself -- correct per-incident tagging, not an inconsistency.
+      - CVE-2019-6986 is tagged CWE-77 + CWE-400, not CWE-943 -- a reminder, confirmed by all three research passes, that a CVE's title ("SPARQL Injection") and its official weakness classification can genuinely diverge.
+    - std: OWASP
+      items:
+      - 'A03:2021 — Injection, by family/conceptual fit. Verified against MITRE''s CWE-1347 (A03:2021''s official mapped-CWE list): CWE-943 itself is NOT among the enumerated members, but its parent CWE-74 and its siblings (CWE-89, CWE-90, CWE-643, CWE-652) all are -- so the mapping holds through the injection family, not as a direct CWE-943 listing.'
+    inlineSources:
+    - label: CWE-943 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/943.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active SPARQL injection exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia SPARQL, przejdź tę listę od góry.
+    steps:
+    - en: Identify the exact injection point and which named graphs the query identity could reach -- treat every graph as potentially read, not just the one confirmed
+      pl: Zidentyfikuj dokładny punkt wstrzyknięcia i które grafy nazwane tożsamość zapytania mogła osiągnąć -- traktuj każdy graf jako potencjalnie odczytany, nie tylko potwierdzony
+    - en: If the endpoint accepts SPARQL Update, treat every triple the writable credential could reach as potentially modified or deleted
+      pl: Jeśli endpoint akceptuje SPARQL Update, traktuj każdą trójkę do której zapisywalne poświadczenie mogło dotrzeć jako potencjalnie zmodyfikowaną lub usuniętą
+    - en: If SERVICE federation was enabled, audit outbound request logs from the triple store for connections to unexpected or internal hosts
+      pl: Jeśli federacja SERVICE była włączona, przeaudytuj logi żądań wychodzących z magazynu trójek pod kątem połączeń do nieoczekiwanych lub wewnętrznych hostów
+    - en: Grep the codebase for every place a query string is built via concatenation rather than ParameterizedSparqlString/initBindings, not just the exploited endpoint
+      pl: Przeszukaj bazę kodu pod kątem każdego miejsca gdzie string zapytania jest budowany przez konkatenację zamiast ParameterizedSparqlString/initBindings, nie tylko wykorzystany endpoint
+    - en: Disable SPARQL Update and SERVICE federation on the affected endpoint until the injection is fixed, if either is not strictly required
+      pl: Wyłącz SPARQL Update i federację SERVICE na dotkniętym endpoincie dopóki wstrzyknięcie nie zostanie naprawione, jeśli którekolwiek nie jest ściśle wymagane
+    - en: Notify per applicable data-breach obligations if data outside the intended graph scope was confirmed exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli potwierdzono eksfiltrację danych spoza zamierzonego zakresu grafu
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-943 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/943.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: W3C SPARQL 1.1 Query
+      url: https://www.w3.org/TR/sparql11-query/
+    - label: W3C SPARQL 1.1 Update
+      url: https://www.w3.org/TR/sparql11-update/
+    - label: W3C SPARQL 1.1 Federated Query
+      url: https://www.w3.org/TR/sparql11-federated-query/
+    - label: Apache Jena — ParameterizedSparqlString
+      url: https://jena.apache.org/documentation/query/parameterized-sparql-strings.html
+    - label: CVE-2012-5872 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2012-5872
+    - label: CVE-2019-6986 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2019-6986
+    - label: CVE-2023-32200 advisory (GHSA-j927-w6g7-7c7w)
+      url: https://github.com/advisories/GHSA-j927-w6g7-7c7w

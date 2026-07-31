@@ -1,0 +1,109 @@
+threatId: cat_1_research27
+title:
+  en: SPARQL Injection — knowledge check
+  pl: SPARQL Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: 'A query template is built as f''SELECT ?b WHERE {{ ?p foaf:name "{name}" . ?p ex:building ?b . }}'' and an attacker submits name = ''Pablo" } UNION { ?s ?p ?o } #''. Is this exploitable?'
+    pl: 'Szablon zapytania jest budowany jako f''SELECT ?b WHERE {{ ?p foaf:name "{name}" . ?p ex:building ?b . }}'' a atakujący przesyła name = ''Pablo" } UNION { ?s ?p ?o } #''. Czy to jest podatne na wykorzystanie?'
+  isVulnerable: true
+  cwe: CWE-943
+  explanation:
+    en: 'Yes. The injected input closes the literal and the pattern, adds a UNION block that matches the entire graph, and comments out the original template''s tail with # (SPARQL''s actual comment syntax -- there is no -- or /* */ in standard SPARQL). This is the graph-pattern equivalent of a cross-table UNION SELECT in SQL injection.'
+    pl: 'Tak. Wstrzyknięte wejście zamyka literał i wzorzec, dodaje blok UNION który dopasowuje cały graf, i komentuje resztę oryginalnego szablonu przez # (faktyczna składnia komentarza SPARQL -- nie ma -- ani /* */ w standardowym SPARQL). To odpowiednik wzorca grafu dla cross-table UNION SELECT we wstrzyknięciu SQL.'
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: CVE-2019-6986 is the single most-cited "SPARQL Injection"-titled CVE. What does its official NVD classification actually say?
+    pl: CVE-2019-6986 to jedyne najczęściej cytowane CVE zatytułowane "SPARQL Injection". Co faktycznie mówi jego oficjalna klasyfikacja NVD?
+  choices:
+  - id: a
+    label:
+      en: It's tagged CWE-77 (Command Injection) + CWE-400 (Uncontrolled Resource Consumption), with the demonstrated impact being a regular expression denial of service via crafted FILTER regex -- not data exfiltration, and not CWE-943
+      pl: Jest otagowane CWE-77 (Command Injection) + CWE-400 (Uncontrolled Resource Consumption), z zademonstrowanym wpływem będącym denial of service przez wyrażenie regularne przez spreparowany FILTER regex -- nie eksfiltracja danych, i nie CWE-943
+  - id: b
+    label:
+      en: It's tagged CWE-943 exactly as this deep-dive's primary classification, with confirmed cross-graph data exfiltration as the impact
+      pl: Jest otagowane CWE-943 dokładnie jak główna klasyfikacja tego deep-dive, z potwierdzoną eksfiltracją danych cross-graph jako wpływem
+  - id: c
+    label:
+      en: NVD has no record of this CVE at all
+      pl: NVD w ogóle nie ma rekordu tego CVE
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes verified this directly against NVD and flagged it as a genuine surprise: the vulnerability''s own title says "SPARQL Injection," but its official classification and demonstrated impact are a ReDoS, not the data-exfiltration scenario most people picture. A vulnerability''s name and its official weakness classification can diverge.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zweryfikowały to bezpośrednio względem NVD i oflagowały jako prawdziwe zaskoczenie: własny tytuł podatności mówi "SPARQL Injection," ale jej oficjalna klasyfikacja i zademonstrowany wpływ to ReDoS, nie scenariusz eksfiltracji danych który większość sobie wyobraża. Nazwa podatności i jej oficjalna klasyfikacja słabości mogą się rozjeżdżać.'
+- id: q3
+  type: vuln-or-not
+  prompt:
+    en: 'A triple store has SPARQL 1.1 Federated Query (SERVICE) enabled with no endpoint allowlist, and an attacker injects } UNION { SERVICE <http://169.254.169.254/latest/meta-data/> { ?s ?p ?o } } # into a query. Is the underlying mechanism (the triple store making an outbound request to the injected URI) confirmed by the W3C specification itself?'
+    pl: 'Magazyn trójek ma włączone SPARQL 1.1 Federated Query (SERVICE) bez allowlisty endpointów, a atakujący wstrzykuje } UNION { SERVICE <http://169.254.169.254/latest/meta-data/> { ?s ?p ?o } } # do zapytania. Czy leżący u podstaw mechanizm (magazyn trójek wykonujący żądanie wychodzące do wstrzykniętego URI) jest potwierdzony przez samą specyfikację W3C?'
+  isVulnerable: true
+  cwe: CWE-943
+  explanation:
+    en: Yes -- the W3C SPARQL 1.1 Federated Query spec itself states that SERVICE "imply[ies] that a URI will be dereferenced, and that the result will be incorporated into a working data set." All three research passes verified this mechanism directly against the spec, though none found a CVE proving this exact scenario exploited in the wild -- it is spec-confirmed and plausible, not incident-proven, a distinction this deep-dive states explicitly rather than overclaiming.
+    pl: Tak -- sama specyfikacja W3C SPARQL 1.1 Federated Query stwierdza że SERVICE "implikuje że URI zostanie zdereferencjonowane, i że wynik zostanie włączony do roboczego zbioru danych." Wszystkie trzy przejścia badawcze zweryfikowały ten mechanizm bezpośrednio względem specyfikacji, choć żadne nie znalazło CVE dowodzącego że ten dokładny scenariusz był wykorzystany w praktyce -- jest potwierdzony specyfikacją i wiarygodny, nie udowodniony incydentem, rozróżnienie które ten deep-dive jawnie stwierdza zamiast przesadzać.
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive map SPARQL injection to CWE-943 even though MITRE's own CWE-943 page never mentions SPARQL by name?
+    pl: Dlaczego ten deep-dive mapuje wstrzyknięcie SPARQL do CWE-943 mimo że własna strona CWE-943 MITRE nigdy nie wymienia SPARQL po nazwie?
+  choices:
+  - id: a
+    label:
+      en: CWE-943 ("Improper Neutralization of Special Elements in Data Query Logic") is the generic parent for non-SQL query-language injection, already used consistently across this knowledge base for LDAP/XPath/XQuery injection -- the absence of a SPARQL-specific CWE is exactly why the shared parent is the correct fit
+      pl: CWE-943 ("Improper Neutralization of Special Elements in Data Query Logic") to generyczny rodzic dla wstrzyknięcia w językach zapytań innych niż SQL, już konsekwentnie używany w tej bazie wiedzy dla wstrzyknięcia LDAP/XPath/XQuery -- brak CWE specyficznego dla SPARQL to dokładnie dlaczego wspólny rodzic jest poprawnym dopasowaniem
+  - id: b
+    label:
+      en: CWE-943 is a mistake and CWE-89 (SQL Injection) should be used instead for every SPARQL injection case
+      pl: CWE-943 to pomyłka i CWE-89 (SQL Injection) powinno być używane zamiast tego dla każdego przypadku wstrzyknięcia SPARQL
+  - id: c
+    label:
+      en: MITRE has a dedicated but unpublished SPARQL CWE that this knowledge base uses instead
+      pl: MITRE ma dedykowane ale niepublikowane CWE dla SPARQL którego ta baza wiedzy używa zamiast tego
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three research passes independently verified this at cwe.mitre.org: CWE-943 is ChildOf CWE-74 (Injection) with ParentOf CWE-89 (SQL), CWE-90 (LDAP), CWE-643 (XPath), CWE-652 (XQuery) as siblings -- SPARQL fits the same family despite having no dedicated entry of its own. CWE-89 would only be correct for a case like CVE-2012-5872 (ARC2), where the SPARQL surface is specifically weaponized into SQL injection against a backing database.'
+    pl: 'Wszystkie trzy przejścia badawcze niezależnie zweryfikowały to na cwe.mitre.org: CWE-943 jest ChildOf CWE-74 (Injection) z ParentOf CWE-89 (SQL), CWE-90 (LDAP), CWE-643 (XPath), CWE-652 (XQuery) jako rodzeństwem -- SPARQL pasuje do tej samej rodziny mimo braku własnego dedykowanego wpisu. CWE-89 byłoby poprawne tylko dla przypadku jak CVE-2012-5872 (ARC2), gdzie powierzchnia SPARQL jest konkretnie uzbrojona we wstrzyknięcie SQL przeciw bazie danych backendu.'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: A Java app uses Jena's ParameterizedSparqlString with pss.setLiteral("name", name) for a user-supplied value. Does this fully guarantee immunity to SPARQL injection with zero further precautions needed?
+    pl: Aplikacja Java używa ParameterizedSparqlString Jeny z pss.setLiteral("name", name) dla wartości dostarczonej przez użytkownika. Czy to w pełni gwarantuje odporność na wstrzyknięcie SPARQL bez potrzeby dalszych środków ostrożności?
+  isVulnerable: true
+  cwe: CWE-943
+  explanation:
+    en: No -- marked vulnerable here because treating it as a complete guarantee is itself the risk. Jena's own documentation, quoted directly by all three research passes, states ParameterizedSparqlString "is by no means foolproof because it works purely at the textual level" and does not understand variable scope in subqueries. It's the primary and most effective defense, but values that must enter query structure -- especially IRIs via setIri() -- still need independent validation.
+    pl: Nie -- oznaczone jako podatne bo traktowanie tego jako kompletnej gwarancji jest samo w sobie ryzykiem. Własna dokumentacja Jeny, cytowana bezpośrednio przez wszystkie trzy przejścia badawcze, stwierdza że ParameterizedSparqlString "nie jest w żaden sposób niezawodna ponieważ działa czysto na poziomie tekstowym" i nie rozumie zasięgu zmiennych w podzapytaniach. To główna i najskuteczniejsza obrona, ale wartości które muszą wejść w strukturę zapytania -- szczególnie IRI przez setIri() -- wciąż potrzebują niezależnej walidacji.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A Python service builds a SPARQL query against a local rdflib graph using a user-supplied name value. Which variant actually avoids SPARQL injection?
+    pl: Usługa Python buduje zapytanie SPARQL przeciw lokalnemu grafowi rdflib używając wartości name dostarczonej przez użytkownika. Który wariant faktycznie unika wstrzyknięcia SPARQL?
+  variants:
+  - id: v1
+    lang: python
+    code: 'name = request.args[''name'']
+
+      q = f''SELECT ?b WHERE {{ ?p foaf:name "{name}" . ?p ex:building ?b . }}''
+
+      graph.query(q)'
+  - id: v2
+    lang: python
+    code: "from rdflib.plugins.sparql import prepareQuery\nfrom rdflib import Literal\nq = prepareQuery('SELECT ?b WHERE { ?p foaf:name ?name . ?p ex:building ?b . }',\n                 initNs={'foaf': FOAF})\ngraph.query(q, initBindings={'name': Literal(request.args['name'])})"
+  - id: v3
+    lang: python
+    code: 'name = request.args[''name''].replace(''UNION'', '''')
+
+      q = f''SELECT ?b WHERE {{ ?p foaf:name "{name}" . ?p ex:building ?b . }}''
+
+      graph.query(q)'
+  correctVariantId: v2
+  explanation:
+    en: 'v2 binds the value into the parsed SPARQL algebra via initBindings, not into the query text -- verified as genuinely safe for local rdflib graphs by all three research passes (note: this specific mechanism does NOT extend to SPARQLWrapper against a remote endpoint, which has no equivalent). v1 is the vulnerable baseline. v3''s keyword blacklist is trivially bypassed by closing the literal with just a quote and a comment (Pablo" } # ), which needs no UNION keyword at all to truncate the query''s intended tail.'
+    pl: 'v2 wiąże wartość w sparsowaną algebrę SPARQL przez initBindings, nie w tekst zapytania -- zweryfikowane jako naprawdę bezpieczne dla lokalnych grafów rdflib przez wszystkie trzy przejścia badawcze (uwaga: ten konkretny mechanizm NIE rozciąga się na SPARQLWrapper przeciw zdalnemu endpointowi, który nie ma odpowiednika). v1 to podatna linia bazowa. Czarna lista słów kluczowych z v3 jest trywialnie omijana przez zamknięcie literału samym cudzysłowem i komentarzem (Pablo" } # ), co w ogóle nie potrzebuje słowa kluczowego UNION by obciąć zamierzony koniec zapytania.'
