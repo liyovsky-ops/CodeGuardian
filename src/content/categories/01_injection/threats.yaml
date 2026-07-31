@@ -1079,26 +1079,28 @@ threats:
 
     '
 - id: cat_1_research22
-  name: Perl open() injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Perl open() injection" wskazane w analizie arena.
+  name: Perl open() Injection
+  severity: Critical
+  difficulty: Medium
+  confidence: POSSIBLE
+  cwe:
+  - CWE-78
+  - CWE-73
+  desc: 'Dwuargumentowy open(FH, EXPR) w Perlu jest "magiczny" -- wiodący albo końcowy | w stringu sprawia że reszta jest oddawana do /bin/sh -c jako komenda; >, >>, +<, +> dają dowolny zapis/obcięcie/odczyt. Trójargumentowy open(FH, tryb, EXPR) (Perl 5.6.0, 2000) eliminuje to całkowicie -- tryb jest osobnym literalnym argumentem -- ale nie zatrzymuje przejścia przez ścieżki jeśli EXPR wciąż zawiera segmenty kontrolowane przez atakującego.
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: Perl's 2-argument open(FH, EXPR) is "magic" -- a leading or trailing | in the string hands the rest to /bin/sh -c as a command; >, >>, +<, +> give arbitrary write/truncate/read. The 3-argument open(FH, mode, EXPR) (Perl 5.6.0, 2000) eliminates this entirely -- the mode is a separate literal argument -- but does not stop path traversal if EXPR still contains attacker-controlled segments.
+  lang: perl
+  vuln: 'my $file = $q->param(''page'');           # attacker-controlled
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
-
-    # Potrzebny dalszy research przed dodaniem przykładu
+    open(my $fh, $file) or die $!;          # 2-arg magic: "page=id |" -> runs `id`
 
     '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
+  safe: 'my $name = $q->param(''page'');
 
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    die "bad name" unless $name =~ /\A([\w.-]+)\z/;
+
+    open(my $fh, ''<'', "/var/www/pages/$1") or die $!;  # 3-arg: literal mode
 
     '
 - id: cat_1_research23

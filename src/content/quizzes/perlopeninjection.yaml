@@ -1,0 +1,111 @@
+threatId: cat_1_research22
+title:
+  en: Perl open() Injection — knowledge check
+  pl: Perl open() Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: A CGI script runs open(my $fh, $q->param('file')) and the attacker submits file=id%20|. Is this exploitable?
+    pl: Skrypt CGI wykonuje open(my $fh, $q->param('file')) a atakujący przesyła file=id%20|. Czy to jest podatne na wykorzystanie?
+  isVulnerable: true
+  cwe: CWE-78
+  explanation:
+    en: 'Yes. The 2-argument open() is "magic": a string ending in | is treated as a command, and Perl runs it via /bin/sh -c, handing back a filehandle you read the command''s stdout from. perldoc''s own documentation literally warns about a filename like "rsh cat file |" for exactly this reason.'
+    pl: 'Tak. Dwuargumentowy open() jest "magiczny": string kończący się na | jest traktowany jako komenda, i Perl uruchamia ją przez /bin/sh -c, oddając uchwyt pliku z którego czytasz stdout komendy. Sama dokumentacja perldoc dosłownie ostrzega przed nazwą pliku jak "rsh cat file |" dokładnie z tego powodu.'
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: A developer switches from open($fh, $file) to open($fh, '<', $file). What does this fix, and what does it NOT fix?
+    pl: Deweloper przełącza się z open($fh, $file) na open($fh, '<', $file). Co to naprawia, a czego NIE naprawia?
+  choices:
+  - id: a
+    label:
+      en: It eliminates the magic pipe/redirection injection completely (the mode is now a separate literal argument), but does NOT by itself stop path traversal if $file still contains attacker-controlled directory segments like ../../etc/passwd
+      pl: Całkowicie eliminuje magiczne wstrzyknięcie pipe/przekierowania (tryb jest teraz osobnym literalnym argumentem), ale samo w sobie NIE zatrzymuje przejścia przez ścieżki jeśli $file wciąż zawiera kontrolowane przez atakującego segmenty katalogów jak ../../etc/passwd
+  - id: b
+    label:
+      en: It fixes every possible file-related vulnerability, including path traversal, with no further validation needed
+      pl: Naprawia każdą możliwą podatność związaną z plikami, włącznie z przejściem przez ścieżki, bez potrzeby dalszej walidacji
+  - id: c
+    label:
+      en: It has no security effect at all -- it only changes performance characteristics
+      pl: Nie ma żadnego efektu bezpieczeństwa -- zmienia tylko charakterystyki wydajności
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes converged on this exact nuance: the 3-argument form is the definitive fix for command/pipe injection (CWE-78) because the mode can no longer be inferred from the filename string, but it says nothing about the CONTENTS of that filename -- path traversal (CWE-73/CWE-22) needs its own validation layer, such as an allowlist or File::Spec-based confinement.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zbiegły się na tym dokładnym niuansie: forma trójargumentowa to definitywna naprawa dla wstrzyknięcia komend/pipe (CWE-78) ponieważ tryb nie może już być wywnioskowany ze stringa nazwy pliku, ale nic nie mówi o ZAWARTOŚCI tej nazwy pliku -- przejście przez ścieżki (CWE-73/CWE-22) potrzebuje własnej warstwy walidacji, jak allowlist albo ograniczenie oparte na File::Spec.'
+- id: q3
+  type: vuln-or-not
+  prompt:
+    en: A script runs under perl -T (taint mode). A tainted $file reaches open(my $fh, "< $file") (2-arg, read mode). Does taint mode block this?
+    pl: Skrypt działa pod perl -T (taint mode). Nieufny $file dociera do open(my $fh, "< $file") (2-arg, tryb odczytu). Czy taint mode to blokuje?
+  isVulnerable: true
+  cwe: CWE-73
+  explanation:
+    en: 'No, and that''s the point -- this is a genuinely surprising gap all three research passes verified word-for-word against perlsec: "Perl doesn''t prevent you from opening tainted filenames for reading." Taint mode fatally blocks tainted data used in pipe-opens and write-opens ("Insecure dependency"), but permits tainted reads -- so an attacker-controlled read path (e.g. traversal to /etc/passwd) still gets through even with -T active. Marked vulnerable here because the read itself is a real information-disclosure risk that taint mode does not stop.'
+    pl: 'Nie, i o to właśnie chodzi -- to naprawdę zaskakująca luka którą wszystkie trzy przejścia badawcze zweryfikowały słowo w słowo względem perlsec: "Perl doesn''t prevent you from opening tainted filenames for reading." Taint mode fatalnie blokuje nieufne dane użyte w otwarciach pipe i zapisu ("Insecure dependency"), ale zezwala na nieufne odczyty -- więc kontrolowana przez atakującego ścieżka odczytu (np. przejście do /etc/passwd) wciąż przechodzi nawet z aktywnym -T. Oznaczone jako podatne bo sam odczyt to prawdziwe ryzyko ujawnienia informacji którego taint mode nie zatrzymuje.'
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive map Perl open() injection to both CWE-78 and CWE-73 rather than just CWE-78?
+    pl: Dlaczego ten deep-dive mapuje wstrzyknięcie Perl open() zarówno do CWE-78 jak i CWE-73, zamiast tylko do CWE-78?
+  choices:
+  - id: a
+    label:
+      en: CWE-78 covers the pipe/RCE facet (command execution), while CWE-73 (External Control of File Name or Path) covers the write/truncate/read facet (an attacker choosing an arbitrary file target) -- verified as co-assigned on the same real advisory, not an inference
+      pl: CWE-78 pokrywa aspekt pipe/RCE (wykonanie komendy), podczas gdy CWE-73 (External Control of File Name or Path) pokrywa aspekt zapisu/obcięcia/odczytu (atakujący wybierający dowolny cel pliku) -- zweryfikowane jako współprzypisane na tym samym prawdziwym advisory, nie wnioskowanie
+  - id: b
+    label:
+      en: CWE-73 is a typo for CWE-78 and should not actually be included
+      pl: CWE-73 to literówka dla CWE-78 i w rzeczywistości nie powinno być uwzględnione
+  - id: c
+    label:
+      en: CWE-78 only applies to Perl, and CWE-73 only applies to every other language
+      pl: CWE-78 dotyczy tylko Perla, a CWE-73 dotyczy tylko każdego innego języka
+  correctChoiceIds:
+  - a
+  explanation:
+    en: All three independent research passes found this dual mapping directly on the CVE-2026-8450 (HTTP::Daemon) security advisory itself, which tags both CWEs on the same real vulnerability -- the two weaknesses capture genuinely distinct facets of the same underlying "magic open" root cause.
+    pl: Wszystkie trzy niezależne przejścia badawcze znalazły to podwójne mapowanie bezpośrednio na samym advisory bezpieczeństwa CVE-2026-8450 (HTTP::Daemon), które tagguje oba CWE na tej samej prawdziwej podatności -- te dwie słabości uchwytują naprawdę odrębne aspekty tej samej leżącej u podstaw przyczyny "magicznego open".
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: A script iterates an upload directory with readdir() and calls open(my $fh, $entryName) on each file found -- no HTTP parameter is involved at any point. An attacker previously uploaded a file literally named "|id". Is this exploitable?
+    pl: Skrypt iteruje katalog uploadów przez readdir() i wywołuje open(my $fh, $entryName) na każdym znalezionym pliku -- żaden parametr HTTP nie jest zaangażowany w żadnym momencie. Atakujący wcześniej wgrał plik dosłownie nazwany "|id". Czy to jest podatne na wykorzystanie?
+  isVulnerable: true
+  cwe: CWE-78
+  explanation:
+    en: 'Yes -- verified via the real CVE-2011-10007 (File::Find::Rule): the string subjected to 2-arg magic-open parsing doesn''t need to arrive as live user input at all. A file name on disk IS the string, and "|id" as a filename triggers the exact same pipe-injection the moment any routine directory scan opens it with the 2-argument form.'
+    pl: 'Tak -- zweryfikowane przez prawdziwe CVE-2011-10007 (File::Find::Rule): string poddany parsowaniu 2-arg magic-open wcale nie musi przybyć jako żywe wejście użytkownika. Nazwa pliku na dysku JEST tym stringiem, a "|id" jako nazwa pliku wyzwala dokładnie to samo wstrzyknięcie pipe w chwili gdy jakikolwiek rutynowy skan katalogu otworzy go formą dwuargumentową.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A Perl script opens a user-uploaded file by name for reading. Which variant actually eliminates the magic-open injection risk?
+    pl: Skrypt Perl otwiera wgrany przez użytkownika plik po nazwie do odczytu. Który wariant faktycznie eliminuje ryzyko wstrzyknięcia magic-open?
+  variants:
+  - id: v1
+    lang: perl
+    code: '# strip only the literal pipe character before opening
+
+      (my $clean = $filename) =~ s/\|//g;
+
+      open(my $fh, $clean) or die $!;'
+  - id: v2
+    lang: perl
+    code: '# 3-argument open with an explicit, literal read mode
+
+      open(my $fh, ''<'', $filename) or die $!;'
+  - id: v3
+    lang: perl
+    code: '# wrap in eval to suppress any errors from a bad open
+
+      eval { open(my $fh, $filename) };
+
+      if ($@) { die ''open failed'' }'
+  correctVariantId: v2
+  explanation:
+    en: v2 supplies the mode as its own literal argument, so Perl never inspects $filename's contents for pipe/redirection meaning at all -- verified by all three research passes as the definitive fix. v1's pipe-stripping blacklist misses > , >> , +< , +> (the write/truncate/read-write magic prefixes still trigger without any | character). v3's eval only catches exceptions -- the pipe command in a 2-arg open executes successfully (no exception thrown), so wrapping it in eval does nothing to stop the injection.
+    pl: v2 dostarcza tryb jako własny literalny argument, więc Perl nigdy nie inspekcjonuje zawartości $filename pod kątem znaczenia pipe/przekierowania w ogóle -- zweryfikowane przez wszystkie trzy przejścia badawcze jako definitywna naprawa. Czarna lista usuwająca pipe z v1 pomija > , >> , +< , +> (magiczne prefiksy zapisu/obcięcia/odczytu-zapisu wciąż się wyzwalają bez żadnego znaku |). eval z v3 łapie tylko wyjątki -- komenda pipe w 2-arg open wykonuje się pomyślnie (żaden wyjątek nie jest rzucony), więc owinięcie jej w eval nic nie robi by zatrzymać wstrzyknięcie.
