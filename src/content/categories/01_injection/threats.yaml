@@ -1151,26 +1151,26 @@ threats:
 
     '
 - id: cat_1_research25
-  name: Null byte injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Null byte injection" wskazane w analizie arena.
+  name: Null Byte Injection
+  severity: High
+  difficulty: Medium
+  confidence: POSSIBLE
+  cwe:
+  - CWE-158
+  - CWE-626
+  desc: 'Zarządzane języki (PHP, Java, Python) śledzą długość stringa jawnie -- osadzony bajt NUL (0x00) to po prostu kolejny znak, więc kontrola jak endsWith(".jpg") ewaluuje cały string i przechodzi. Leżące pod spodem API C/POSIX jest zakończone NUL, więc open()/fopen()/socket widzi tylko prefiks przed NUL. PHP naprawił to na poziomie systemu plików w 5.3.4 (2010, dokończone dopiero w 2015), ale CVE-2025-1220 (fsockopen) i CVE-2026-41256 (jq) dowodzą że klasa żyje wszędzie gdzie ujście inne niż system plików nigdy nie zostało utwardzone.
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: Managed languages (PHP, Java, Python) track string length explicitly -- an embedded NUL byte (0x00) is just another character, so a check like endsWith('.jpg') evaluates the whole string and passes. The underlying C/POSIX API is NUL-terminated, so open()/fopen()/socket only sees the prefix before the NUL. PHP fixed this at the filesystem level in 5.3.4 (2010, not fully closed until 2015), but CVE-2025-1220 (fsockopen) and CVE-2026-41256 (jq) prove the class survives wherever a non-filesystem sink was never hardened.
+  lang: php
+  vuln: "$page = $_GET['page'];\nif (file_exists($page . '.php')) {   // full string checked, NUL included\n    include($page . '.php');          // native fopen() truncates at the NUL\n}\n"
+  safe: '$page = $_GET[''page''] ?? ''home'';
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
+    $allowed = [''home'' => 1, ''about'' => 1, ''contact'' => 1];
 
-    # Potrzebny dalszy research przed dodaniem przykładu
+    if (!isset($allowed[$page])) { http_response_code(400); exit; }
 
-    '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
-
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    include __DIR__ . "/pages/{$page}.php";  // allowlist -- input never becomes a raw path
 
     '
 - id: cat_1_research26

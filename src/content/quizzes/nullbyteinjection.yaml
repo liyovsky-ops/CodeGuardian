@@ -1,0 +1,101 @@
+threatId: cat_1_research25
+title:
+  en: Null Byte Injection — knowledge check
+  pl: Null Byte Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: An upload handler on PHP 8.3 checks filename.endsWith('.jpg') then calls move_uploaded_file() with a name like "shell.php%00.jpg". Is this exploitable on a current, patched PHP runtime?
+    pl: Handler uploadu na PHP 8.3 sprawdza filename.endsWith('.jpg') potem wywołuje move_uploaded_file() z nazwą jak "shell.php%00.jpg". Czy to jest podatne na wykorzystanie na aktualnym, załatanym środowisku PHP?
+  isVulnerable: false
+  cwe: CWE-158
+  explanation:
+    en: 'No -- this is the honest, verified finding at the center of this deep-dive: PHP''s filesystem functions (including move_uploaded_file, fully fixed by CVE-2015-4025/CVE-2015-2348''s follow-ups, closing in 5.6.9/5.5.25/5.4.41) reject embedded NUL bytes in paths outright on any currently-supported version. The classic file-open vector is mostly dead on a maintained runtime -- the live risk today is legacy stacks and non-filesystem sinks.'
+    pl: 'Nie -- to uczciwe, zweryfikowane ustalenie w centrum tego deep-dive: funkcje systemu plików PHP (włącznie z move_uploaded_file, w pełni naprawione przez następstwa CVE-2015-4025/CVE-2015-2348, zamknięte w 5.6.9/5.5.25/5.4.41) odrzucają wprost osadzone bajty NUL w ścieżkach na każdej aktualnie wspieranej wersji. Klasyczny wektor otwarcia pliku jest w większości martwy na utrzymywanym środowisku -- żywe ryzyko dziś to przestarzałe stosy i ujścia inne niż system plików.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: A PHP application validates a hostname string against an allowlist, then passes it to fsockopen() on a version before 8.1.33/8.2.29/8.3.23/8.4.10, with the value "trusted-host.example\0.evil.example". Is this exploitable?
+    pl: Aplikacja PHP waliduje string hostname względem allowlisty, potem przekazuje go do fsockopen() na wersji przed 8.1.33/8.2.29/8.3.23/8.4.10, z wartością "trusted-host.example\0.evil.example". Czy to jest podatne na wykorzystanie?
+  isVulnerable: true
+  cwe: CWE-158
+  explanation:
+    en: Yes -- verified via the real, modern CVE-2025-1220. The allowlist check evaluates the full managed string (which starts with the trusted hostname, so it can pass depending on the check logic), but the underlying C socket layer connects using only the prefix before the NUL. This is the canonical proof that the null-byte class survives in any sink that wasn't hardened the same way PHP's filesystem functions were.
+    pl: Tak -- zweryfikowane przez prawdziwe, współczesne CVE-2025-1220. Kontrola allowlisty ewaluuje pełny string zarządzany (który zaczyna się od zaufanego hostname, więc może przejść zależnie od logiki kontroli), ale leżąca pod spodem warstwa socketu C łączy się używając tylko prefiksu przed NUL. To kanoniczny dowód że klasa null-byte przeżywa w każdym ujściu które nie zostało utwardzone w ten sam sposób co funkcje systemu plików PHP.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive cite both CVE-2015-2348 and CVE-2015-4025 as separate incidents rather than treating one as a duplicate of the other?
+    pl: Dlaczego ten deep-dive cytuje zarówno CVE-2015-2348 jak i CVE-2015-4025 jako osobne incydenty zamiast traktować jeden jako duplikat drugiego?
+  choices:
+  - id: a
+    label:
+      en: Both are real, independently-verified CVEs (confirmed directly against NVD) that fix the SAME 2010 root cause in DIFFERENT PHP functions at DIFFERENT point releases -- move_uploaded_file() in 5.4.39/5.5.23/5.6.7, and set_include_path()/tempnam()/rmdir()/readlink() in 5.4.41/5.5.25/5.6.9
+      pl: Oba to prawdziwe, niezależnie zweryfikowane CVE (potwierdzone bezpośrednio względem NVD) naprawiające TĘ SAMĄ przyczynę źródłową z 2010 w RÓŻNYCH funkcjach PHP przy RÓŻNYCH wydaniach punktowych -- move_uploaded_file() w 5.4.39/5.5.23/5.6.7, i set_include_path()/tempnam()/rmdir()/readlink() w 5.4.41/5.5.25/5.6.9
+  - id: b
+    label:
+      en: CVE-2015-4025 is a typo that should be corrected to CVE-2015-2348
+      pl: CVE-2015-4025 to literówka którą należy poprawić na CVE-2015-2348
+  - id: c
+    label:
+      en: They affect completely unrelated vulnerability classes that happen to share a year
+      pl: Dotyczą całkowicie niepowiązanych klas podatności które przypadkiem dzielą rok
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Two independent research passes each surfaced one of these CVEs, and a dedicated verification pass confirmed both exist on NVD with distinct descriptions, distinct affected functions, and distinct (though nearby) fixed versions -- both explicitly described by NVD as incomplete-fix follow-ups to the original CVE-2006-7243. The PHP language-level fix genuinely took five years and multiple releases to fully close.
+    pl: Dwa niezależne przejścia badawcze każde ujawniło jedno z tych CVE, a dedykowane przejście weryfikacyjne potwierdziło że oba istnieją na NVD z odrębnymi opisami, odrębnymi dotkniętymi funkcjami, i odrębnymi (choć bliskimi) załatanymi wersjami -- oba jawnie opisane przez NVD jako następstwa niepełnej naprawy oryginalnego CVE-2006-7243. Naprawa PHP na poziomie języka naprawdę potrzebowała pięciu lat i wielu wydań by w pełni się zamknąć.
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: Where does CWE-158 (Improper Neutralization of Null Byte or NUL Character) officially sit in the OWASP Top 10:2021?
+    pl: Gdzie oficjalnie znajduje się CWE-158 (Improper Neutralization of Null Byte or NUL Character) w OWASP Top 10:2021?
+  choices:
+  - id: a
+    label:
+      en: Not directly listed anywhere -- verified by fetching OWASP's own CWE-to-category mapping data (CWE-1347), CWE-158 rolls up to A03:2021-Injection only indirectly, through its parent CWE-138, which IS a listed member
+      pl: Nie wymienione bezpośrednio nigdzie -- zweryfikowane przez pobranie danych mapowania CWE-na-kategorię OWASP (CWE-1347), CWE-158 rolluje się do A03:2021-Injection tylko pośrednio, przez swojego rodzica CWE-138, który JEST wymienionym członkiem
+  - id: b
+    label:
+      en: Directly and explicitly listed as a member of A03:2021-Injection
+      pl: Bezpośrednio i jawnie wymienione jako członek A03:2021-Injection
+  - id: c
+    label:
+      en: Directly listed under A01:2021-Broken Access Control instead
+      pl: Bezpośrednio wymienione zamiast tego pod A01:2021-Broken Access Control
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes verified this against MITRE''s own CWE-1347 mapping data directly: CWE-158 is not itself in the A03:2021 list, and only inherits membership through its parent CWE-138. This is exactly the kind of nuance this knowledge base insists on stating plainly rather than defaulting to the instinctive ''it has Injection in a related name, so it must be A03'' assumption.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zweryfikowały to bezpośrednio względem danych mapowania CWE-1347 MITRE: CWE-158 samo w sobie nie jest na liście A03:2021, i dziedziczy członkostwo tylko przez swojego rodzica CWE-138. To dokładnie ten rodzaj niuansu który ta baza wiedzy nalega jasno stwierdzać zamiast domyślnie przyjmować instynktowne założenie "ma Injection w powiązanej nazwie, więc musi być A03".'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: A Java servlet calls Paths.get(baseDir, userInput).normalize() where userInput contains an embedded NUL character, on a current JDK. Does the call succeed and silently truncate the path?
+    pl: Serwlet Java wywołuje Paths.get(baseDir, userInput).normalize() gdzie userInput zawiera osadzony znak NUL, na aktualnym JDK. Czy wywołanie się powiedzie i po cichu obetnie ścieżkę?
+  isVulnerable: false
+  cwe: CWE-626
+  explanation:
+    en: No. Modern Java's java.nio.file.Paths.get() throws InvalidPathException on an embedded NUL rather than silently truncating -- one of several verified runtime-level protections (alongside PHP's filesystem functions, Python's open(), and Node's fs module) that closed the classic truncation vector at the language level. Marked not-vulnerable here because the failure is loud (an exception), not the silent truncation the attack depends on.
+    pl: Nie. Nowoczesne Paths.get() java.nio.file Javy rzuca InvalidPathException na osadzonym NUL zamiast po cichu obcinać -- jedna z kilku zweryfikowanych ochron na poziomie środowiska uruchomieniowego (obok funkcji systemu plików PHP, open() Pythona, i modułu fs Node) które zamknęły klasyczny wektor obcięcia na poziomie języka. Oznaczone jako niepodatne bo błąd jest głośny (wyjątek), nie cichym obcięciem od którego zależy atak.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A file server validates a user-supplied filename against an extension allowlist before reading it. Which variant actually closes the null-byte truncation risk for every downstream sink, not just the filesystem?
+    pl: Serwer plików waliduje dostarczoną przez użytkownika nazwę pliku względem allowlisty rozszerzeń zanim ją odczyta. Który wariant faktycznie zamyka ryzyko obcięcia null-byte dla każdego ujścia downstream, nie tylko systemu plików?
+  variants:
+  - id: v1
+    lang: php
+    code: "$name = $_GET['file'];\nif (str_ends_with($name, '.txt')) {\n    readfile('/data/' . $name);   // relies only on the runtime's filesystem NUL rejection\n}"
+  - id: v2
+    lang: php
+    code: "$name = $_GET['file'];\nif (strpos($name, \"\\0\") !== false || !preg_match('/\\A[\\w.-]+\\.txt\\z/', $name)) {\n    http_response_code(400); exit;\n}\nreadfile('/data/' . $name);"
+  - id: v3
+    lang: php
+    code: "$name = str_replace('..', '', $_GET['file']);   // strips only \"..\"\nif (str_ends_with($name, '.txt')) {\n    readfile('/data/' . $name);\n}"
+  correctVariantId: v2
+  explanation:
+    en: v2 rejects NUL explicitly at the input boundary AND enforces a strict allowlist pattern -- the only approach that protects every sink the value might later reach (filesystem, but also any socket/LDAP/native code the same string could flow into), not just the ones a particular runtime happens to have hardened. v1 relies solely on the current PHP filesystem layer's NUL rejection, which is real but sink-specific -- it does nothing if this value is later also used to build a hostname or LDAP filter. v3's ".." stripping is irrelevant to null-byte truncation entirely and doesn't touch the vulnerability.
+    pl: v2 odrzuca NUL jawnie na granicy wejścia I wymusza ścisły wzorzec allowlisty -- jedyne podejście które chroni każde ujście które wartość może później osiągnąć (system plików, ale też każdy socket/LDAP/kod natywny do którego ten sam string mógłby popłynąć), nie tylko te które dane środowisko akurat utwardziło. v1 polega wyłącznie na odrzuceniu NUL przez aktualną warstwę systemu plików PHP, co jest prawdziwe ale specyficzne dla ujścia -- nic nie robi jeśli ta wartość jest później też używana do zbudowania hostname albo filtra LDAP. Usuwanie ".." z v3 jest całkowicie nieistotne dla obcięcia null-byte i nie dotyka podatności.

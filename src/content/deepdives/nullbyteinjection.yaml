@@ -1,0 +1,427 @@
+meta:
+  id: nullbyteinjection
+  threatId: cat_1_research25
+  severity: High
+  color: '#78350f'
+  colorRgb: 120,53,15
+  cwe: CWE-158
+  cvss: '7.5'
+  standard: OWASP A03:2021 (indirect, via CWE-138)
+hero:
+  titleMain: 'Null Byte '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: Null Byte / %00 Injection (Poison Null Byte)
+  lead:
+    en: 'Managed languages (PHP, Java, Python, Node.js) track string length explicitly, so an embedded NUL byte (0x00) is just another character -- a check like filename.endsWith(''.jpg'') evaluates the whole string and passes. The C/POSIX API underneath is NUL-terminated, so the moment that string reaches open()/fopen()/a socket call, everything after the first NUL silently vanishes. The gap between what was validated and what actually got opened is the entire vulnerability. All three independent research passes converged on the same honest framing: this was fixed at the language level in every mainstream runtime''s filesystem API years ago, but a genuine 2025 PHP CVE (fsockopen hostname validation) and a 2026 jq CVE prove the underlying class is not dead -- it just moved to sinks (sockets, LDAP, XPath, custom native code) that were never hardened.'
+    pl: 'Języki zarządzane (PHP, Java, Python, Node.js) śledzą długość stringa jawnie, więc osadzony bajt NUL (0x00) jest po prostu kolejnym znakiem -- kontrola jak filename.endsWith(''.jpg'') ewaluuje cały string i przechodzi. Leżące pod spodem API C/POSIX jest zakończone NUL, więc w chwili gdy ten string dotrze do open()/fopen()/wywołania socketu, wszystko po pierwszym NUL po cichu znika. Luka między tym co zostało zwalidowane a tym co faktycznie zostało otwarte to cała ta podatność. Wszystkie trzy niezależne przejścia badawcze zbiegły się na tym samym uczciwym ramowaniu: to zostało naprawione na poziomie języka w API systemu plików każdego głównego środowiska uruchomieniowego lata temu, ale prawdziwe CVE PHP z 2025 (walidacja hostname w fsockopen) i CVE jq z 2026 dowodzą że leżąca u podstaw klasa nie jest martwa -- po prostu przeniosła się do ujść (sockety, LDAP, XPath, własny kod natywny) które nigdy nie zostały utwardzone.'
+  metrics:
+  - k: CWE-158
+    v:
+      en: Weakness ID (+ CWE-626)
+      pl: ID słabości (+ CWE-626)
+  - k: '2010'
+    v:
+      en: PHP 5.3.4 -- filesystem fix (incomplete until 2015)
+      pl: PHP 5.3.4 -- naprawa systemu plików (niepełna do 2015)
+  - k: 2025-26
+    v:
+      en: Modern CVEs -- fsockopen, jq
+      pl: Nowoczesne CVE -- fsockopen, jq
+  - k: No 2021 slot
+    v:
+      en: Direct OWASP mapping (verified absent)
+      pl: Bezpośrednie mapowanie OWASP (potwierdzony brak)
+  sources:
+  - label: CWE-158 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/158.html
+  - label: CWE-626 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/626.html
+  - label: CVE-2006-7243 (NVD)
+    url: https://nvd.nist.gov/vuln/detail/CVE-2006-7243
+  - label: PHP manual — Null bytes related issues
+    url: https://www.php.net/manual/en/security.filesystem.nullbytes.php
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laboratoria
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Every variant is the same trick applied to a different sink: get validation to see the full, safe-looking string while a lower layer only sees the truncated prefix.'
+      pl: 'Każdy wariant to ta sama sztuczka zastosowana na innym ujściu: sprawić by walidacja widziała pełny, bezpiecznie wyglądający string podczas gdy niższa warstwa widzi tylko obcięty prefiks.'
+    items:
+    - name: File-upload extension bypass
+      sev: critical
+      description:
+        en: An upload filter checks the trailing extension of the full filename and approves it; the underlying filesystem write only sees the prefix. On a runtime old enough not to reject embedded NUL, shell.php%00.jpg is written/served as shell.php.
+        pl: Filtr uploadu sprawdza końcowe rozszerzenie pełnej nazwy pliku i zatwierdza ją; leżący pod spodem zapis systemu plików widzi tylko prefiks. Na środowisku uruchomieniowym wystarczająco starym by nie odrzucać osadzonego NUL, shell.php%00.jpg jest zapisywany/serwowany jako shell.php.
+      payload: 'upload filename: shell.php%00.jpg   ->   validator sees ".jpg" (pass), filesystem write sees "shell.php"'
+    - name: Path traversal + extension-append truncation
+      sev: critical
+      description:
+        en: Code that appends a fixed extension to a user-controlled path (include($_GET['page'].'.php')) can be defeated by placing the NUL before the traversal sequence's intended suffix -- the append happens on the full managed string, but the file open truncates at the NUL.
+        pl: Kod dołączający stałe rozszerzenie do ścieżki kontrolowanej przez użytkownika (include($_GET['page'].'.php')) może zostać pokonany przez umieszczenie NUL przed zamierzonym sufiksem sekwencji przejścia -- dołączenie zachodzi na pełnym stringu zarządzanym, ale otwarcie pliku obcina na NUL.
+      payload: ?page=../../../etc/passwd%00   ->   include('../../../etc/passwd%00'.'.php')  opens /etc/passwd
+    - name: LDAP filter truncation
+      sev: high
+      description:
+        en: 'Verified via PortSwigger''s own research against Microsoft ADAM: .NET''s System.DirectoryServices does not strip NUL from filter strings, so a NUL truncates the query as seen by the native LDAP layer, dropping a trailing restrictive clause the application intended to enforce.'
+        pl: 'Zweryfikowane przez własne badanie PortSwigger względem Microsoft ADAM: System.DirectoryServices .NET nie usuwa NUL ze stringów filtra, więc NUL obcina zapytanie widziane przez natywną warstwę LDAP, usuwając końcową restrykcyjną klauzulę którą aplikacja zamierzała wymusić.'
+      payload: (&(displayName=*))%00)(department=Marketing))  -- trailing department restriction dropped at the NUL
+    - name: XPath query truncation
+      sev: medium
+      description:
+        en: 'Also documented by PortSwigger: System.Xml.XPath historically did not block embedded NUL either, allowing the same truncation trick against XPath predicates that restrict which nodes a query is allowed to return.'
+        pl: 'Również udokumentowane przez PortSwigger: System.Xml.XPath historycznie też nie blokował osadzonego NUL, pozwalając na tę samą sztuczkę obcięcia przeciw predykatom XPath ograniczającym które węzły zapytanie może zwrócić.'
+      payload: //user[name=$name and role!='admin']%00  -- trailing role restriction truncated away
+    - name: Hostname/SSRF allowlist bypass (modern, 2025)
+      sev: high
+      description:
+        en: 'Verified via CVE-2025-1220: PHP''s fsockopen()/stream_socket_client() validated a hostname string against an allowlist, but the C socket layer connected using only the pre-NUL prefix -- a genuinely modern proof that the class survives wherever a non-filesystem sink was never hardened.'
+        pl: 'Zweryfikowane przez CVE-2025-1220: fsockopen()/stream_socket_client() PHP walidowały string hostname względem allowlisty, ale warstwa socketu C łączyła się używając tylko prefiksu przed NUL -- naprawdę współczesny dowód że klasa przeżywa gdziekolwiek ujście inne niż system plików nigdy nie zostało utwardzone.'
+      payload: fsockopen("trusted-host.example\0.evil.example", 80)  -- allowlist check passes on the full string, socket connects to the truncated prefix
+    - name: Structured-file truncation (modern, 2026)
+      sev: medium
+      description:
+        en: 'Verified via CVE-2026-41256: jq (versions <=1.8.1) truncates a top-level program loaded from a file via -f at the first embedded NUL byte, so the compiled filter can silently diverge from the full file content the operator believes they are running.'
+        pl: 'Zweryfikowane przez CVE-2026-41256: jq (wersje <=1.8.1) obcina program najwyższego poziomu wczytany z pliku przez -f na pierwszym osadzonym bajcie NUL, więc skompilowany filtr może po cichu odbiegać od pełnej zawartości pliku którą operator wierzy że uruchamia.'
+      payload: jq -f program.jq   where program.jq contains an embedded 0x00 partway through -- only the prefix before it is compiled and run
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: Modern filesystem APIs already reject embedded NUL in every mainstream language -- the residual risk is code on an old runtime, or a modern runtime's non-filesystem sink that was never hardened the same way.
+      pl: Nowoczesne API systemu plików już odrzucają osadzony NUL w każdym głównym języku -- pozostałe ryzyko to kod na starym środowisku uruchomieniowym, albo ujście inne niż system plików nowoczesnego środowiska które nigdy nie zostało utwardzone w ten sam sposób.
+    languages:
+    - label: PHP -- legacy (pre-5.3.4)
+      lang: php
+      vulnerable: "$page = $_GET['page'];\nif (file_exists($page . '.php')) {   // full string checked, NUL included\n    include($page . '.php');          // native fopen() truncates at the NUL\n}"
+      safe: '$page = $_GET[''page''] ?? ''home'';
+
+        $allowed = [''home'' => 1, ''about'' => 1, ''contact'' => 1];
+
+        if (!isset($allowed[$page])) { http_response_code(400); exit; }
+
+        include __DIR__ . "/pages/{$page}.php";  // allowlist -- input never becomes a raw path
+
+        // (PHP >=5.3.4 also rejects embedded NUL in the filesystem layer itself as defense-in-depth)'
+    - label: PHP -- modern non-filesystem sink (fsockopen)
+      lang: php
+      vulnerable: "$host = $_POST['host'];\nif (in_array($host, $allowedHosts)) {     // full string checked\n    $fp = fsockopen($host, 80);           // pre-8.1.33/8.2.29/8.3.23/8.4.10: truncates at NUL\n}"
+      safe: '$host = $_POST[''host''];
+
+        if (strpos($host, "\0") !== false) { http_response_code(400); exit; }
+
+        if (!in_array($host, $allowedHosts, true)) { http_response_code(400); exit; }
+
+        $fp = fsockopen($host, 80);  // patched PHP also rejects NUL in the hostname itself'
+    - label: Java -- allowlist bypass on a native-backed check
+      lang: java
+      vulnerable: "String name = request.getParameter(\"file\");   // \"secret.txt\\0.jpg\"\nif (name.endsWith(\".jpg\")) {                    // TRUE -- managed string, full length\n    return new FileInputStream(new File(baseDir, name));  // legacy JRE: opens \"secret.txt\"\n}"
+      safe: 'String name = request.getParameter("file");
+
+        if (name.indexOf(''\0'') >= 0) throw new IllegalArgumentException("NUL in name");
+
+        Path base = Paths.get(baseDir).toRealPath();
+
+        Path target = base.resolve(name).normalize();   // NIO throws InvalidPathException on embedded NUL
+
+        if (!target.startsWith(base)) throw new SecurityException("traversal");
+
+        return Files.newInputStream(target);'
+    - label: Python -- the safe default (and its limit)
+      lang: python
+      vulnerable: "import ctypes\nname = user_input                      # \"../secret\\x00.txt\"\nif name.endswith(\".txt\"):              # check passes on the full string\n    libc = ctypes.CDLL(\"libc.so.6\")\n    fd = libc.open(name.encode(), 0)   # C open() truncates at \\x00 -> ../secret"
+      safe: "# Python's own open()/os/pathlib already refuse embedded NUL:\nopen(name)   # raises ValueError: embedded null byte\n# The residual risk is exactly what's shown above: bypassing that guard\n# by handing the raw string to ctypes/a C extension/subprocess instead.\nif \"\\x00\" in name or not re.fullmatch(r\"[\\w.-]+\", name):\n    raise ValueError(\"invalid name\")"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: On a current mainstream runtime the classic file-open vector is mostly dead -- the practical 2026 hunting ground is legacy stacks and non-filesystem sinks that were never hardened the same way.
+      pl: Na aktualnym głównym środowisku uruchomieniowym klasyczny wektor otwarcia pliku jest w większości martwy -- praktycznym terenem łowieckim 2026 są przestarzałe stosy i ujścia inne niż system plików które nigdy nie zostały utwardzone w ten sam sposób.
+    steps:
+    - title:
+        en: Fingerprint the runtime and its patch level
+        pl: Rozpoznaj środowisko uruchomieniowe i jego poziom łatek
+      description:
+        en: The vector is entirely version-gated. Identify the PHP/Java/Python/Node version in play -- a maintained, current runtime blocks the classic filesystem variant outright.
+        pl: Wektor jest całkowicie zależny od wersji. Zidentyfikuj wersję PHP/Java/Python/Node w grze -- utrzymywane, aktualne środowisko uruchomieniowe blokuje klasyczny wariant systemu plików wprost.
+    - title:
+        en: Locate validate-then-truncate flows
+        pl: Zlokalizuj przepływy waliduj-potem-obetnij
+      description:
+        en: Look for extension-allowlist checks on upload filenames, path-plus-fixed-extension concatenation, and any string validated in the app then handed to a lower layer -- sockets/hostnames, LDAP/XPath filters, native extensions, subprocess arguments.
+        pl: Szukaj kontroli allowlisty rozszerzenia na nazwach plików uploadu, konkatenacji ścieżki plus stałego rozszerzenia, i każdego stringa zwalidowanego w aplikacji a potem oddanego niższej warstwie -- sockety/hostname, filtry LDAP/XPath, rozszerzenia natywne, argumenty subprocess.
+    - title:
+        en: Confirm with a differential test
+        pl: Potwierdź testem różnicowym
+      description:
+        en: Send the value once clean and once with an injected NUL placed before the part the validator inspects -- %00 on URL/urlencoded channels, a raw 0x00 byte on multipart filenames and binary channels. Different content served, a different host reached, or an error string like "embedded null byte" / "Invalid file path" (which ironically proves the runtime is patched) confirms the sink's handling.
+        pl: Wyślij wartość raz czystą i raz z wstrzykniętym NUL umieszczonym przed częścią którą inspekcjonuje walidator -- %00 na kanałach URL/urlencoded, surowy bajt 0x00 na nazwach plików multipart i kanałach binarnych. Inna serwowana treść, inny osiągnięty host, albo string błędu jak "embedded null byte" / "Invalid file path" (co ironicznie dowodzi że środowisko jest załatane) potwierdza obsługę ujścia.
+    - title:
+        en: Pivot to non-filesystem sinks when the filesystem is hardened
+        pl: Przerzuć się na ujścia inne niż system plików gdy system plików jest utwardzony
+      description:
+        en: An "embedded null byte" error confirms the runtime blocks NUL in file paths -- but says nothing about sockets, LDAP, XPath, or custom native code the same request might also reach. CVE-2025-1220 is the canonical example of this pivot paying off.
+        pl: Błąd "embedded null byte" potwierdza że środowisko blokuje NUL w ścieżkach plików -- ale nic nie mówi o socketach, LDAP, XPath, czy własnym kodzie natywnym które to samo żądanie może również osiągnąć. CVE-2025-1220 to kanoniczny przykład że ten przerzut się opłaca.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Front-door rejection of NUL is the only defense that covers every sink at once -- runtime-level filesystem protections are strong but sink-specific, and stop at the filesystem boundary.
+      pl: Odrzucenie NUL na wejściu to jedyna obrona pokrywająca każde ujście naraz -- ochrony na poziomie środowiska uruchomieniowego są silne ale specyficzne dla ujścia, i kończą się na granicy systemu plików.
+    items:
+    - rank: 1
+      eff: 95
+      kind: primary
+      label:
+        en: Reject NUL and control characters at input validation, fail-closed
+        pl: Odrzuć NUL i znaki kontrolne przy walidacji wejścia, fail-closed
+      note:
+        en: The only control that covers every sink -- filesystem, sockets, LDAP, XPath, native extensions -- at once, since it stops the byte before it reaches any of them. MITRE's own recommended mitigation for CWE-158. Reject outright rather than strip (stripping can itself introduce a different bypass).
+        pl: Jedyna kontrola pokrywająca każde ujście -- system plików, sockety, LDAP, XPath, rozszerzenia natywne -- naraz, bo zatrzymuje bajt zanim dosięgnie któregokolwiek z nich. Własne zalecane łagodzenie MITRE dla CWE-158. Odrzuć wprost zamiast usuwać (usuwanie może samo wprowadzić inne obejście).
+    - rank: 2
+      eff: 90
+      kind: primary
+      label:
+        en: Allowlist the whole value; never let user input become a raw path/host string
+        pl: Allowlistuj całą wartość; nigdy nie pozwól by wejście użytkownika stało się surowym stringiem ścieżki/hosta
+      note:
+        en: Structurally immune to truncation because attacker input never reaches the sink verbatim -- an indirection map (id -> known-good filename) sidesteps the entire class regardless of runtime patch level.
+        pl: Strukturalnie odporne na obcięcie ponieważ wejście atakującego nigdy nie dociera do ujścia dosłownie -- mapa pośrednia (id -> znana dobra nazwa pliku) omija całą klasę niezależnie od poziomu łatek środowiska.
+    - rank: 3
+      eff: 80
+      kind: strong
+      label:
+        en: Current, patched runtime filesystem APIs
+        pl: Aktualne, załatane API systemu plików środowiska
+      note:
+        en: 'PHP >=5.6.9/5.5.25/5.4.41 (full closure, after two incomplete-fix follow-ups), Python 3''s open()/os (ValueError: embedded null byte), Java NIO Paths.get (InvalidPathException), Node.js fs (ERR_INVALID_ARG_VALUE) all reject embedded NUL today -- strong but scoped strictly to the filesystem sink.'
+        pl: 'PHP >=5.6.9/5.5.25/5.4.41 (pełne zamknięcie, po dwóch niepełnych naprawach), Python 3 open()/os (ValueError: embedded null byte), Java NIO Paths.get (InvalidPathException), Node.js fs (ERR_INVALID_ARG_VALUE) wszystkie dziś odrzucają osadzony NUL -- silne ale ściśle ograniczone do ujścia systemu plików.'
+    - rank: 4
+      eff: 75
+      kind: strong
+      label:
+        en: Canonicalize then verify base-directory containment
+        pl: Kanonikalizuj potem zweryfikuj zawieranie w katalogu bazowym
+      note:
+        en: realpath()/toRealPath() + a startsWith(base) check closes the path-traversal facet directly, and canonicalization tends to surface an embedded NUL as a side effect on most runtimes.
+        pl: realpath()/toRealPath() + kontrola startsWith(base) zamyka aspekt przejścia przez ścieżki bezpośrednio, a kanonikalizacja ma tendencję do ujawniania osadzonego NUL jako efekt uboczny na większości środowisk.
+    - rank: 5
+      eff: 35
+      kind: weak
+      label:
+        en: WAF / edge filtering of %00
+        pl: Filtrowanie %00 na WAF / krawędzi
+      note:
+        en: Misses raw-NUL channels entirely (multipart filenames, binary bodies) and is bypassable via double-encoding -- defense-in-depth at best, never the primary control.
+        pl: Całkowicie pomija kanały surowego NUL (nazwy plików multipart, ciała binarne) i jest omijalne przez podwójne kodowanie -- co najwyżej obrona w głąb, nigdy główna kontrola.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'A rich, honestly-dated record spanning 20 years: the flagship 2010-era PHP fix took two more CVEs across 2015 to actually finish, and two independently-verified CVEs from 2025 and 2026 prove the class is alive wherever a non-filesystem sink was never hardened.'
+      pl: 'Bogaty, uczciwie datowany rejestr rozciągający się na 20 lat: flagowa naprawa PHP z ok. 2010 potrzebowała jeszcze dwóch CVE w 2015 by faktycznie się zakończyć, a dwa niezależnie zweryfikowane CVE z 2025 i 2026 dowodzą że klasa żyje gdziekolwiek ujście inne niż system plików nigdy nie zostało utwardzone.'
+    items:
+    - org: PHP (language-level)
+      year: 2010
+      impact: CVE-2006-7243 -- NVD CWE-20, CVSSv2 5.0
+      cost: Fixed in PHP 5.3.4
+      description:
+        en: PHP before 5.3.4 accepted \0 in pathnames, letting an attacker append a safe-looking extension after the NUL (e.g. .php\0.jpg to file_exists()) to bypass extension checks. The flagship, best-known case -- and NVD tagged it CWE-20 (Improper Input Validation), not a null-byte-specific CWE, a reminder that real-world CVE tagging is often coarser than the ideal classification.
+        pl: PHP przed 5.3.4 akceptował \0 w nazwach ścieżek, pozwalając atakującemu dołączyć bezpiecznie wyglądające rozszerzenie po NUL (np. .php\0.jpg do file_exists()) by ominąć kontrole rozszerzenia. Flagowy, najlepiej znany przypadek -- a NVD otagował go CWE-20 (Improper Input Validation), nie CWE specyficznym dla null-byte, przypomnienie że rzeczywiste tagowanie CVE jest często zgrubsze niż idealna klasyfikacja.
+    - org: 'PHP (incomplete-fix follow-up #1)'
+      year: 2015
+      impact: CVE-2015-2348
+      cost: Fixed in 5.4.39 / 5.5.23 / 5.6.7
+      description:
+        en: move_uploaded_file() specifically still truncated pathnames at \x00 five years after the 2010 fix -- NVD explicitly describes this as existing "because of an incomplete fix for CVE-2006-7243." Verified directly against the NVD record.
+        pl: move_uploaded_file() konkretnie wciąż obcinał nazwy ścieżek na \x00 pięć lat po naprawie z 2010 -- NVD jawnie opisuje to jako istniejące "z powodu niepełnej naprawy CVE-2006-7243." Zweryfikowane bezpośrednio względem rekordu NVD.
+    - org: 'PHP (incomplete-fix follow-up #2)'
+      year: 2015
+      impact: CVE-2015-4025
+      cost: Fixed in 5.4.41 / 5.5.25 / 5.6.9
+      description:
+        en: A separate, later 2015 fix for the SAME root cause -- set_include_path(), tempnam(), rmdir(), and readlink() all still truncated at an embedded NUL. Verified directly against the NVD record as a second, distinct incomplete-fix CVE for different functions than CVE-2015-2348 -- the 2010 language-level fix genuinely took multiple releases across five years to finish closing.
+        pl: Osobna, późniejsza naprawa z 2015 dla TEJ SAMEJ przyczyny źródłowej -- set_include_path(), tempnam(), rmdir(), i readlink() wszystkie wciąż obcinały na osadzonym NUL. Zweryfikowane bezpośrednio względem rekordu NVD jako drugie, odrębne CVE niepełnej naprawy dla innych funkcji niż CVE-2015-2348 -- naprawa na poziomie języka z 2010 naprawdę potrzebowała wielu wydań na przestrzeni pięciu lat by faktycznie się zamknąć.
+    - org: PHP (modern, non-filesystem sink)
+      year: 2025
+      impact: CVE-2025-1220 -- SSRF via hostname allowlist bypass
+      cost: Fixed in 8.1.33 / 8.2.29 / 8.3.23 / 8.4.10
+      description:
+        en: fsockopen()/stream_socket_client() validated a hostname against an allowlist on the full managed string, but the underlying C socket layer connected using only the truncated prefix -- a genuinely modern (2025) proof this class survives in any sink that was never hardened the same way the filesystem functions were.
+        pl: fsockopen()/stream_socket_client() walidowały hostname względem allowlisty na pełnym stringu zarządzanym, ale leżąca pod spodem warstwa socketu C łączyła się używając tylko obciętego prefiksu -- naprawdę współczesny (2025) dowód że ta klasa przeżywa w każdym ujściu które nigdy nie zostało utwardzone w ten sam sposób co funkcje systemu plików.
+    - org: jq (jqlang)
+      year: 2026
+      impact: CVE-2026-41256 -- NVD CWE-158, versions <=1.8.1
+      cost: Confirmed directly against the live NVD record (not an aggregator)
+      description:
+        en: A top-level jq program loaded from a file via -f is truncated at the first embedded NUL byte -- the operator believes the full file is running, but only the prefix before the NUL was ever compiled. NVD tags this CWE-158 directly, matching this deep-dive's primary CWE exactly.
+        pl: Program jq najwyższego poziomu wczytany z pliku przez -f jest obcinany na pierwszym osadzonym bajcie NUL -- operator wierzy że działa pełny plik, ale tylko prefiks przed NUL kiedykolwiek został skompilowany. NVD tagguje to bezpośrednio jako CWE-158, dokładnie pasując do głównego CWE tego deep-dive.
+    inlineSources:
+    - label: CVE-2006-7243 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2006-7243
+    - label: CVE-2015-2348 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2015-2348
+    - label: CVE-2015-4025 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2015-4025
+    - label: CVE-2025-1220 -- Hadrian writeup
+      url: https://hadrian.io/blog/cve-2025-1220-null-byte-trickery-bypasses-hostname-allowlists-in-php
+    - label: CVE-2026-41256 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2026-41256
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: General SAST catches the taint-flow shape (unvalidated input reaching a file/socket/LDAP sink); dedicated null-byte checks are mostly a DAST/fuzzing discipline.
+      pl: Generyczny SAST łapie kształt przepływu skażenia (niezwalidowane wejście docierające do ujścia plik/socket/LDAP); dedykowane kontrole null-byte to głównie dyscyplina DAST/fuzzingu.
+    sast:
+    - - FindSecBugs / SpotBugs (WEAK_FILENAMEUTILS)
+      - Java-specific rule flagging filename/path handling weak to null-byte and related manipulation
+    - - Semgrep / CodeQL / SonarQube taint rules
+      - General taint-tracking from request parameters to file/native sinks catches the vulnerable shape even without a null-byte-specific rule
+    - - NIST SAMATE / Juliet test suite
+      - Includes Java null-byte-injection test cases, useful for validating any of the above detectors
+    dast:
+    - - Burp Suite (Intruder + active scanner)
+      - Fuzz path/filename/hostname parameters with %00 payload sets; multipart filenames need a raw 0x00 byte, not the literal text %00
+    - - OWASP ZAP
+      - Equivalent fuzzing capability with null-byte payload lists
+    note:
+      en: <strong>Key signal:</strong> an "embedded null byte" / "Invalid file path" / ERR_INVALID_ARG_VALUE error on a probe is good news for the filesystem sink (it proves the runtime is patched) but tells you nothing about sockets, LDAP, XPath, or native extensions the same input might also reach -- test those sinks independently.
+      pl: <strong>Kluczowy sygnał:</strong> błąd "embedded null byte" / "Invalid file path" / ERR_INVALID_ARG_VALUE na sondzie to dobra wiadomość dla ujścia systemu plików (dowodzi że środowisko jest załatane) ale nic nie mówi o socketach, LDAP, XPath, czy rozszerzeniach natywnych które to samo wejście może również osiągnąć -- testuj te ujścia niezależnie.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'The most important compliance finding here, verified independently by all three research passes by fetching MITRE''s own CWE-to-category mapping data directly: neither of the two null-byte-specific CWEs is directly listed under OWASP A03:2021-Injection. One rolls up to it indirectly through its parent; the flagship real-world CVE was tagged with neither.'
+      pl: 'Najważniejsze ustalenie zgodności tutaj, zweryfikowane niezależnie przez wszystkie trzy przejścia badawcze przez pobranie bezpośrednio danych mapowania CWE-na-kategorię OWASP MITRE: żaden z dwóch CWE specyficznych dla null-byte nie jest bezpośrednio wymieniony pod OWASP A03:2021-Injection. Jeden rolluje się do niej pośrednio przez swojego rodzica; flagowe rzeczywiste CVE nie zostało otagowane żadnym z nich.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - 'CWE-158 — Improper Neutralization of Null Byte or NUL Character (primary here; Variant, ChildOf CWE-138 Improper Neutralization of Special Elements). The neutralization-failure framing: "the filter didn''t strip the NUL." Directly matches CVE-2026-41256''s own NVD tag.'
+      - 'CWE-626 — Null Byte Interaction Error / Poison Null Byte (Variant, ChildOf CWE-147 Improper Neutralization of Input Terminators AND CWE-436 Interpretation Conflict). The cross-layer framing: "two components disagree on where the string ends" -- arguably the more precise mechanistic fit for the managed-vs-C truncation scenario this deep-dive covers. Confirmed by all three research passes as a SIBLING of CWE-158, not its parent or child.'
+      - MITRE's own CWE-626 page cites CVE-2005-4155 and CVE-2005-3153 as demonstrative examples -- both PHP/regex allowlist bypasses via an injected NUL byte.
+      - CVE-2006-7243 itself was tagged CWE-20 (Improper Input Validation) by NVD, not either null-byte-specific CWE -- real-world tagging is often coarser than the ideal classification.
+    - std: OWASP
+      items:
+      - Neither CWE-158 nor CWE-626 is directly enumerated in the official A03:2021-Injection mapped-CWE list (CWE-1347), verified by fetching that data directly. CWE-158 rolls up to A03:2021 only indirectly, through its parent CWE-138, which IS a listed member.
+      - 'CWE-626 is murkier still: one parent path (CWE-147 -> CWE-138) leads into A03; the other (CWE-436 Interpretation Conflict) does not. Treat any flat "this is A03:2021 Injection" statement about null byte injection as an oversimplification.'
+      - 'The impact frequently lands elsewhere depending on the sink: CVE-2025-1220''s real-world manifestation was tagged CWE-918 (SSRF), which is OWASP A10:2021 -- proof that a null-byte bug''s OWASP home depends on the sink it reaches, not on the presence of a NUL byte itself.'
+    inlineSources:
+    - label: CWE-158 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/158.html
+    - label: CWE-626 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/626.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active exploitation of a null-byte truncation bug is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji błędu obcięcia null-byte, przejdź tę listę od góry.
+    steps:
+    - en: Identify the exact validation check and the sink it was protecting -- filesystem, socket/hostname, LDAP, XPath, native extension -- since the fix differs per sink
+      pl: Zidentyfikuj dokładną kontrolę walidacji i ujście które chroniła -- system plików, socket/hostname, LDAP, XPath, rozszerzenie natywne -- ponieważ naprawa różni się per ujście
+    - en: If a file was written/read via the bypass, treat every file the process had access to as potentially exposed, not just the one confirmed
+      pl: Jeśli plik został zapisany/odczytany przez obejście, traktuj każdy plik do którego proces miał dostęp jako potencjalnie narażony, nie tylko potwierdzony
+    - en: If the sink was a socket/hostname (SSRF-style), audit every downstream service reachable from that egress path for what an attacker-redirected connection could have reached
+      pl: Jeśli ujściem był socket/hostname (w stylu SSRF), przeaudytuj każdą usługę downstream osiągalną z tej ścieżki wyjścia pod kątem tego co połączenie przekierowane przez atakującego mogło osiągnąć
+    - en: Confirm the runtime version and whether it already rejects embedded NUL at the filesystem layer -- if so, the entry point was necessarily a non-filesystem sink
+      pl: Potwierdź wersję środowiska i czy już odrzuca ono osadzony NUL na warstwie systemu plików -- jeśli tak, punkt wejścia był z konieczności ujściem innym niż system plików
+    - en: Grep the codebase for every validate-then-concatenate pattern feeding a native/C-backed API, not just the exploited one
+      pl: Przeszukaj bazę kodu pod kątem każdego wzorca waliduj-potem-konkatenuj zasilającego API oparte na natywnym/C, nie tylko wykorzystanego
+    - en: Upgrade the runtime to a patched version AND add explicit NUL/control-character rejection at every input boundary before considering the incident closed
+      pl: Zaktualizuj środowisko do załatanej wersji ORAZ dodaj jawne odrzucenie NUL/znaków kontrolnych na każdej granicy wejścia zanim uznasz incydent za zamknięty
+  labs:
+    title:
+      en: Practice labs
+      pl: Laboratoria praktyczne
+    lead:
+      en: PortSwigger has no lab combining a null byte with a file-upload web shell (their upload-bypass lab actually teaches a .htaccess override technique, not %00 -- verified directly, not assumed), but its path-traversal track has one genuine, verified lab covering exactly the truncation mechanism this deep-dive centers on.
+      pl: PortSwigger nie ma laboratorium łączącego null byte z web shellem przez upload (ich laboratorium obejścia uploadu w rzeczywistości uczy techniki nadpisania .htaccess, nie %00 -- zweryfikowane bezpośrednio, nie założone), ale jego ścieżka path traversal ma jedno prawdziwe, zweryfikowane laboratorium pokrywające dokładnie mechanizm obcięcia na którym skupia się ten deep-dive.
+    items:
+    - variant: Path traversal + extension-append truncation
+      provider: PortSwigger Web Security Academy
+      label: File path traversal, validation of file extension with null byte bypass
+      url: https://portswigger.net/web-security/file-path-traversal/lab-validate-file-extension-null-byte-bypass
+      difficulty: Practitioner
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-158 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/158.html
+    - label: CWE-626 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/626.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: CVE-2006-7243 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2006-7243
+    - label: CVE-2015-2348 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2015-2348
+    - label: CVE-2015-4025 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2015-4025
+    - label: CVE-2025-1220 -- Hadrian writeup
+      url: https://hadrian.io/blog/cve-2025-1220-null-byte-trickery-bypasses-hostname-allowlists-in-php
+    - label: CVE-2026-41256 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2026-41256
+    - label: PHP manual — Null bytes related issues
+      url: https://www.php.net/manual/en/security.filesystem.nullbytes.php
+    - label: PortSwigger — Null byte attacks are alive and well
+      url: https://portswigger.net/blog/null-byte-attacks-are-alive-and-well
