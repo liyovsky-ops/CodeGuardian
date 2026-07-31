@@ -38,6 +38,7 @@ import xqueryinjectionData from '../content/deepdives/xqueryinjection.yaml';
 import imapinjectionData from '../content/deepdives/imapinjection.yaml';
 import jsoninjectionData from '../content/deepdives/jsoninjection.yaml';
 import svginjectionData from '../content/deepdives/svginjection.yaml';
+import regexinjectionData from '../content/deepdives/regexinjection.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -73,6 +74,7 @@ import xqueryinjectionQuiz from '../content/quizzes/xqueryinjection.yaml';
 import imapinjectionQuiz from '../content/quizzes/imapinjection.yaml';
 import jsoninjectionQuiz from '../content/quizzes/jsoninjection.yaml';
 import svginjectionQuiz from '../content/quizzes/svginjection.yaml';
+import regexinjectionQuiz from '../content/quizzes/regexinjection.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -110,6 +112,7 @@ export const DEEPDIVES = {
   '1.27': imapinjectionData, // IMAP Injection
   cat_1_research06: jsoninjectionData, // JSON Injection (structural + polymorphic deserialization)
   cat_1_research14: svginjectionData, // SVG Injection (SVG-based XSS via file upload)
+  cat_1_research16: regexinjectionData, // Regex Injection / ReDoS
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -150,4 +153,5 @@ export const QUIZZES = {
   '1.27': imapinjectionQuiz,
   cat_1_research06: jsoninjectionQuiz,
   cat_1_research14: svginjectionQuiz,
+  cat_1_research16: regexinjectionQuiz,
 };

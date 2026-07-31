@@ -1,0 +1,422 @@
+meta:
+  id: regexinjection
+  threatId: cat_1_research16
+  severity: High
+  color: '#b45309'
+  colorRgb: 180,83,9
+  cwe: CWE-1333
+  cvss: '7.5'
+  standard: 'OWASP: no 2021 mapping (verified)'
+hero:
+  titleMain: 'Regex Injection '
+  titleGrad: / ReDoS
+  titleTail: ''
+  topbar: Regex Injection & ReDoS (Regular Expression Denial of Service)
+  lead:
+    en: 'Two distinct mechanisms share this catalog entry, and all three independent research passes insisted on keeping them separate: <strong>regex-injection-proper</strong>, where an attacker controls part of the *pattern* itself (string-concatenated into a RegExp/Pattern.compile call, changing match semantics for a filter/allowlist bypass), and <strong>ReDoS</strong>, the far more common real-world case, where an attacker controls the *input* matched against an already-ambiguous pattern, forcing a backtracking engine through exponential or polynomial work. The research brief for this topic itself contained an error that all three teams caught and corrected: "the 2016 Cloudflare/Stack Exchange ReDoS outage" is not one incident -- Stack Exchange (2016, quadratic) and Cloudflare (2019, PCRE catastrophic backtracking) are two separate, unrelated events.'
+    pl: 'Dwa odrębne mechanizmy dzielą ten wpis katalogowy, i wszystkie trzy niezależne przejścia badawcze nalegały na ich rozdzielenie: <strong>regex-injection-proper</strong>, gdzie atakujący kontroluje część *wzorca* (sklejonego do wywołania RegExp/Pattern.compile, zmieniając semantykę dopasowania dla obejścia filtra/allowlisty), oraz <strong>ReDoS</strong>, znacznie częstszy w praktyce przypadek, gdzie atakujący kontroluje *wejście* dopasowywane do już niejednoznacznego wzorca, zmuszając silnik z nawrotami do wykładniczej albo wielomianowej pracy. Sam brief badawczy dla tego tematu zawierał błąd który wszystkie trzy zespoły wychwyciły i poprawiły: "incydent ReDoS Cloudflare/Stack Exchange z 2016" to nie jedno zdarzenie -- Stack Exchange (2016, wielomianowe) i Cloudflare (2019, katastrofalne nawroty PCRE) to dwa osobne, niepowiązane wydarzenia.'
+  metrics:
+  - k: CWE-1333
+    v:
+      en: Weakness ID (ReDoS)
+      pl: ID słabości (ReDoS)
+  - k: '7.5'
+    v: CVSS · High (typical unauth. DoS case, e.g. CVE-2021-3807)
+  - k: No 2021 slot
+    v:
+      en: OWASP Top 10 mapping (verified absent)
+      pl: Mapowanie OWASP Top 10 (potwierdzony brak)
+  - k: '2'
+    v:
+      en: Distinct failure modes
+      pl: Odrębne mechanizmy
+  sources:
+  - label: CWE-1333 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/1333.html
+  - label: Cloudflare — Details of the outage on July 2, 2019
+    url: https://blog.cloudflare.com/details-of-the-cloudflare-outage-on-july-2-2019/
+  - label: Stack Exchange — Outage postmortem, July 20, 2016
+    url: https://stackstatus.net/post/147710624694/outage-postmortem-july-20-2016
+  - label: OWASP — Regular expression Denial of Service - ReDoS
+    url: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Ambiguous backtracking patterns (ReDoS) dominate real-world impact; pattern-construction injection is rarer but genuine, and can itself be used to weaponize ReDoS against a service that lets users supply a search regex.
+      pl: Niejednoznaczne wzorce z nawrotami (ReDoS) dominują we wpływie w praktyce; wstrzyknięcie przez konstrukcję wzorca jest rzadsze, ale prawdziwe, i może samo posłużyć do uzbrojenia ReDoS przeciw usłudze pozwalającej użytkownikom podać wzorzec wyszukiwania.
+    items:
+    - name: Exponential backtracking -- nested quantifier
+      sev: high
+      description:
+        en: A quantifier applied to a group that itself contains a quantifier over ambiguous content, e.g. (a+)+$. A near-miss input forces the engine to try every way of partitioning the run among the two quantifiers before failing -- work roughly doubles per added character.
+        pl: Kwantyfikator zastosowany do grupy która sama zawiera kwantyfikator nad niejednoznaczną treścią, np. (a+)+$. Wejście będące "prawie dopasowaniem" zmusza silnik do wypróbowania każdego sposobu podziału ciągu między dwa kwantyfikatory zanim zawiedzie -- praca w przybliżeniu podwaja się na każdy dodany znak.
+      payload: 'pattern: /^(a+)+$/   input: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!"  (~30 chars -> multi-second hang)'
+    - name: Exponential backtracking -- overlapping alternation
+      sev: high
+      description:
+        en: Alternation where both branches can match the same substring, e.g. (a|a)*$ or (a|aa)*$, gives the engine multiple equally-valid ways to consume each character -- same exponential blowup as the nested-quantifier case, confirmed identically by all three research passes.
+        pl: Alternacja gdzie obie gałęzie mogą dopasować ten sam podciąg, np. (a|a)*$ albo (a|aa)*$, daje silnikowi wiele równie ważnych sposobów skonsumowania każdego znaku -- taki sam wykładniczy wybuch jak w przypadku zagnieżdżonego kwantyfikatora, potwierdzony identycznie przez wszystkie trzy przejścia badawcze.
+      payload: 'pattern: /^(a|aa)*$/   input: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"'
+    - name: Polynomial (quadratic) backtracking -- unanchored/trim patterns
+      sev: medium
+      description:
+        en: A single unbounded quantifier that can start matching at many positions (whitespace-trim patterns are the classic real-world case) costs roughly O(n^2), not exponential -- still enough to cause a multi-minute outage on a large enough input, as the 2016 Stack Exchange incident demonstrated.
+        pl: Pojedynczy nieograniczony kwantyfikator który może zacząć dopasowanie w wielu pozycjach (wzorce przycinania białych znaków to klasyczny przypadek z praktyki) kosztuje w przybliżeniu O(n^2), nie wykładniczo -- wciąż wystarczająco by spowodować kilkuminutową awarię przy dostatecznie długim wejściu, co pokazał incydent Stack Exchange z 2016.
+      payload: 'pattern: ^[\s\u200c]+|[\s\u200c]+$   input: ~20,000 consecutive whitespace characters'
+    - name: Regex-injection-proper -- filter/allowlist bypass
+      sev: high
+      description:
+        en: The application builds a pattern by concatenating user input, e.g. new RegExp("^" + userInput + "$"). Injecting .* or an alternation broadens the pattern to match values the check was meant to exclude -- a genuine injection, not a performance issue.
+        pl: Aplikacja buduje wzorzec przez konkatenację wejścia użytkownika, np. new RegExp("^" + userInput + "$"). Wstrzyknięcie .* albo alternacji rozszerza wzorzec tak by dopasowywał wartości które kontrola miała wykluczyć -- prawdziwe wstrzyknięcie, nie problem wydajności.
+      payload: userInput = ".*"  ->  new RegExp("^" + ".*" + "$")  matches everything
+    - name: Regex-injection-proper -- weaponized ReDoS
+      sev: high
+      description:
+        en: A service that lets users supply a search/filter regex (log query tools, custom validation rules, some WAF rule builders) lets an attacker directly submit an evil pattern like (a+)+$ as the "regex," turning pattern-construction injection into a direct ReDoS vector with no need to also control the matched input.
+        pl: Usługa pozwalająca użytkownikom podać wzorzec wyszukiwania/filtra (narzędzia zapytań do logów, niestandardowe reguły walidacji, niektóre buildery reguł WAF) pozwala atakującemu wprost przesłać zły wzorzec jak (a+)+$ jako "regex", zamieniając wstrzyknięcie przez konstrukcję wzorca w bezpośredni wektor ReDoS bez potrzeby kontrolowania także dopasowywanego wejścia.
+      payload: user-supplied "search pattern" field = (a+)+$  ->  server runs it against any input
+    - name: 'Historical: PHP preg_replace() /e modifier -- injection to RCE'
+      sev: critical
+      description:
+        en: PHP's legacy /e modifier evaluated the replacement string of preg_replace() as PHP code. Combined with an injectable pattern or replacement, this turned regex injection directly into remote code execution (CWE-624). The /e modifier was removed entirely in PHP 7.0 (2015) -- a structural fix, not a hardening.
+        pl: Przestarzały modyfikator /e PHP ewaluował string zastępczy preg_replace() jako kod PHP. Połączony z wstrzykiwalnym wzorcem lub zastąpieniem, zamieniał wstrzyknięcie regex bezpośrednio w zdalne wykonanie kodu (CWE-624). Modyfikator /e został całkowicie usunięty w PHP 7.0 (2015) -- naprawa strukturalna, nie utwardzenie.
+      payload: preg_replace('/pattern/e', $userControlledReplacement, $subject)  // PHP < 7.0 only
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'Two independent fixes for two independent problems: escape user input before it becomes a pattern (stops injection-proper), and use a non-backtracking engine or bound the work (stops ReDoS) -- neither fix substitutes for the other.'
+      pl: 'Dwie niezależne naprawy dla dwóch niezależnych problemów: escapuj wejście użytkownika zanim stanie się wzorcem (zatrzymuje injection-proper), i użyj silnika bez nawrotów albo ogranicz pracę (zatrzymuje ReDoS) -- żadna naprawa nie zastępuje drugiej.'
+    languages:
+    - label: Node.js -- ReDoS
+      lang: javascript
+      vulnerable: "// VULNERABLE: nested quantifier over ambiguous content, run on user input\nconst re = /^(\\w+\\s?)*$/;\napp.get('/check', (req, res) => {\n  res.json({ ok: re.test(req.query.name) }); // \"aaaa...aaa!\" pins one CPU core\n});"
+      safe: "// SAFE: linear-time engine (node-re2, backed by Google's RE2)\nconst RE2 = require('re2');\nconst re = new RE2('^(\\\\w+\\\\s?)*$');   // same pattern, guaranteed O(n) time\napp.get('/check', (req, res) => {\n  if (req.query.name.length > 256) return res.status(400).end(); // defense in depth\n  res.json({ ok: re.test(req.query.name) });\n});"
+    - label: Node.js -- regex injection
+      lang: javascript
+      vulnerable: '// VULNERABLE: user input becomes part of the pattern
+
+        const rx = new RegExp(req.query.q); // attacker supplies ".*" or "(a+)+$"
+
+        items.filter(i => rx.test(i.name));'
+      safe: '// SAFE: escape metacharacters so input is a literal, never a pattern
+
+        const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, ''\\$&'');
+
+        const rx = new RegExp(esc(req.query.q));
+
+        items.filter(i => rx.test(i.name));'
+    - label: Python -- ReDoS
+      lang: python
+      vulnerable: 'import re
+
+        # VULNERABLE: nested quantifier
+
+        EMAIL = re.compile(r''^([a-zA-Z0-9]+)*@example\.com$'')
+
+        EMAIL.match(user_input)  # hangs on ''aaaa...aaa!'''
+      safe: "import re2  # pip install google-re2\n# SAFE: RE2 binding guarantees linear time for the same pattern\nEMAIL = re2.compile(r'^([a-zA-Z0-9]+)*@example\\.com$')\nEMAIL.match(user_input)\n# defense in depth: cap length before matching at all\nif len(user_input) > 254:\n    raise ValueError('input too long')"
+    - label: Python -- regex injection
+      lang: python
+      vulnerable: '# VULNERABLE: user input compiled directly as a pattern
+
+        pat = re.compile(user_input)
+
+        pat.match(subject)'
+      safe: '# SAFE: re.escape() treats the input as a literal string
+
+        pat = re.compile(re.escape(user_input))
+
+        pat.match(subject)'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: ReDoS discovery is fundamentally a timing-oracle technique; regex-injection-proper discovery is a metacharacter-probing technique -- the two require different confirmation steps even when found on the same endpoint.
+      pl: Odkrywanie ReDoS to fundamentalnie technika wyroczni czasowej; odkrywanie regex-injection-proper to technika sondowania metaznaków -- oba wymagają innych kroków potwierdzenia, nawet gdy znalezione na tym samym endpoincie.
+    steps:
+    - title:
+        en: Locate every regex entry point
+        pl: Zlokalizuj każdy punkt wejścia regex
+      description:
+        en: Form validators (email/URL/username), search/filter/log-query features, header/User-Agent parsers, file-upload name checks, WAF/filter rule inputs, and (if source is visible) any dynamic Pattern.compile()/RegExp() call.
+        pl: Walidatory formularzy (email/URL/nazwa użytkownika), funkcje wyszukiwania/filtra/zapytań do logów, parsery nagłówków/User-Agent, sprawdzanie nazw wgrywanych plików, wejścia reguł WAF/filtra, i (jeśli źródło widoczne) każde dynamiczne wywołanie Pattern.compile()/RegExp().
+    - title:
+        en: Timing-based ReDoS confirmation
+        pl: Potwierdzenie ReDoS oparte na czasie
+      description:
+        en: Send inputs of increasing length built as <repeated-char><breaking-char> (e.g. "a"*10+"!", *20, *30...) and measure response latency. Superlinear growth -- roughly doubling per added character (exponential) or clear quadratic scaling -- confirms a vulnerable pattern.
+        pl: Wyślij wejścia o rosnącej długości zbudowane jako <powtórzony-znak><znak-przerywający> (np. "a"*10+"!", *20, *30...) i zmierz opóźnienie odpowiedzi. Ponadliniowy wzrost -- w przybliżeniu podwojenie na każdy dodany znak (wykładniczy) albo wyraźne skalowanie kwadratowe -- potwierdza podatny wzorzec.
+    - title:
+        en: Static pattern analysis when source is available
+        pl: Statyczna analiza wzorca gdy źródło dostępne
+      description:
+        en: Run detectors like regexploit or recheck against the codebase or its dependencies -- these tools not only flag an ambiguous pattern but generate a concrete attack string, skipping the manual fuzzing step entirely.
+        pl: Uruchom detektory jak regexploit albo recheck na bazie kodu lub jej zależnościach -- te narzędzia nie tylko flagują niejednoznaczny wzorzec ale generują konkretny string ataku, całkowicie pomijając ręczny krok fuzzowania.
+    - title:
+        en: Probe for regex-injection-proper
+        pl: Sonduj pod kątem regex-injection-proper
+      description:
+        en: Inject a single metacharacter (., (, \) and watch for a compile error, a changed match result, or a broadened filter. Escalate a confirmed injection point with .* (semantic bypass) or an evil sub-pattern like (a+)+$ (weaponized ReDoS).
+        pl: Wstrzyknij pojedynczy metaznak (., (, \) i obserwuj błąd kompilacji, zmieniony wynik dopasowania, albo rozszerzony filtr. Eskaluj potwierdzony punkt wstrzyknięcia przez .* (obejście semantyczne) albo zły podwzorzec jak (a+)+$ (uzbrojony ReDoS).
+    - title:
+        en: Target hot-path endpoints for maximum blast radius
+        pl: Celuj w endpointy na gorącej ścieżce dla maksymalnego promienia rażenia
+      description:
+        en: A ReDoS on an endpoint hit by every request (a homepage, a health check, a WAF rule applied globally) turns a single-request bug into a full-site or full-network outage -- exactly the mechanism behind both real incidents in this deep-dive.
+        pl: ReDoS na endpoincie trafianym przez każde żądanie (strona główna, health check, reguła WAF stosowana globalnie) zamienia błąd pojedynczego żądania w awarię całej strony lub całej sieci -- dokładnie mechanizm stojący za oboma prawdziwymi incydentami w tym deep-dive.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: The top two defenses are structural eliminations of one mechanism each, not mitigations -- everything below them is defense-in-depth for what the top two miss.
+      pl: Dwie najlepsze obrony to strukturalne eliminacje po jednym mechanizmie, nie łagodzenia -- wszystko poniżej to obrona w głąb dla tego czego dwie pierwsze nie łapią.
+    items:
+    - rank: 1
+      eff: 92
+      kind: primary
+      label:
+        en: Non-backtracking regex engine (RE2 / Go regexp / Rust regex / .NET NonBacktracking)
+        pl: Silnik regex bez nawrotów (RE2 / Go regexp / Rust regex / .NET NonBacktracking)
+      note:
+        en: 'Eliminates ReDoS by construction -- guaranteed O(m*n) time regardless of pattern, verified against RE2/Rust documentation by all three research passes. The real trade-off: these engines drop backreferences and lookaround, so they are not always a drop-in replacement.'
+        pl: 'Eliminuje ReDoS przez konstrukcję -- gwarantowany czas O(m*n) niezależnie od wzorca, zweryfikowane względem dokumentacji RE2/Rust przez wszystkie trzy przejścia badawcze. Prawdziwy kompromis: te silniki porzucają referencje wsteczne i lookaround, więc nie zawsze są zamiennikiem 1:1.'
+    - rank: 2
+      eff: 90
+      kind: primary
+      label:
+        en: Never build a pattern from user input; escape when unavoidable
+        pl: Nigdy nie buduj wzorca z wejścia użytkownika; escapuj gdy nieuniknione
+      note:
+        en: Eliminates regex-injection-proper entirely. Use re.escape() / Pattern.quote() / manual metacharacter escaping so untrusted input is always treated as a literal, never as pattern syntax. Prefer plain string operations over a dynamically-built regex wherever possible.
+        pl: Eliminuje regex-injection-proper całkowicie. Użyj re.escape() / Pattern.quote() / ręcznego escapowania metaznaków tak by nieufne wejście było zawsze traktowane jako literał, nigdy jako składnia wzorca. Preferuj proste operacje na stringach zamiast dynamicznie budowanego regex gdziekolwiek to możliwe.
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Input length caps before matching
+        pl: Limity długości wejścia przed dopasowaniem
+      note:
+        en: 'Cheap and engine-agnostic: since ReDoS cost is a function of input length, a cap (e.g. 128-256 chars for a username/email field) bounds worst-case time. Both real incidents in this deep-dive involved unusually long inputs (~20,000 whitespace chars; a >10k-char date string in moment.js''s CVE).'
+        pl: 'Tanie i niezależne od silnika: ponieważ koszt ReDoS jest funkcją długości wejścia, limit (np. 128-256 znaków dla pola nazwy użytkownika/email) ogranicza czas w najgorszym przypadku. Oba prawdziwe incydenty w tym deep-dive dotyczyły niezwykle długiego wejścia (~20 000 znaków białych; string daty >10k znaków w CVE moment.js).'
+    - rank: 4
+      eff: 65
+      kind: strong
+      label:
+        en: Per-match timeout / killable worker
+        pl: Limit czasu dopasowania / przerywalny worker
+      note:
+        en: .NET Regex supports a native matchTimeout; Java/JS/Python require running the match in an interruptible thread or worker (Python 3.11+ third-party regex module supports timeout=). A safety net, not a fix -- Cloudflare's 2019 outage happened precisely because an equivalent CPU-runaway guard had been removed in a prior refactor.
+        pl: .NET Regex ma natywny matchTimeout; Java/JS/Python wymagają uruchomienia dopasowania w przerywalnym wątku lub workerze (moduł regex innej firmy w Python 3.11+ wspiera timeout=). Siatka bezpieczeństwa, nie naprawa -- awaria Cloudflare z 2019 zdarzyła się dokładnie dlatego że równoważna ochrona przed ucieczką CPU została usunięta we wcześniejszym refaktorze.
+    - rank: 5
+      eff: 50
+      kind: mitigation
+      label:
+        en: Rewrite ambiguous patterns (atomic groups, possessive quantifiers, de-nesting)
+        pl: Przepisz niejednoznaczne wzorce (grupy atomowe, kwantyfikatory posesywne, usunięcie zagnieżdżenia)
+      note:
+        en: Atomic groups (?>...) and possessive quantifiers a++ (PCRE, Java -- not native to JS/Python re) prevent backtracking into a group once it succeeds. Effective but requires regex expertise and is easy to reintroduce in a later change; doesn't scale across a large codebase.
+        pl: Grupy atomowe (?>...) i kwantyfikatory posesywne a++ (PCRE, Java -- nie natywne w JS/Python re) zapobiegają nawrotom do grupy po jej sukcesie. Skuteczne ale wymaga ekspertyzy regex i łatwo ponownie wprowadzić w późniejszej zmianie; nie skaluje się w dużej bazie kodu.
+    - rank: 6
+      eff: 40
+      kind: weak
+      label:
+        en: Static analysis in CI (regexploit, recheck, CodeQL)
+        pl: Analiza statyczna w CI (regexploit, recheck, CodeQL)
+      note:
+        en: Effective as a gate for catching known-bad shapes before merge, but ReDoS detection is undecidable in general -- these tools have real false negatives and positives, so treat them as one layer, never the only one.
+        pl: Skuteczne jako brama wyłapująca znane złe kształty przed merge, ale wykrywanie ReDoS jest generalnie nierozstrzygalne -- te narzędzia mają realne fałszywe negatywy i pozytywy, więc traktuj je jako jedną warstwę, nigdy jedyną.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Two separate, independently-verified outages -- not one, despite how the story is often told -- plus package CVEs corrected against each other where the three research passes disagreed on exact numbers.
+      pl: Dwie osobne, niezależnie zweryfikowane awarie -- nie jedna, mimo że historia jest często tak opowiadana -- plus CVE pakietów skorygowane względem siebie tam gdzie trzy przejścia badawcze różniły się co do dokładnych numerów.
+    items:
+    - org: Stack Overflow / Stack Exchange
+      year: 2016
+      impact: 34-minute full-site outage
+      cost: No CVE (internal regex, not a shipped product)
+      description:
+        en: 'July 20, 2016, 14:44 UTC: a post with ~20,000 consecutive whitespace characters hit the trim regex ^[\s\u200c]+|[\s\u200c]+$, triggering quadratic (~n^2, ~200 million char-class checks) backtracking. The regex ran on every homepage render; the load balancer used the homepage as a health check, pulling every server from rotation. Verified against Stack Exchange''s own official postmortem.'
+        pl: '20 lipca 2016, 14:44 UTC: post z ~20 000 kolejnymi znakami białymi trafił regex przycinający ^[\s\u200c]+|[\s\u200c]+$, wyzwalając kwadratowe (~n^2, ~200 milionów sprawdzeń klasy znaków) nawroty. Regex działał przy każdym renderowaniu strony głównej; load balancer używał strony głównej jako health check, wycofując każdy serwer z rotacji. Zweryfikowane względem oficjalnego postmortemu Stack Exchange.'
+    - org: Cloudflare
+      year: 2019
+      impact: 27-minute global outage, ~100% CPU across the network
+      cost: No CVE (internal WAF managed rule, not a shipped product)
+      description:
+        en: 'July 2, 2019, 13:42-14:09 UTC: a new WAF managed rule for XSS contained a PCRE pattern whose problematic core simplified to .*(?:.*=.*) -- PCRE backtracks and had no runaway-CPU protection at the time, because that protection had been accidentally removed in a prior refactor. Verified against Cloudflare''s own first-party blog postmortem. Frequently misattributed to 2016 or conflated with the Stack Exchange incident -- they are unrelated.'
+        pl: '2 lipca 2019, 13:42-14:09 UTC: nowa reguła WAF dla XSS zawierała wzorzec PCRE którego problematyczny rdzeń upraszczał się do .*(?:.*=.*) -- PCRE ma nawroty i nie miał wtedy ochrony przed ucieczką CPU, bo ta ochrona została przypadkowo usunięta we wcześniejszym refaktorze. Zweryfikowane względem oficjalnego postmortemu na blogu Cloudflare. Często błędnie przypisywane do 2016 albo mylone z incydentem Stack Exchange -- są niepowiązane.'
+    - org: moment.js (npm)
+      year: 2022
+      impact: CVE-2022-31129
+      cost: Fixed in 2.29.4
+      description:
+        en: 'RFC2822 date-string parsing in preprocessRFC2822() had quadratic (N^2) complexity on long inputs, noticeable above ~10,000 characters (PoC: moment("(".repeat(500000))). A useful reminder that real-world ReDoS is frequently polynomial, not textbook-exponential.'
+        pl: 'Parsowanie stringa daty RFC2822 w preprocessRFC2822() miało kwadratową (N^2) złożoność dla długich wejść, zauważalną powyżej ~10 000 znaków (PoC: moment("(".repeat(500000))). Przydatne przypomnienie że realny ReDoS jest często wielomianowy, nie podręcznikowo-wykładniczy.'
+    - org: lodash (npm)
+      year: 2021
+      impact: CVE-2020-28500
+      cost: Fixed in 4.17.21
+      description:
+        en: ReDoS in toNumber/trim/trimEnd affecting versions before 4.17.21, in one of the most-depended-upon packages in the npm ecosystem. Two of three independent research passes converged on this exact CVE number; the third cited CVE-2021-23337 for the same bug, which cross-checking showed is actually a separate lodash command-injection CVE -- corrected here rather than silently repeated.
+        pl: ReDoS w toNumber/trim/trimEnd dotykający wersji przed 4.17.21, w jednym z najczęściej zależnych pakietów w ekosystemie npm. Dwa z trzech niezależnych przejść badawczych zbiegły się na tym dokładnym numerze CVE; trzecie cytowało CVE-2021-23337 dla tego samego błędu, co po weryfikacji okazało się osobnym CVE wstrzyknięcia komend w lodash -- skorygowane tutaj zamiast po cichu powtórzone.
+    - org: ansi-regex (npm)
+      year: 2021
+      impact: CVE-2021-3807 -- CVSS 7.5 (High)
+      cost: Fixed in 5.0.1 / 6.0.1
+      description:
+        en: ReDoS in a very widely transitively-depended-upon package (pulled in by chalk, and through it by a huge share of the npm ecosystem) in versions before 5.0.1/6.0.1 -- illustrates how a single vulnerable regex deep in a dependency tree can have an outsized blast radius.
+        pl: ReDoS w bardzo szeroko tranzytywnie zależnym pakiecie (ciągniętym przez chalk, a przez niego przez ogromną część ekosystemu npm) w wersjach przed 5.0.1/6.0.1 -- pokazuje jak pojedynczy podatny regex głęboko w drzewie zależności może mieć nieproporcjonalnie duży promień rażenia.
+    inlineSources:
+    - label: Cloudflare — Details of the outage on July 2, 2019
+      url: https://blog.cloudflare.com/details-of-the-cloudflare-outage-on-july-2-2019/
+    - label: Stack Exchange — Outage postmortem, July 20, 2016
+      url: https://stackstatus.net/post/147710624694/outage-postmortem-july-20-2016
+    - label: Snyk — CVE-2022-31129 (moment.js)
+      url: https://security.snyk.io/vuln/SNYK-JS-MOMENT-2944238
+    - label: GitHub Advisory GHSA-29mw-wpgm-hmr9 — CVE-2020-28500 (lodash)
+      url: https://github.com/advisories/GHSA-29mw-wpgm-hmr9
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Static ReDoS detection is a genuinely different discipline from generic SAST -- purpose-built regex-complexity analyzers exist and materially outperform generic taint-tracking rules for this specific class.
+      pl: Statyczne wykrywanie ReDoS to naprawdę inna dyscyplina niż generyczny SAST -- istnieją dedykowane analizatory złożoności regex które materialnie przewyższają generyczne reguły śledzenia skażenia dla tej konkretnej klasy.
+    sast:
+    - - regexploit (Doyensec)
+      - Extracts regexes from a codebase and generates a concrete, working malicious input for each vulnerable one -- skips manual fuzzing entirely
+    - - recheck / redos-detector
+      - Static + fuzzing hybrid analyzers; rated strongest in independent comparisons among open-source ReDoS tools
+    - - eslint-plugin-security (detect-unsafe-regex) / safe-regex
+      - Lightweight heuristic (star-height) checks, good as a fast CI gate but with real false negatives/positives
+    - - CodeQL (js/redos, py/redos, java/regex-injection)
+      - Google's/GitHub's SAST engine has dedicated queries for both ReDoS and the pattern-construction injection variant
+    dast:
+    - - Timing-based fuzzing (custom or Burp/ffuf)
+      - Send inputs of increasing length built as <repeat><breaking-char> and measure response latency for superlinear growth
+    - - SlowFuzz
+      - Academic fuzzer purpose-built for discovering algorithmic-complexity (including ReDoS) vulnerabilities
+    - - regex101 / debuggex
+      - Interactive regex debuggers that visualize the backtracking steps and flag catastrophic patterns during development
+    note:
+      en: <strong>Key signal:</strong> because ReDoS detection is provably undecidable in the general case, no single tool catches everything -- combine a purpose-built static analyzer (regexploit/recheck) in CI with dependency scanning (Snyk/Dependabot), since most real-world ReDoS ships via a transitive dependency, not first-party code.
+      pl: <strong>Kluczowy sygnał:</strong> ponieważ wykrywanie ReDoS jest dowodliwie nierozstrzygalne w ogólnym przypadku, żadne pojedyncze narzędzie nie łapie wszystkiego -- połącz dedykowany analizator statyczny (regexploit/recheck) w CI ze skanowaniem zależności (Snyk/Dependabot), ponieważ większość realnego ReDoS trafia przez tranzytywną zależność, nie kod własny.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'The most important compliance finding here, verified independently by all three research passes and confirmed directly against OWASP''s own official CWE-to-category mapping data: CWE-1333 (ReDoS) has no home in the OWASP Top 10:2021 at all -- not A03 Injection, not any other category. Do not blanket-tag this class as A03.'
+      pl: 'Najważniejsze ustalenie zgodności tutaj, zweryfikowane niezależnie przez wszystkie trzy przejścia badawcze i potwierdzone bezpośrednio względem oficjalnych danych mapowania CWE-na-kategorię OWASP: CWE-1333 (ReDoS) nie ma żadnego miejsca w OWASP Top 10:2021 -- ani A03 Injection, ani żadnej innej kategorii. Nie tagguj tej klasy hurtowo jako A03.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-1333 — Inefficient Regular Expression Complexity (primary, for ReDoS). ChildOf CWE-407 Inefficient Algorithmic Complexity; related attack pattern CAPEC-492 Regular Expression Exponential Blowup. Verified directly against cwe.mitre.org by all three research passes.
+      - 'Regex-injection-proper has no single dedicated CWE. Closest, all confirmed to exist at MITRE: CWE-625 (Permissive Regular Expression), CWE-777 (Regular Expression without Anchors), CWE-185 (Incorrect Regular Expression). CodeQL''s own "Regular expression injection" query tags it CWE-730 + CWE-400 instead.'
+      - 'CWE-624 — Executable Regular Expression Error (historical: PHP preg_replace() /e modifier, removed in PHP 7.0).'
+    - std: OWASP
+      items:
+      - 'CWE-1333 is confirmed ABSENT from the official A03:2021-Injection mapped-CWE list -- one research pass fetched OWASP''s own CWE-Guidance.md mapping data directly and enumerated all 33 CWEs mapped to A03: CWE-1333 is not among them, nor is it mapped to any other 2021 category (2021 has no dedicated DoS/resource-consumption slot).'
+      - Regex-injection-proper is conceptually an injection issue (untrusted data becomes part of an interpreted mini-language) and is reasonably associated with A03:2021 by analogy, but none of its closest CWEs (625/777/185) are on A03's official mapped list either -- so even this association is interpretive, not an official MITRE mapping.
+      - OWASP's 2004 Top 10 had an explicit "A9 Denial of Service" category (the lineage of CWE-730) that was dropped in later editions -- ReDoS had a home once, and lost it, rather than never having had one.
+    inlineSources:
+    - label: CWE-1333 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1333.html
+    - label: CWE-625 — Permissive Regular Expression (MITRE)
+      url: https://cwe.mitre.org/data/definitions/625.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If an active ReDoS or regex-injection exploitation is suspected, work this list top to bottom.
+      pl: Po podejrzeniu aktywnej eksploatacji ReDoS lub wstrzyknięcia regex, przejdź tę listę od góry.
+    steps:
+    - en: Identify the specific regex and endpoint causing CPU exhaustion (thread dumps / flame graphs pointing at a regex-match frame are the fastest signal)
+      pl: Zidentyfikuj konkretny regex i endpoint powodujący wyczerpanie CPU (zrzuty wątków / flame graphs wskazujące na klatkę dopasowania regex to najszybszy sygnał)
+    - en: Kill or rate-limit the offending requests/IPs immediately to restore availability, then roll back or disable the specific rule/pattern if it was a recent deploy (as both real incidents in this deep-dive were)
+      pl: Natychmiast zabij lub ogranicz częstotliwość szkodliwych żądań/IP by przywrócić dostępność, potem wycofaj lub wyłącz konkretną regułę/wzorzec jeśli był świeżym wdrożeniem (jak oba prawdziwe incydenty w tym deep-dive)
+    - en: If the endpoint doubles as a health check or load-balancer probe, verify the health check itself did not cascade the outage across the fleet
+      pl: Jeśli endpoint pełni też funkcję health check albo sondy load balancera, zweryfikuj czy sam health check nie rozprzestrzenił awarii na całą flotę
+    - en: Grep the codebase and its dependency tree for the same ambiguous-pattern shape (nested quantifiers, overlapping alternation), not just the one exploited endpoint
+      pl: Przeszukaj bazę kodu i drzewo zależności pod kątem tego samego niejednoznacznego kształtu wzorca (zagnieżdżone kwantyfikatory, nakładająca się alternacja), nie tylko jednego wykorzystanego endpointu
+    - en: If regex-injection-proper was the entry point, audit every place user input is concatenated into a pattern rather than escaped
+      pl: Jeśli punktem wejścia było regex-injection-proper, przeaudytuj każde miejsce gdzie wejście użytkownika jest sklejane do wzorca zamiast escapowane
+    - en: Add a length cap and/or migrate the pattern to a non-backtracking engine before considering the incident closed
+      pl: Dodaj limit długości i/lub przenieś wzorzec na silnik bez nawrotów zanim uznasz incydent za zamknięty
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-1333 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1333.html
+    - label: CWE-625 — Permissive Regular Expression (MITRE)
+      url: https://cwe.mitre.org/data/definitions/625.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: OWASP — Regular expression Denial of Service - ReDoS
+      url: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS
+    - label: Cloudflare — Details of the outage on July 2, 2019
+      url: https://blog.cloudflare.com/details-of-the-cloudflare-outage-on-july-2-2019/
+    - label: Stack Exchange — Outage postmortem, July 20, 2016
+      url: https://stackstatus.net/post/147710624694/outage-postmortem-july-20-2016
+    - label: google/re2 (README)
+      url: https://github.com/google/re2
+    - label: Snyk — CVE-2022-31129 (moment.js)
+      url: https://security.snyk.io/vuln/SNYK-JS-MOMENT-2944238
+    - label: GitHub Advisory GHSA-29mw-wpgm-hmr9 — CVE-2020-28500 (lodash)
+      url: https://github.com/advisories/GHSA-29mw-wpgm-hmr9

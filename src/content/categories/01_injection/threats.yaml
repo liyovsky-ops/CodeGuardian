@@ -954,26 +954,30 @@ threats:
 
     '
 - id: cat_1_research16
-  name: Regex injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Regex injection" wskazane w analizie arena.
+  name: Regex Injection / ReDoS
+  severity: High
+  difficulty: Medium
+  confidence: POSSIBLE
+  cwe:
+  - CWE-1333
+  - CWE-625
+  desc: 'Dwa mechanizmy: ReDoS -- atakujący kontroluje wejście dopasowywane do niejednoznacznego wzorca (zagnieżdżony kwantyfikator jak (a+)+$), zmuszając silnik z nawrotami (PCRE/Java/JS/Python re) do wykładniczej pracy i zawieszenia CPU; oraz regex-injection-proper -- atakujący kontroluje część samego wzorca (sklejonego z wejścia użytkownika), zmieniając semantykę dopasowania dla obejścia filtra. Silniki bez nawrotów (RE2, Go regexp, Rust regex) są odporne na ReDoS przez konstrukcję, kosztem braku referencji wstecznych i lookaround.
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: 'Two mechanisms: ReDoS -- an attacker controls the input matched against an ambiguous pattern (a nested quantifier like (a+)+$), forcing a backtracking engine (PCRE/Java/JS/Python re) into exponential work and pinning the CPU; and regex-injection-proper -- an attacker controls part of the pattern itself (concatenated from user input), changing match semantics to bypass a filter. Non-backtracking engines (RE2, Go regexp, Rust regex) are immune to ReDoS by construction, at the cost of dropping backreferences and lookaround.'
+  lang: javascript
+  vuln: '// VULNERABLE -- nested quantifier, run on user input
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
+    const re = /^(\w+\s?)*$/;
 
-    # Potrzebny dalszy research przed dodaniem przykładu
+    app.get(''/check'', (req, res) => res.json({ ok: re.test(req.query.name) })); // "aaaa...aaa!" pins the CPU
 
     '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
+  safe: '// SECURE -- linear-time engine (node-re2, backed by Google''s RE2)
 
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    const RE2 = require(''re2'');
+
+    const re = new RE2(''^(\\w+\\s?)*$''); // guaranteed O(n) time, same pattern
 
     '
 - id: cat_1_research17

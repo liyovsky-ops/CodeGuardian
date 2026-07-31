@@ -1,0 +1,124 @@
+threatId: cat_1_research16
+title:
+  en: Regex Injection / ReDoS — knowledge check
+  pl: Regex Injection / ReDoS — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: A validator uses the pattern /^(\w+\s?)*$/ against user-supplied names, and an attacker submits "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!" (30 a's then an exclamation mark). Is this a genuine performance risk?
+    pl: Walidator używa wzorca /^(\w+\s?)*$/ na nazwach dostarczonych przez użytkownika, a atakujący przesyła "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!" (30 znaków a, potem wykrzyknik). Czy to prawdziwe ryzyko wydajnościowe?
+  isVulnerable: true
+  cwe: CWE-1333
+  explanation:
+    en: Yes. (\w+\s?)* is a quantifier applied to a group containing another quantifier over ambiguous content -- a near-miss input like this forces a backtracking engine (V8, Java, Python re, PCRE) to try exponentially many ways to partition the string before concluding no match. ~30 characters is already enough for a multi-second hang.
+    pl: Tak. (\w+\s?)* to kwantyfikator zastosowany do grupy zawierającej kolejny kwantyfikator nad niejednoznaczną treścią -- wejście "prawie dopasowanie" jak to zmusza silnik z nawrotami (V8, Java, Python re, PCRE) do wypróbowania wykładniczo wielu sposobów podziału stringa zanim stwierdzi brak dopasowania. ~30 znaków to już wystarczająco na kilkusekundowe zawieszenie.
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: Which regex engine is immune to ReDoS by construction, and what is the real trade-off of using it?
+    pl: Który silnik regex jest odporny na ReDoS przez konstrukcję, i jaki jest prawdziwy kompromis jego użycia?
+  choices:
+  - id: a
+    label:
+      en: RE2 (and Go regexp / Rust regex, same lineage) -- guaranteed linear time, but it does not support backreferences or lookaround
+      pl: RE2 (i Go regexp / Rust regex, ta sama linia) -- gwarantowany czas liniowy, ale nie wspiera referencji wstecznych ani lookaround
+  - id: b
+    label:
+      en: PCRE -- it is the fastest engine available and has no meaningful trade-offs
+      pl: PCRE -- to najszybszy dostępny silnik i nie ma żadnych istotnych kompromisów
+  - id: c
+    label:
+      en: Python's re module -- it was rewritten in Python 3 to eliminate backtracking entirely
+      pl: Moduł re Pythona -- został przepisany w Python 3 by całkowicie wyeliminować nawroty
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes verified this against RE2/Rust documentation: non-backtracking engines (RE2, Go''s regexp, Rust''s regex crate) simulate the automaton in guaranteed O(m*n) time instead of backtracking, making catastrophic blowup structurally impossible -- but the price is dropping backreferences and lookaround, since those require backtracking to express. PCRE is a classic backtracking engine and is exactly what caused the 2019 Cloudflare outage.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zweryfikowały to względem dokumentacji RE2/Rust: silniki bez nawrotów (RE2, Go regexp, crate regex Rust) symulują automat w gwarantowanym czasie O(m*n) zamiast nawrotów, czyniąc katastrofalny wybuch strukturalnie niemożliwym -- ale ceną jest porzucenie referencji wstecznych i lookaround, bo te wymagają nawrotów by je wyrazić. PCRE to klasyczny silnik z nawrotami i to dokładnie on spowodował awarię Cloudflare w 2019.'
+- id: q3
+  type: vuln-or-not
+  prompt:
+    en: 'Code builds a filter like this: const rx = new RegExp(req.query.q); items.filter(i => rx.test(i.name)); An attacker submits q=".*" . Is this exploitable?'
+    pl: 'Kod buduje filtr tak: const rx = new RegExp(req.query.q); items.filter(i => rx.test(i.name)); Atakujący przesyła q=".*" . Czy to jest podatne na wykorzystanie?'
+  isVulnerable: true
+  cwe: CWE-625
+  explanation:
+    en: 'Yes -- this is regex-injection-proper, not ReDoS: the attacker controls the pattern itself, not just the matched input. ".*" makes the filter match every item regardless of name, defeating whatever filtering the endpoint was meant to enforce. The fix is to escape user input (treat it as a literal) before it ever reaches RegExp(), never to pass it through unescaped.'
+    pl: 'Tak -- to regex-injection-proper, nie ReDoS: atakujący kontroluje sam wzorzec, nie tylko dopasowywane wejście. ".*" sprawia że filtr dopasowuje każdy element niezależnie od nazwy, pokonując jakiekolwiek filtrowanie które endpoint miał wymuszać. Naprawa to escapowanie wejścia użytkownika (traktowanie go jako literał) zanim w ogóle dotrze do RegExp(), nigdy przepuszczanie go nieoescapowanego.'
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: A prompt describing this topic referred to "the 2016 Cloudflare/Stack Exchange ReDoS outage" as one incident. What did all three independent research passes find?
+    pl: Prompt opisujący ten temat odnosił się do "incydentu ReDoS Cloudflare/Stack Exchange z 2016" jako jednego zdarzenia. Co znalazły wszystkie trzy niezależne przejścia badawcze?
+  choices:
+  - id: a
+    label:
+      en: 'These are two separate, unrelated incidents: Stack Exchange, July 2016, quadratic backtracking in a trim regex; Cloudflare, July 2019, PCRE catastrophic backtracking in a WAF rule'
+      pl: 'To dwa osobne, niepowiązane incydenty: Stack Exchange, lipiec 2016, kwadratowe nawroty w regexie przycinającym; Cloudflare, lipiec 2019, katastrofalne nawroty PCRE w regule WAF'
+  - id: b
+    label:
+      en: The premise was correct -- both companies suffered the exact same outage on the same day in 2016
+      pl: Przesłanka była poprawna -- obie firmy doświadczyły dokładnie tej samej awarii tego samego dnia w 2016
+  - id: c
+    label:
+      en: Neither incident is real; both were fabricated examples commonly used in ReDoS training material
+      pl: Żaden incydent nie jest prawdziwy; oba były zmyślonymi przykładami powszechnie używanymi w materiałach szkoleniowych o ReDoS
+  correctChoiceIds:
+  - a
+  explanation:
+    en: All three teams independently caught and corrected this conflation in the research brief, verifying each incident against its own first-party postmortem (stackstatus.net for Stack Exchange, Cloudflare's own blog for the 2019 event). This is a textbook case of the knowledge base's zero-fabrication discipline catching an error in the research prompt itself.
+    pl: Wszystkie trzy zespoły niezależnie wychwyciły i skorygowały tę konflację w briefie badawczym, weryfikując każdy incydent względem jego własnego pierwotnego postmortemu (stackstatus.net dla Stack Exchange, własny blog Cloudflare dla wydarzenia z 2019). To podręcznikowy przypadek dyscypliny zero-fabrykacji tej bazy wiedzy wychwytującej błąd w samym prompcie badawczym.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: Where does CWE-1333 (Inefficient Regular Expression Complexity / ReDoS) officially sit in the OWASP Top 10:2021?
+    pl: Gdzie oficjalnie znajduje się CWE-1333 (Inefficient Regular Expression Complexity / ReDoS) w OWASP Top 10:2021?
+  choices:
+  - id: a
+    label:
+      en: Nowhere -- verified directly against OWASP's own CWE-to-category mapping data, CWE-1333 is absent from A03:2021-Injection's 33-CWE list and from every other 2021 category
+      pl: Nigdzie -- zweryfikowane bezpośrednio względem oficjalnych danych mapowania CWE-na-kategorię OWASP, CWE-1333 jest nieobecne na liście 33 CWE dla A03:2021-Injection i w każdej innej kategorii 2021
+  - id: b
+    label:
+      en: A03:2021-Injection, since regex matching is a form of pattern-language interpretation
+      pl: A03:2021-Injection, ponieważ dopasowanie regex to forma interpretacji języka wzorców
+  - id: c
+    label:
+      en: A01:2021-Broken Access Control, since ReDoS is usually used to bypass authentication rate limits
+      pl: A01:2021-Broken Access Control, ponieważ ReDoS jest zwykle używany do obejścia limitów szybkości uwierzytelniania
+  correctChoiceIds:
+  - a
+  explanation:
+    en: One research pass fetched OWASP's own CWE-Guidance.md mapping file directly and enumerated all 33 CWEs officially mapped to A03:2021 -- CWE-1333 is not among them, confirming the popular "ReDoS = A03 Injection" assumption is simply wrong. The 2021 edition has no dedicated resource-consumption/DoS category at all (the 2004 edition briefly had one, later dropped).
+    pl: Jedno przejście badawcze pobrało bezpośrednio plik mapowania CWE-Guidance.md OWASP i wyliczyło wszystkie 33 CWE oficjalnie zmapowane do A03:2021 -- CWE-1333 nie jest wśród nich, potwierdzając że popularne założenie "ReDoS = A03 Injection" jest po prostu błędne. Edycja 2021 nie ma w ogóle dedykowanej kategorii zużycia zasobów/DoS (edycja 2004 miała ją krótko, potem usunięta).
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A Node.js endpoint validates a username against /^(\w+\s?)*$/, and the endpoint is public and unauthenticated. Which variant actually fixes the ReDoS risk?
+    pl: Endpoint Node.js waliduje nazwę użytkownika względem /^(\w+\s?)*$/, i endpoint jest publiczny i nieuwierzytelniony. Który wariant faktycznie naprawia ryzyko ReDoS?
+  variants:
+  - id: v1
+    lang: javascript
+    code: '// switch to RE2 for guaranteed linear-time matching
+
+      const RE2 = require(''re2'');
+
+      const re = new RE2(''^(\\w+\\s?)*$'');
+
+      if (re.test(username)) accept(username);'
+  - id: v2
+    lang: javascript
+    code: '// swap to a case-insensitive flag, since the bug is about casing
+
+      const re = /^(\w+\s?)*$/i;
+
+      if (re.test(username)) accept(username);'
+  - id: v3
+    lang: javascript
+    code: "// wrap the check in a try/catch so a hang doesn't crash the process\ntry {\n  const re = /^(\\w+\\s?)*$/;\n  if (re.test(username)) accept(username);\n} catch (e) { reject(); }"
+  correctVariantId: v1
+  explanation:
+    en: 'v1 replaces the backtracking engine with RE2, giving the exact same pattern a guaranteed O(n) matching time -- eliminating catastrophic backtracking by construction, verified by all three research passes. v2''s case-insensitivity flag is irrelevant to the ambiguous-quantifier structure causing the blowup. v3''s try/catch does nothing: a hanging regex.test() call doesn''t throw an exception, it just blocks the event loop -- there''s no error to catch.'
+    pl: 'v1 zastępuje silnik z nawrotami przez RE2, dając temu samemu wzorcowi gwarantowany czas dopasowania O(n) -- eliminując katastrofalne nawroty przez konstrukcję, zweryfikowane przez wszystkie trzy przejścia badawcze. Flaga niewrażliwości na wielkość liter z v2 jest nieistotna dla struktury niejednoznacznego kwantyfikatora powodującej wybuch. try/catch z v3 nic nie robi: zawieszające się wywołanie regex.test() nie rzuca wyjątku, po prostu blokuje event loop -- nie ma błędu do złapania.'
