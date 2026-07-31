@@ -906,26 +906,28 @@ threats:
   vuln: "# VULNERABLE — absolute name overrides the base entirely\ndef get_file(name):\n    path = os.path.join(\"/var/www/files\", name)\n    return open(path).read()\n"
   safe: "# SECURE — canonicalize, then verify containment\nBASE = os.path.realpath(\"/var/www/files\")\ndef get_file(name):\n    path = os.path.realpath(os.path.join(BASE, name))\n    if os.path.commonpath([path, BASE]) != BASE:\n        raise ValueError(\"path traversal blocked\")\n    return open(path).read()\n"
 - id: cat_1_research14
-  name: Svg injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Svg injection" wskazane w analizie arena.
+  name: SVG Injection (SVG-based XSS)
+  severity: High
+  difficulty: Medium
+  confidence: POSSIBLE
+  cwe:
+  - CWE-79
+  - CWE-434
+  desc: 'SVG to żywy dokument XML, nie obrazek -- może zawierać <script> i handlery zdarzeń. Wgrany plik SVG (avatar, logo) serwowany inline, przez object/embed/iframe, albo otwarty bezpośrednią nawigacją wykonuje osadzony skrypt w sesji domeny; <img src> jest bezpieczny (tryb bez skryptów wymuszony specyfikacją).
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: SVG is a live XML document, not a picture -- it can carry <script> and event handlers. An uploaded SVG file (avatar, logo) served inline, through object/embed/iframe, or opened via direct navigation executes embedded script in the origin session; <img src> is safe (script-free mode mandated by spec).
+  lang: javascript
+  vuln: '// VULNERABLE -- raw bytes stored and served inline, same origin
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
-
-    # Potrzebny dalszy research przed dodaniem przykładu
+    fs.writeFileSync(`./public/${req.file.originalname}`, req.file.buffer);
 
     '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
+  safe: '// SECURE -- DOMPurify with the SVG profile enabled
 
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    const clean = DOMPurify.sanitize(svgContent, { USE_PROFILES: { svg: true, svgFilters: true } });
+
+    fs.writeFileSync(`./uploads/${crypto.randomUUID()}.svg`, clean);
 
     '
 - id: cat_1_research15

