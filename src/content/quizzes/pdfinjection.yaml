@@ -1,0 +1,119 @@
+threatId: cat_1_research28
+title:
+  en: PDF Injection — knowledge check
+  pl: PDF Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: An invoice-export feature renders user-supplied notes as raw HTML through a server-side PDF generator. An attacker submits <iframe src="http://169.254.169.254/latest/meta-data/iam/security-credentials/">. Is this exploitable?
+    pl: Funkcja eksportu faktur renderuje notatki dostarczone przez użytkownika jako surowy HTML przez generator PDF po stronie serwera. Atakujący przesyła <iframe src="http://169.254.169.254/latest/meta-data/iam/security-credentials/">. Czy to jest podatne na wykorzystanie?
+  isVulnerable: true
+  cwe: CWE-918
+  explanation:
+    en: Yes -- this is the dominant real-world PDF injection variant. The PDF generator is a full (or WebKit-derived) browser engine running server-side, so the iframe makes the SERVER itself fetch the cloud metadata endpoint, potentially exposing IAM credentials in the returned PDF. This is Server-Side Request Forgery, confirmed by all three independent research passes as the single most-reported real-world scenario in this class.
+    pl: Tak -- to dominujący wariant wstrzyknięcia PDF z praktyki. Generator PDF to pełny (albo wywodzący się z WebKit) silnik przeglądarki działający po stronie serwera, więc iframe sprawia że sam SERWER pobiera endpoint metadanych chmury, potencjalnie ujawniając poświadczenia IAM w zwróconym PDF. To Server-Side Request Forgery, potwierdzone przez wszystkie trzy niezależne przejścia badawcze jako najczęściej zgłaszany scenariusz z praktyki w tej klasie.
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: Where does the dominant HTML-to-PDF variant of PDF injection officially map in the OWASP Top 10:2021?
+    pl: Gdzie oficjalnie mapuje się dominujący wariant HTML-to-PDF wstrzyknięcia PDF w OWASP Top 10:2021?
+  choices:
+  - id: a
+    label:
+      en: A10:2021 -- Server-Side Request Forgery, because the mechanism is verified as CWE-918, not the A03 Injection category the threat's name might suggest
+      pl: A10:2021 -- Server-Side Request Forgery, ponieważ mechanizm jest zweryfikowany jako CWE-918, nie kategoria A03 Injection którą mogłaby sugerować nazwa zagrożenia
+  - id: b
+    label:
+      en: A03:2021 -- Injection, since the threat's name contains the word "injection"
+      pl: A03:2021 -- Injection, ponieważ nazwa zagrożenia zawiera słowo "wstrzyknięcie"
+  - id: c
+    label:
+      en: A01:2021 -- Broken Access Control exclusively, with no SSRF component
+      pl: A01:2021 -- Broken Access Control wyłącznie, bez komponentu SSRF
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes verified this directly: CVE-2022-35583 (wkhtmltopdf) is assigned CWE-918 on its own security advisory, and CWE-918 maps to OWASP A10:2021 SSRF, not A03. This is exactly the kind of instinct-defying mapping this knowledge base insists on stating plainly -- the code/structure-injection sub-variants (RCE escalations, PDF object injection) DO map to A03, but the dominant HTML-to-PDF case does not.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zweryfikowały to bezpośrednio: CVE-2022-35583 (wkhtmltopdf) jest przypisane CWE-918 na własnym advisory bezpieczeństwa, a CWE-918 mapuje się do OWASP A10:2021 SSRF, nie A03. To dokładnie ten rodzaj mapowania przeczącego instynktowi który ta baza wiedzy nalega jasno stwierdzać -- pod-warianty wstrzyknięcia kodu/struktury (eskalacje RCE, wstrzyknięcie obiektu PDF) MAPUJĄ SIĘ do A03, ale dominujący przypadek HTML-to-PDF nie.'
+- id: q3
+  type: vuln-or-not
+  prompt:
+    en: A team is confident their PDF generation is safe because they use the latest available version of wkhtmltopdf and pass --disable-local-file-access. Given that CVE-2022-35583 (SSRF via iframe, CVSS 9.8) has no upstream fix and the project is archived, is relying on "patch and keep updated" alone a sound defense strategy here?
+    pl: Zespół jest pewny że ich generowanie PDF jest bezpieczne bo używają najnowszej dostępnej wersji wkhtmltopdf i przekazują --disable-local-file-access. Biorąc pod uwagę że CVE-2022-35583 (SSRF przez iframe, CVSS 9.8) nie ma naprawy upstream a projekt jest zarchiwizowany, czy poleganie wyłącznie na "łataj i aktualizuj" jest tu solidną strategią obrony?
+  isVulnerable: true
+  cwe: CWE-1104
+  explanation:
+    en: No -- marked vulnerable here because the strategy itself is the flaw. All three research passes independently verified wkhtmltopdf's repository was archived 2023-01-02 and its GitHub organization archived 2024-07-10, with the last release in 2020 -- CVE-2022-35583 will never receive an upstream fix. "Keep it patched" is impossible for an abandoned project; the real fix is migration to a maintained alternative, combined with network isolation as defense-in-depth regardless of which renderer is used.
+    pl: Nie -- oznaczone jako podatne bo sama strategia jest wadą. Wszystkie trzy przejścia badawcze niezależnie zweryfikowały że repozytorium wkhtmltopdf zostało zarchiwizowane 2023-01-02 a jego organizacja GitHub 2024-07-10, z ostatnim wydaniem w 2020 -- CVE-2022-35583 nigdy nie otrzyma naprawy upstream. "Utrzymuj załatane" jest niemożliwe dla porzuconego projektu; prawdziwa naprawa to migracja do utrzymywanej alternatywy, połączona z izolacją sieciową jako obroną w głąb niezależnie od użytego renderera.
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: What is "PDF object injection" (the class credited to Gareth Heyes/PortSwigger, Black Hat EU 2020), and how does it differ from the HTML-to-PDF SSRF variant?
+    pl: Czym jest "wstrzyknięcie obiektu PDF" (klasa uznana Garethowi Heyesowi/PortSwigger, Black Hat EU 2020), i czym różni się od wariantu SSRF HTML-to-PDF?
+  choices:
+  - id: a
+    label:
+      en: It injects untrusted text directly into a PDF's own object/string syntax (e.g. an unescaped annotation URI) to graft a JavaScript /OpenAction into the file itself -- a completely different mechanism from HTML being rendered by a server-side browser engine
+      pl: Wstrzykuje nieufny tekst bezpośrednio do własnej składni obiektu/stringa PDF (np. nieoescapowany URI adnotacji) by wszczepić akcję JavaScript /OpenAction do samego pliku -- całkowicie inny mechanizm niż HTML renderowany przez silnik przeglądarki po stronie serwera
+  - id: b
+    label:
+      en: It is just a different name for the same SSRF mechanism, targeting a different URL scheme
+      pl: To po prostu inna nazwa dla tego samego mechanizmu SSRF, celująca w inny schemat URL
+  - id: c
+    label:
+      en: It only works against wkhtmltopdf specifically
+      pl: Działa tylko konkretnie przeciw wkhtmltopdf
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three research passes verified this research directly: pdf-lib and jsPDF failed to escape parentheses/backslashes in PDF text strings and annotation URIs, letting an attacker close the string and inject raw PDF dictionary syntax carrying a JavaScript action -- executed when a capable reader opens the file, not during server-side rendering. This is why this deep-dive treats it as a genuinely separate mechanism from the SSRF/LFI variant, not a rename of it.'
+    pl: 'Wszystkie trzy przejścia badawcze zweryfikowały to badanie bezpośrednio: pdf-lib i jsPDF nie escapowały nawiasów/backslashy w stringach tekstowych PDF i URI adnotacji, pozwalając atakującemu zamknąć string i wstrzyknąć surową składnię słownika PDF niosącą akcję JavaScript -- wykonywaną gdy zdolna przeglądarka otwiera plik, nie podczas renderowania po stronie serwera. Dlatego ten deep-dive traktuje to jako naprawdę odrębny mechanizm od wariantu SSRF/LFI, nie jego zmianę nazwy.'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: An application strips <iframe>, <img>, <script>, and <object> tags from user notes before PDF generation, but does not inspect CSS. An attacker submits <style>@import url("http://collaborator-host/x")</style>. Is this still exploitable?
+    pl: Aplikacja usuwa tagi <iframe>, <img>, <script>, i <object> z notatek użytkownika przed generowaniem PDF, ale nie inspekcjonuje CSS. Atakujący przesyła <style>@import url("http://collaborator-host/x")</style>. Czy to wciąż jest podatne na wykorzystanie?
+  isVulnerable: true
+  cwe: CWE-918
+  explanation:
+    en: 'Yes. CSS @import and url() trigger the identical server-side resource-fetch primitive as the tag-based vectors -- a tag-only allowlist that never inspects CSS is bypassed trivially. All three research passes independently identified this as a real, recurring gap: sanitization must cover CSS explicitly, not just HTML tags.'
+    pl: 'Tak. CSS @import i url() wyzwalają identyczny prymityw pobierania zasobów po stronie serwera co wektory oparte na tagach -- allowlist tylko-tagów która nigdy nie inspekcjonuje CSS jest trywialnie omijana. Wszystkie trzy przejścia badawcze niezależnie zidentyfikowały to jako prawdziwą, powracającą lukę: sanityzacja musi jawnie pokrywać CSS, nie tylko tagi HTML.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A PHP app renders user-supplied HTML into invoices via DomPDF. Which variant actually closes both the SSRF/LFI and the font-cache RCE vector at once?
+    pl: Aplikacja PHP renderuje HTML dostarczony przez użytkownika do faktur przez DomPDF. Który wariant faktycznie zamyka jednocześnie wektor SSRF/LFI i RCE przez font-cache?
+  variants:
+  - id: v1
+    lang: php
+    code: '$dompdf = new Dompdf([''isRemoteEnabled'' => true]);
+
+      $clean = strip_tags($_POST[''html''], ''<b><i><p>'');
+
+      $dompdf->loadHtml($clean);
+
+      $dompdf->render();'
+  - id: v2
+    lang: php
+    code: '$clean = (new HTMLPurifier())->purify($_POST[''html'']);
+
+      $dompdf = new Dompdf([''isRemoteEnabled'' => false, ''isPhpEnabled'' => false]);
+
+      $dompdf->loadHtml($clean);
+
+      $dompdf->render();'
+  - id: v3
+    lang: php
+    code: '$dompdf = new Dompdf([''isRemoteEnabled'' => true]);
+
+      $clean = str_replace(''http://169.254.169.254'', '''', $_POST[''html'']);
+
+      $dompdf->loadHtml($clean);
+
+      $dompdf->render();'
+  correctVariantId: v2
+  explanation:
+    en: v2 sets isRemoteEnabled=false, which closes the SSRF/LFI vector AND the @font-face font-cache RCE vector (CVE-2022-28368) at once, since both depend on DomPDF being allowed to fetch remote resources at all -- verified by all three research passes as the single most important DomPDF flag. v1 leaves isRemoteEnabled=true, so strip_tags() does nothing to stop a CSS-based or attribute-based bypass, and remote fetching is still fully enabled. v3's string-replace blocklist only blocks one literal IP string and is trivially bypassed by any other internal host, encoding variant, or the file:// scheme entirely.
+    pl: v2 ustawia isRemoteEnabled=false, co zamyka wektor SSRF/LFI ORAZ wektor RCE przez font-cache @font-face (CVE-2022-28368) jednocześnie, ponieważ oba zależą od tego czy DomPDF w ogóle może pobierać zdalne zasoby -- zweryfikowane przez wszystkie trzy przejścia badawcze jako pojedyncza najważniejsza flaga DomPDF. v1 zostawia isRemoteEnabled=true, więc strip_tags() nic nie robi by zatrzymać obejście oparte na CSS albo atrybucie, a zdalne pobieranie wciąż jest w pełni włączone. Czarna lista string-replace z v3 blokuje tylko jeden dosłowny string IP i jest trywialnie omijana przez jakikolwiek inny host wewnętrzny, wariant kodowania, albo całkowicie schemat file://.

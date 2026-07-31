@@ -32,6 +32,7 @@ export const LEARNING_PATH = [
   'cat_1_research22', // Perl open() Injection
   'cat_1_research25', // Null Byte Injection
   'cat_1_research27', // SPARQL Injection
+  'cat_1_research28', // PDF Injection
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

@@ -1225,26 +1225,36 @@ threats:
 
     '
 - id: cat_1_research28
-  name: Pdf injection
-  severity: Medium
-  difficulty: Unknown
-  confidence: RESEARCH
-  cwe: []
-  desc: 'Zagrożenie wymaga weryfikacji — zostało zidentyfikowane tylko przez jeden model AI. Opis: potencjalne zagrożenie typu "Pdf injection" wskazane w analizie arena.
+  name: PDF Injection
+  severity: Critical
+  difficulty: Medium
+  confidence: POSSIBLE
+  cwe:
+  - CWE-918
+  - CWE-94
+  desc: 'Parasol nad trzema odrębnymi mechanizmami: dominujący przypadek to renderer HTML-to-PDF po stronie serwera (wkhtmltopdf, DomPDF, TCPDF, Puppeteer) będący pełnym silnikiem przeglądarki -- wstrzyknięty <iframe src="file://..."> albo z adresem IP metadanych chmury daje SSRF/LFI z pozycji sieciowej serwera. Rzadsze warianty: wstrzyknięcie surowej składni obiektu PDF by przemycić akcję JavaScript (Gareth Heyes/PortSwigger, BH EU 2020), i błędy parsowania przeglądarki PDF (PDF.js CVE-2024-4367).
 
     '
-  desc_en: 'This threat requires verification — it was identified by only one AI model. Description: potential threat of this type indicated in the arena analysis.'
-  lang: unknown
-  vuln: '# Wymaga weryfikacji — brak przykładu kodu
+  desc_en: 'An umbrella over three distinct mechanisms: the dominant case is a server-side HTML-to-PDF renderer (wkhtmltopdf, DomPDF, TCPDF, Puppeteer) that is a full browser engine -- an injected <iframe src="file://..."> or one pointed at cloud metadata IPs reaches SSRF/LFI from the server''s network position. Rarer variants: injecting raw PDF object syntax to smuggle a JavaScript action (Gareth Heyes/PortSwigger, BH EU 2020), and PDF-viewer parsing bugs (PDF.js CVE-2024-4367).'
+  lang: javascript
+  vuln: 'const html = `<h1>Invoice for ${req.body.name}</h1>${req.body.notes}`;
 
-    # To zagrożenie pojawił się tylko u jednego modelu AI
+    const page = await browser.newPage();
 
-    # Potrzebny dalszy research przed dodaniem przykładu
+    await page.setContent(html);   // raw user HTML rendered by a full browser
+
+    const pdf = await page.pdf();
 
     '
-  safe: '# Brak zweryfikowanego przykładu bezpiecznego kodu
+  safe: 'const clean = sanitizeHtml(req.body.notes, { allowedTags: [''b'',''i'',''p''], allowedAttributes: {} });
 
-    # Po weryfikacji zagrożenia zostanie dodany przykład
+    await page.setJavaScriptEnabled(false);
+
+    await page.setRequestInterception(true);
+
+    page.on(''request'', r => /^(file|ftp):/i.test(r.url()) ? r.abort() : r.continue());
+
+    await page.setContent(`<h1>Invoice</h1>${clean}`, { waitUntil: ''load'' });
 
     '
 - id: cat_1_research29
