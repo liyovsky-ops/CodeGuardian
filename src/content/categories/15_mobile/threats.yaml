@@ -50,22 +50,19 @@ threats:
   note_en: 'Source: OWASP Mobile Top 10 2024, M3. Mobile nuance: trust boundary sits on an attacker-controlled device.'
 - id: '15.4'
   name: Insufficient Input/Output Validation (Mobile)
-  severity: High
-  difficulty: Unknown
+  severity: Critical
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-20
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Failure to validate or sanitize data from IPC, deep links, WebViews, files, or network responses, enabling injection, memory corruption, or logic abuse on the device.
+  - CWE-89
+  desc: 'Brak walidacji albo sanityzacji danych z IPC, deep linków, WebView, plików, albo odpowiedzi sieciowych, umożliwiający wstrzyknięcie, uszkodzenie pamięci, albo nadużycie logiki na urządzeniu. Dane przychodzące przez Intent, wyeksportowany Content Provider, albo niestandardowy schemat URL są tak samo nieufne jak wejście sieciowe, ale rutynowo walidowane z mniejszą rygorystycznością bo wyglądają wewnętrznie -- 2/2 prawdziwe CVE ownCloud i TikTok potwierdzają że to nie teoria.
 
     '
-  desc_en: Failure to validate or sanitize data from IPC, deep links, WebViews, files, or network responses, enabling injection, memory corruption, or logic abuse on the device.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
+  desc_en: Failure to validate or sanitize data from IPC, deep links, WebViews, files, or network responses, enabling injection, memory corruption, or logic abuse on the device. Data arriving via an Intent, an exported Content Provider, or a custom URL scheme is exactly as untrusted as network input, but routinely validated with less rigor because it looks internal -- 2 real CVEs (ownCloud, TikTok) confirm this is not theoretical.
+  lang: kotlin
+  vuln: "override fun query(uri: Uri, projection: Array<String>?, selection: String?,\n                   selectionArgs: Array<String>?, sortOrder: String?): Cursor {\n    val id = uri.lastPathSegment                      // attacker-controlled\n    val sql = \"SELECT * FROM notes WHERE _id = $id\"    // raw concat -> SQLi\n    return db.rawQuery(sql, null)\n}\n"
+  safe: "override fun query(uri: Uri, projection: Array<String>?, selection: String?,\n                   selectionArgs: Array<String>?, sortOrder: String?): Cursor {\n    val id = uri.lastPathSegment?.toLongOrNull()\n        ?: throw IllegalArgumentException(\"bad id\")   // strict type validation\n    val qb = SQLiteQueryBuilder().apply { tables = \"notes\"; setProjectionMap(ALLOWED_COLUMNS) }\n    return qb.query(db, projection, \"_id = ?\", arrayOf(id.toString()), null, null, null)\n}\n"
   note_en: 'Source: OWASP Mobile Top 10 2024, M4.'
 - id: '15.5'
   name: Insecure Communication (Mobile)

@@ -37,6 +37,7 @@ export const LEARNING_PATH = [
   '15.1', // Improper Credential Usage (Mobile) -- first Mobile Security entry
   '15.2', // Inadequate Supply Chain Security (Mobile)
   '15.3', // Insecure Authentication/Authorization (Mobile)
+  '15.4', // Insufficient Input/Output Validation (Mobile)
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

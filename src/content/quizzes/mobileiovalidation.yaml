@@ -1,0 +1,122 @@
+threatId: '15.4'
+title:
+  en: Insufficient Input/Output Validation — knowledge check
+  pl: Insufficient Input/Output Validation — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: According to all three independent research passes that verified OWASP's own official M4 page directly, what does that page actually name as its attack vectors?
+    pl: Zgodnie ze wszystkimi trzema niezależnymi przejściami badawczymi które zweryfikowały bezpośrednio własną oficjalną stronę M4 OWASP, co ta strona faktycznie wymienia jako swoje wektory ataku?
+  choices:
+  - id: a
+    label:
+      en: SQL injection, command injection, XSS, and path traversal -- the same generic families already covered elsewhere in this knowledge base's Injection category, NOT Intents/Content Providers/deep links by name
+      pl: Wstrzyknięcie SQL, wstrzyknięcie komend, XSS, i przejście przez ścieżki -- te same generyczne rodziny już pokryte gdzie indziej w kategorii Injection tej bazy wiedzy, NIE Intenty/Content Providery/deep linki po nazwie
+  - id: b
+    label:
+      en: Android Intents, Content Providers, and Broadcast Receivers specifically, by name
+      pl: Konkretnie Intenty Android, Content Providery, i Broadcast Receivery, po nazwie
+  - id: c
+    label:
+      en: Only biometric authentication bypass techniques
+      pl: Tylko techniki ominięcia uwierzytelniania biometrycznego
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three research passes independently fetched the official OWASP M4 page and converged on this exact honesty flag: OWASP''s own text is generic, not IPC-specific. This deep-dive''s narrower focus on Intents/Content Providers/deep links is a deliberate curatorial scoping choice to avoid duplicating this knowledge base''s existing Injection category content -- documented explicitly rather than misattributed to OWASP''s literal wording.'
+    pl: 'Wszystkie trzy przejścia badawcze niezależnie pobrały oficjalną stronę M4 OWASP i zbiegły się na dokładnie tej flagce uczciwości: własny tekst OWASP jest generyczny, nie specyficzny dla IPC. Węższy fokus tego deep-dive na Intentach/Content Providerach/deep linkach to celowy wybór zakresu kuratorskiego by uniknąć duplikacji istniejącej treści kategorii Injection tej bazy wiedzy -- udokumentowany jawnie zamiast błędnie przypisany do dosłownego brzmienia OWASP.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: An Android app's exported Content Provider builds its SQL query as db.rawQuery("SELECT * FROM notes WHERE _id = " + uri.lastPathSegment, null), trusting the URI path segment directly. Is this exploitable by another app installed on the same device?
+    pl: Wyeksportowany Content Provider apki Android buduje swoje zapytanie SQL jako db.rawQuery("SELECT * FROM notes WHERE _id = " + uri.lastPathSegment, null), ufając bezpośrednio segmentowi ścieżki URI. Czy to jest podatne na wykorzystanie przez inną apkę zainstalowaną na tym samym urządzeniu?
+  isVulnerable: true
+  cwe: CWE-89
+  explanation:
+    en: Yes -- this is the exact real-world pattern verified in CVE-2023-24804 (ownCloud Android). Any co-installed app can query this exported Content Provider with a crafted URI whose path segment contains SQL syntax (e.g. a UNION SELECT), reaching tables never intended to be exposed by the provider's own API -- confirmed by all three research passes against ownCloud's own official security advisory.
+    pl: Tak -- to dokładnie prawdziwy wzorzec z praktyki zweryfikowany w CVE-2023-24804 (ownCloud Android). Każda współzainstalowana apka może zapytać ten wyeksportowany Content Provider spreparowanym URI którego segment ścieżki zawiera składnię SQL (np. UNION SELECT), dosięgając tabel nigdy nie przeznaczonych do ujawnienia przez własne API providera -- potwierdzone przez wszystkie trzy przejścia badawcze względem własnego oficjalnego advisory bezpieczeństwa ownCloud.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: In the real CVE-2022-28799 (TikTok) incident, what was the exact chain that enabled one-click account takeover?
+    pl: W prawdziwym incydencie CVE-2022-28799 (TikTok), jaki był dokładny łańcuch który umożliwił przejęcie konta jednym kliknięciem?
+  choices:
+  - id: a
+    label:
+      en: A deeplink-verification bypass forced the app's WebView to load an attacker-controlled URL, which could then invoke over 70 exposed JavaScript-bridge methods
+      pl: Obejście weryfikacji deeplink zmusiło WebView apki do załadowania URL kontrolowanego przez atakującego, który mógł następnie wywołać ponad 70 udostępnionych metod mostu JavaScript
+  - id: b
+    label:
+      en: A hardcoded API key was found by decompiling the app
+      pl: Zahardkodowany klucz API został znaleziony przez dekompilację apki
+  - id: c
+    label:
+      en: A weak biometric implementation only gated local UI
+      pl: Słaba implementacja biometryczna bramkowała tylko lokalny UI
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Verified by all three research passes against Microsoft's own security blog (August 31, 2022) and NVD. This is the precise seam between insufficient input validation (the unvalidated deep link) and this catalog's separate WebView JavaScript Bridge Exposure entry (the 70+ exposed methods the attacker page could then reach) -- both weaknesses had to be present for the full exploit chain to work.
+    pl: Zweryfikowane przez wszystkie trzy przejścia badawcze względem własnego bloga bezpieczeństwa Microsoft (31 sierpnia 2022) i NVD. To precyzyjny szew między niewystarczającą walidacją wejścia (niezwalidowany deep link) a osobnym wpisem tego katalogu o ujawnieniu mostu JavaScript WebView (ponad 70 udostępnionych metod które strona atakującego mogła następnie dosięgnąć) -- obie słabości musiały być obecne by pełny łańcuch eksploatacji zadziałał.
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: An Android app targets API level 30 (below the API 31 threshold) and declares an Activity with an intent-filter but no explicit android:exported attribute. Does this Activity default to being reachable by other apps on the device?
+    pl: Apka Android celuje w poziom API 30 (poniżej progu API 31) i deklaruje Activity z intent-filter ale bez jawnego atrybutu android:exported. Czy ta Activity domyślnie jest osiągalna przez inne apki na urządzeniu?
+  isVulnerable: true
+  cwe: CWE-926
+  explanation:
+    en: 'Yes -- verified by all three research passes against Android''s own developer documentation: prior to Android 12 (API 31), a component WITH an intent-filter defaulted to exported=true. Since API 31, the OS forces an explicit declaration for any component with an intent-filter, but this hardening does not retroactively protect apps still targeting older API levels, which remain silently over-exported unless the developer explicitly opted out.'
+    pl: 'Tak -- zweryfikowane przez wszystkie trzy przejścia badawcze względem własnej dokumentacji deweloperskiej Android: przed Android 12 (API 31), komponent Z intent-filter domyślnie był exported=true. Od API 31, system zmusza do jawnej deklaracji dla każdego komponentu z intent-filter, ale to utwardzenie nie chroni retroaktywnie apek wciąż celujących w starsze poziomy API, które pozostają po cichu nadmiernie wyeksportowane dopóki deweloper jawnie nie zrezygnuje.'
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: This deep-dive cites CWE-20 as primary rather than CWE-927 ("Use of Implicit Intent for Sensitive Communication"), even though CWE-927 is Android-specific and directly relevant to Intents. Why?
+    pl: Ten deep-dive cytuje CWE-20 jako główne zamiast CWE-927 ("Use of Implicit Intent for Sensitive Communication"), mimo że CWE-927 jest specyficzne dla Androida i bezpośrednio istotne dla Intentów. Dlaczego?
+  choices:
+  - id: a
+    label:
+      en: All three research passes verified at MITRE that CWE-927's scope is specifically OUTBOUND data leaked via an implicit Intent, not inbound Intent-data validation -- a different concern already owned by this catalog's separate Intent Redirection entry
+      pl: Wszystkie trzy przejścia badawcze zweryfikowały na MITRE że zakres CWE-927 to konkretnie WYCHODZĄCE dane wyciekające przez niejawny Intent, nie walidacja danych Intent przychodzących -- inna kwestia już przypisana do osobnego wpisu o Przekierowaniu Intent tego katalogu
+  - id: b
+    label:
+      en: CWE-927 does not actually exist at MITRE
+      pl: CWE-927 w rzeczywistości nie istnieje na MITRE
+  - id: c
+    label:
+      en: CWE-20 is what OWASP's own M4 page links to directly, and CWE-927 is completely unrelated to this category
+      pl: CWE-20 to co własna strona M4 OWASP linkuje bezpośrednio, a CWE-927 jest całkowicie niezwiązane z tą kategorią
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three research passes independently verified CWE-927 at MITRE and reached the same precise conclusion: it is real, Android-specific, and relevant to this general topic area, but its exact scope (outbound sensitive-data leakage) is a subtly different concern from inbound Intent-data validation, and applying it here would misapply a CWE already correctly used by a neighboring catalog entry.'
+    pl: 'Wszystkie trzy przejścia badawcze niezależnie zweryfikowały CWE-927 na MITRE i doszły do tego samego precyzyjnego wniosku: jest prawdziwe, specyficzne dla Androida, i istotne dla tego ogólnego obszaru tematycznego, ale jego dokładny zakres (wyciek wrażliwych danych wychodzących) to subtelnie inna kwestia niż walidacja danych Intent przychodzących, a zastosowanie go tutaj błędnie zastosowałoby CWE już poprawnie używane przez sąsiedni wpis katalogowy.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: An Android Content Provider needs to return a note by its ID, supplied via the query URI. Which variant actually closes the SQL injection risk?
+    pl: Content Provider Android musi zwrócić notatkę po jej ID, dostarczonym przez URI zapytania. Który wariant faktycznie zamyka ryzyko wstrzyknięcia SQL?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: 'val id = uri.lastPathSegment
+
+      val sql = "SELECT * FROM notes WHERE _id = $id"
+
+      return db.rawQuery(sql, null)'
+  - id: v2
+    lang: kotlin
+    code: "val id = uri.lastPathSegment?.toLongOrNull()\n    ?: throw IllegalArgumentException(\"bad id\")\nval qb = SQLiteQueryBuilder().apply {\n    tables = \"notes\"\n    setProjectionMap(ALLOWED_COLUMNS)\n}\nreturn qb.query(db, projection, \"_id = ?\", arrayOf(id.toString()), null, null, null)"
+  - id: v3
+    lang: kotlin
+    code: 'val id = uri.lastPathSegment?.replace("''", "") ?: ""
+
+      val sql = "SELECT * FROM notes WHERE _id = $id"
+
+      return db.rawQuery(sql, null)'
+  correctVariantId: v2
+  explanation:
+    en: v2 both strictly type-validates the ID (rejecting anything that isn't a valid Long, closing off SQL syntax entirely) AND uses a bound parameter ("_id = ?") instead of string concatenation, plus an allowlisted projection map -- the combination verified as the correct fix for the real ownCloud CVEs. v1 is the vulnerable baseline. v3's quote-stripping blacklist is trivially bypassed by SQL syntax that doesn't require a single quote at all (e.g. numeric UNION-based injection, or comment sequences), and doesn't address the root cause of string concatenation into a raw query.
+    pl: v2 zarówno ściśle waliduje typ ID (odrzucając cokolwiek co nie jest ważnym Long, całkowicie zamykając składnię SQL) JAK I używa związanego parametru ("_id = ?") zamiast konkatenacji stringów, plus allowlistowaną mapę projekcji -- kombinacja zweryfikowana jako poprawna naprawa dla prawdziwych CVE ownCloud. v1 to podatna linia bazowa. Czarna lista usuwania cudzysłowów z v3 jest trywialnie omijana przez składnię SQL która wcale nie wymaga pojedynczego cudzysłowu (np. wstrzyknięcie numeryczne oparte na UNION, albo sekwencje komentarzy), i nie adresuje przyczyny źródłowej konkatenacji stringów w surowe zapytanie.

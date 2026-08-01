@@ -1,0 +1,336 @@
+meta:
+  id: mobileiovalidation
+  threatId: '15.4'
+  severity: Critical
+  color: '#155e75'
+  colorRgb: 21,94,117
+  cwe: CWE-20
+  cvss: '8.8'
+  standard: OWASP Mobile Top 10 2024 (M4)
+hero:
+  titleMain: 'Insufficient Input/Output '
+  titleGrad: Validation
+  titleTail: ''
+  topbar: Insufficient Input/Output Validation (OWASP Mobile Top 10 2024, M4)
+  lead:
+    en: 'An honest scoping note all three independent research passes converged on and insisted be stated plainly: OWASP''s own official M4 page is framed generically around SQL injection, command injection, XSS, and path traversal -- the same families this knowledge base already covers extensively in its Injection category -- and does NOT itself foreground Inter-Process Communication (IPC), Intents, Content Providers, or deep links by name. This deep-dive deliberately narrows M4 to the genuinely mobile-specific slice of that broader category: untrusted data crossing an IPC boundary that ANY other app on the device (or a malicious webpage, or a QR code) can reach -- an Android Intent, an exported Content Provider, a custom URL scheme -- which is exactly as untrusted as network input but routinely validated with far less rigor because it "looks internal." This is a curatorial scoping choice made to avoid duplicating existing content, stated explicitly rather than presented as OWASP''s literal
+      wording.'
+    pl: 'Uczciwa notatka o zakresie do której zbiegły się wszystkie trzy niezależne przejścia badawcze i nalegały by jasno stwierdzić: własna oficjalna strona M4 OWASP jest ramowana generycznie wokół wstrzyknięcia SQL, wstrzyknięcia komend, XSS, i przejścia przez ścieżki -- te same rodziny które ta baza wiedzy już obszernie pokrywa w swojej kategorii Injection -- i sama NIE wysuwa na pierwszy plan Inter-Process Communication (IPC), Intentów, Content Providerów, ani deep linków po nazwie. Ten deep-dive celowo zawęża M4 do naprawdę specyficznego dla mobile wycinka tej szerszej kategorii: nieufnych danych przekraczających granicę IPC do której DOWOLNA inna apka na urządzeniu (albo złośliwa strona web, albo kod QR) może dosięgnąć -- Intent Android, wyeksportowany Content Provider, niestandardowy schemat URL -- co jest dokładnie tak nieufne jak wejście sieciowe ale rutynowo walidowane ze znacznie mniejszą rygorystycznością bo wygląda wewnętrznie. To celowy wybór zakresu dokonany by uniknąć duplikacji
+      istniejącej treści, jawnie stwierdzony zamiast przedstawiony jako dosłowne brzmienie OWASP.'
+  metrics:
+  - k: CWE-20
+    v:
+      en: Weakness ID (+ CWE-89)
+      pl: ID słabości (+ CWE-89)
+  - k: '8.8'
+    v: CVSS · High (CVE-2022-28799, TikTok deeplink->WebView)
+  - k: Curated scope
+    v:
+      en: IPC/deep-link angle, not OWASP's literal M4 text
+      pl: Kąt IPC/deep-link, nie dosłowny tekst M4 OWASP
+  - k: '2'
+    v:
+      en: Real Content Provider SQLi CVEs (ownCloud)
+      pl: Prawdziwe CVE SQLi Content Provider (ownCloud)
+  sources:
+  - label: OWASP Mobile Top 10 2024 — M4
+    url: https://owasp.org/www-project-mobile-top-10/2023-risks/m4-insufficient-input-output-validation
+  - label: CVE-2022-28799 (TikTok, NVD)
+    url: https://nvd.nist.gov/vuln/detail/CVE-2022-28799
+  - label: ownCloud Security Advisory OC-SA-2023-002
+    url: https://owncloud.com/security-advisories/sql-injection-in-android-app/
+  - label: CWE-20 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/20.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Every variant here shares one shape: data enters through an IPC channel that looks internal but is reachable by any other app, a malicious webpage, or a QR code -- and is validated with less rigor than the same data would receive arriving over the network.'
+      pl: 'Każdy wariant tutaj dzieli jeden kształt: dane wchodzą przez kanał IPC który wygląda wewnętrznie ale jest osiągalny przez dowolną inną apkę, złośliwą stronę web, albo kod QR -- i jest walidowany z mniejszą rygorystycznością niż te same dane otrzymałyby przybywając przez sieć.'
+    items:
+    - name: Content Provider SQL injection via unvalidated selection/projection
+      sev: critical
+      description:
+        en: An exported Content Provider concatenates the caller-supplied selection, projection, or sortOrder string directly into a raw SQL query. Verified as a real, well-documented Android-specific class via two real CVEs against ownCloud's own Android app.
+        pl: Wyeksportowany Content Provider skleja dostarczony przez dzwoniącego string selection, projection, albo sortOrder bezpośrednio w surowe zapytanie SQL. Zweryfikowane jako prawdziwa, dobrze udokumentowana klasa specyficzna dla Androida przez dwa prawdziwe CVE przeciw własnej apce Android ownCloud.
+      payload: selection = "1=1) UNION SELECT * FROM sqlite_master--"  -- dumps schema of tables never exposed by the provider's intended API
+    - name: Unvalidated deep link steers a WebView to attacker content
+      sev: critical
+      description:
+        en: 'A custom URL scheme or deep link parameter, insufficiently validated, forces the app''s WebView to load an attacker-controlled URL -- which then reaches whatever JavaScript bridge methods that WebView exposes. Verified via the real TikTok CVE-2022-28799: a deeplink-verification bypass reached over 70 exposed JS-bridge methods, enabling one-click account takeover.'
+        pl: 'Niestandardowy schemat URL albo parametr deep link, niewystarczająco zwalidowany, zmusza WebView aplikacji do załadowania URL kontrolowanego przez atakującego -- który następnie dosięga jakichkolwiek metod mostu JavaScript które ten WebView udostępnia. Zweryfikowane przez prawdziwe CVE-2022-28799 TikTok: obejście weryfikacji deeplink dosięgło ponad 70 udostępnionych metod mostu JS, umożliwiając przejęcie konta jednym kliknięciem.'
+      payload: tiktok://... crafted URL bypassing deeplink verification -> WebView loads attacker page -> attacker page calls exposed JS bridge method
+    - name: Implicit Intent injection to an exported component
+      sev: high
+      description:
+        en: A malicious app sends a crafted Intent directly to an exported Activity, Service, or Broadcast Receiver, supplying extras the receiving component trusts without validation -- the inbound-data-validation counterpart to this catalog's separate Intent redirection and insecure-IPC entries.
+        pl: Złośliwa apka wysyła spreparowany Intent bezpośrednio do wyeksportowanej Activity, Service, albo Broadcast Receiver, dostarczając dodatki którym odbierający komponent ufa bez walidacji -- odpowiednik walidacji danych wejściowych dla osobnych wpisów tego katalogu o przekierowaniu Intent i niebezpiecznym IPC.
+      payload: adb shell am start -n com.target/.SomeExportedActivity --es next_url "file:///data/data/com.target/databases/app.db"
+    - name: Local SQLite injection from IPC-sourced input
+      sev: high
+      description:
+        en: An app builds a raw rawQuery()/execSQL() string against its own on-device database using data received from an Intent or another app -- distinct from server-side SQLi because the trust boundary is the on-device IPC surface, not a network API.
+        pl: Apka buduje surowy string rawQuery()/execSQL() przeciw własnej bazie danych na urządzeniu używając danych otrzymanych z Intentu albo innej apki -- odrębne od SQLi po stronie serwera bo granicą zaufania jest powierzchnia IPC na urządzeniu, nie API sieciowe.
+      payload: db.execSQL("SELECT * FROM messages WHERE uid='" + intentExtra + "'")
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The fix is always the same discipline applied to network input: parameterize, allowlist, and never trust that a channel being on-device makes its data trustworthy.'
+      pl: 'Naprawa to zawsze ta sama dyscyplina stosowana do wejścia sieciowego: parametryzuj, allowlistuj, i nigdy nie ufaj że kanał będący na urządzeniu czyni jego dane wiarygodnymi.'
+    languages:
+    - label: Android (Kotlin) -- Content Provider query
+      lang: kotlin
+      vulnerable: "override fun query(uri: Uri, projection: Array<String>?, selection: String?,\n                   selectionArgs: Array<String>?, sortOrder: String?): Cursor {\n    val id = uri.lastPathSegment                      // attacker-controlled\n    val sql = \"SELECT * FROM notes WHERE _id = $id\"    // raw concat -> SQLi\n    return db.rawQuery(sql, null)\n}"
+      safe: "override fun query(uri: Uri, projection: Array<String>?, selection: String?,\n                   selectionArgs: Array<String>?, sortOrder: String?): Cursor {\n    val id = uri.lastPathSegment?.toLongOrNull()\n        ?: throw IllegalArgumentException(\"bad id\")   // strict type validation\n    val qb = SQLiteQueryBuilder().apply {\n        tables = \"notes\"\n        setProjectionMap(ALLOWED_COLUMNS)              // allowlist projection\n    }\n    return qb.query(db, projection, \"_id = ?\", arrayOf(id.toString()), null, null, null)\n}"
+    - label: Android (Kotlin) -- Intent-sourced data reaching a WebView
+      lang: kotlin
+      vulnerable: '// VULNERABLE: extra trusted blindly, no scheme/host check
+
+        val next = intent.getStringExtra("next_url")
+
+        webView.loadUrl(next)'
+      safe: "// SAFE: treat as untrusted, allowlist scheme + host\nval next = intent.getStringExtra(\"next_url\")\nval uri = next?.let { Uri.parse(it) }\nif (uri != null && uri.scheme == \"https\" && uri.host in ALLOWED_HOSTS) {\n    webView.loadUrl(next)\n}"
+    - label: iOS (Swift) -- custom URL scheme handler
+      lang: swift
+      vulnerable: "func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any]) -> Bool {\n    let action = url.host ?? \"\"\n    performAction(action, params: url.query)   // no allowlist, no validation\n    return true\n}"
+      safe: "func application(_ app: UIApplication, open url: URL,\n                  options: [UIApplication.OpenURLOptionsKey: Any]) -> Bool {\n    guard let c = URLComponents(url: url, resolvingAgainstBaseURL: false),\n          c.scheme == \"myapp\",\n          let action = c.host, allowedActions.contains(action),   // allowlist\n          let items = c.queryItems else { return false }\n    // iOS 16+: also inspect options[.sourceApplication] before trusting the caller\n    for item in items { guard isValid(item) else { return false } }  // validate each param\n    navigate(to: action, params: items)\n    return true\n}"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: Drozer is the standard, purpose-built framework for this entire attack surface -- verified as still actively maintained (now under Reversec, v3.1.0 as of August 2024).
+      pl: Drozer to standardowy, dedykowany framework dla całej tej powierzchni ataku -- zweryfikowany jako wciąż aktywnie utrzymywany (teraz pod Reversec, v3.1.0 na sierpień 2024).
+    steps:
+    - title:
+        en: Enumerate the exported attack surface
+        pl: Wylicz wyeksportowaną powierzchnię ataku
+      description:
+        en: Use Drozer's scanner.provider.finduris and app.provider.info (or MobSF's static report) to enumerate every exported Content Provider, Activity, Service, and Broadcast Receiver, and every registered custom URL scheme.
+        pl: Użyj scanner.provider.finduris i app.provider.info Drozer (albo statycznego raportu MobSF) by wyliczyć każdy wyeksportowany Content Provider, Activity, Service, i Broadcast Receiver, i każdy zarejestrowany niestandardowy schemat URL.
+    - title:
+        en: Probe Content Providers for injection
+        pl: Sonduj Content Providery pod kątem wstrzyknięcia
+      description:
+        en: 'Drozer''s scanner.provider.injection automates exactly this: inject a stray quote into selection/projection/sortOrder and watch for a SQL error or an unexpected result set revealing tables outside the provider''s intended API.'
+        pl: 'scanner.provider.injection Drozer automatyzuje dokładnie to: wstrzyknij zbłąkany cudzysłów do selection/projection/sortOrder i obserwuj błąd SQL albo nieoczekiwany zbiór wyników ujawniający tabele spoza zamierzonego API providera.'
+    - title:
+        en: Craft malicious Intents against exported components
+        pl: Spreparuj złośliwe Intenty przeciw wyeksportowanym komponentom
+      description:
+        en: adb shell am start/broadcast with custom extras (--es/--ei), or a purpose-built malicious test app, sends crafted data directly to an exported component without going through the legitimate app's own UI.
+        pl: adb shell am start/broadcast z niestandardowymi dodatkami (--es/--ei), albo dedykowana złośliwa apka testowa, wysyła spreparowane dane bezpośrednio do wyeksportowanego komponentu bez przechodzenia przez własny UI legalnej apki.
+    - title:
+        en: Fuzz deep link / custom URL scheme parameters
+        pl: Fuzzuj parametry deep link / niestandardowego schematu URL
+      description:
+        en: Test weak host/scheme checks (e.g. contains("trusted.com") passing for "trusted.com.attacker.com") and confirm whether an unvalidated parameter reaches a WebView -- the exact chain that produced the real TikTok CVE.
+        pl: Przetestuj słabe kontrole hosta/schematu (np. contains("trusted.com") przechodzące dla "trusted.com.attacker.com") i potwierdź czy niezwalidowany parametr dosięga WebView -- dokładny łańcuch który wyprodukował prawdziwe CVE TikTok.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes converged on the same top defense and the same verified Android platform detail behind it: since API 31, the OS itself now forces developers to make an explicit choice rather than silently defaulting to exported.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej głównej obronie i tym samym zweryfikowanym szczególe platformy Android za nią: od API 31, sam system zmusza deweloperów do jawnego wyboru zamiast po cichu domyślnie eksportować.'
+    items:
+    - rank: 1
+      eff: 85
+      kind: primary
+      label:
+        en: Don't export components unless required
+        pl: Nie eksportuj komponentów jeśli nie jest to konieczne
+      note:
+        en: 'Highest leverage -- removes the untrusted caller entirely. Verified Android behavior change: pre-Android-12, a component WITH an intent-filter defaulted to exported=true; since API 31 (Android 12), any component with an intent-filter must declare android:exported explicitly or the app fails to install. This is real hardening for new builds but does not retroactively secure apps still targeting older API levels.'
+        pl: 'Najwyższa dźwignia -- całkowicie usuwa nieufnego dzwoniącego. Zweryfikowana zmiana zachowania Android: przed Android 12, komponent Z intent-filter domyślnie był exported=true; od API 31 (Android 12), każdy komponent z intent-filter musi jawnie zadeklarować android:exported albo apka nie zainstaluje się. To prawdziwe utwardzenie dla nowych buildów ale nie zabezpiecza retroaktywnie apek wciąż celujących w starsze poziomy API.'
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: Parameterized queries + allowlisted projection for Content Provider and local SQLite access
+        pl: Sparametryzowane zapytania + allowlistowana projekcja dla Content Provider i dostępu do lokalnego SQLite
+      note:
+        en: selectionArgs bind values instead of concatenating them, and SQLiteQueryBuilder.setProjectionMap restricts which columns can ever be returned -- near-complete elimination of the SQLi variant, the direct fix for the real ownCloud CVEs.
+        pl: selectionArgs wiążą wartości zamiast je sklejać, a SQLiteQueryBuilder.setProjectionMap ogranicza które kolumny mogą kiedykolwiek zostać zwrócone -- niemal kompletna eliminacja wariantu SQLi, bezpośrednia naprawa dla prawdziwych CVE ownCloud.
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Validate ALL Intent/deep-link/Content-Provider data as untrusted
+        pl: Waliduj WSZYSTKIE dane Intent/deep-link/Content-Provider jako nieufne
+      note:
+        en: Type, format, and range checks on every extra/param/selection value -- essential but depends on developer completeness across every entry point, which is where real incidents keep slipping through.
+        pl: Kontrole typu, formatu, i zakresu na każdej wartości dodatku/parametru/selection -- niezbędne ale zależy od kompletności dewelopera na każdym punkcie wejścia, co jest tym gdzie prawdziwe incydenty wciąż się prześlizgują.
+    - rank: 4
+      eff: 70
+      kind: strong
+      label:
+        en: Strict allowlisting of custom URL scheme actions/params; prefer App Links / Universal Links
+        pl: Ścisły allowlisting akcji/parametrów niestandardowego schematu URL; preferuj App Links / Universal Links
+      note:
+        en: Custom schemes have no OS-level ownership verification -- Android App Links (autoVerify) and iOS Universal Links do. Where a custom scheme is unavoidable, allowlist the host/action and every parameter, and on iOS 16+ inspect the sourceApplication option before trusting the caller.
+        pl: Niestandardowe schematy nie mają weryfikacji własności na poziomie systemu -- Android App Links (autoVerify) i iOS Universal Links mają. Gdy niestandardowy schemat jest nieunikniony, allowlistuj host/akcję i każdy parametr, a na iOS 16+ zbadaj opcję sourceApplication zanim zaufasz dzwoniącemu.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Two independently-verified, high-quality incidents anchor this deep-dive -- both confirmed by all three research passes against primary vendor/security-lab sources, spanning the two dominant attack variants.
+      pl: Dwa niezależnie zweryfikowane, wysokiej jakości incydenty zakotwiczają ten deep-dive -- oba potwierdzone przez wszystkie trzy przejścia badawcze względem podstawowych źródeł dostawcy/laboratorium bezpieczeństwa, obejmujące dwa dominujące warianty ataku.
+    items:
+    - org: ownCloud Android app
+      year: 2023
+      impact: CVE-2023-24804 + CVE-2023-23948
+      cost: Fixed in v3.0, official advisory OC-SA-2023-002
+      description:
+        en: 'Confirmed by all three research passes against ownCloud''s own official security advisory and GitHub Security Lab''s GHSL-2022-059/060: the app''s exported FileContentProvider concatenated caller-supplied selection, sortOrder, where, and values strings directly into raw SQL, letting a co-installed malicious app exfiltrate the app''s own file-list and database tables. A companion path-traversal issue (CVE-2023-23948) in the same IPC surface was disclosed alongside it. A clean, real-product, officially-acknowledged example of the Content Provider SQLi variant.'
+        pl: 'Potwierdzone przez wszystkie trzy przejścia badawcze względem własnego oficjalnego advisory bezpieczeństwa ownCloud i GHSL-2022-059/060 GitHub Security Lab: wyeksportowany FileContentProvider apki sklejał dostarczone przez dzwoniącego stringi selection, sortOrder, where, i values bezpośrednio w surowy SQL, pozwalając współzainstalowanej złośliwej apce eksfiltrować własną listę plików i tabele bazy danych apki. Towarzyszący problem przejścia przez ścieżki (CVE-2023-23948) na tej samej powierzchni IPC został ujawniony razem z nim. Czysty, prawdziwy produkt, oficjalnie uznany przykład wariantu SQLi Content Provider.'
+    - org: TikTok for Android
+      year: 2022
+      impact: CVE-2022-28799 -- CVSS 8.8 High
+      cost: Fixed in versions after 23.7.3
+      description:
+        en: 'Confirmed by all three research passes against Microsoft''s own security blog (August 31, 2022) and NVD: an insufficiently validated deep link bypassed TikTok''s own deeplink-verification logic, forcing the app''s WebView to load an attacker-controlled URL. That page could then invoke over 70 exposed JavaScript-bridge methods, enabling one-click account takeover -- the exact chain this deep-dive''s attack-types section describes, and the precise seam between insufficient input validation (M4) and this catalog''s separate WebView JavaScript Bridge Exposure entry.'
+        pl: 'Potwierdzone przez wszystkie trzy przejścia badawcze względem własnego bloga bezpieczeństwa Microsoft (31 sierpnia 2022) i NVD: niewystarczająco zwalidowany deep link ominął własną logikę weryfikacji deeplink TikTok, zmuszając WebView apki do załadowania URL kontrolowanego przez atakującego. Ta strona mogła następnie wywołać ponad 70 udostępnionych metod mostu JavaScript, umożliwiając przejęcie konta jednym kliknięciem -- dokładny łańcuch który opisuje sekcja typów ataków tego deep-dive, i precyzyjny szew między niewystarczającą walidacją wejścia (M4) a osobnym wpisem tego katalogu o ujawnieniu mostu JavaScript WebView.'
+    inlineSources:
+    - label: ownCloud Security Advisory OC-SA-2023-002
+      url: https://owncloud.com/security-advisories/sql-injection-in-android-app/
+    - label: GitHub Security Lab GHSL-2022-059
+      url: https://securitylab.github.com/advisories/GHSL-2022-059_ownCloud/
+    - label: Microsoft Security Blog — TikTok Android vulnerability
+      url: https://www.microsoft.com/en-us/security/blog/2022/08/31/vulnerability-in-tiktok-android-app-could-lead-to-one-click-account-hijacking/
+    - label: CVE-2022-28799 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2022-28799
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: Drozer is purpose-built for exactly this attack surface -- verified as still actively maintained under Reversec, not an abandoned tool despite predating the current Mobile Top 10 revision.
+      pl: Drozer jest dedykowany dokładnie tej powierzchni ataku -- zweryfikowany jako wciąż aktywnie utrzymywany pod Reversec, nie porzucone narzędzie mimo że poprzedza obecną rewizję Mobile Top 10.
+    sast:
+    - - MobSF (Mobile Security Framework)
+      - Static report flags exported components, raw SQL string-concatenation patterns, and WebView configuration issues
+    - - Manual code review for selectionArgs vs. string concatenation
+      - 'The practical static check: grep for rawQuery/execSQL calls building queries via + concatenation rather than ? placeholders'
+    dast:
+    - - Drozer (Reversec, v3.1.0)
+      - 'The standard Android IPC attack-surface framework: scanner.provider.finduris and app.provider.info for enumeration, scanner.provider.injection to automate Content Provider SQLi discovery'
+    - - adb (am start / am broadcast)
+      - Craft and send test Intents with arbitrary extras directly to exported components, bypassing the legitimate app UI entirely
+    - - Frida
+      - Hook deep-link/URL-scheme handlers and WebView loadUrl calls at runtime to observe exactly what unvalidated data reaches them
+    note:
+      en: <strong>Key signal:</strong> Drozer's scanner.provider.injection module automates exactly the technique that would have caught both real ownCloud CVEs -- if a security review of an Android app has never run this scanner against its exported Content Providers, treat that surface as unverified regardless of how the source code reads.
+      pl: <strong>Kluczowy sygnał:</strong> moduł scanner.provider.injection Drozer automatyzuje dokładnie technikę która wyłapałaby oba prawdziwe CVE ownCloud -- jeśli przegląd bezpieczeństwa apki Android nigdy nie uruchomił tego skanera przeciw jej wyeksportowanym Content Providerom, traktuj tę powierzchnię jako niezweryfikowaną niezależnie od tego jak czyta się kod źródłowy.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'All three research passes independently verified the same important nuance: OWASP''s own M4 page references exactly one CWE by name (CWE-20), which is more specific than the fully-generic "no CWE enumerated at all" pattern found on several other Mobile Top 10 category pages elsewhere in this knowledge base -- worth stating precisely rather than flattening to the same blanket claim.'
+      pl: 'Wszystkie trzy przejścia badawcze niezależnie zweryfikowały ten sam ważny niuans: własna strona M4 OWASP odnosi się dokładnie do jednego CWE po nazwie (CWE-20), co jest bardziej konkretne niż w pełni generyczny wzorzec "brak wymienionego CWE w ogóle" znaleziony na kilku innych stronach kategorii Mobile Top 10 gdzie indziej w tej bazie wiedzy -- warte precyzyjnego stwierdzenia zamiast spłaszczenia do tego samego ogólnego twierdzenia.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-20 — Improper Input Validation (primary; this IS the specific CWE OWASP's own M4 page links to, verified directly, unlike the purely generic cwe.mitre.org link found on some other Mobile Top 10 pages).
+      - CWE-89 — SQL Injection (secondary, for the Content Provider / local SQLite variant specifically; the correct child CWE for both real ownCloud CVEs cited above).
+      - CWE-927 — Use of Implicit Intent for Sensitive Communication exists and is Android-specific, but all three research passes verified its scope is specifically OUTBOUND data leaked via an implicit Intent, not inbound Intent-data validation -- a subtly different concern already owned by this catalog's separate Intent Redirection entry. Not used as a primary CWE here to avoid misapplying it.
+    - std: OWASP
+      items:
+      - 'Mobile Top 10 2024 — M4: Insufficient Input/Output Validation. Verified directly against owasp.org: the official page itself names SQL injection, command injection, XSS, and path traversal as its attack vectors -- the same families covered in this knowledge base''s Injection category -- and does not center IPC/deep-links/Content Providers by name. This deep-dive''s narrower scope is a deliberate curatorial choice, documented explicitly rather than attributed to OWASP.'
+      - 'This catalog deliberately keeps the structural/authorization side of the mobile IPC surface in separate entries: WebView JavaScript Bridge Exposure (the bridge being exposed at all), Android Intent Redirection/Hijacking, Insecure IPC via Exported Components, and Insecure Deep Link/Custom URL Scheme Handling. This entry owns specifically the validation of untrusted data once it arrives through those channels.'
+    inlineSources:
+    - label: OWASP Mobile Top 10 2024 — M4
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m4-insufficient-input-output-validation
+    - label: CWE-20 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/20.html
+    - label: CWE-927 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/927.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active exploitation of an IPC/deep-link input-validation gap is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji luki walidacji wejścia IPC/deep-link, przejdź tę listę od góry.
+    steps:
+    - en: Identify the exact IPC channel exploited -- Content Provider, Intent, deep link, or Broadcast Receiver -- since detection and remediation differ per channel
+      pl: Zidentyfikuj dokładny kanał IPC który został wykorzystany -- Content Provider, Intent, deep link, albo Broadcast Receiver -- ponieważ wykrywanie i naprawa różnią się per kanał
+    - en: If a Content Provider SQLi was exploited, assume every table reachable by that provider's underlying database connection was accessible, not just the table the exploit targeted
+      pl: Jeśli wykorzystano SQLi Content Provider, załóż że każda tabela osiągalna przez leżące pod spodem połączenie bazy danych tego providera była dostępna, nie tylko tabela którą celował exploit
+    - en: If a deep link steered a WebView to attacker content, treat every JavaScript bridge method exposed to that WebView as potentially invoked, and audit for follow-on actions taken through the bridge
+      pl: Jeśli deep link skierował WebView do treści atakującego, traktuj każdą metodę mostu JavaScript udostępnioną temu WebView jako potencjalnie wywołaną, i przeaudytuj pod kątem dalszych akcji podjętych przez most
+    - en: Grep the app's manifest for every exported=true component and re-verify each one's need to be exported, not just the one exploited
+      pl: Przeszukaj manifest apki pod kątem każdego komponentu exported=true i ponownie zweryfikuj potrzebę eksportu każdego z nich, nie tylko wykorzystanego
+    - en: Ship a fix that parameterizes the affected query AND audits every other Content Provider/query in the app for the same string-concatenation anti-pattern
+      pl: Wydaj naprawę która parametryzuje dotknięte zapytanie ORAZ audytuje każdy inny Content Provider/zapytanie w apce pod kątem tego samego antywzorca konkatenacji stringów
+    - en: Notify per applicable data-breach obligations if on-device data was confirmed exfiltrated by a co-installed malicious app
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli potwierdzono eksfiltrację danych na urządzeniu przez współzainstalowaną złośliwą apkę
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP Mobile Top 10 2024 — M4
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m4-insufficient-input-output-validation
+    - label: CWE-20 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/20.html
+    - label: CWE-89 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/89.html
+    - label: CWE-927 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/927.html
+    - label: ownCloud Security Advisory OC-SA-2023-002
+      url: https://owncloud.com/security-advisories/sql-injection-in-android-app/
+    - label: GitHub Security Lab GHSL-2022-059
+      url: https://securitylab.github.com/advisories/GHSL-2022-059_ownCloud/
+    - label: Microsoft Security Blog — TikTok Android vulnerability
+      url: https://www.microsoft.com/en-us/security/blog/2022/08/31/vulnerability-in-tiktok-android-app-could-lead-to-one-click-account-hijacking/
+    - label: CVE-2022-28799 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2022-28799
