@@ -35,6 +35,7 @@ export const LEARNING_PATH = [
   'cat_1_research28', // PDF Injection
   'cat_1_research29', // OData Injection
   '15.1', // Improper Credential Usage (Mobile) -- first Mobile Security entry
+  '15.2', // Inadequate Supply Chain Security (Mobile)
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

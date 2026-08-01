@@ -1,0 +1,101 @@
+threatId: '15.2'
+title:
+  en: Inadequate Supply Chain Security — knowledge check
+  pl: Inadequate Supply Chain Security — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: A developer, frustrated with a slow official Xcode download, grabs a copy from a faster unofficial file-sharing mirror and uses it to build and ship their app. Is this a genuine supply-chain risk, even though the developer wrote no malicious code themselves?
+    pl: Deweloper, sfrustrowany powolnym oficjalnym pobieraniem Xcode, bierze kopię z szybszego nieoficjalnego lustra udostępniania plików i używa jej do zbudowania i wydania swojej apki. Czy to prawdziwe ryzyko łańcucha dostaw, mimo że deweloper sam nie napisał żadnego złośliwego kodu?
+  isVulnerable: true
+  cwe: CWE-829
+  explanation:
+    en: Yes -- this is exactly the real XcodeGhost mechanism, verified in detail by all three research passes against Palo Alto Networks' primary analysis. A trojanized Xcode patched the linker to force-load malicious code into every app compiled with it, invisibly to the developer. The attack surface was convenience (a faster unofficial mirror), not carelessness in the app's own source code.
+    pl: Tak -- to dokładnie prawdziwy mechanizm XcodeGhost, zweryfikowany w szczególe przez wszystkie trzy przejścia badawcze względem podstawowej analizy Palo Alto Networks. Trojanizowany Xcode załatał linker by wymusić załadowanie złośliwego kodu do każdej apki skompilowanej przy jego użyciu, niewidocznie dla dewelopera. Powierzchnią ataku była wygoda (szybsze nieoficjalne lustro), nie niedbalstwo we własnym kodzie źródłowym apki.
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: A security researcher tests a suspicious ad SDK through a standard intercepting proxy on a rooted test device and finds no evidence of malicious network activity. What does this deep-dive's real-world incident record say about how confident that finding should be?
+    pl: Badacz bezpieczeństwa testuje podejrzany SDK reklamowy przez standardowe proxy przechwytujące na zrootowanym urządzeniu testowym i nie znajduje dowodów złośliwej aktywności sieciowej. Co rejestr incydentów z praktyki tego deep-dive mówi o tym jak pewny powinien być ten wynik?
+  choices:
+  - id: a
+    label:
+      en: Not very confident -- the real SourMint SDK specifically detected proxies, debuggers, and rooted/jailbroken environments and suppressed its malicious behavior exactly under those conditions, which is why it evaded detection for over a year
+      pl: Niezbyt pewny -- prawdziwy SDK SourMint konkretnie wykrywał proxy, debuggery, i środowiska zrootowane/jailbreak i tłumił swoje złośliwe zachowanie dokładnie w tych warunkach, dlatego unikał wykrycia przez ponad rok
+  - id: b
+    label:
+      en: Fully confident -- a clean result from a proxied dynamic analysis pass is conclusive for any mobile SDK
+      pl: Pełna pewność -- czysty wynik z przeanalizowanego przez proxy przejścia analizy dynamicznej jest rozstrzygający dla każdego SDK mobile
+  - id: c
+    label:
+      en: Confident, because malicious SDKs cannot detect when they are being analyzed
+      pl: Pewny, bo złośliwe SDK nie mogą wykryć kiedy są analizowane
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Verified via Snyk''s real disclosure of SourMint (Mintegral SDK, 2020), confirmed by all three research passes: the SDK actively evaded exactly the standard analysis setup described in the question, which is precisely why it stayed undetected in ~1,200 apps for over a year despite being a widely-embedded, heavily-downloaded component.'
+    pl: 'Zweryfikowane przez prawdziwe ujawnienie Snyk SourMint (SDK Mintegral, 2020), potwierdzone przez wszystkie trzy przejścia badawcze: SDK aktywnie unikał dokładnie standardowego ustawienia analizy opisanego w pytaniu, dlatego dokładnie pozostał niewykryty w ~1200 apkach przez ponad rok mimo bycia szeroko osadzonym, mocno pobieranym komponentem.'
+- id: q3
+  type: vuln-or-not
+  prompt:
+    en: A mobile team's Gradle build declares implementation 'com.vendor:ad-sdk:+' (a floating, unpinned version) with no lock file, and the app store review process is treated as the only security gate for third-party code. Is this a supply-chain risk beyond just an outdated-dependency concern?
+    pl: Build Gradle zespołu mobile deklaruje implementation 'com.vendor:ad-sdk:+' (płynąca, nieprzypięta wersja) bez pliku blokady, a proces recenzji sklepu aplikacji jest traktowany jako jedyna brama bezpieczeństwa dla kodu firm trzecich. Czy to ryzyko łańcucha dostaw wykraczające poza samo obawę o przestarzałą zależność?
+  isVulnerable: true
+  cwe: CWE-1357
+  explanation:
+    en: 'Yes. A floating version means any future malicious point-release from the vendor -- or a compromised vendor account -- is automatically pulled into the next build with zero developer awareness, exactly the propagation mechanism behind SourMint and Goldoson. Store review is not a reliable backstop: all three research passes confirmed both incidents passed official app-store review and persisted for extended periods before independent researchers found them.'
+    pl: 'Tak. Płynąca wersja oznacza że każde przyszłe złośliwe wydanie punktowe od dostawcy -- albo skompromitowane konto dostawcy -- jest automatycznie wciągane do następnego builda z zerową świadomością dewelopera, dokładnie mechanizm propagacji stojący za SourMint i Goldoson. Recenzja sklepu to nie niezawodna siatka bezpieczeństwa: wszystkie trzy przejścia badawcze potwierdziły że oba incydenty przeszły oficjalną recenzję sklepu aplikacji i przetrwały przez wydłużone okresy zanim niezależni badacze je znaleźli.'
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: This deep-dive cites both CWE-1357 and CWE-829. What distinguishes when each applies?
+    pl: Ten deep-dive cytuje zarówno CWE-1357 jak i CWE-829. Co odróżnia kiedy każde się stosuje?
+  choices:
+  - id: a
+    label:
+      en: CWE-1357 fits when a team knowingly embeds a third-party component whose trustworthiness can't be fully assessed (e.g. a closed-source ad SDK), while CWE-829 fits the build-toolchain-injection case specifically, where the app never chose to trust the injected functionality at all
+      pl: CWE-1357 pasuje gdy zespół świadomie osadza komponent firmy trzeciej którego wiarygodności nie można w pełni ocenić (np. zamkniętoźródłowy SDK reklamowy), podczas gdy CWE-829 pasuje konkretnie do przypadku wstrzyknięcia przez łańcuch narzędzi budowania, gdzie apka w ogóle nie wybrała zaufania wstrzykniętej funkcjonalności
+  - id: b
+    label:
+      en: CWE-829 is the parent of CWE-1357
+      pl: CWE-829 to rodzic CWE-1357
+  - id: c
+    label:
+      en: They are identical and interchangeable
+      pl: Są identyczne i wymienne
+  correctChoiceIds:
+  - a
+  explanation:
+    en: All three research passes independently verified at MITRE that CWE-829 is a SEPARATE lineage from CWE-1357, not its parent or child. This deep-dive uses CWE-1357 for the SDK-trust cases (SourMint, Goldoson, CocoaPods orphaned packages) and CWE-829 specifically for the XcodeGhost-style build-toolchain injection, where malicious functionality entered the app without any deliberate trust decision at all.
+    pl: Wszystkie trzy przejścia badawcze niezależnie zweryfikowały na MITRE że CWE-829 to ODRĘBNA linia od CWE-1357, nie jego rodzic ani dziecko. Ten deep-dive używa CWE-1357 dla przypadków zaufania SDK (SourMint, Goldoson, porzucone pakiety CocoaPods) i CWE-829 konkretnie dla wstrzyknięcia przez łańcuch narzędzi budowania w stylu XcodeGhost, gdzie złośliwa funkcjonalność weszła do apki bez jakiejkolwiek celowej decyzji zaufania.
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: A CocoaPods package has had no maintainer activity or ownership claim since 2014, but is still resolvable and installable by anyone running pod install today. Is an unclaimed, orphaned package on a mobile registry a genuine attack surface?
+    pl: Pakiet CocoaPods nie miał żadnej aktywności maintainera ani roszczenia własności od 2014, ale wciąż jest rozwiązywalny i instalowalny przez każdego kto dziś uruchomi pod install. Czy nieodebrany, porzucony pakiet w rejestrze mobile to prawdziwa powierzchnia ataku?
+  isVulnerable: true
+  cwe: CWE-1357
+  explanation:
+    en: 'Yes -- verified via the real CVE-2024-38368 (CVSS 9.3): ~1,866 CocoaPods packages orphaned since a 2014 migration were claimable by anyone through a public API and a hardcoded fallback email address, letting an attacker inject malicious code into a package that developers still trust and pull by name, with no need to compromise any individual developer''s credentials.'
+    pl: 'Tak -- zweryfikowane przez prawdziwe CVE-2024-38368 (CVSS 9.3): ~1866 pakietów CocoaPods porzuconych od migracji z 2014 było przejmowalnych przez każdego przez publiczne API i zahardkodowany zapasowy adres email, pozwalając atakującemu wstrzyknąć złośliwy kod do pakietu któremu deweloperzy wciąż ufają i pobierają po nazwie, bez potrzeby kompromitowania poświadczeń jakiegokolwiek indywidualnego dewelopera.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A mobile team wants to reduce the risk that a future malicious SDK update silently ships in their next release. Which change actually addresses this?
+    pl: Zespół mobile chce zmniejszyć ryzyko że przyszła złośliwa aktualizacja SDK po cichu trafi do ich następnego wydania. Która zmiana faktycznie to adresuje?
+  variants:
+  - id: v1
+    lang: groovy
+    code: "dependencies {\n    implementation 'com.vendor:ad-sdk:+'   // always take the latest\n}"
+  - id: v2
+    lang: groovy
+    code: "dependencies {\n    implementation 'com.vendor:ad-sdk:5.5.0'   // exact pin\n}\n// dependencyLocking { lockAllConfigurations() } enabled in build.gradle,\n// gradle.lockfile committed to version control and enforced in CI"
+  - id: v3
+    lang: groovy
+    code: "dependencies {\n    implementation 'com.vendor:ad-sdk:[5.0,6.0)'   // any 5.x release\n}"
+  correctVariantId: v2
+  explanation:
+    en: v2 pins an exact reviewed version AND enforces it via a committed lock file checked in CI -- a build cannot silently drift to a new point release without a deliberate, reviewable change to the pinned version. v1's floating '+' takes literally whatever the vendor last published, the exact condition that let malicious SourMint versions auto-propagate. v3's range constraint still allows any 5.x point release to be silently pulled, including a future malicious 5.6.0 -- narrower than v1 but the same underlying flaw.
+    pl: v2 przypina dokładną zrecenzowaną wersję ORAZ wymusza ją przez zacommitowany plik blokady sprawdzany w CI -- build nie może po cichu dryfować do nowego wydania punktowego bez celowej, recenzowalnej zmiany przypiętej wersji. Płynący '+' z v1 bierze dosłownie cokolwiek dostawca ostatnio opublikował, dokładnie warunek który pozwolił złośliwym wersjom SourMint automatycznie się propagować. Ograniczenie zakresu z v3 wciąż pozwala by dowolne wydanie punktowe 5.x zostało po cichu pobrane, włącznie z przyszłym złośliwym 5.6.0 -- węższe niż v1 ale ta sama leżąca u podstaw wada.

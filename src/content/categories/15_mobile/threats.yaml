@@ -17,22 +17,19 @@ threats:
   note_en: 'Source: OWASP Mobile Top 10 2024, M1. Partially overlaps existing catalog entries (data_exposure desc #218, auth #172) but as the general mobile credential-usage risk it is broader than hardcoded-secret extraction.'
 - id: '15.2'
   name: Inadequate Supply Chain Security (Mobile)
-  severity: High
-  difficulty: Unknown
+  severity: Critical
+  difficulty: Hard
   confidence: POSSIBLE
   cwe:
   - CWE-1357
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Malicious or compromised third-party SDKs, libraries, or build tooling embedded in a mobile app introduce backdoors, data exfiltration, or vulnerable code that ships to end-user devices.
+  - CWE-829
+  desc: 'Złośliwe albo skompromitowane SDK firm trzecich, biblioteki, albo narzędzia budowania osadzone w aplikacji mobilnej wprowadzają backdoory, eksfiltrację danych, albo podatny kod który trafia na urządzenia użytkowników. Nowość w OWASP Mobile Top 10 2024 -- pojedynczy skompromitowany SDK reklamowy albo trojanizowany kompilator może propagować złośliwy kod do tysięcy niepowiązanych apek jednocześnie (XcodeGhost 2015, SourMint 2020).
 
     '
-  desc_en: Malicious or compromised third-party SDKs, libraries, or build tooling embedded in a mobile app introduce backdoors, data exfiltration, or vulnerable code that ships to end-user devices.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
+  desc_en: Malicious or compromised third-party SDKs, libraries, or build tooling embedded in a mobile app introduce backdoors, data exfiltration, or vulnerable code that ships to end-user devices. New to OWASP Mobile Top 10 2024 -- a single compromised ad SDK or trojanized compiler can propagate malicious code to thousands of unrelated apps simultaneously (XcodeGhost 2015, SourMint 2020).
+  lang: groovy
+  vuln: "dependencies {\n    implementation 'com.somevendor:ad-sdk:+'   // floating version, no vetting\n}\n"
+  safe: "dependencies {\n    implementation('com.somevendor:ad-sdk:5.5.0')   // exact pin, reviewed before adoption\n}\n// dependencyLocking { lockAllConfigurations() } enabled + gradle.lockfile committed\n"
   note_en: 'Source: OWASP Mobile Top 10 2024, M2. Mobile-specific facet distinct from the existing general Supply Chain category (SDK bundling, app store signing).'
 - id: '15.3'
   name: Insecure Authentication/Authorization (Mobile)

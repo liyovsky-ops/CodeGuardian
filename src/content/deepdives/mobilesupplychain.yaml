@@ -1,0 +1,368 @@
+meta:
+  id: mobilesupplychain
+  threatId: '15.2'
+  severity: Critical
+  color: '#0f766e'
+  colorRgb: 15,118,110
+  cwe: CWE-1357
+  cvss: '10.0'
+  standard: OWASP Mobile Top 10 2024 (M2)
+hero:
+  titleMain: 'Inadequate Supply Chain '
+  titleGrad: Security
+  titleTail: ''
+  topbar: Inadequate Supply Chain Security (OWASP Mobile Top 10 2024, M2)
+  lead:
+    en: 'New to the OWASP Mobile Top 10 in its 2024 revision, and for good reason: a third-party SDK embedded in a mobile app runs inside the app''s own process with the app''s own permissions -- there is generally no per-library sandboxing on mobile the way a defender might isolate a server-side dependency. All three independent research passes converged on the same structural consequence: a single compromised ad SDK, analytics library, or build toolchain can propagate malicious code to thousands of unrelated apps and hundreds of millions of devices simultaneously, and this is not theoretical -- it is this deep-dive''s strongest-documented incident record of any topic researched in this knowledge base so far, anchored by three separate, primary-source-verified real-world cases spanning a trojanized compiler, two malicious ad SDKs, and a critical registry-infrastructure vulnerability.'
+    pl: 'Nowość w OWASP Mobile Top 10 w rewizji 2024, i to z dobrego powodu: SDK firmy trzeciej osadzony w aplikacji mobilnej działa wewnątrz własnego procesu aplikacji z własnymi uprawnieniami aplikacji -- generalnie nie ma na mobile piaskownicy per-biblioteka w sposób w jaki obrońca mógłby izolować zależność po stronie serwera. Wszystkie trzy niezależne przejścia badawcze zbiegły się na tej samej strukturalnej konsekwencji: pojedynczy skompromitowany SDK reklamowy, biblioteka analityczna, albo łańcuch narzędzi budowania może propagować złośliwy kod do tysięcy niepowiązanych apek i setek milionów urządzeń jednocześnie, i to nie jest teoretyczne -- to najlepiej udokumentowany rejestr incydentów spośród wszystkich tematów zbadanych w tej bazie wiedzy do tej pory, zakotwiczony trzema osobnymi, zweryfikowanymi względem źródeł pierwotnych prawdziwymi przypadkami obejmującymi trojanizowany kompilator, dwa złośliwe SDK reklamowe, i krytyczną podatność infrastruktury rejestru.'
+  metrics:
+  - k: CWE-1357
+    v:
+      en: Weakness ID (+ CWE-829)
+      pl: ID słabości (+ CWE-829)
+  - k: 128M
+    v:
+      en: iOS users affected by XcodeGhost (Apple/litigation figure)
+      pl: Użytkowników iOS dotkniętych XcodeGhost (dane Apple/sądowe)
+  - k: '10.0'
+    v: CVSS · Critical (CVE-2024-38366, CocoaPods Trunk RCE)
+  - k: '3'
+    v:
+      en: Independently verified real-world incidents
+      pl: Niezależnie zweryfikowanych incydentów z praktyki
+  sources:
+  - label: 'OWASP Mobile Top 10 2024 — M2: Inadequate Supply Chain Security'
+    url: https://owasp.org/www-project-mobile-top-10/2023-risks/m2-inadequate-supply-chain-security
+  - label: Palo Alto Unit 42 — XcodeGhost
+    url: https://unit42.paloaltonetworks.com/novel-malware-xcodeghost-modifies-xcode-infects-apple-ios-apps-and-hits-app-store/
+  - label: Snyk — SourMint (Mintegral SDK)
+    url: https://snyk.io/blog/sour-mint-malicious-sdk/
+  - label: CWE-1357 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/1357.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Four distinct entry points into the chain, each with at least one real, documented incident: the build toolchain itself, an embedded third-party SDK, the package registry infrastructure, and the code-signing process.'
+      pl: 'Cztery odrębne punkty wejścia do łańcucha, każdy z co najmniej jednym prawdziwym, udokumentowanym incydentem: sam łańcuch narzędzi budowania, osadzony SDK firmy trzeciej, infrastruktura rejestru pakietów, i proces podpisywania kodu.'
+    items:
+    - name: Compromised build toolchain (trojanized compiler/IDE)
+      sev: critical
+      description:
+        en: A tampered compiler or IDE, typically distributed via an unofficial mirror for speed/convenience, silently injects malicious code into every app built with it -- invisible to the developer, who compiled the malware in without ever writing a malicious line themselves. Verified in full technical detail via the real XcodeGhost incident (2015).
+        pl: Zmanipulowany kompilator albo IDE, zwykle dystrybuowany przez nieoficjalne lustro dla szybkości/wygody, po cichu wstrzykuje złośliwy kod do każdej apki zbudowanej przy jego użyciu -- niewidoczne dla dewelopera, który skompilował malware bez napisania choć jednej złośliwej linii samodzielnie. Zweryfikowane w pełnym szczególe technicznym przez prawdziwy incydent XcodeGhost (2015).
+      payload: Xcode's Ld.xcspec patched to force-load a malicious CoreServices object into every linked binary
+    - name: Malicious/compromised third-party SDK exfiltrating data
+      sev: critical
+      description:
+        en: 'A closed-source ad, analytics, or attribution SDK runs inside the host app''s process with the app''s own network and permission access -- and can silently exfiltrate URLs, HTTP headers (including Authorization tokens), device identifiers, and location, while actively evading dynamic analysis. Verified via two separate real cases: SourMint/Mintegral (2020) and Goldoson (2023).'
+        pl: 'Zamkniętoźródłowy SDK reklamowy, analityczny, albo atrybucji działa wewnątrz procesu aplikacji-hosta z własnym dostępem sieciowym i uprawnieniami aplikacji -- i może po cichu eksfiltrować URL-e, nagłówki HTTP (włącznie z tokenami Authorization), identyfikatory urządzenia, i lokalizację, jednocześnie aktywnie unikając analizy dynamicznej. Zweryfikowane przez dwa osobne prawdziwe przypadki: SourMint/Mintegral (2020) i Goldoson (2023).'
+      payload: SDK detects a proxy/debugger/jailbroken device and suppresses its malicious behavior specifically during security analysis
+    - name: Package-registry infrastructure compromise
+      sev: critical
+      description:
+        en: The mobile-equivalent registry itself (CocoaPods for iOS) can have infrastructure-level flaws letting an attacker claim orphaned packages or inject code at the registry/CDN level -- compromising every app that later pulls the affected package, verified via three real 2024 CocoaPods CVEs including a CVSS 10.0 remote code execution in the Trunk server.
+        pl: Sam rejestr odpowiednika mobile (CocoaPods dla iOS) może mieć wady na poziomie infrastruktury pozwalające atakującemu przejąć porzucone pakiety albo wstrzyknąć kod na poziomie rejestru/CDN -- kompromitując każdą apkę która później pobierze dotknięty pakiet, zweryfikowane przez trzy prawdziwe CVE CocoaPods z 2024 włącznie ze zdalnym wykonaniem kodu CVSS 10.0 w serwerze Trunk.
+      payload: Shell command built from an unsanitized email address during rfc-822 DNS MX validation -- reaches command injection in the registry server itself
+    - name: Signing-key compromise -- malicious update inherits original trust
+      sev: critical
+      description:
+        en: 'OWASP''s own official M2 attack scenario: an attacker who compromises app signing keys or certificates can sign malicious code as trusted, bypassing store review entirely. Verified real-world instance: leaked Android OEM platform signing certificates (Samsung, LG, MediaTek, Revoview, 2022) let malware inherit android.uid.system-level trust.'
+        pl: 'Własny oficjalny scenariusz ataku M2 OWASP: atakujący który kompromituje klucze podpisujące aplikacji albo certyfikaty może podpisać złośliwy kod jako zaufany, całkowicie omijając recenzję sklepu. Zweryfikowany prawdziwy przypadek: wyciekłe certyfikaty podpisujące platformy OEM Android (Samsung, LG, MediaTek, Revoview, 2022) pozwoliły malware odziedziczyć zaufanie na poziomie android.uid.system.'
+      payload: Malware signed with a leaked OEM platform certificate installs with system-level privileges, indistinguishable from a legitimate platform update
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: The fix is rarely about the app's own code -- it's about the discipline applied to what gets pulled into the build and how that build is signed.
+      pl: Naprawa rzadko dotyczy własnego kodu aplikacji -- dotyczy dyscypliny stosowanej do tego co jest wciągane do builda i jak ten build jest podpisywany.
+    languages:
+    - label: Android (Gradle) -- SDK dependency management
+      lang: groovy
+      vulnerable: "// VULNERABLE: floating version, no vetting, no lock file\ndependencies {\n    implementation 'com.somevendor:ad-sdk:+'   // silently pulls whatever the vendor last published\n}"
+      safe: "// SAFE: exact pin + verified checksum + dependency locking enabled\ndependencies {\n    implementation('com.somevendor:ad-sdk:5.5.0') {\n        // exact version, reviewed before adoption; project has\n        // dependencyLocking { lockAllConfigurations() } enabled in build.gradle\n    }\n}\n// + generate a CycloneDX SBOM at build time and feed it to Dependency-Track\n// + verify what the SDK sends over the network with a proxy before shipping"
+    - label: iOS (CocoaPods) -- dependency pinning
+      lang: ruby
+      vulnerable: '# VULNERABLE: unpinned, no Podfile.lock committed to version control
+
+        pod ''SomeAdSDK'''
+      safe: '# SAFE: exact version, Podfile.lock committed and enforced in CI
+
+        pod ''SomeAdSDK'', ''5.5.0''
+
+        # `pod install --deployment` in CI fails the build if Podfile.lock
+
+        # doesn''t exactly match what''s specified -- no silent version drift'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: The four real incidents in this deep-dive map to four distinct attacker entry points into the chain -- none of them required finding a bug in the target app's own code.
+      pl: Cztery prawdziwe incydenty w tym deep-dive mapują się do czterech odrębnych punktów wejścia atakującego do łańcucha -- żaden z nich nie wymagał znalezienia błędu we własnym kodzie docelowej aplikacji.
+    steps:
+    - title:
+        en: Compromise the SDK vendor or the build toolchain, not the target app
+        pl: Skompromituj dostawcę SDK albo łańcuch narzędzi budowania, nie docelową apkę
+      description:
+        en: 'The highest-leverage move: poison a component thousands of unrelated developers already trust and embed, rather than attacking any single app directly. XcodeGhost poisoned the compiler; Mintegral/Goldoson poisoned a widely-embedded SDK.'
+        pl: 'Ruch o najwyższej dźwigni: zatruj komponent któremu tysiące niepowiązanych deweloperów już ufa i który osadzają, zamiast atakować jakąkolwiek pojedynczą apkę bezpośrednio. XcodeGhost zatruł kompilator; Mintegral/Goldoson zatruły szeroko osadzony SDK.'
+    - title:
+        en: Distribute the poisoned component through a channel developers already trust
+        pl: Dystrybuuj zatruty komponent przez kanał któremu deweloperzy już ufają
+      description:
+        en: XcodeGhost specifically exploited developers bypassing the slow official Apple download in favor of a faster unofficial mirror -- convenience, not carelessness, was the attack surface.
+        pl: XcodeGhost konkretnie wykorzystał deweloperów omijających powolne oficjalne pobieranie Apple na rzecz szybszego nieoficjalnego lustra -- wygoda, nie niedbalstwo, była powierzchnią ataku.
+    - title:
+        en: Evade dynamic/security analysis actively
+        pl: Aktywnie unikaj analizy dynamicznej/bezpieczeństwa
+      description:
+        en: SourMint specifically detected proxies, debuggers, and jailbroken/simulator environments and suppressed its malicious behavior only during those conditions -- exactly the conditions a security researcher or automated scanner would use to test it, which is why it went undetected for over a year.
+        pl: SourMint konkretnie wykrywał proxy, debuggery, i środowiska jailbreak/symulator i tłumił swoje złośliwe zachowanie tylko w tych warunkach -- dokładnie warunkach których użyłby badacz bezpieczeństwa albo automatyczny skaner by go przetestować, dlatego pozostał niewykryty przez ponad rok.
+    - title:
+        en: Exploit registry-infrastructure trust rather than any individual package
+        pl: Wykorzystaj zaufanie infrastruktury rejestru zamiast jakiegokolwiek pojedynczego pakietu
+      description:
+        en: CVE-2024-38368 exploited ~1,866 orphaned CocoaPods packages left unclaimed since a 2014 migration, reachable via a public API and a hardcoded fallback email address -- an attacker didn't need to compromise any developer, only the registry's own bookkeeping gap.
+        pl: CVE-2024-38368 wykorzystywało ~1866 porzuconych pakietów CocoaPods pozostawionych nieodebranymi od migracji z 2014, osiągalnych przez publiczne API i zahardkodowany zapasowy adres email -- atakujący nie musiał kompromitować żadnego dewelopera, tylko lukę we własnej księgowości rejestru.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: All three research passes converged on signing-key protection and SDK minimization as the top two controls, precisely because they map to this deep-dive's two most damaging incident classes.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na ochronie kluczy podpisujących i minimalizacji SDK jako dwóch głównych kontrolach, dokładnie dlatego że mapują się do dwóch najbardziej szkodliwych klas incydentów tego deep-dive.
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: Code-signing key protection (HSM-backed, isolated CI signing credentials)
+        pl: Ochrona klucza podpisującego kod (oparta na HSM, izolowane poświadczenia podpisywania CI)
+      note:
+        en: A stolen signing key launders arbitrary malicious code into full trust -- directly the mechanism behind the leaked Android OEM platform certificates. Store the key in hardware (HSM/managed signing like Google Play App Signing or Apple's managed process), never on a developer's own machine.
+        pl: Skradziony klucz podpisujący pierze dowolny złośliwy kod w pełne zaufanie -- bezpośrednio mechanizm stojący za wyciekłymi certyfikatami platformy OEM Android. Przechowuj klucz w sprzęcie (HSM/zarządzane podpisywanie jak Google Play App Signing albo zarządzany proces Apple), nigdy na własnej maszynie dewelopera.
+    - rank: 2
+      eff: 85
+      kind: primary
+      label:
+        en: SDK vetting, minimization, and allowlisting
+        pl: Vetting, minimalizacja, i allowlisting SDK
+      note:
+        en: The only defense that would have prevented the SourMint/Goldoson class outright -- fewer, better-vetted, ideally source-available SDKs, with a documented approval gate before any new one is embedded.
+        pl: Jedyna obrona która zapobiegłaby klasie SourMint/Goldoson wprost -- mniej, lepiej zweryfikowanych, idealnie dostępnych źródłowo SDK, z udokumentowaną bramą zatwierdzania zanim jakikolwiek nowy zostanie osadzony.
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Dependency pinning + lock files + checksum verification
+        pl: Przypinanie zależności + pliki blokady + weryfikacja sum kontrolnych
+      note:
+        en: Exact versions plus committed Podfile.lock/Gradle version catalogs stop a silent malicious point-release from being auto-pulled -- cheap, foundational, and directly closes the CocoaPods orphaned-package escalation path.
+        pl: Dokładne wersje plus zacommitowane Podfile.lock/katalogi wersji Gradle zatrzymują ciche automatyczne pobranie złośliwego wydania punktowego -- tanie, fundamentalne, i bezpośrednio zamyka ścieżkę eskalacji porzuconego pakietu CocoaPods.
+    - rank: 4
+      eff: 70
+      kind: strong
+      label:
+        en: Build reproducibility / verified toolchain integrity
+        pl: Odtwarzalność builda / zweryfikowana integralność łańcucha narzędzi
+      note:
+        en: Checksum-verifying the compiler/IDE itself and building on hermetic, controlled CI is the specific counter to XcodeGhost -- a tampered local toolchain can't inject silently if the build environment is verified and centrally controlled.
+        pl: Weryfikacja sumy kontrolnej samego kompilatora/IDE i budowanie na hermetycznym, kontrolowanym CI to konkretna kontra dla XcodeGhost -- zmanipulowany lokalny łańcuch narzędzi nie może wstrzyknąć po cichu jeśli środowisko budowania jest zweryfikowane i centralnie kontrolowane.
+    - rank: 5
+      eff: 55
+      kind: strong
+      label:
+        en: SBOM generation (CycloneDX) + continuous monitoring
+        pl: Generowanie SBOM (CycloneDX) + ciągłe monitorowanie
+      note:
+        en: Doesn't prevent a novel malicious SDK, but turns "are we affected by this disclosure?" from a days-long audit into a minutes-long lookup -- the precondition for fast response when the next SourMint-class case is publicly disclosed.
+        pl: Nie zapobiega nowemu złośliwemu SDK, ale zamienia "czy jesteśmy dotknięci tym ujawnieniem?" z wielodniowego audytu w wyszukiwanie trwające minuty -- warunek wstępny szybkiej reakcji gdy kolejny przypadek klasy SourMint zostanie publicznie ujawniony.
+    - rank: 6
+      eff: 45
+      kind: weak
+      label:
+        en: SDK network egress monitoring
+        pl: Monitorowanie ruchu wychodzącego SDK
+      note:
+        en: Detective, not preventive -- this is literally how Snyk discovered SourMint -- but the SDK itself may actively evade proxied/debugged analysis sessions, so a clean result from one analysis pass is not a guarantee.
+        pl: Detektywistyczne, nie zapobiegawcze -- dokładnie tak Snyk odkrył SourMint -- ale sam SDK może aktywnie unikać sesji analizy przez proxy/debugger, więc czysty wynik z jednego przejścia analizy nie jest gwarancją.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: An unusually strong incident record for this knowledge base -- three separate cases independently verified against primary sources, spanning every major entry point into the mobile supply chain.
+      pl: Niezwykle silny rejestr incydentów jak na tę bazę wiedzy -- trzy osobne przypadki niezależnie zweryfikowane względem źródeł pierwotnych, obejmujące każdy główny punkt wejścia do łańcucha dostaw mobile.
+    items:
+    - org: XcodeGhost (trojanized Xcode)
+      year: 2015
+      impact: ~2,500-4,000+ apps (source estimates vary); ~128 million iOS users
+      cost: Apple pulled affected apps; developers had to recompile with clean Xcode
+      description:
+        en: 'Confirmed in full technical detail by all three research passes against Palo Alto Networks Unit 42''s primary analysis: a trojanized copy of Xcode, distributed via Baidu Pan because the official multi-gigabyte Apple download was slow in China, patched the linker spec (Ld.xcspec) to force-load a malicious CoreServices object into every app compiled with it. Infected apps exfiltrated device data via DES-ECB-encrypted HTTP to trust-mimicking C2 domains and could display phishing dialogs or open arbitrary URLs on command. Affected apps included WeChat and Didi. The exact app count is genuinely disputed across sources (39 initially confirmed, 344 per Qihoo 360, 3,418 per Pangu Team, 4,000+ per FireEye) -- presented here as a range rather than a single figure. The 128 million user figure comes from Apple''s own internal numbers, surfaced in 2021 Epic v. Apple litigation emails.'
+        pl: 'Potwierdzone w pełnym szczególe technicznym przez wszystkie trzy przejścia badawcze względem podstawowej analizy Palo Alto Networks Unit 42: trojanizowana kopia Xcode, dystrybuowana przez Baidu Pan bo oficjalne wielogigabajtowe pobieranie Apple było wolne w Chinach, załatała spec linkera (Ld.xcspec) by wymusić załadowanie złośliwego obiektu CoreServices do każdej apki skompilowanej przy jego użyciu. Zainfekowane apki eksfiltrowały dane urządzenia przez HTTP zaszyfrowane DES-ECB do domen C2 imitujących zaufanie i mogły wyświetlać dialogi phishingowe albo otwierać dowolne URL na komendę. Dotknięte apki obejmowały WeChat i Didi. Dokładna liczba apek jest naprawdę sporna między źródłami (39 początkowo potwierdzonych, 344 wg Qihoo 360, 3418 wg Pangu Team, 4000+ wg FireEye) -- przedstawione tutaj jako zakres zamiast pojedynczej liczby. Liczba 128 milionów użytkowników pochodzi z własnych wewnętrznych danych Apple, ujawnionych w mailach procesowych Epic v. Apple z 2021.'
+    - org: SourMint / Mintegral iOS SDK
+      year: 2020
+      impact: ~1,200 iOS apps, ~300M downloads/month, including ~70 of the top-500 free apps
+      cost: Undetected for over a year; SDK versions patched after Snyk disclosure
+      description:
+        en: 'Confirmed by all three research passes against Snyk''s primary disclosure (Aug 2020): Mintegral''s iOS ad SDK, from version 5.5.1 (July 2019) onward, used method swizzling to hook URL-open and HTTP methods, exfiltrating click/URL data and HTTP headers (including Authorization tokens per one research pass) while committing ad-attribution fraud against competing networks. It actively detected proxies, debuggers, and jailbroken/simulator environments to suppress its behavior specifically during security analysis, which is how it evaded detection for over a year. Mintegral publicly disputed the "malicious" characterization -- a genuine, documented vendor dispute rather than an undisputed breach, noted here rather than silently resolved.'
+        pl: 'Potwierdzone przez wszystkie trzy przejścia badawcze względem podstawowego ujawnienia Snyk (sierpień 2020): SDK reklamowy iOS Mintegral, od wersji 5.5.1 (lipiec 2019), używał method swizzling by zahaczyć metody otwierania URL i HTTP, eksfiltrując dane kliknięć/URL i nagłówki HTTP (włącznie z tokenami Authorization wg jednego przejścia badawczego) jednocześnie popełniając oszustwo atrybucji reklam przeciw konkurencyjnym sieciom. Aktywnie wykrywał proxy, debuggery, i środowiska jailbreak/symulator by tłumić swoje zachowanie konkretnie podczas analizy bezpieczeństwa, co pozwoliło mu unikać wykrycia przez ponad rok. Mintegral publicznie zakwestionował charakterystykę "złośliwy" -- prawdziwy, udokumentowany spór z dostawcą zamiast niespornego wycieku, odnotowany tutaj zamiast po cichu rozwiązany.'
+    - org: CocoaPods Trunk server
+      year: 2024
+      impact: CVE-2024-38366 -- CVSS 10.0; CVE-2024-38368 -- CVSS 9.3; CVE-2024-38367 -- CVSS 8.2
+      cost: Fixed by EVA Information Security's disclosure and CocoaPods remediation
+      description:
+        en: 'Verified via EVA Information Security''s disclosure and corroborating coverage: three infrastructure-level flaws in the CocoaPods registry itself. CVE-2024-38366 was an unauthenticated remote code execution in the Trunk server''s email-validation logic (a shell command built from a user-supplied email during rfc-822 DNS MX lookup), giving an attacker root over the whole registry. CVE-2024-38368 let anyone claim any of ~1,866 packages orphaned since a 2014 migration via a public API and a hardcoded fallback address. CVE-2024-38367 was a session-hijack/zero-click account takeover via a spoofed verification link. Together these represent the registry-infrastructure entry point into the mobile supply chain -- distinct from a compromised individual SDK.'
+        pl: 'Zweryfikowane przez ujawnienie EVA Information Security i potwierdzające doniesienia: trzy wady na poziomie infrastruktury w samym rejestrze CocoaPods. CVE-2024-38366 to nieuwierzytelnione zdalne wykonanie kodu w logice walidacji email serwera Trunk (komenda powłoki zbudowana z adresu email dostarczonego przez użytkownika podczas wyszukiwania rfc-822 DNS MX), dająca atakującemu root nad całym rejestrem. CVE-2024-38368 pozwalało każdemu przejąć dowolny z ~1866 pakietów porzuconych od migracji z 2014 przez publiczne API i zahardkodowany zapasowy adres. CVE-2024-38367 to przejęcie sesji/przejęcie konta zero-click przez sfałszowany link weryfikacyjny. Razem reprezentują punkt wejścia infrastruktury rejestru do łańcucha dostaw mobile -- odrębny od skompromitowanego pojedynczego SDK.'
+    - org: Goldoson (Android library)
+      year: 2023
+      impact: 60 apps, 100M+ combined downloads across Google Play and Korea's ONE store
+      cost: Reported to Google; affected apps updated or pulled
+      description:
+        en: 'Verified via McAfee Mobile Research Team''s primary disclosure: a third-party library that 60 apps'' own developers embedded without realizing its full behavior -- collecting installed-app lists, Wi-Fi/Bluetooth device history, and nearby GPS locations, while performing background ad-click fraud. Its exact collection behavior and frequency were controlled remotely via an obfuscated C2 configuration, letting the operator tune what it did after the fact without a new app release.'
+        pl: 'Zweryfikowane przez podstawowe ujawnienie McAfee Mobile Research Team: biblioteka firmy trzeciej którą własni deweloperzy 60 apek osadzili nie zdając sobie sprawy z jej pełnego zachowania -- zbierając listy zainstalowanych apek, historię urządzeń Wi-Fi/Bluetooth, i pobliskie lokalizacje GPS, jednocześnie wykonując oszustwo kliknięć reklamowych w tle. Jej dokładne zachowanie zbierania i częstotliwość były kontrolowane zdalnie przez zaciemnioną konfigurację C2, pozwalając operatorowi dostroić co robiła po fakcie bez nowego wydania apki.'
+    inlineSources:
+    - label: Palo Alto Unit 42 — XcodeGhost
+      url: https://unit42.paloaltonetworks.com/novel-malware-xcodeghost-modifies-xcode-infects-apple-ios-apps-and-hits-app-store/
+    - label: Snyk — SourMint (Mintegral SDK)
+      url: https://snyk.io/blog/sour-mint-malicious-sdk/
+    - label: CVE-2024-38366 (CocoaPods Trunk RCE)
+      url: https://github.com/advisories/GHSA-483f-6frq-2rqx
+    - label: McAfee — Goldoson
+      url: https://www.mcafee.com/blogs/other-blogs/mcafee-labs/goldoson-privacy-invasive-and-clicker-android-adware-found-in-popular-apps-in-south-korea/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: SBOM tooling for mobile is real and OWASP-backed, but dynamic SDK-behavior detection is fundamentally an arms race -- exactly the class of analysis SourMint was purpose-built to evade.
+      pl: Narzędzia SBOM dla mobile są prawdziwe i wspierane przez OWASP, ale wykrywanie dynamicznego zachowania SDK to fundamentalnie wyścig zbrojeń -- dokładnie ta klasa analizy którą SourMint był zbudowany by unikać.
+    sast:
+    - - CycloneDX (cyclonedx-gradle-plugin, CocoaPods support, cdxgen)
+      - OWASP's own SBOM standard and tooling, with explicit Gradle/Android and CocoaPods/iOS support -- verified as the standard path for mobile SBOM generation
+    - - OWASP Dependency-Check + Dependency-Track
+      - Dependency-Check officially supports Gradle; Dependency-Track ingests CycloneDX SBOMs for continuous vulnerability monitoring across an app portfolio
+    - - OWASP MASTG-TECH-0130
+      - The official MASTG technique for Software Composition Analysis of Android dependencies via SBOM
+    dast:
+    - - mitmproxy / Burp Suite
+      - TLS-intercepting proxies to observe exactly what an embedded SDK sends over the network -- the method that surfaced SourMint's exfiltration
+    - - Frida + objection
+      - Runtime instrumentation to hook and observe SDK behavior directly, including behavior an SDK tries to suppress when it detects a proxy
+    - - MobSF (Mobile Security Framework)
+      - Static + dynamic analysis of APK/IPA including third-party library enumeration and behavior flagging
+    note:
+      en: <strong>Key signal:</strong> a clean result from a single dynamic-analysis pass is not proof of safety -- SourMint specifically detected the analysis environment (proxy, debugger, jailbreak) and suppressed its malicious behavior only under those exact conditions, undetected for over a year as a direct result.
+      pl: <strong>Kluczowy sygnał:</strong> czysty wynik z pojedynczego przejścia analizy dynamicznej to nie dowód bezpieczeństwa -- SourMint konkretnie wykrywał środowisko analizy (proxy, debugger, jailbreak) i tłumił swoje złośliwe zachowanie tylko w tych dokładnych warunkach, pozostając niewykrytym przez ponad rok jako bezpośredni skutek.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes independently verified that OWASP's own M2 page publishes no specific CWE number -- the mapping below is the standard analytical alignment against MITRE, not a quote from OWASP's text.
+      pl: Wszystkie trzy przejścia badawcze niezależnie zweryfikowały że własna strona M2 OWASP nie publikuje konkretnego numeru CWE -- poniższe mapowanie to standardowe dopasowanie analityczne względem MITRE, nie cytat z tekstu OWASP.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-1357 — Reliance on Insufficiently Trustworthy Component (primary, Class-level). Verified directly at MITRE as the best conceptual fit for embedding a third-party component whose trustworthiness can't be fully assessed. ParentOf CWE-1104 (Use of Unmaintained Third Party Components), CWE-1395 (Dependency on Vulnerable Third-Party Component), and CWE-1329 (Reliance on Component That is Not Updateable) -- use these three for more precise sub-case citations.
+      - CWE-829 — Inclusion of Functionality from Untrusted Control Sphere (secondary, for the build-toolchain-injection variant specifically). Confirmed as a SEPARATE lineage from CWE-1357, not its parent or child -- the better fit for XcodeGhost-style compiler compromise, where the app itself never chose to trust the injected functionality.
+    - std: OWASP
+      items:
+      - 'Mobile Top 10 2024 — M2: Inadequate Supply Chain Security, new to the 2024 revision. Verified directly against owasp.org: Exploitability AVERAGE, Prevalence COMMON, Detectability DIFFICULT, Impact SEVERE.'
+      - OWASP's own M2 attack scenario explicitly names signing-key/certificate compromise as a core vector -- directly matching this deep-dive's leaked-OEM-certificate incident.
+      - 'The nearest web OWASP Top 10 (2021) analogs, for context only and not the correct mapping: A06:2021 Vulnerable and Outdated Components (for the outdated-dependency facet) and A08:2021 Software and Data Integrity Failures (for the build/signing-integrity facet).'
+    inlineSources:
+    - label: OWASP Mobile Top 10 2024 — M2
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m2-inadequate-supply-chain-security
+    - label: CWE-1357 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1357.html
+    - label: CWE-829 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/829.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If a compromised dependency, SDK, or signing key is confirmed in a shipped mobile app, work this list top to bottom.
+      pl: Po potwierdzeniu skompromitowanej zależności, SDK, albo klucza podpisującego w wydanej aplikacji mobilnej, przejdź tę listę od góry.
+    steps:
+    - en: Identify the exact entry point -- compromised SDK, build toolchain, registry package, or signing key -- since remediation differs completely per vector
+      pl: Zidentyfikuj dokładny punkt wejścia -- skompromitowany SDK, łańcuch narzędzi budowania, pakiet rejestru, albo klucz podpisujący -- ponieważ naprawa całkowicie różni się per wektor
+    - en: If a signing key is confirmed compromised, revoke and rotate it immediately, and treat every artifact ever signed with it as potentially malicious, not just the one confirmed
+      pl: Jeśli klucz podpisujący jest potwierdzony jako skompromitowany, natychmiast go unieważnij i zrotuj, i traktuj każdy artefakt kiedykolwiek nim podpisany jako potencjalnie złośliwy, nie tylko potwierdzony
+    - en: If an SDK is confirmed malicious, audit for its evasion behavior first -- test in an environment it cannot detect as an analysis context, not just a standard proxy/debugger setup
+      pl: Jeśli SDK jest potwierdzony jako złośliwy, najpierw przeaudytuj pod kątem jego zachowania unikającego -- testuj w środowisku którego nie może wykryć jako kontekstu analizy, nie tylko standardowego ustawienia proxy/debuggera
+    - en: Check whether the same SDK or dependency is embedded in other apps in the same portfolio -- a compromised widely-embedded component rarely affects only one app
+      pl: Sprawdź czy ten sam SDK albo zależność jest osadzona w innych apkach tego samego portfolio -- skompromitowany szeroko osadzony komponent rzadko dotyka tylko jednej apki
+    - en: Rebuild from a verified, hermetic toolchain and republish, rather than patching the existing compromised build artifact
+      pl: Przebuduj z zweryfikowanego, hermetycznego łańcucha narzędzi i wydaj ponownie, zamiast łatać istniejący skompromitowany artefakt builda
+    - en: Notify per applicable data-breach obligations if the compromised component had access to user data
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli skompromitowany komponent miał dostęp do danych użytkowników
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP Mobile Top 10 2024 — M2
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m2-inadequate-supply-chain-security
+    - label: CWE-1357 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1357.html
+    - label: CWE-829 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/829.html
+    - label: Palo Alto Unit 42 — XcodeGhost
+      url: https://unit42.paloaltonetworks.com/novel-malware-xcodeghost-modifies-xcode-infects-apple-ios-apps-and-hits-app-store/
+    - label: Snyk — SourMint (Mintegral SDK)
+      url: https://snyk.io/blog/sour-mint-malicious-sdk/
+    - label: CVE-2024-38366 (CocoaPods Trunk RCE)
+      url: https://github.com/advisories/GHSA-483f-6frq-2rqx
+    - label: McAfee — Goldoson
+      url: https://www.mcafee.com/blogs/other-blogs/mcafee-labs/goldoson-privacy-invasive-and-clicker-android-adware-found-in-popular-apps-in-south-korea/
+    - label: OWASP MASTG-TECH-0130 — Android SBOM
+      url: https://mas.owasp.org/MASTG/techniques/android/MASTG-TECH-0130/
