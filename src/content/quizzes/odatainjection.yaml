@@ -1,0 +1,105 @@
+threatId: cat_1_research29
+title:
+  en: OData Injection — knowledge check
+  pl: OData Injection — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: A properly configured ASP.NET Web API OData service uses [EnableQuery] with no custom filter-to-SQL code -- the framework parses $filter into an AST and lowers it to LINQ. A user submits $filter=Name eq 'x' or 1 eq 1. Does this reach the underlying database as raw, unparameterized SQL?
+    pl: Poprawnie skonfigurowana usługa ASP.NET Web API OData używa [EnableQuery] bez niestandardowego kodu filtr-do-SQL -- framework parsuje $filter do AST i sprowadza go do LINQ. Użytkownik przesyła $filter=Name eq 'x' or 1 eq 1. Czy to dociera do leżącej pod spodem bazy danych jako surowy, niesparametryzowany SQL?
+  isVulnerable: false
+  cwe: CWE-943
+  explanation:
+    en: No -- this is the reassuring nuance all three research passes verified against Microsoft's own OData documentation. In this default, framework-parsed path, $filter is converted to an AST then a LINQ expression, which the EF/EF Core provider renders as a parameterized query. The tautology still returns all records (a genuine logic bypass worth defending against with allowlisting), but it does NOT become raw string-concatenated SQL -- classic SQL injection is not the default risk here.
+    pl: Nie -- to pocieszający niuans który wszystkie trzy przejścia badawcze zweryfikowały względem własnej dokumentacji Microsoft OData. W tej domyślnej, sparsowanej przez framework ścieżce, $filter jest konwertowany do AST potem wyrażenia LINQ, które dostawca EF/EF Core renderuje jako sparametryzowane zapytanie. Tautologia wciąż zwraca wszystkie rekordy (prawdziwe obejście logiki warte obrony przez allowlisting), ale NIE staje się surowym sklejonym stringiem SQL -- klasyczne wstrzyknięcie SQL nie jest tutaj domyślnym ryzykiem.
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: What is the flagship real-world CVE demonstrating that OData injection can genuinely escalate to a backend query, and what technique did its proof-of-concept use?
+    pl: Jakie jest flagowe prawdziwe CVE demonstrujące że wstrzyknięcie OData może naprawdę eskalować do zapytania backendowego, i jakiej techniki użył jego proof-of-concept?
+  choices:
+  - id: a
+    label:
+      en: CVE-2024-21793 (F5 BIG-IP Next Central Manager) -- an unauthenticated attacker used startswith-based boolean oracles to blindly extract password hashes, including the admin hash, via the LDAP-backed authentication query
+      pl: CVE-2024-21793 (F5 BIG-IP Next Central Manager) -- nieuwierzytelniony atakujący użył wyroczni boolowskich opartych na startswith by ślepo wyekstrahować hashe haseł, włącznie z hashem admina, przez zapytanie uwierzytelniające oparte na LDAP
+  - id: b
+    label:
+      en: CVE-2018-8269 (Microsoft.Data.OData) -- a classic UNION-based extraction attack
+      pl: CVE-2018-8269 (Microsoft.Data.OData) -- klasyczny atak ekstrakcji oparty na UNION
+  - id: c
+    label:
+      en: A SAP Gateway CVE demonstrating $filter-based SQL injection
+      pl: CVE SAP Gateway demonstrujące wstrzyknięcie SQL oparte na $filter
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes converged on CVE-2024-21793 as the flagship case, verified against NVD and the discovering researcher''s own disclosure (Vladyslav Babkin, Eclypsium). Both distractors were explicitly checked and rejected: CVE-2018-8269 is a denial-of-service issue, not injection (all three passes flagged this as a common miscitation risk), and no team found a verifiable SAP Gateway $filter-injection CVE despite searching -- a negative result reported honestly rather than papered over.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zbiegły się na CVE-2024-21793 jako flagowym przypadku, zweryfikowanym względem NVD i własnego ujawnienia odkrywającego badacza (Vladyslav Babkin, Eclypsium). Obie dystraktory zostały jawnie sprawdzone i odrzucone: CVE-2018-8269 to problem denial-of-service, nie wstrzyknięcie (wszystkie trzy przejścia oflagowały to jako powszechne ryzyko błędnego cytowania), i żaden zespół nie znalazł potwierdzalnego CVE wstrzyknięcia $filter SAP Gateway mimo szukania -- negatywny wynik zgłoszony uczciwie zamiast zamazany.'
+- id: q3
+  type: vuln-or-not
+  prompt:
+    en: A Java service using Apache Olingo has a custom filter-visitor that builds SQL like "SELECT * FROM Employees WHERE Name = '" + literalValue + "'" instead of using a prepared statement. Is this a genuine OData-to-SQL injection risk?
+    pl: Usługa Java używająca Apache Olingo ma niestandardowy wizytator filtra który buduje SQL jak "SELECT * FROM Employees WHERE Name = '" + literalValue + "'" zamiast używać prepared statement. Czy to jest prawdziwe ryzyko wstrzyknięcia OData-do-SQL?
+  isVulnerable: true
+  cwe: CWE-89
+  explanation:
+    en: 'Yes -- and this exact pattern is explicitly warned against in Apache Olingo''s own filter-visitor tutorial, which states developers "have to be careful with strings due to sql injection" and recommends prepared statements over concatenation. This is not a theoretical concern: odata4j''s real CVE-2016-11023/11024 (CVSS 9.8) are documented instances of precisely this mistake.'
+    pl: 'Tak -- i dokładnie ten wzorzec jest jawnie ostrzeżony we własnym tutorialu wizytatora filtra Apache Olingo, który stwierdza że deweloperzy "muszą być ostrożni ze stringami z powodu sql injection" i zaleca prepared statements zamiast konkatenacji. To nie teoretyczna obawa: prawdziwe CVE-2016-11023/11024 odata4j (CVSS 9.8) to udokumentowane przypadki dokładnie tego błędu.'
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive map OData injection to CWE-943 as primary, while noting NVD tagged the real incidents as CWE-89?
+    pl: Dlaczego ten deep-dive mapuje wstrzyknięcie OData do CWE-943 jako główne, przy jednoczesnym odnotowaniu że NVD otagowało prawdziwe incydenty jako CWE-89?
+  choices:
+  - id: a
+    label:
+      en: CWE-943 is the correct class-level parent for query-language injection with no dedicated child CWE (OData is named only in its description text), while CWE-89 is what NVD actually assigned to both real CVEs because their documented impact specifically reached the backend SQL/JPQL layer
+      pl: CWE-943 to poprawny klasowy rodzic dla wstrzyknięcia w języku zapytań bez dedykowanego CWE dziecka (OData jest wymienione tylko w tekście opisu), podczas gdy CWE-89 to co faktycznie przypisał NVD obu prawdziwym CVE ponieważ ich udokumentowany wpływ konkretnie dosięgnął warstwy backendowej SQL/JPQL
+  - id: b
+    label:
+      en: CWE-89 is simply wrong and should be corrected to CWE-943 in NVD's records
+      pl: CWE-89 jest po prostu błędne i powinno być skorygowane do CWE-943 w rekordach NVD
+  - id: c
+    label:
+      en: CWE-943 only applies to OData, and CWE-89 only applies to every other query language
+      pl: CWE-943 dotyczy tylko OData, a CWE-89 dotyczy tylko każdego innego języka zapytań
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three research passes converged on this exact dual-mapping, verified directly against MITRE: CWE-943 (ChildOf CWE-74) is the class-level parent shared with SPARQL/XPath/XQuery injection in this knowledge base, while CWE-89 correctly captures what actually happened in the two real, documented escalation CVEs -- both classifications are correct for what they each describe, not a contradiction to resolve.'
+    pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym dokładnym podwójnym mapowaniu, zweryfikowanym bezpośrednio względem MITRE: CWE-943 (ChildOf CWE-74) to klasowy rodzic dzielony z wstrzyknięciem SPARQL/XPath/XQuery w tej bazie wiedzy, podczas gdy CWE-89 poprawnie uchwytuje co faktycznie się stało w dwóch prawdziwych, udokumentowanych CVE eskalacji -- obie klasyfikacje są poprawne dla tego co każda opisuje, nie sprzeczność do rozwiązania.'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: An OData service allows GET /odata/$metadata without any authentication, and the service does not otherwise restrict which properties can be filtered on. Is exposing $metadata itself a meaningful reconnaissance risk?
+    pl: Usługa OData zezwala na GET /odata/$metadata bez żadnego uwierzytelnienia, i usługa poza tym nie ogranicza na których właściwościach można filtrować. Czy samo ujawnienie $metadata jest istotnym ryzykiem rekonesansu?
+  isVulnerable: true
+  cwe: CWE-943
+  explanation:
+    en: Yes. All three research passes independently identified $metadata reconnaissance as the standard first step in attacking an OData service -- it returns the complete EDM/CSDL schema (every entity set, property, and navigation relationship) before an attacker sends a single injection payload, making this class unusually cheap to reconnoiter compared to most other query-injection topics in this knowledge base.
+    pl: Tak. Wszystkie trzy przejścia badawcze niezależnie zidentyfikowały rekonesans $metadata jako standardowy pierwszy krok w atakowaniu usługi OData -- zwraca kompletny schemat EDM/CSDL (każdy zestaw encji, właściwość, i relację nawigacyjną) zanim atakujący wyśle choć jeden ładunek wstrzyknięcia, czyniąc tę klasę niezwykle tanią do rozpoznania w porównaniu do większości innych tematów wstrzyknięcia zapytań w tej bazie wiedzy.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: An ASP.NET Web API OData endpoint takes user-supplied filter values. Which variant actually closes both the logic-bypass and property-over-exposure risk?
+    pl: Endpoint ASP.NET Web API OData przyjmuje wartości filtra dostarczone przez użytkownika. Który wariant faktycznie zamyka jednocześnie ryzyko obejścia logiki i nadmiernego ujawnienia właściwości?
+  variants:
+  - id: v1
+    lang: csharp
+    code: 'string name = Request.Query["name"];
+
+      var url = $"https://svc/odata/Users?$filter=Name eq ''{name}''&$select=*";'
+  - id: v2
+    lang: csharp
+    code: "[EnableQuery(AllowedQueryOptions = AllowedQueryOptions.Filter | AllowedQueryOptions.Top,\n             MaxNodeCount = 20)]\npublic IQueryable<Employee> Get() => _db.Employees;\n// + FilterQueryValidator allowlisting only { \"Title\", \"ReleaseYear\" }\n// + [IgnoreDataMember] on sensitive fields"
+  - id: v3
+    lang: csharp
+    code: 'string name = Request.Query["name"].Replace("or", "").Replace("eq", "");
+
+      var url = $"https://svc/odata/Users?$filter=Name eq ''{name}''&$select=*";'
+  correctVariantId: v2
+  explanation:
+    en: v2 lets the framework parse and validate the query (closing the logic-bypass risk via its safe AST->LINQ path) AND adds explicit property allowlisting plus EDM exclusion for sensitive fields (closing the over-exposure risk) -- verified by all three research passes as the combination Microsoft's own guidance recommends. v1 both hand-concatenates the filter and leaves $select unrestricted, exposing every risk at once. v3's keyword blacklist is trivially bypassed (e.g. "OR"/"Or" case variants, or a different operator entirely) and still leaves $select=* wide open regardless.
+    pl: v2 pozwala frameworkowi sparsować i zwalidować zapytanie (zamykając ryzyko obejścia logiki przez jego bezpieczną ścieżkę AST->LINQ) ORAZ dodaje jawny allowlisting właściwości plus wykluczenie EDM dla wrażliwych pól (zamykając ryzyko nadmiernego ujawnienia) -- zweryfikowane przez wszystkie trzy przejścia badawcze jako kombinacja którą zaleca własna dokumentacja Microsoft. v1 zarówno ręcznie skleja filtr jak i zostawia $select nieograniczone, ujawniając każde ryzyko naraz. Czarna lista słów kluczowych z v3 jest trywialnie omijana (np. warianty wielkości liter "OR"/"Or", albo zupełnie inny operator) i wciąż zostawia $select=* szeroko otwarte niezależnie.

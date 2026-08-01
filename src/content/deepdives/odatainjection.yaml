@@ -1,0 +1,352 @@
+meta:
+  id: odatainjection
+  threatId: cat_1_research29
+  severity: Critical
+  color: '#1e3a8a'
+  colorRgb: 30,58,138
+  cwe: CWE-943
+  cvss: '9.8'
+  standard: OWASP A03:2021 (via CWE-74 family)
+hero:
+  titleMain: 'OData '
+  titleGrad: Injection
+  titleTail: ''
+  topbar: OData Injection (Open Data Protocol Query Injection)
+  lead:
+    en: 'OData exposes data through a URL-based query language ($filter, $orderby, $expand, $select) built into an OASIS/ISO standard widely used across Microsoft technologies (ASP.NET Web API OData, SAP Gateway, Dynamics, Power Platform) and Apache Olingo. All three independent research passes converged on a genuinely reassuring nuance most SQL-injection-trained instincts get wrong: in a properly wired OData service, the framework parses $filter into an AST and lowers it to a parameterized LINQ query -- classic string-concatenation SQL injection is NOT the default risk. Injection becomes real specifically when a developer bypasses that safe path -- hand-concatenating a filter, or a provider translating OData into backend SQL/LDAP by string-splicing rather than binding -- and the strongest real-world proof of exactly that escalation is a 2024 CVE against F5''s own BIG-IP management API.'
+    pl: 'OData wystawia dane przez oparty na URL język zapytań ($filter, $orderby, $expand, $select) wbudowany w standard OASIS/ISO szeroko używany w technologiach Microsoft (ASP.NET Web API OData, SAP Gateway, Dynamics, Power Platform) i Apache Olingo. Wszystkie trzy niezależne przejścia badawcze zbiegły się na naprawdę pocieszającym niuansie który instynkty wytrenowane na SQL injection zwykle łapią błędnie: w poprawnie okablowanej usłudze OData framework parsuje $filter do AST i sprowadza go do sparametryzowanego zapytania LINQ -- klasyczne wstrzyknięcie SQL przez konkatenację stringów NIE jest domyślnym ryzykiem. Wstrzyknięcie staje się prawdziwe konkretnie gdy deweloper omija tę bezpieczną ścieżkę -- ręcznie sklejając filtr, albo dostawca tłumaczy OData na backendowy SQL/LDAP przez sklejanie stringów zamiast wiązania -- a najsilniejszym dowodem z praktyki dokładnie tej eskalacji jest CVE z 2024 przeciw własnemu API zarządzania BIG-IP firmy F5.'
+  metrics:
+  - k: CWE-943
+    v:
+      en: Weakness ID (query-logic class)
+      pl: ID słabości (klasa logiki zapytań)
+  - k: 7.5-9.8
+    v: CVSS · High-Critical (CVE-2024-21793 F5 / CVE-2016-11023 odata4j)
+  - k: A03:2021
+    v:
+      en: OWASP Top 10 (via injection family)
+      pl: OWASP Top 10 (przez rodzinę injection)
+  - k: Safe by default
+    v:
+      en: AST->LINQ->parameterized (mainstream stacks)
+      pl: AST->LINQ->sparametryzowane (główne stosy)
+  sources:
+  - label: CVE-2024-21793 (NVD)
+    url: https://nvd.nist.gov/vuln/detail/CVE-2024-21793
+  - label: CWE-943 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/943.html
+  - label: Microsoft Learn — OData Security Guidance
+    url: https://learn.microsoft.com/en-us/aspnet/web-api/overview/odata-support-in-aspnet-web-api/odata-security-guidance
+  - label: Eclypsium — BIG-IP Next Central Manager vulnerabilities
+    url: https://eclypsium.com/blog/big-vulnerabilities-in-next-gen-big-ip/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Two tiers: logic-level abuse that stays entirely within OData''s own semantics (the common case, mostly filter bypass and over-exposure), and genuine escalation to a backend query language when a provider translates filters unsafely (rarer, but real and CVE-documented).'
+      pl: 'Dwa poziomy: nadużycie na poziomie logiki które pozostaje całkowicie w obrębie własnej semantyki OData (częsty przypadek, głównie obejście filtra i nadmierne ujawnienie), i prawdziwa eskalacja do backendowego języka zapytań gdy dostawca tłumaczy filtry niebezpiecznie (rzadsze, ale prawdziwe i udokumentowane przez CVE).'
+    items:
+    - name: Filter logic bypass (tautology)
+      sev: high
+      description:
+        en: Untrusted input concatenated into a $filter literal position lets an attacker close it and inject a disjunction that neutralizes the intended predicate, returning every record instead of the caller's own.
+        pl: Nieufne wejście sklejone w pozycji literału $filter pozwala atakującemu zamknąć go i wstrzyknąć alternatywę która neutralizuje zamierzony predykat, zwracając każdy rekord zamiast tylko własnych dzwoniącego.
+      payload: $filter=Name eq 'admin' or true
+    - name: Field/entity over-exposure via $select and $expand
+      sev: high
+      description:
+        en: When selectable properties and navigation depth aren't allowlisted, $select=* or a hidden property name returns columns never meant to be exposed, and $expand walks navigation properties into related entities the caller shouldn't traverse.
+        pl: Gdy wybieralne właściwości i głębokość nawigacji nie są allowlistowane, $select=* albo ukryta nazwa właściwości zwraca kolumny które nigdy nie miały być ujawnione, a $expand przechodzi przez właściwości nawigacyjne do powiązanych encji których dzwoniący nie powinien przemierzać.
+      payload: $select=*   or   $expand=Orders/Customer/CreditCards
+    - name: Boolean / blind extraction (verified real-world payload)
+      sev: critical
+      description:
+        en: 'Verified via the actual CVE-2024-21793 proof-of-concept: string functions like startswith combined with logical operators build a true/false oracle, extracting a secret value character-by-character from response differentials -- the exact technique that leaked an admin password hash from F5''s BIG-IP Next Central Manager.'
+        pl: 'Zweryfikowane przez faktyczny proof-of-concept CVE-2024-21793: funkcje stringowe jak startswith połączone z operatorami logicznymi budują wyrocznię prawda/fałsz, ekstrahując tajną wartość znak po znaku z różnic w odpowiedzi -- dokładnie ta technika która wyciekła hash hasła admina z BIG-IP Next Central Manager firmy F5.'
+      payload: username=fakeuser' or 'username' eq 'admin' and startswith('password','a') or 'username' eq '1
+    - name: OData-to-SQL/LDAP escalation (real, provider-dependent)
+      sev: critical
+      description:
+        en: When a custom or legacy OData provider translates the parsed filter into backend SQL/JPQL/LDAP by string concatenation rather than parameter binding, standard injection payloads reach the underlying store. Apache Olingo's own filter-visitor tutorial explicitly warns about this exact risk in its example code. Both CVE-2024-21793 (LDAP-backed) and odata4j's CVE-2016-11023/11024 (JPQL) are real, documented instances of this escalation.
+        pl: Gdy niestandardowy albo starszy dostawca OData tłumaczy sparsowany filtr na backendowy SQL/JPQL/LDAP przez konkatenację stringów zamiast wiązanie parametrów, standardowe ładunki wstrzyknięcia dosięgają leżącego pod spodem magazynu. Własny tutorial wizytatora filtrów Apache Olingo jawnie ostrzega przed dokładnie tym ryzykiem w swoim przykładowym kodzie. Zarówno CVE-2024-21793 (oparte na LDAP) jak i CVE-2016-11023/11024 odata4j (JPQL) to prawdziwe, udokumentowane przypadki tej eskalacji.
+      payload: -- provider-specific; the shape mirrors classic SQLi/LDAP-injection payloads once the filter reaches the backend query string
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The fix is almost always "stop bypassing the framework": let the OData middleware parse, validate, and lower the query itself rather than hand-building a filter string or a backend query from raw input.'
+      pl: 'Naprawa to niemal zawsze "przestań omijać framework": pozwól middleware OData samemu sparsować, zwalidować, i sprowadzić zapytanie zamiast ręcznie budować string filtra albo zapytanie backendowe z surowego wejścia.'
+    languages:
+    - label: C# / ASP.NET Web API OData -- vulnerable
+      lang: csharp
+      vulnerable: 'string name = Request.Query["name"];
+
+        var odata = $"$filter=Name eq ''{name}''";   // attacker closes the quote, injects logic
+
+        var url = $"https://svc/odata/Users?{odata}";'
+      safe: "// SAFE: let the framework parse/validate/lower the query itself\n[EnableQuery(\n    AllowedQueryOptions = AllowedQueryOptions.Filter | AllowedQueryOptions.Top | AllowedQueryOptions.Skip,\n    MaxNodeCount = 20, MaxExpansionDepth = 1)]\npublic IQueryable<Employee> Get() => _db.Employees;   // AST -> LINQ -> parameterized SQL\n\n// + allowlist which properties can be filtered on:\npublic class MyFilterQueryValidator : FilterQueryValidator {\n    static readonly string[] allowed = { \"ReleaseYear\", \"Title\" };\n    public override void ValidateSingleValuePropertyAccessNode(\n        SingleValuePropertyAccessNode node, ODataValidationSettings s) {\n        if (node?.Property?.Name is string p && !allowed.Contains(p))\n            throw new ODataException($\"Filter on {p} not allowed\");\n        base.ValidateSingleValuePropertyAccessNode(node, s);\n    }\n}"
+    - label: Java / Apache Olingo -- filter-to-SQL visitor
+      lang: java
+      vulnerable: '// VULNERABLE: Olingo''s own tutorial explicitly warns about this exact pattern
+
+        String sql = "SELECT * FROM Employees WHERE Name = ''" + literalValue + "''";  // concatenation'
+      safe: '// SAFE: prepared statement / bound parameter, per Olingo''s own recommended pattern
+
+        String sql = "SELECT * FROM Employees WHERE EmployeeId = ? OR (ManagerId = ? AND TeamId = ?)";
+
+        PreparedStatement stmt = connection.prepareStatement(sql);
+
+        stmt.setInt(1, employeeId);
+
+        stmt.setInt(2, managerId);
+
+        stmt.setInt(3, teamId);'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: OData's own $metadata endpoint hands the attacker a complete schema map before a single payload is sent -- reconnaissance here is unusually cheap compared to most other query-injection classes.
+      pl: Własny endpoint $metadata OData daje atakującemu kompletną mapę schematu zanim wysłany zostanie choć jeden ładunek -- rekonesans tutaj jest niezwykle tani w porównaniu do większości innych klas wstrzyknięcia zapytań.
+    steps:
+    - title:
+        en: Fingerprint via $metadata
+        pl: Rozpoznaj przez $metadata
+      description:
+        en: Request /$metadata (or the service root) -- returns the EDM/CSDL XML listing every entity set, property, type, and navigation property, giving a full schema map before any payload is sent.
+        pl: Zażądaj /$metadata (albo katalogu głównego usługi) -- zwraca XML EDM/CSDL wyliczający każdy zestaw encji, właściwość, typ, i właściwość nawigacyjną, dając pełną mapę schematu zanim wysłany zostanie jakikolwiek ładunek.
+    - title:
+        en: Differential/error-based probing on $filter
+        pl: Sondowanie różnicowe/oparte na błędach na $filter
+      description:
+        en: Inject or true / or 1 eq 1 / unbalanced quotes and compare result-set size and error responses -- verbose OData exceptions or backend errors leak whether the value reaches a raw query, and how.
+        pl: Wstrzyknij or true / or 1 eq 1 / niezbalansowane cudzysłowy i porównaj rozmiar zbioru wyników i odpowiedzi błędów -- rozwlekłe wyjątki OData albo błędy backendu ujawniają czy wartość dociera do surowego zapytania, i jak.
+    - title:
+        en: Enumerate over-exposure
+        pl: Wylicz nadmierne ujawnienie
+      description:
+        en: Flip $select to * or a guessed sensitive property name, and walk $expand chains discovered from $metadata to test whether property/entity allowlisting is enforced.
+        pl: Zmień $select na * albo zgadniętą nazwę wrażliwej właściwości, i przejdź łańcuchy $expand odkryte z $metadata by przetestować czy allowlisting właściwości/encji jest wymuszany.
+    - title:
+        en: Blind extraction when output is not reflected
+        pl: Ślepa ekstrakcja gdy output nie jest odbity
+      description:
+        en: Use startswith/contains/length as a boolean oracle keyed on status code, response size, or record presence -- the exact technique verified in the real CVE-2024-21793 proof-of-concept that extracted an admin password hash.
+        pl: Użyj startswith/contains/length jako wyroczni boolowskiej opartej na kodzie statusu, rozmiarze odpowiedzi, albo obecności rekordu -- dokładnie ta technika zweryfikowana w prawdziwym proof-of-concept CVE-2024-21793 która wyekstrahowała hash hasła admina.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: The top defense isn't a new control -- it's simply not bypassing the safe path the OData framework already provides by default. Every real incident in this deep-dive happened because that path was bypassed somewhere.
+      pl: Główna obrona to nie nowa kontrola -- to po prostu nieomijanie bezpiecznej ścieżki którą framework OData już domyślnie zapewnia. Każdy prawdziwy incydent w tym deep-dive zdarzył się bo ta ścieżka została gdzieś ominięta.
+    items:
+    - rank: 1
+      eff: 92
+      kind: primary
+      label:
+        en: Use the framework's parse-validate-lower pipeline; never hand-concatenate a filter or backend query
+        pl: Użyj potoku parsuj-waliduj-sprowadź frameworka; nigdy nie sklejaj ręcznie filtra ani zapytania backendowego
+      note:
+        en: 'The root-cause fix, verified as the default-safe behavior of ASP.NET Web API OData / Olingo when used as intended: the middleware converts $filter into an AST then a parameterized LINQ/prepared-statement query. Both real escalation CVEs in this deep-dive happened specifically because custom code bypassed this pipeline.'
+        pl: 'Naprawa przyczyny źródłowej, zweryfikowana jako domyślnie bezpieczne zachowanie ASP.NET Web API OData / Olingo gdy używane zgodnie z przeznaczeniem: middleware konwertuje $filter do AST potem do sparametryzowanego zapytania LINQ/prepared-statement. Oba prawdziwe CVE eskalacji w tym deep-dive zdarzyły się konkretnie dlatego że niestandardowy kod ominął ten potok.'
+    - rank: 2
+      eff: 85
+      kind: primary
+      label:
+        en: Property/query-option allowlisting
+        pl: Allowlisting właściwości/opcji zapytania
+      note:
+        en: AllowedQueryOptions, AllowedFunctions, AllowedOrderByProperties, a FilterQueryValidator restricting which properties can be filtered on, and EDM exclusion (IgnoreDataMember/EntityType.Ignore) for sensitive fields -- directly closes the over-exposure variant even when injection into the store itself isn't possible.
+        pl: AllowedQueryOptions, AllowedFunctions, AllowedOrderByProperties, FilterQueryValidator ograniczający na których właściwościach można filtrować, i wykluczenie EDM (IgnoreDataMember/EntityType.Ignore) dla wrażliwych pól -- bezpośrednio zamyka wariant nadmiernego ujawnienia nawet gdy wstrzyknięcie do samego magazynu nie jest możliwe.
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Restrict/disable $expand depth and dangerous options
+        pl: Ogranicz/wyłącz głębokość $expand i niebezpieczne opcje
+      note:
+        en: MaxExpansionDepth, disabling navigation-property filtering, and capping MaxNodeCount limit cross-entity exfiltration and join-based DoS -- the specific control the OData spec's own richer navigation model requires that SQL injection defenses don't need to think about.
+        pl: MaxExpansionDepth, wyłączenie filtrowania właściwości nawigacyjnych, i ograniczenie MaxNodeCount ogranicza eksfiltrację cross-entity i DoS oparty na złączeniach -- konkretna kontrola której wymaga bogatszy model nawigacji własnej specyfikacji OData, o czym obrony wstrzyknięcia SQL nie muszą myśleć.
+    - rank: 4
+      eff: 55
+      kind: strong
+      label:
+        en: Least privilege on the underlying data source
+        pl: Najmniejsze uprawnienia na leżącym pod spodem źródle danych
+      note:
+        en: Doesn't prevent injection, but caps blast radius if the escalation path is ever reached -- read-only credentials, minimal accessible columns/rows, matching this deep-dive's precedent from SPARQL and Perl open() Injection.
+        pl: Nie zapobiega wstrzyknięciu, ale ogranicza promień rażenia jeśli ścieżka eskalacji zostanie kiedykolwiek osiągnięta -- poświadczenia tylko-do-odczytu, minimalne dostępne kolumny/wiersze, zgodnie z precedensem tego deep-dive z SPARQL i Perl open() Injection.
+    - rank: 5
+      eff: 40
+      kind: weak
+      label:
+        en: Input validation on individual literal values
+        pl: Walidacja wejścia na pojedynczych wartościach literałów
+      note:
+        en: Helpful where concatenation is genuinely unavoidable, but structurally weaker than letting the framework parse the whole query -- easy to get an edge case wrong, and does nothing for the over-exposure or $expand variants.
+        pl: Pomocne tam gdzie konkatenacja jest naprawdę nieunikniona, ale strukturalnie słabsze niż pozwolenie frameworkowi sparsować całe zapytanie -- łatwo pomylić się w przypadku brzegowym, i nic nie robi dla wariantów nadmiernego ujawnienia albo $expand.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'An honest, thin record confirmed by all three research passes: essentially one flagship product CVE and one older, discontinued-library CVE pair, plus one well-attributed named research talk with no CVE attached. Two candidate incidents surfaced by search were independently corrected as misattributions by different teams.'
+      pl: 'Uczciwy, szczupły rejestr potwierdzony przez wszystkie trzy przejścia badawcze: zasadniczo jedno flagowe CVE produktu i jedna para CVE starszej, porzuconej biblioteki, plus jedno dobrze uznane badanie z nazwiskiem bez przypisanego CVE. Dwa kandydackie incydenty ujawnione przez wyszukiwanie zostały niezależnie skorygowane jako błędne przypisania przez różne zespoły.'
+    items:
+    - org: F5 BIG-IP Next Central Manager
+      year: 2024
+      impact: CVE-2024-21793 -- CVSS 7.5 High, NVD-tagged CWE-89
+      cost: Fixed in 20.2.0
+      description:
+        en: The flagship, best-documented real OData injection incident. An unauthenticated attacker's OData query (requires LDAP-configured auth) reaches the backend authentication query, enabling blind extraction of password hashes -- including the admin hash -- via startswith-based boolean oracles. Confirmed by all three research passes against NVD and the discovering researcher's (Vladyslav Babkin, Eclypsium) own disclosure. A companion CVE-2024-26026 in the same product is a separate, unrelated SQL injection -- explicitly not conflated here per all three teams' caution.
+        pl: Flagowy, najlepiej udokumentowany prawdziwy incydent wstrzyknięcia OData. Zapytanie OData nieuwierzytelnionego atakującego (wymaga uwierzytelniania skonfigurowanego przez LDAP) dociera do backendowego zapytania uwierzytelniającego, umożliwiając ślepą ekstrakcję hashy haseł -- włącznie z hashem admina -- przez wyrocznie boolowskie oparte na startswith. Potwierdzone przez wszystkie trzy przejścia badawcze względem NVD i własnego ujawnienia odkrywającego badacza (Vladyslav Babkin, Eclypsium). Towarzyszące CVE-2024-26026 w tym samym produkcie to osobne, niepowiązane wstrzyknięcie SQL -- jawnie niepomylone tutaj zgodnie z ostrożnością wszystkich trzech zespołów.
+    - org: odata4j (discontinued)
+      year: 2016
+      impact: CVE-2016-11023 + CVE-2016-11024 -- CVSS 9.8 Critical, CWE-89
+      cost: Product discontinued -- no fix
+      description:
+        en: SQL injection in ExecuteCountQueryCommand.java and ExecuteJPQLQueryCommand.java respectively, where the OData provider translated filters into JPQL/SQL by string concatenation -- the exact escalation path this deep-dive's mechanism section warns about, confirmed as real rather than theoretical. Both confirmed by all three research passes against NVD.
+        pl: Wstrzyknięcie SQL odpowiednio w ExecuteCountQueryCommand.java i ExecuteJPQLQueryCommand.java, gdzie dostawca OData tłumaczył filtry na JPQL/SQL przez konkatenację stringów -- dokładnie ta ścieżka eskalacji przed którą ostrzega sekcja mechanizmu tego deep-dive, potwierdzona jako prawdziwa a nie teoretyczna. Oba potwierdzone przez wszystkie trzy przejścia badawcze względem NVD.
+    - org: Microsoft Power Platform / UiPath (research, no CVE)
+      year: 2024
+      impact: '"O My Data: OData Injection attack in Microsoft Power Platform and UiPath" -- OWASP Global AppSec San Francisco, Sept 26 2024'
+      cost: Named research, no product CVE attached
+      description:
+        en: Amichai Shulman (CTO, Nokod Security; former Imperva CTO) demonstrated OData injection as a distinct, under-appreciated risk specifically in low-code/no-code platforms, where citizen-developer flows build OData queries from untrusted input against connected enterprise data. Verified as a real, delivered talk against the official conference schedule and a public recording -- the flagship named research for this topic, included as attributed research context rather than an incident with a CVE.
+        pl: Amichai Shulman (CTO, Nokod Security; były CTO Imperva) zademonstrował wstrzyknięcie OData jako odrębne, niedocenione ryzyko konkretnie w platformach low-code/no-code, gdzie przepływy citizen-developer budują zapytania OData z nieufnego wejścia przeciw podłączonym danym korporacyjnym. Zweryfikowane jako prawdziwy, wygłoszony wykład względem oficjalnego harmonogramu konferencji i publicznego nagrania -- flagowe badanie z nazwiskiem dla tego tematu, uwzględnione jako uznany kontekst badawczy zamiast incydentu z CVE.
+    inlineSources:
+    - label: CVE-2024-21793 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2024-21793
+    - label: CVE-2016-11024 (odata4j, NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2016-11024
+    - label: Eclypsium — BIG-IP Next Central Manager vulnerabilities
+      url: https://eclypsium.com/blog/big-vulnerabilities-in-next-gen-big-ip/
+    - label: OWASP Global AppSec SF 2024 — speaker schedule (Amichai Shulman)
+      url: https://owasp2024globalappsecsanfra.sched.com/speaker/amichai1
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: No mature, dedicated OData-injection scanner exists (unlike sqlmap for SQL) -- all three research passes independently confirmed this. Testing is manual, proxy-driven, and starts with the protocol's own unusually generous reconnaissance endpoint.
+      pl: Nie istnieje dojrzały, dedykowany skaner wstrzyknięcia OData (w przeciwieństwie do sqlmap dla SQL) -- wszystkie trzy przejścia badawcze niezależnie to potwierdziły. Testowanie jest manualne, oparte na proxy, i zaczyna się od niezwykle hojnego własnego endpointu rekonesansu protokołu.
+    sast:
+    - - Manual config/code review
+      - Auditing for AllowedQueryOptions/FilterQueryValidator allowlisting, and for any custom filter-to-backend-query visitor that concatenates rather than binds parameters, is effectively the static check here
+    - - Generic taint-tracking SAST (Semgrep/CodeQL)
+      - Catches the vulnerable shape (untrusted input reaching a hand-built SQL/JPQL/LDAP string) even without OData-specific rules
+    dast:
+    - - GET /$metadata (or the service root)
+      - The primary reconnaissance step -- returns the full EDM/CSDL schema, entity sets, and navigation properties before a single injection payload is sent
+    - - Burp Suite (Repeater + Intruder)
+      - Manual payload crafting via Repeater, automated blind boolean extraction via Intruder -- no native OData awareness, payloads are hand-crafted using the query grammar
+    - - Nuclei templates / custom scripts
+      - Community-maintained OData-aware fuzzing templates and Postman/Insomnia scripts referenced across research passes for automating differential probing
+    note:
+      en: <strong>Key signal:</strong> the $metadata endpoint being publicly reachable and unauthenticated is itself worth flagging during recon -- it hands an attacker the complete data model (every entity, property, and navigation relationship) before they need to guess anything.
+      pl: <strong>Kluczowy sygnał:</strong> publiczna dostępność i brak uwierzytelnienia endpointu $metadata jest sama w sobie warta oflagowania podczas rekonesansu -- daje atakującemu kompletny model danych (każdą encję, właściwość, i relację nawigacyjną) zanim będzie musiał czegokolwiek zgadywać.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'All three research passes converged on presenting CWE-943 as the primary, class-level mapping while documenting that NVD itself tagged both real escalation CVEs as CWE-89 -- a dual-mapping pattern this knowledge base already uses for SPARQL Injection, applied here for the same underlying reason: no dedicated CWE exists for the protocol, and the abstract class differs from what the concrete incidents were actually tagged.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na przedstawieniu CWE-943 jako głównego, klasowego mapowania przy jednoczesnym udokumentowaniu że sam NVD otagował oba prawdziwe CVE eskalacji jako CWE-89 -- wzorzec podwójnego mapowania którego ta baza wiedzy już używa dla SPARQL Injection, zastosowany tutaj z tego samego powodu: nie istnieje dedykowany CWE dla protokołu, a klasa abstrakcyjna różni się od tego czym faktycznie otagowano konkretne incydenty.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-943 — Improper Neutralization of Special Elements in Data Query Logic (primary, class-level). ChildOf CWE-74 (Injection); ParentOf CWE-89 (SQL), CWE-90 (LDAP), CWE-643 (XPath), CWE-652 (XQuery) -- the same shared parent this knowledge base uses for SPARQL Injection. MITRE names OData, HTSQL, and DQL as further examples in CWE-943's own description text, without a dedicated child CWE for any of them.
+      - CWE-89 — used by NVD on both real escalation CVEs (CVE-2024-21793 and CVE-2016-11023/11024), because in each case the actual documented impact was the backend query layer being reached, not a purely OData-internal logic bypass. Cite CWE-89 when a specific incident escalates to the backend; cite CWE-943 for the general class.
+    - std: OWASP
+      items:
+      - 'A03:2021 — Injection, via the family. Verified by two of three research passes against MITRE''s CWE-1347 (A03:2021''s official mapped-CWE list): CWE-943 is not itself among the enumerated members, but its children CWE-89/90/643/652 are -- the same structural nuance already documented in this knowledge base''s SPARQL Injection deep-dive.'
+    inlineSources:
+    - label: CWE-943 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/943.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active OData injection exploitation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji wstrzyknięcia OData, przejdź tę listę od góry.
+    steps:
+    - en: Identify whether the exploited path stayed within OData logic (filter bypass, over-exposure) or escalated to a backend query language -- remediation and blast radius differ completely between the two
+      pl: Zidentyfikuj czy wykorzystana ścieżka pozostała w obrębie logiki OData (obejście filtra, nadmierne ujawnienie) czy eskalowała do backendowego języka zapytań -- naprawa i promień rażenia całkowicie się różnią między tymi dwoma
+    - en: If credentials or hashes were extracted via a blind boolean oracle, treat every account reachable through the same entity/filter as potentially compromised, not just the one confirmed
+      pl: Jeśli poświadczenia albo hashe zostały wyekstrahowane przez ślepą wyrocznię boolowską, traktuj każde konto osiągalne przez tę samą encję/filtr jako potencjalnie skompromitowane, nie tylko potwierdzone
+    - en: Check whether $metadata is publicly reachable without authentication, and restrict it if the schema itself is sensitive
+      pl: Sprawdź czy $metadata jest publicznie dostępne bez uwierzytelnienia, i ogranicz je jeśli sam schemat jest wrażliwy
+    - en: Audit every place a raw filter string or navigation path is concatenated into a backend SQL/JPQL/LDAP query rather than parsed by the framework, not just the exploited endpoint
+      pl: Przeaudytuj każde miejsce gdzie surowy string filtra albo ścieżka nawigacji jest sklejana do backendowego zapytania SQL/JPQL/LDAP zamiast sparsowana przez framework, nie tylko wykorzystany endpoint
+    - en: Add or tighten AllowedQueryOptions/FilterQueryValidator allowlisting and MaxExpansionDepth limits before considering the incident closed
+      pl: Dodaj albo zaostrz allowlisting AllowedQueryOptions/FilterQueryValidator i limity MaxExpansionDepth zanim uznasz incydent za zamknięty
+    - en: Notify per applicable data-breach obligations if credentials or data outside the intended entity scope were confirmed exfiltrated
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli potwierdzono eksfiltrację poświadczeń lub danych spoza zamierzonego zakresu encji
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-943 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/943.html
+    - label: OWASP A03:2021 Injection
+      url: https://owasp.org/Top10/2021/A03_2021-Injection/
+    - label: Microsoft Learn — OData Security Guidance
+      url: https://learn.microsoft.com/en-us/aspnet/web-api/overview/odata-support-in-aspnet-web-api/odata-security-guidance
+    - label: CVE-2024-21793 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2024-21793
+    - label: CVE-2016-11024 (odata4j, NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2016-11024
+    - label: Eclypsium — BIG-IP Next Central Manager vulnerabilities
+      url: https://eclypsium.com/blog/big-vulnerabilities-in-next-gen-big-ip/
+    - label: OWASP Global AppSec SF 2024 — speaker schedule (Amichai Shulman)
+      url: https://owasp2024globalappsecsanfra.sched.com/speaker/amichai1
