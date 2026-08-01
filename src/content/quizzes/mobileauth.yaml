@@ -1,0 +1,101 @@
+threatId: '15.3'
+title:
+  en: Insecure Authentication/Authorization — knowledge check
+  pl: Insecure Authentication/Authorization — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: An Android app checks prefs.getString("role", "user") == "admin" client-side before calling api.getAllUsers(), but the getAllUsers() endpoint itself performs no server-side role check. Is this exploitable even if a Frida hook is never used?
+    pl: Apka Android sprawdza prefs.getString("role", "user") == "admin" po stronie klienta przed wywołaniem api.getAllUsers(), ale sam endpoint getAllUsers() nie wykonuje żadnej kontroli roli po stronie serwera. Czy to jest podatne na wykorzystanie nawet jeśli hook Frida nigdy nie jest użyty?
+  isVulnerable: true
+  cwe: CWE-602
+  explanation:
+    en: Yes -- this is exploitable with nothing more than a proxy. OWASP's own first named M3 attack method is calling the backend directly, bypassing the app's UI entirely. Since the endpoint itself performs no authorization check, an attacker doesn't even need to touch the client's role flag -- Burp/mitmproxy alone reaches the same unprotected endpoint. The client-side check was never a security boundary to begin with.
+    pl: Tak -- to podatne na wykorzystanie nie potrzebując niczego więcej niż proxy. Własna pierwsza nazwana metoda ataku M3 OWASP to bezpośrednie wywołanie backendu, całkowicie omijając UI apki. Ponieważ sam endpoint nie wykonuje żadnej kontroli autoryzacji, atakujący nawet nie musi dotykać flagi roli klienta -- samo Burp/mitmproxy dosięga tego samego niechronionego endpointu. Kontrola client-side nigdy nie była granicą bezpieczeństwa.
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: What does RFC 8252 require of a public native mobile app implementing OAuth 2.0, and why?
+    pl: Czego wymaga RFC 8252 od publicznej natywnej aplikacji mobilnej implementującej OAuth 2.0, i dlaczego?
+  choices:
+  - id: a
+    label:
+      en: PKCE MUST be implemented, because a private-use URI scheme redirect can be registered by more than one app on the device, so an intercepted authorization code alone must be useless without the original code_verifier
+      pl: PKCE MUSI być zaimplementowane, ponieważ przekierowanie schematu URI do prywatnego użytku może być zarejestrowane przez więcej niż jedną apkę na urządzeniu, więc sam przechwycony kod autoryzacji musi być bezużyteczny bez oryginalnego code_verifier
+  - id: b
+    label:
+      en: A client secret must be embedded in the app binary to authenticate the token exchange
+      pl: Sekret klienta musi być osadzony w binarce apki by uwierzytelnić wymianę tokenu
+  - id: c
+    label:
+      en: PKCE is optional and only recommended for apps handling payment data
+      pl: PKCE jest opcjonalne i zalecane tylko dla apek obsługujących dane płatnicze
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Verified directly against RFC 8252 by all three research passes: public native app clients MUST implement PKCE, precisely because custom URI schemes aren''t exclusively owned by one app, and no client secret can be safely embedded in a distributed binary anyway (that would itself be an M1 Improper Credential Usage violation). PKCE''s code_verifier never leaves the device, so an intercepted code alone cannot be exchanged for tokens.'
+    pl: 'Zweryfikowane bezpośrednio względem RFC 8252 przez wszystkie trzy przejścia badawcze: publiczni klienci natywnych apek MUSZĄ zaimplementować PKCE, dokładnie dlatego że niestandardowe schematy URI nie są wyłączną własnością jednej apki, a żaden sekret klienta i tak nie może być bezpiecznie osadzony w dystrybuowanej binarce (to samo byłoby naruszeniem M1 Improper Credential Usage). code_verifier PKCE nigdy nie opuszcza urządzenia, więc sam przechwycony kod nie może zostać wymieniony na tokeny.'
+- id: q3
+  type: vuln-or-not
+  prompt:
+    en: A fitness app enforces authentication (you must be logged in to call the API) but its GraphQL endpoint returns any user's profile data -- age, weight, location -- as long as the caller supplies that user's ID, regardless of whose account made the request. Is this an authorization failure distinct from an authentication failure?
+    pl: Apka fitness wymusza uwierzytelnienie (musisz być zalogowany by wywołać API) ale jej endpoint GraphQL zwraca dane profilu dowolnego użytkownika -- wiek, waga, lokalizacja -- dopóki dzwoniący dostarczy ID tego użytkownika, niezależnie od tego czyje konto wykonało żądanie. Czy to awaria autoryzacji odrębna od awarii uwierzytelnienia?
+  isVulnerable: true
+  cwe: CWE-639
+  explanation:
+    en: Yes -- this is exactly the real, independently-corroborated Peloton API incident (2021). Authentication worked correctly (the caller genuinely was a valid logged-in user); the failure was entirely on the authorization side -- the server never checked whether that specific authenticated user was allowed to access that specific other user's object. This is the canonical CWE-639 IDOR pattern, distinct from CWE-287 authentication failures.
+    pl: Tak -- to dokładnie prawdziwy, niezależnie potwierdzony incydent API Peloton (2021). Uwierzytelnienie działało poprawnie (dzwoniący naprawdę był ważnym zalogowanym użytkownikiem); awaria była całkowicie po stronie autoryzacji -- serwer nigdy nie sprawdził czy ten konkretny uwierzytelniony użytkownik miał prawo dostępu do tego konkretnego obiektu innego użytkownika. To klasyczny wzorzec IDOR CWE-639, odrębny od awarii uwierzytelnienia CWE-287.
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: Why does this deep-dive rank certificate/public-key pinning at the bottom of its defense list, calling it "defense-in-depth only"?
+    pl: Dlaczego ten deep-dive umieszcza przypinanie certyfikatu/klucza publicznego na dole swojej listy obrony, nazywając je "tylko obroną w głąb"?
+  choices:
+  - id: a
+    label:
+      en: All three research passes confirmed pinning is routinely bypassed on a controlled device via Frida/objection, and even when it holds it does nothing to stop a properly authenticated attacker exploiting IDOR -- it protects the transport channel, not the authorization logic
+      pl: Wszystkie trzy przejścia badawcze potwierdziły że przypinanie jest rutynowo omijane na kontrolowanym urządzeniu przez Frida/objection, a nawet gdy się utrzyma nic nie robi by zatrzymać poprawnie uwierzytelnionego atakującego wykorzystującego IDOR -- chroni kanał transportowy, nie logikę autoryzacji
+  - id: b
+    label:
+      en: Certificate pinning is deprecated and no longer supported on modern mobile platforms
+      pl: Przypinanie certyfikatu jest przestarzałe i nie jest już wspierane na nowoczesnych platformach mobile
+  - id: c
+    label:
+      en: Pinning actively increases the risk of authentication bypass
+      pl: Przypinanie aktywnie zwiększa ryzyko ominięcia uwierzytelnienia
+  correctChoiceIds:
+  - a
+  explanation:
+    en: All three research passes independently arrived at this same ranking rationale. Pinning is a real, useful control against passive/casual network interception, but a determined attacker with a rooted/jailbroken test device routinely disables it (objection has a documented one-line bypass), and none of this deep-dive's real incidents -- Peloton, Sign in with Apple, CVE-2020-7692 -- were prevented or would have been prevented by pinning, since each was an authorization/authentication logic failure, not a transport-interception attack.
+    pl: Wszystkie trzy przejścia badawcze niezależnie doszły do tego samego uzasadnienia rankingu. Przypinanie to prawdziwa, użyteczna kontrola przeciw pasywnemu/przypadkowemu przechwyceniu sieciowemu, ale zdeterminowany atakujący z zrootowanym/jailbreaknietym urządzeniem testowym rutynowo je wyłącza (objection ma udokumentowane jednolinijkowe obejście), i żaden z prawdziwych incydentów tego deep-dive -- Peloton, Sign in with Apple, CVE-2020-7692 -- nie był ani nie zostałby zapobiegnięty przez przypinanie, ponieważ każdy był awarią logiki autoryzacji/uwierzytelnienia, nie atakiem przechwycenia transportu.
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: An iOS app calls LAContext().evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics) and, on success, simply sets a local isUnlocked = true before letting the user view sensitive account data -- no Keychain item, no server call is involved. Is this biometric implementation itself a genuine authentication weakness, independent of whether the biometric sensor itself was fooled?
+    pl: Apka iOS wywołuje LAContext().evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics) i, po sukcesie, po prostu ustawia lokalne isUnlocked = true zanim pozwoli użytkownikowi zobaczyć wrażliwe dane konta -- żaden element Keychain, żadne wywołanie serwera nie jest zaangażowane. Czy ta implementacja biometrii sama w sobie to prawdziwa słabość uwierzytelnienia, niezależnie od tego czy sam czujnik biometryczny został oszukany?
+  isVulnerable: true
+  cwe: CWE-602
+  explanation:
+    en: Yes. Even assuming the biometric check itself is unbypassable, the result is stored as a plain local boolean with no server-bound credential -- exactly the client-side-enforcement pattern (CWE-602) this deep-dive's code examples warn against. A Frida hook on the completion callback (or on the isUnlocked flag itself) unlocks the sensitive data with zero valid biometric input at all, because the biometric result was never actually tied to anything the server could independently verify.
+    pl: Tak. Nawet zakładając że sama kontrola biometryczna jest nieomijalna, wynik jest przechowywany jako zwykła lokalna wartość boolowska bez poświadczenia związanego z serwerem -- dokładnie wzorzec wymuszania client-side (CWE-602) przed którym ostrzegają przykłady kodu tego deep-dive. Hook Frida na callback zakończenia (albo na samej fladze isUnlocked) odblokowuje wrażliwe dane z zerowym ważnym wejściem biometrycznym w ogóle, ponieważ wynik biometryczny nigdy nie był faktycznie związany z niczym co serwer mógłby niezależnie zweryfikować.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A backend endpoint returns a user's order history given an orderId in the URL path. Which variant actually closes the IDOR risk for an authenticated caller?
+    pl: Endpoint backendu zwraca historię zamówień użytkownika na podstawie orderId w ścieżce URL. Który wariant faktycznie zamyka ryzyko IDOR dla uwierzytelnionego dzwoniącego?
+  variants:
+  - id: v1
+    lang: python
+    code: "@app.get('/orders/{order_id}')\ndef get_order(order_id: int, token: str = Depends(verify_token)):\n    return db.query(Order).filter(Order.id == order_id).first()"
+  - id: v2
+    lang: python
+    code: "@app.get('/orders/{order_id}')\ndef get_order(order_id: int, user = Depends(verify_token)):\n    order = db.query(Order).filter(\n        Order.id == order_id, Order.owner_id == user.id\n    ).first()\n    if order is None:\n        raise HTTPException(404)\n    return order"
+  - id: v3
+    lang: python
+    code: "@app.get('/orders/{order_id}')\ndef get_order(order_id: int, token: str = Depends(verify_token)):\n    if len(str(order_id)) > 10:   # reject suspiciously long IDs\n        raise HTTPException(400)\n    return db.query(Order).filter(Order.id == order_id).first()"
+  correctVariantId: v2
+  explanation:
+    en: 'v2 adds the object-level check that was missing: it filters by BOTH the requested order_id AND the authenticated caller''s own owner_id, so a valid token can never retrieve another user''s order regardless of what ID is guessed. v1 verifies the token (authentication) but never checks that the token''s owner actually owns the requested order (authorization) -- the exact Peloton-class gap. v3''s ID-length check is irrelevant to the authorization question entirely; any sufficiently short valid order_id belonging to another user still succeeds.'
+    pl: 'v2 dodaje brakującą kontrolę na poziomie obiektu: filtruje zarówno po żądanym order_id JAK I po własnym owner_id uwierzytelnionego dzwoniącego, więc ważny token nigdy nie może pobrać zamówienia innego użytkownika niezależnie od tego jakie ID zostanie zgadnięte. v1 weryfikuje token (uwierzytelnienie) ale nigdy nie sprawdza czy właściciel tokenu faktycznie posiada żądane zamówienie (autoryzacja) -- dokładnie luka klasy Peloton. Kontrola długości ID z v3 jest całkowicie nieistotna dla kwestii autoryzacji; każdy dostatecznie krótki ważny order_id należący do innego użytkownika wciąż się powiedzie.'

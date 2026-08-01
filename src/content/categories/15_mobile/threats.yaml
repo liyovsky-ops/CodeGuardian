@@ -33,22 +33,20 @@ threats:
   note_en: 'Source: OWASP Mobile Top 10 2024, M2. Mobile-specific facet distinct from the existing general Supply Chain category (SDK bundling, app store signing).'
 - id: '15.3'
   name: Insecure Authentication/Authorization (Mobile)
-  severity: High
-  difficulty: Unknown
+  severity: Critical
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
-  - CWE-287
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Client-side-only authentication or authorization checks, weak session handling, or trusting device-side state that an attacker with local control can bypass or forge.
+  - CWE-602
+  - CWE-863
+  - CWE-639
+  desc: 'Kontrole uwierzytelniania albo autoryzacji tylko po stronie klienta, słabe zarządzanie sesją, albo zaufanie stanowi po stronie urządzenia który atakujący z lokalną kontrolą może ominąć albo sfałszować. OWASP: "zakładaj że wszystkie kontrole client-side mogą zostać ominięte" -- UI aplikacji to tylko jeden dzwoniący prawdziwego API backendu, więc atakujący może wywołać uprzywilejowane endpointy bezpośrednio przez proxy, całkowicie omijając UI.
 
     '
-  desc_en: Client-side-only authentication or authorization checks, weak session handling, or trusting device-side state that an attacker with local control can bypass or forge.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
+  desc_en: 'Client-side-only authentication or authorization checks, weak session handling, or trusting device-side state that an attacker with local control can bypass or forge. OWASP: "assume all client-side controls can be bypassed" -- the app UI is only one caller of the real backend API, so an attacker can call privileged endpoints directly via a proxy, bypassing the UI entirely.'
+  lang: kotlin
+  vuln: "fun onOpenAdminPanel() {\n    val role = prefs.getString(\"role\", \"user\")   // client-controlled, hookable\n    if (role == \"admin\") {\n        api.getAllUsers()                          // endpoint trusts the caller\n    }\n}\n"
+  safe: "fun onOpenAdminPanel() {\n    api.getAllUsers()   // Authorization: Bearer <short-lived token>\n    // Backend independently re-verifies role + object-level access on every call\n}\n"
   note_en: 'Source: OWASP Mobile Top 10 2024, M3. Mobile nuance: trust boundary sits on an attacker-controlled device.'
 - id: '15.4'
   name: Insufficient Input/Output Validation (Mobile)

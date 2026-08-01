@@ -1,0 +1,387 @@
+meta:
+  id: mobileauth
+  threatId: '15.3'
+  severity: Critical
+  color: '#0284c7'
+  colorRgb: 2,132,199
+  cwe: CWE-602
+  cvss: '9.1'
+  standard: OWASP Mobile Top 10 2024 (M3)
+hero:
+  titleMain: 'Insecure Authentication / '
+  titleGrad: Authorization
+  titleTail: ''
+  topbar: Insecure Authentication/Authorization (OWASP Mobile Top 10 2024, M3)
+  lead:
+    en: 'The 2024 merger of the old 2016 Mobile Top 10''s separate Insecure Authentication (M4) and Insecure Authorization (M6) categories. All three independent research passes converged on OWASP''s own blunt framing: developers should "assume all client-side controls can be bypassed." A mobile app''s binary and every check it performs run entirely on a device the attacker controls, so any auth/authz decision the client makes and merely reports to itself -- a boolean flag, a role string, a biometric prompt that only gates local UI -- is not a security boundary at all. Mobile''s client-heavy, API-backed architecture adds a distinctive twist beyond the general principle: an attacker doesn''t even need to use the app''s UI to exploit this, since the UI is only one possible caller of the real backend API, and a proxy can call any endpoint directly.'
+    pl: 'Fuzja z 2024 dawnych osobnych kategorii Mobile Top 10 z 2016: Insecure Authentication (M4) i Insecure Authorization (M6). Wszystkie trzy niezależne przejścia badawcze zbiegły się na własnym dosadnym ramowaniu OWASP: deweloperzy powinni "zakładać że wszystkie kontrole client-side mogą zostać ominięte". Binarka aplikacji mobilnej i każda kontrola którą wykonuje działają całkowicie na urządzeniu które kontroluje atakujący, więc jakakolwiek decyzja uwierzytelniania/autoryzacji którą podejmuje klient i tylko sam sobie zgłasza -- flaga boolowska, string roli, prompt biometryczny który tylko bramkuje lokalny UI -- to w ogóle nie granica bezpieczeństwa. Architektura mobile ciężka po stronie klienta, oparta na API, dodaje odrębny zwrot ponad ogólną zasadę: atakujący nawet nie musi używać UI aplikacji by to wykorzystać, bo UI to tylko jeden możliwy dzwoniący prawdziwego API backendu, a proxy może wywołać dowolny endpoint bezpośrednio.'
+  metrics:
+  - k: CWE-602
+    v:
+      en: Weakness ID (+ CWE-863, CWE-639)
+      pl: ID słabości (+ CWE-863, CWE-639)
+  - k: '9.1'
+    v: CVSS · Critical (CVE-2020-7692, missing PKCE)
+  - k: RFC 8252
+    v:
+      en: PKCE mandatory for native app OAuth
+      pl: PKCE obowiązkowe dla OAuth apek natywnych
+  - k: ~3M
+    v:
+      en: Users affected by Peloton API IDOR (2021)
+      pl: Użytkowników dotkniętych IDOR API Peloton (2021)
+  sources:
+  - label: 'OWASP Mobile Top 10 2024 — M3: Insecure Authentication/Authorization'
+    url: https://owasp.org/www-project-mobile-top-10/2023-risks/m3-insecure-authentication-authorization
+  - label: RFC 8252 — OAuth 2.0 for Native Apps
+    url: https://www.rfc-editor.org/rfc/rfc8252.html
+  - label: CWE-602 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/602.html
+  - label: Pen Test Partners — Tour de Peloton
+    url: https://www.pentestpartners.com/security-blog/tour-de-peloton-exposed-user-data/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- labs
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: labs
+  en: Practice labs
+  pl: Laboratoria
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: OWASP's own two named attack methods -- calling the backend directly, or authenticating legitimately then reaching hidden endpoints -- plus the specific OAuth/PKCE variant all three research passes verified against RFC 8252.
+      pl: Dwie własne nazwane metody ataku OWASP -- bezpośrednie wywołanie backendu, albo legalne uwierzytelnienie a potem dosięgnięcie ukrytych endpointów -- plus konkretny wariant OAuth/PKCE który wszystkie trzy przejścia badawcze zweryfikowały względem RFC 8252.
+    items:
+    - name: Local "logged in" / role flag bypass via Frida
+      sev: critical
+      description:
+        en: An app stores an authentication or role state locally (SharedPreferences, a static field, a method return value) and trusts it without server re-verification. Frida hooks the check and forces it to return the privileged value, unlocking gated screens with no valid credential at all.
+        pl: Apka przechowuje stan uwierzytelnienia albo roli lokalnie (SharedPreferences, pole statyczne, wartość zwracana metody) i ufa mu bez ponownej weryfikacji serwera. Frida zahaczaja kontrolę i wymusza zwrócenie uprzywilejowanej wartości, odblokowując bramkowane ekrany bez żadnego ważnego poświadczenia.
+      payload: 'Interceptor.attach(AuthManager.isLoggedIn.implementation, { onLeave: r => r.replace(true) })'
+    - name: Direct API replay bypassing client-side authorization
+      sev: critical
+      description:
+        en: 'OWASP''s own first named attack method: the app''s UI is only one caller of the backend API. An attacker proxies traffic and calls a privileged or hidden endpoint the current user''s screens never expose -- if the server assumed the UI would gate access, the assumption is void.'
+        pl: 'Własna pierwsza nazwana metoda ataku OWASP: UI aplikacji to tylko jeden dzwoniący API backendu. Atakujący proxuje ruch i wywołuje uprzywilejowany albo ukryty endpoint którego ekrany bieżącego użytkownika nigdy nie ujawniają -- jeśli serwer zakładał że UI będzie bramkować dostęp, założenie jest nieważne.'
+      payload: POST /api/admin/users  -- called directly via Burp Repeater, never reachable through this user's own app UI
+    - name: IDOR / broken object-level authorization via API
+      sev: critical
+      description:
+        en: An authenticated user swaps a resource identifier in a captured request and receives another user's data or performs an action on another user's object -- the canonical CWE-639 case, and the exact mechanism verified in the real Peloton API incident.
+        pl: Uwierzytelniony użytkownik zamienia identyfikator zasobu w przechwyconym żądaniu i otrzymuje dane innego użytkownika albo wykonuje akcję na obiekcie innego użytkownika -- klasyczny przypadek CWE-639, i dokładny mechanizm zweryfikowany w prawdziwym incydencie API Peloton.
+      payload: GET /api/users/1234/profile  ->  GET /api/users/1235/profile  -- returns another user's private data
+    - name: Missing PKCE in mobile OAuth -- authorization-code interception
+      sev: critical
+      description:
+        en: 'Verified directly against RFC 8252: a public native OAuth client without PKCE is vulnerable because a private-use URI scheme redirect can be registered by more than one app on the device -- a malicious app can receive the authorization code and exchange it for tokens, since no client secret exists to stop it.'
+        pl: 'Zweryfikowane bezpośrednio względem RFC 8252: publiczny natywny klient OAuth bez PKCE jest podatny bo przekierowanie schematu URI do prywatnego użytku może być zarejestrowane przez więcej niż jedną apkę na urządzeniu -- złośliwa apka może otrzymać kod autoryzacji i wymienić go na tokeny, bo nie istnieje żaden sekret klienta który by to zatrzymał.'
+      payload: GET /authorize?response_type=code&client_id=APP&redirect_uri=com.app://cb  -- no code_challenge present
+    - name: Insecure custom URL scheme / embedded WebView in OAuth redirect
+      sev: high
+      description:
+        en: 'RFC 8252 explicitly names both risks: custom URI schemes are not exclusively owned by one app on the OS, and using an embedded WebView (rather than the OS browser/ASWebAuthenticationSession/Custom Tabs) lets the host app itself capture credentials, bypass consent, or copy session cookies -- verified as an explicit RFC recommendation, not a hypothetical concern.'
+        pl: 'RFC 8252 jawnie nazywa oba ryzyka: schematy URI do prywatnego użytku nie są wyłącznie własnością jednej apki na systemie, a użycie osadzonego WebView (zamiast przeglądarki systemowej/ASWebAuthenticationSession/Custom Tabs) pozwala samej apce-hostowi przechwycić poświadczenia, ominąć zgodę, albo skopiować ciasteczka sesji -- zweryfikowane jako jawna rekomendacja RFC, nie hipotetyczna obawa.'
+      payload: WKWebView / android.webkit.WebView used to render the OAuth login page inside the app, instead of the OS-provided authentication session
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: The fix is never a better client-side check -- it's removing the client from the trust decision entirely and letting the server independently authorize every privileged action.
+      pl: Naprawa nigdy nie jest lepszą kontrolą client-side -- to całkowite usunięcie klienta z decyzji zaufania i pozwolenie serwerowi niezależnie autoryzować każdą uprzywilejowaną akcję.
+    languages:
+    - label: Android (Kotlin) -- role check
+      lang: kotlin
+      vulnerable: "// VULNERABLE: authorization decided on-device and trusted\nfun onOpenAdminPanel() {\n    val role = prefs.getString(\"role\", \"user\")   // client-controlled, hookable\n    if (role == \"admin\") {\n        api.getAllUsers()                          // endpoint trusts the caller\n    }\n}"
+      safe: "// SAFE: client never decides; server re-validates on every call\nfun onOpenAdminPanel() {\n    api.getAllUsers()   // Authorization: Bearer <short-lived token>\n    // Backend: verify token -> load role from server-side store ->\n    // authorize -> else 403. Client only reacts to the server's answer.\n}"
+    - label: iOS (Swift) -- biometric gate
+      lang: swift
+      vulnerable: "// VULNERABLE: \"success\" is a local boolean, no server-bound credential\ncontext.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, ...) { ok, _ in\n    if ok { self.showAccountBalance() }   // Frida-hookable, nothing to validate server-side\n}"
+      safe: "// SAFE: biometric releases a Keychain item bound to .biometryCurrentSet,\n// which the SERVER then validates as a real credential -- not a UI boolean.\ncontext.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,\n                        localizedReason: \"Authorize payment\") { ok, _ in\n    guard ok else { return }\n    let token = try? Keychain.read(\"session\", context: context)\n    self.api.authorizePayment(token: token)   // server re-verifies the token itself\n}"
+    - label: OAuth mobile flow -- PKCE
+      lang: kotlin
+      vulnerable: "// VULNERABLE: no code_challenge -- intercepted code is directly exchangeable\nval authUrl = \"$AUTH_ENDPOINT?response_type=code&client_id=$CLIENT_ID\" +\n    \"&redirect_uri=com.app://cb\""
+      safe: "// SAFE, per RFC 8252 / RFC 7636:\nval verifier = randomUrlSafe(64)\nval challenge = base64Url(sha256(verifier))\nval authUrl = \"$AUTH_ENDPOINT?response_type=code&client_id=$CLIENT_ID\" +\n    \"&redirect_uri=$CLAIMED_HTTPS_REDIRECT\" +   // App Links, not a custom scheme\n    \"&code_challenge=$challenge&code_challenge_method=S256\"\n// Token exchange must present the original verifier -- an intercepted\n// code alone is useless without it. Use the OS browser/ASWebAuthenticationSession/\n// Custom Tabs, never an embedded WebView."
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: OWASP names two attack methods directly on its official M3 page; the tooling below maps precisely onto each.
+      pl: OWASP nazywa dwie metody ataku bezpośrednio na własnej oficjalnej stronie M3; poniższe narzędzia mapują się precyzyjnie na każdą z nich.
+    steps:
+    - title:
+        en: Static recon of client-side auth logic
+        pl: Statyczny rekonesans logiki uwierzytelniania client-side
+      description:
+        en: Decompile with JADX/apktool (Android) or class-dump/Hopper (iOS), or run MobSF for automated triage, to locate auth/role checks, hardcoded endpoints, and OAuth configuration.
+        pl: Dekompiluj przez JADX/apktool (Android) albo class-dump/Hopper (iOS), albo uruchom MobSF dla zautomatyzowanego rozpoznania, by zlokalizować kontrole uwierzytelniania/roli, zahardkodowane endpointy, i konfigurację OAuth.
+    - title:
+        en: Hook and force local auth checks with Frida/objection
+        pl: Zahaczaj i wymuszaj lokalne kontrole uwierzytelniania przez Frida/objection
+      description:
+        en: Hook the method or flag deciding local auth state and force the privileged value; objection provides one-line bypasses for root/jailbreak detection and certificate pinning that would otherwise block the next step.
+        pl: Zahaczaj metodę albo flagę decydującą o lokalnym stanie uwierzytelnienia i wymuś uprzywilejowaną wartość; objection dostarcza jednolinijkowe obejścia dla wykrywania root/jailbreak i przypinania certyfikatu które inaczej zablokowałyby następny krok.
+    - title:
+        en: Call the backend directly, bypassing the app's UI entirely
+        pl: Wywołaj backend bezpośrednio, całkowicie omijając UI apki
+      description:
+        en: 'OWASP''s own first named attack method: proxy the app''s real traffic via Burp/mitmproxy, then replay or hand-craft requests to endpoints the current user''s UI never exposes -- privileged actions, hidden admin routes, or another user''s data.'
+        pl: 'Własna pierwsza nazwana metoda ataku OWASP: proxuj prawdziwy ruch apki przez Burp/mitmproxy, potem powtórz albo ręcznie skonstruuj żądania do endpointów których UI bieżącego użytkownika nigdy nie ujawnia -- uprzywilejowane akcje, ukryte trasy admina, albo dane innego użytkownika.'
+    - title:
+        en: Test for IDOR by swapping identifiers
+        pl: Testuj IDOR zamieniając identyfikatory
+      description:
+        en: With two test accounts, send account A's token against account B's resource ID and observe whether the server returns the data anyway -- the exact technique that surfaced the real Peloton API incident.
+        pl: Z dwoma kontami testowymi, wyślij token konta A przeciw ID zasobu konta B i obserwuj czy serwer i tak zwraca dane -- dokładna technika która ujawniła prawdziwy incydent API Peloton.
+    - title:
+        en: Inspect the OAuth flow for missing PKCE and unsafe redirect handling
+        pl: Zbadaj przepływ OAuth pod kątem brakującego PKCE i niebezpiecznej obsługi przekierowania
+      description:
+        en: Check the authorization request for a code_challenge parameter, and check whether the redirect URI is a custom scheme (hijackable) versus a claimed HTTPS App Link/Universal Link, and whether the flow uses the OS browser or a capturable embedded WebView.
+        pl: Sprawdź żądanie autoryzacji pod kątem parametru code_challenge, i sprawdź czy URI przekierowania to schemat niestandardowy (przechwytywalny) w porównaniu do zastrzeżonego HTTPS App Link/Universal Link, i czy przepływ używa przeglądarki systemowej czy przechwytywalnego osadzonego WebView.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes independently converged on the same top principle, quoting OWASP''s own text: the server is the only trust boundary, and certificate pinning is explicitly demoted to defense-in-depth, never a primary control.'
+      pl: 'Wszystkie trzy przejścia badawcze niezależnie zbiegły się na tej samej głównej zasadzie, cytując własny tekst OWASP: serwer jest jedyną granicą zaufania, a przypinanie certyfikatu jest jawnie zdegradowane do obrony w głąb, nigdy głównej kontroli.'
+    items:
+    - rank: 1
+      eff: 95
+      kind: primary
+      label:
+        en: Server-side re-validation of every privileged action, never trusting client-reported auth state
+        pl: Ponowna walidacja po stronie serwera każdej uprzywilejowanej akcji, nigdy nie ufając stanowi uwierzytelnienia zgłoszonemu przez klienta
+      note:
+        en: 'OWASP''s own central instruction, verified verbatim: "assume all client-side controls can be bypassed" and backend systems must "independently verify the roles and permissions of the authenticated user." Addresses the root cause directly -- without this, no other control matters.'
+        pl: 'Własna centralna instrukcja OWASP, zweryfikowana dosłownie: "zakładaj że wszystkie kontrole client-side mogą zostać ominięte" a systemy backendowe muszą "niezależnie weryfikować role i uprawnienia uwierzytelnionego użytkownika". Adresuje przyczynę źródłową bezpośrednio -- bez tego żadna inna kontrola nie ma znaczenia.'
+    - rank: 2
+      eff: 90
+      kind: primary
+      label:
+        en: Robust server-side object-level authorization (BOLA/IDOR prevention)
+        pl: Solidna autoryzacja na poziomie obiektu po stronie serwera (zapobieganie BOLA/IDOR)
+      note:
+        en: Every object access checks that the authenticated principal specifically owns or may access THAT object, independent of what the client UI shows -- the direct, verified fix for the Peloton-class incident.
+        pl: Każdy dostęp do obiektu sprawdza że uwierzytelniony podmiot konkretnie posiada albo może uzyskać dostęp do TEGO obiektu, niezależnie od tego co pokazuje UI klienta -- bezpośrednia, zweryfikowana naprawa dla incydentu klasy Peloton.
+    - rank: 3
+      eff: 85
+      kind: primary
+      label:
+        en: OAuth 2.0 + PKCE per RFC 8252, claimed-HTTPS redirects, OS browser (never embedded WebView)
+        pl: OAuth 2.0 + PKCE wg RFC 8252, zastrzeżone przekierowania HTTPS, przeglądarka systemowa (nigdy osadzony WebView)
+      note:
+        en: Directly closes the authorization-code-interception and custom-scheme-hijack classes -- a verified RFC MUST requirement for public native clients, not an optional hardening step.
+        pl: Bezpośrednio zamyka klasy przechwycenia kodu autoryzacji i przejęcia schematu niestandardowego -- zweryfikowany wymóg MUST RFC dla publicznych klientów natywnych, nie opcjonalny krok utwardzania.
+    - rank: 4
+      eff: 75
+      kind: strong
+      label:
+        en: Short-lived, server-validated, revocable tokens checked per request
+        pl: Krótkożyjące, zweryfikowane przez serwer, unieważnialne tokeny sprawdzane per żądanie
+      note:
+        en: Bounds the blast radius of any stolen or forged client state and forces the server to make the real decision on every single call, not just at login.
+        pl: Ogranicza promień rażenia jakiegokolwiek skradzionego albo sfałszowanego stanu klienta i zmusza serwer do podjęcia prawdziwej decyzji przy każdym pojedynczym wywołaniu, nie tylko przy logowaniu.
+    - rank: 5
+      eff: 65
+      kind: strong
+      label:
+        en: Biometric authentication bound to a server-validated credential, not a UI gate
+        pl: Uwierzytelnianie biometryczne związane ze zweryfikowanym przez serwer poświadczeniem, nie bramką UI
+      note:
+        en: Turns a bypassable local boolean into a real credential the server independently checks -- effective for its specific scope, but only ever a complement to server-side authorization, never a substitute.
+        pl: Zamienia omijalną lokalną wartość boolowską w prawdziwe poświadczenie które serwer niezależnie sprawdza -- skuteczne dla swojego konkretnego zakresu, ale zawsze tylko uzupełnienie autoryzacji server-side, nigdy substytut.
+    - rank: 6
+      eff: 35
+      kind: weak
+      label:
+        en: Certificate/public-key pinning
+        pl: Przypinanie certyfikatu/klucza publicznego
+      note:
+        en: 'Explicitly demoted to defense-in-depth by all three research passes: raises the cost of trivial proxy interception but is routinely bypassed on a controlled device via Frida/objection, and does nothing to stop a properly authenticated attacker performing IDOR.'
+        pl: 'Jawnie zdegradowane do obrony w głąb przez wszystkie trzy przejścia badawcze: podnosi koszt trywialnego przechwycenia przez proxy ale jest rutynowo omijane na kontrolowanym urządzeniu przez Frida/objection, i nic nie robi by zatrzymać poprawnie uwierzytelnionego atakującego wykonującego IDOR.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'A strong, well-documented record spanning both halves of this category: a famous SSO authentication failure, a widely-covered IDOR/authorization incident corroborated by two independent research passes, and an NVD-verified CVE for the missing-PKCE variant.'
+      pl: 'Silny, dobrze udokumentowany rejestr obejmujący obie połowy tej kategorii: słynna awaria uwierzytelniania SSO, szeroko relacjonowany incydent IDOR/autoryzacji potwierdzony przez dwa niezależne przejścia badawcze, i zweryfikowane przez NVD CVE dla wariantu brakującego PKCE.'
+    items:
+    - org: Peloton API
+      year: 2021
+      impact: Broken object-level authorization -- ~3 million+ users' private profile data (age, gender, city, weight, workout stats)
+      cost: Fixed roughly 7 days after Pen Test Partners' disclosure and press coverage
+      description:
+        en: 'Confirmed independently by two research passes against Pen Test Partners'' primary research (with TechCrunch/Threatpost/Infosecurity Magazine corroboration): Peloton''s GraphQL API enabled authentication but never enforced proper object-level authorization -- any authenticated (initially even unauthenticated) request could pull another user''s private profile data regardless of that user''s own privacy settings. A textbook real-world instance of this deep-dive''s IDOR attack variant, mapped by researchers directly to OWASP API1 Broken Object Level Authorization.'
+        pl: 'Potwierdzone niezależnie przez dwa przejścia badawcze względem podstawowego badania Pen Test Partners (z potwierdzeniem TechCrunch/Threatpost/Infosecurity Magazine): API GraphQL Peloton umożliwiało uwierzytelnienie ale nigdy nie wymuszało właściwej autoryzacji na poziomie obiektu -- każde uwierzytelnione (początkowo nawet nieuwierzytelnione) żądanie mogło pobrać prywatne dane profilu innego użytkownika niezależnie od własnych ustawień prywatności tego użytkownika. Podręcznikowy prawdziwy przypadek wariantu ataku IDOR tego deep-dive, zmapowany przez badaczy bezpośrednio na OWASP API1 Broken Object Level Authorization.'
+    - org: '"Sign in with Apple" SSO'
+      year: 2020
+      impact: Full third-party account takeover -- $100,000 bug bounty
+      cost: Fixed by Apple; named affected relying parties included Dropbox, Spotify, Airbnb, Giphy
+      description:
+        en: 'Verified via researcher Bhavuk Jain''s own writeup: Apple''s SSO server generated a validly-signed JWT for ANY email address a client requested, without verifying the requester actually owned that email. Because the JWT verified correctly against Apple''s own public key, any third-party service trusting "Sign in with Apple" could be silently impersonated -- a server-side authentication-validation failure reachable entirely through the mobile SSO flow this deep-dive covers.'
+        pl: 'Zweryfikowane przez własne ujawnienie badacza Bhavuka Jaina: serwer SSO Apple generował poprawnie podpisany JWT dla DOWOLNEGO adresu email o który klient poprosił, bez weryfikacji czy żądający faktycznie posiadał ten email. Ponieważ JWT poprawnie weryfikował się względem własnego klucza publicznego Apple, każda usługa firmy trzeciej ufająca "Sign in with Apple" mogła zostać po cichu podszyta -- awaria walidacji uwierzytelnienia po stronie serwera osiągalna całkowicie przez przepływ SSO mobile który pokrywa ten deep-dive.'
+    - org: Google OAuth Client Library for Java
+      year: 2020
+      impact: CVE-2020-7692 -- CVSS 9.1 Critical, CWE-863
+      cost: Fixed in 1.31.0
+      description:
+        en: 'Verified directly against NVD: versions before 1.31.0 did not implement PKCE in accordance with RFC 8252 for OAuth 2.0 on native apps, enabling exactly the authorization-code-interception attack this deep-dive''s attack-types section describes. A clean, primary-source-verified anchor for the missing-PKCE variant.'
+        pl: 'Zweryfikowane bezpośrednio względem NVD: wersje przed 1.31.0 nie implementowały PKCE zgodnie z RFC 8252 dla OAuth 2.0 na apkach natywnych, umożliwiając dokładnie atak przechwycenia kodu autoryzacji który opisuje sekcja typów ataków tego deep-dive. Czysty, zweryfikowany względem źródła pierwotnego przypadek zakotwiczający wariant brakującego PKCE.'
+    inlineSources:
+    - label: Pen Test Partners — Tour de Peloton
+      url: https://www.pentestpartners.com/security-blog/tour-de-peloton-exposed-user-data/
+    - label: Bhavuk Jain — Sign in with Apple account takeover
+      url: https://bhavukjain.com/blog/2020/05/30/zeroday-signin-with-apple/
+    - label: CVE-2020-7692 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2020-7692
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: 'OWASP''s own two named attack methods map directly onto two tool categories: runtime hooking to defeat local checks, and API-layer proxying to bypass the UI entirely.'
+      pl: 'Dwie własne nazwane metody ataku OWASP mapują się bezpośrednio na dwie kategorie narzędzi: haczenie w czasie wykonania by pokonać lokalne kontrole, i proxowanie na poziomie API by całkowicie ominąć UI.'
+    sast:
+    - - JADX / apktool (+ class-dump/Hopper on iOS)
+      - Decompile to locate and review client-side auth/role logic, hardcoded endpoints, and OAuth configuration
+    - - MobSF (Mobile Security Framework)
+      - Automated static+dynamic triage flagging insecure auth patterns and exported/hidden components
+    dast:
+    - - Frida + objection
+      - Hook and force local auth/role checks to return privileged values; objection's one-line bypasses for root/jailbreak detection and certificate pinning unblock the next step
+    - - Burp Suite / mitmproxy
+      - 'The primary M3 tool: intercept, replay, and hand-craft requests to endpoints the app''s own UI never exposes to the current user -- directly implements OWASP''s first named attack method'
+    - - Burp Autorize / Intruder for IDOR enumeration
+      - Systematically swap resource identifiers across two authenticated test accounts to detect object-level authorization gaps
+    note:
+      en: <strong>Key signal:</strong> if a security review only ever exercises an app's own UI, it will miss this entire category by construction -- the defining characteristic of M3 is that the vulnerable path is reachable only by bypassing the UI, not by using it.
+      pl: <strong>Kluczowy sygnał:</strong> jeśli przegląd bezpieczeństwa zawsze tylko ćwiczy własny UI aplikacji, ominie tę całą kategorię z definicji -- cechą definiującą M3 jest że podatna ścieżka jest osiągalna tylko przez ominięcie UI, nie przez jego użycie.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: This category genuinely spans multiple CWEs -- all three research passes independently converged on the same conclusion that a single CWE (the catalog stub's original CWE-287 alone) is insufficient, and that CWE-602 is the single best conceptual fit for the client-side-trust root cause.
+      pl: Ta kategoria naprawdę obejmuje wiele CWE -- wszystkie trzy przejścia badawcze niezależnie zbiegły się na tym samym wniosku że pojedyncze CWE (oryginalne samo CWE-287 stuba katalogowego) jest niewystarczające, i że CWE-602 jest pojedynczym najlepszym dopasowaniem koncepcyjnym dla przyczyny źródłowej zaufania client-side.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - 'CWE-602 — Client-Side Enforcement of Server-Side Security (primary). Verified directly at MITRE: explicitly lists Mobile as an applicable platform, and is the single best conceptual fit for "the attacker controls the device the check runs on."'
+      - CWE-287 — Improper Authentication (authentication half). Verified as MITRE-marked DISCOURAGED for direct mapping in favor of more specific children -- kept here as the authentication anchor, not the sole classification.
+      - CWE-863 — Incorrect Authorization and CWE-862 — Missing Authorization (authorization half, checks flawed vs. absent respectively). CWE-863 is what NVD actually assigned to the real CVE-2020-7692.
+      - CWE-639 — Authorization Bypass Through User-Controlled Key (the canonical IDOR CWE, ChildOf CWE-863) — the exact fit for the Peloton-class incident.
+    - std: OWASP
+      items:
+      - 'Mobile Top 10 2024 — M3: Insecure Authentication/Authorization, merging the 2016 list''s separate M4 (Insecure Authentication) and M6 (Insecure Authorization). Verified directly against owasp.org: Exploitability EASY, Prevalence COMMON, Detectability AVERAGE, Impact SEVERE.'
+      - Maps to the MASVS-AUTH control group; the OWASP MAS project's MASWE weakness catalog names this precisely as MASWE-0041 (Authentication Enforced Only Locally Instead of on the Server-side) and MASWE-0042 (the authorization equivalent).
+      - OWASP's own M3 page does not itself enumerate specific CWE numbers -- confirmed by all three research passes fetching the page directly -- so the CWE mapping above is the standard analytical alignment, not an OWASP quote.
+      - 'Web analogs for context only, not the correct mapping: OWASP Top 10 2021 A01 Broken Access Control and A07 Identification and Authentication Failures, and OWASP API Top 10 2023 API1 Broken Object Level Authorization -- the most directly relevant analog given how often mobile auth/authz failures manifest at the API layer, as in the Peloton incident.'
+    inlineSources:
+    - label: OWASP Mobile Top 10 2024 — M3
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m3-insecure-authentication-authorization
+    - label: CWE-602 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/602.html
+    - label: CWE-639 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/639.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active exploitation of a mobile authentication or authorization bypass is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji ominięcia uwierzytelniania albo autoryzacji mobile, przejdź tę listę od góry.
+    steps:
+    - en: Identify whether the exploited path was authentication (proving identity) or authorization (enforcing permissions) -- the fix differs completely, and this category frequently involves both at once
+      pl: Zidentyfikuj czy wykorzystana ścieżka to uwierzytelnianie (dowodzenie tożsamości) czy autoryzacja (wymuszanie uprawnień) -- naprawa całkowicie się różni, a ta kategoria często obejmuje oba naraz
+    - en: If IDOR/object-level authorization was exploited, audit how many other objects the same technique could reach, not just the one confirmed -- this is rarely a single-record bug
+      pl: Jeśli wykorzystano IDOR/autoryzację na poziomie obiektu, przeaudytuj ile innych obiektów ta sama technika mogła osiągnąć, nie tylko ten potwierdzony -- to rzadko błąd pojedynczego rekordu
+    - en: If the app itself was bypassed via Frida/patching, remember the server-side endpoint remains reachable directly regardless of any client-side fix -- patch the server-side authorization gap, not just the app
+      pl: Jeśli sama apka została ominięta przez Frida/patching, pamiętaj że endpoint server-side pozostaje osiągalny bezpośrednio niezależnie od jakiejkolwiek naprawy client-side -- załataj lukę autoryzacji server-side, nie tylko apkę
+    - en: If a missing-PKCE OAuth flow was exploited, revoke and rotate any tokens issued through that flow during the exposure window
+      pl: Jeśli wykorzystano przepływ OAuth bez PKCE, unieważnij i zrotuj wszelkie tokeny wydane przez ten przepływ w oknie ekspozycji
+    - en: Grep the codebase and API surface for every other endpoint following the same anti-pattern (client-trusted role, missing object-level check), not just the exploited one
+      pl: Przeszukaj bazę kodu i powierzchnię API pod kątem każdego innego endpointu podążającego za tym samym antywzorcem (rola zaufana przez klienta, brakująca kontrola na poziomie obiektu), nie tylko wykorzystanego
+    - en: Notify per applicable data-breach obligations if another user's data was confirmed accessed
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych jeśli potwierdzono dostęp do danych innego użytkownika
+  labs:
+    title:
+      en: Practice labs
+      pl: Laboratoria praktyczne
+    lead:
+      en: PortSwigger's Web Security Academy has no mobile-specific track (verified elsewhere in this knowledge base's Mobile Security category), and OWASP's MAS Crackmes are all hidden-secret-extraction exercises rather than local-auth-bypass ones (verified) -- but the MASTG's own technique guide for biometric bypass is real, on-topic, and directly usable.
+      pl: PortSwigger Web Security Academy nie ma ścieżki specyficznej dla mobile (zweryfikowane gdzie indziej w kategorii Mobile Security tej bazy wiedzy), a MAS Crackmes OWASP to wszystko ćwiczenia ekstrakcji ukrytego sekretu zamiast ominięcia lokalnego uwierzytelnienia (zweryfikowane) -- ale własny przewodnik techniczny MASTG dla ominięcia biometrii jest prawdziwy, na temat, i bezpośrednio użyteczny.
+    items:
+    - variant: Local biometric authentication bypass
+      provider: OWASP MASTG
+      label: MASTG-TECH-0135 -- Bypassing Biometric Authentication
+      url: https://mas.owasp.org/MASTG/techniques/ios/MASTG-TECH-0135/
+      difficulty: Intermediate
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP Mobile Top 10 2024 — M3
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m3-insecure-authentication-authorization
+    - label: RFC 8252 — OAuth 2.0 for Native Apps
+      url: https://www.rfc-editor.org/rfc/rfc8252.html
+    - label: CWE-602 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/602.html
+    - label: CWE-639 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/639.html
+    - label: CWE-863 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/863.html
+    - label: Pen Test Partners — Tour de Peloton
+      url: https://www.pentestpartners.com/security-blog/tour-de-peloton-exposed-user-data/
+    - label: Bhavuk Jain — Sign in with Apple account takeover
+      url: https://bhavukjain.com/blog/2020/05/30/zeroday-signin-with-apple/
+    - label: CVE-2020-7692 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2020-7692
+    - label: OWASP MASTG-TECH-0135
+      url: https://mas.owasp.org/MASTG/techniques/ios/MASTG-TECH-0135/

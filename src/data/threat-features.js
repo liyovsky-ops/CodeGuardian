@@ -46,6 +46,7 @@ import pdfinjectionData from '../content/deepdives/pdfinjection.yaml';
 import odatainjectionData from '../content/deepdives/odatainjection.yaml';
 import mobilecredentialsData from '../content/deepdives/mobilecredentials.yaml';
 import mobilesupplychainData from '../content/deepdives/mobilesupplychain.yaml';
+import mobileauthData from '../content/deepdives/mobileauth.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -89,6 +90,7 @@ import pdfinjectionQuiz from '../content/quizzes/pdfinjection.yaml';
 import odatainjectionQuiz from '../content/quizzes/odatainjection.yaml';
 import mobilecredentialsQuiz from '../content/quizzes/mobilecredentials.yaml';
 import mobilesupplychainQuiz from '../content/quizzes/mobilesupplychain.yaml';
+import mobileauthQuiz from '../content/quizzes/mobileauth.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -134,6 +136,7 @@ export const DEEPDIVES = {
   cat_1_research29: odatainjectionData, // OData Injection
   '15.1': mobilecredentialsData, // Improper Credential Usage (Mobile)
   '15.2': mobilesupplychainData, // Inadequate Supply Chain Security (Mobile)
+  '15.3': mobileauthData, // Insecure Authentication/Authorization (Mobile)
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -182,4 +185,5 @@ export const QUIZZES = {
   cat_1_research29: odatainjectionQuiz,
   '15.1': mobilecredentialsQuiz,
   '15.2': mobilesupplychainQuiz,
+  '15.3': mobileauthQuiz,
 };
