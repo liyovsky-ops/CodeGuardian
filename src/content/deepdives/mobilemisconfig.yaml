@@ -1,0 +1,356 @@
+meta:
+  id: mobilemisconfig
+  threatId: '15.8'
+  severity: High
+  color: '#9f1239'
+  colorRgb: 159,18,57
+  cwe: CWE-926
+  cvss: N/A (configuration-hygiene class, not a single scored CVE)
+  standard: OWASP Mobile Top 10 2024 (M8)
+hero:
+  titleMain: 'Security '
+  titleGrad: Misconfiguration
+  titleTail: ' (Mobile)'
+  topbar: Security Misconfiguration (OWASP Mobile Top 10 2024, M8)
+  lead:
+    en: 'All three independent research passes converged on the same nuanced framing for this category: new label, not new idea. Neither the 2014 nor 2016 OWASP Mobile Top 10 had a category named "Security Misconfiguration" -- but the concepts it now consolidates (exported components, permission hygiene, debug artifacts) were previously scattered mainly under 2016''s M1 ("Improper Platform Usage") and M10 ("Extraneous Functionality"). OWASP''s own page cites no CWE at all, confirmed directly by all three teams -- only a generic link to cwe.mitre.org. Notably, OWASP rates this category''s exploitability DIFFICULT (unlike the EASY rating on M1-M5 and M7) but both Technical and Business Impact SEVERE -- a distinctive profile: harder to pull off than most Mobile Security categories, but worse when it lands, which this deep-dive''s own severity honestly reflects.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zbiegły się na tym samym niuansowym ramowaniu tej kategorii: nowa etykieta, nie nowa idea. Ani lista OWASP Mobile Top 10 z 2014 ani z 2016 nie miała kategorii nazwanej "Security Misconfiguration" -- ale koncepcje które teraz konsoliduje (eksportowane komponenty, higiena uprawnień, artefakty debugowania) były wcześniej rozproszone głównie pod 2016 M1 ("Improper Platform Usage") i M10 ("Extraneous Functionality"). Własna strona OWASP nie cytuje żadnego CWE, potwierdzone bezpośrednio przez wszystkie trzy zespoły -- tylko generyczny link do cwe.mitre.org. Znacząco, OWASP klasyfikuje eksploatowalność tej kategorii jako DIFFICULT (w przeciwieństwie do oceny EASY na M1-M5 i M7) ale zarówno Wpływ Techniczny jak i Biznesowy jako SEVERE -- odrębny profil: trudniejsza do wykonania niż większość kategorii Mobile Security, ale gorsza gdy się uda, co własna ocena ważności tego deep-dive uczciwie odzwierciedla.'
+  metrics:
+  - k: SEVERE / SEVERE
+    v:
+      en: OWASP's own Technical + Business Impact rating
+      pl: Własna ocena Wpływu Technicznego + Biznesowego OWASP
+  - k: 3,046 apps
+    v:
+      en: leaked ~100M records via misconfigured Firebase backends (2018)
+      pl: wyciekło ~100 mln rekordów przez błędnie skonfigurowane backendy Firebase (2018)
+  - k: '36'
+    v:
+      en: malicious apps exploiting StrandHogg in the wild, targeting top-100 banking apps
+      pl: złośliwych apek wykorzystujących StrandHogg w praktyce, celujących w top-100 apek bankowych
+  - k: No CWE
+    v:
+      en: OWASP's own M8 page cites none
+      pl: Własna strona M8 OWASP nie cytuje żadnego
+  sources:
+  - label: OWASP Mobile Top 10 2024 — M8
+    url: https://owasp.org/www-project-mobile-top-10/2023-risks/m8-security-misconfiguration
+  - label: OWASP Mobile Top 10 2016 — M1 (conceptual predecessor)
+    url: https://owasp.org/www-project-mobile-top-10/2016-risks/m1-improper-platform-usage
+  - label: SecurityWeek — Firebase misconfiguration exposes 100M+ records
+    url: https://www.securityweek.com/thousands-android-apps-leak-data-due-firebase-misconfigurations/
+  - label: CWE-926 — Improper Export of Android Application Components
+    url: https://cwe.mitre.org/data/definitions/926.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: OWASP's own page lists five example scenarios; all three research passes independently confirmed the same core sub-techniques underneath them, each a single misconfigured flag or setting rather than a code-level bug.
+      pl: Własna strona OWASP wymienia pięć przykładowych scenariuszy; wszystkie trzy przejścia badawcze niezależnie potwierdziły te same podstawowe pod-techniki pod nimi, każda pojedyncza błędnie skonfigurowana flaga albo ustawienie zamiast błąd na poziomie kodu.
+    items:
+    - name: Exported components without protection (activities, services, receivers, providers)
+      sev: high
+      description:
+        en: 'A component left android:exported="true" (or implicitly exported pre-API 31 via an intent-filter) with no android:permission guard can be launched, queried, or sent data by ANY other app on the device. All three research passes rank this as the flagship sub-technique -- it is exactly what OWASP''s own scenarios #2 and #4 describe (exposed file content provider, internal activity exported).'
+        pl: 'Komponent pozostawiony jako android:exported="true" (albo niejawnie eksportowany pre-API 31 przez intent-filter) bez strażnika android:permission może zostać uruchomiony, odpytany, albo mu wysłane dane przez DOWOLNĄ inną apkę na urządzeniu. Wszystkie trzy przejścia badawcze klasyfikują to jako flagową pod-technikę -- to dokładnie to co opisują własne scenariusze OWASP #2 i #4 (wystawiony content provider plików, wyeksportowana wewnętrzna aktywność).'
+      payload: <activity android:name=".InternalDebugActivity" android:exported="true"/>  <!-- no permission guard -- any app can launch it -->
+    - name: Backup data exfiltration via allowBackup
+      sev: medium
+      description:
+        en: android:allowBackup="true" permits an app's private /data/data contents to leave the device via adb backup or Auto Backup. Real, but requires ADB/USB-debugging or physical access -- not a remote attack, and progressively restricted since Android 12 (API 31). Verified directly against a real disclosed case (cPanel WebDisk Android app, 2017) where a PassCode value was recoverable this way.
+        pl: android:allowBackup="true" pozwala by prywatna zawartość /data/data apki opuściła urządzenie przez adb backup albo Auto Backup. Prawdziwe, ale wymaga ADB/debugowania USB albo dostępu fizycznego -- nie atak zdalny, i stopniowo ograniczane od Android 12 (API 31). Zweryfikowane bezpośrednio względem prawdziwego ujawnionego przypadku (apka cPanel WebDisk Android, 2017) gdzie wartość PassCode była tak odzyskiwalna.
+      payload: adb backup -f loot.ab com.target.app && dd if=loot.ab bs=24 skip=1 | zlib-flate -uncompress > loot.tar
+    - name: Cleartext traffic and permissive Network Security Config
+      sev: medium
+      description:
+        en: android:usesCleartextTraffic="true" or a Network Security Config with cleartextTrafficPermitted="true" re-enables plaintext HTTP, which Android has blocked by default since API 28 (Android 9). The real risk today is developers deliberately re-enabling it (often for a debug/staging domain that ships to production), not the platform default.
+        pl: android:usesCleartextTraffic="true" albo Network Security Config z cleartextTrafficPermitted="true" ponownie włącza jawny tekst HTTP, który Android blokuje domyślnie od API 28 (Android 9). Prawdziwe ryzyko dzisiaj to deweloperzy celowo je ponownie włączający (często dla domeny debug/staging która trafia na produkcję), nie domyślne ustawienie platformy.
+      payload: <domain-config cleartextTrafficPermitted="true"><domain>staging-api.internal</domain></domain-config>  <!-- shipped to production by mistake -->
+    - name: Insecure WebView configuration and world-readable storage
+      sev: medium
+      description:
+        en: JavaScript enabled with no genuine need, file-access APIs left on, mixed-content mode set to always-allow, or shared preferences/files written with legacy world-readable modes -- each individually a single misconfigured flag, each expanding what another app or a loaded page can reach. WebView JS-bridge exposure specifically has its own dedicated catalog entry (15.11); here the focus is the broader configuration hygiene around it.
+        pl: JavaScript włączony bez prawdziwej potrzeby, API dostępu do plików pozostawione włączone, tryb mixed-content ustawiony na zawsze-zezwalaj, albo shared preferences/pliki zapisywane w przestarzałych trybach world-readable -- każde indywidualnie pojedyncza błędnie skonfigurowana flaga, każde rozszerzające to co inna apka albo załadowana strona może osiągnąć. Wystawienie mostka JS WebView ma własny dedykowany wpis katalogowy (15.11); tutaj fokus to szersza higiena konfiguracji wokół niego.
+      payload: 'webView.settings.javaScriptEnabled = true  // enabled for a purely static content page
+
+        webView.settings.allowFileAccess = true    // never actually needed by this screen'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: Every fix here is a manifest or config flag, not a rewrite -- which is exactly why OWASP rates this category's detectability EASY even while exploitation itself is rated DIFFICULT.
+      pl: Każda naprawa tutaj to flaga manifestu albo konfiguracji, nie przepisanie -- dokładnie dlatego OWASP klasyfikuje wykrywalność tej kategorii jako EASY nawet gdy sama eksploatacja jest klasyfikowana jako DIFFICULT.
+    languages:
+    - label: AndroidManifest.xml — exported component
+      lang: xml
+      vulnerable: '<!-- VULNERABLE: internal-only activity reachable by any installed app -->
+
+        <activity android:name=".AdminPanelActivity" android:exported="true"/>'
+      safe: "<!-- SAFE: not exported at all, since API 31 this must be explicit --\n     if it genuinely needs to be reachable by another specific app,\n     guard it with a signature-level permission instead of exported=\"true\" alone -->\n<activity android:name=\".AdminPanelActivity\" android:exported=\"false\"/>"
+    - label: AndroidManifest.xml — backup + cleartext
+      lang: xml
+      vulnerable: '<!-- VULNERABLE: private data extractable via adb backup, cleartext HTTP permitted -->
+
+        <application android:allowBackup="true" android:usesCleartextTraffic="true" ...>'
+      safe: "<!-- SAFE: backup disabled (or scoped via a custom BackupAgent),\n     cleartext left at the platform default (blocked since API 28) -->\n<application android:allowBackup=\"false\" ...>"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: All three research passes agreed detection is trivial (a manifest read); the real methodological question is proving actual reachability and impact, which is where dynamic tooling comes in.
+      pl: Wszystkie trzy przejścia badawcze zgodziły się że wykrycie jest trywialne (odczyt manifestu); prawdziwe pytanie metodyczne to udowodnienie faktycznej osiągalności i wpływu, co jest tam gdzie wkracza narzędzie dynamiczne.
+    steps:
+    - title:
+        en: Static manifest triage
+        pl: Statyczna klasyfikacja manifestu
+      description:
+        en: Decompile with apktool and read AndroidManifest.xml directly for android:exported, android:allowBackup, android:debuggable, android:usesCleartextTraffic, and every uses-permission entry -- this single file surfaces most of this category's findings in minutes, consistent with OWASP's own EASY detectability rating.
+        pl: Dekompiluj przez apktool i czytaj AndroidManifest.xml bezpośrednio pod kątem android:exported, android:allowBackup, android:debuggable, android:usesCleartextTraffic, i każdego wpisu uses-permission -- ten pojedynczy plik ujawnia większość ustaleń tej kategorii w minuty, zgodnie z własną oceną wykrywalności EASY OWASP.
+    - title:
+        en: Automated static scan with MobSF
+        pl: Zautomatyzowany skan statyczny przez MobSF
+      description:
+        en: MobSF automates the manifest triage above plus WebView configuration, world-readable file modes, and Network Security Config parsing in one pass -- the same signals confirmed by all three research passes as the tool's core detection set for this category.
+        pl: MobSF automatyzuje powyższą klasyfikację manifestu plus konfigurację WebView, tryby plików world-readable, i parsowanie Network Security Config w jednym przejściu -- te same sygnały potwierdzone przez wszystkie trzy przejścia badawcze jako podstawowy zestaw wykrywania narzędzia dla tej kategorii.
+    - title:
+        en: Dynamic exploitation with drozer
+        pl: Dynamiczna eksploatacja przez drozer
+      description:
+        en: A static exported="true" flag only proves POTENTIAL exposure; drozer's app.package.attacksurface module enumerates it, and its activity/provider/service modules actually invoke the component, query the content provider, or send the broadcast to confirm real reachability and impact -- the step that separates a theoretical finding from a proven one.
+        pl: Statyczna flaga exported="true" dowodzi tylko POTENCJALNEJ ekspozycji; moduł app.package.attacksurface drozer ją wylicza, a jego moduły activity/provider/service faktycznie wywołują komponent, odpytują content provider, albo wysyłają broadcast by potwierdzić prawdziwą osiągalność i wpływ -- krok który oddziela ustalenie teoretyczne od udowodnionego.
+    - title:
+        en: Backend/cloud config check
+        pl: Kontrola konfiguracji backendu/chmury
+      description:
+        en: Since this category's own OWASP definition covers "security settings, permissions, and controls" broadly, extend the review beyond the APK itself to any backend-as-a-service configuration bundled with it (e.g. Firebase rules) -- the largest real-world incidents in this category were backend misconfigurations discoverable directly from the client app's own bundled config.
+        pl: Ponieważ własna definicja OWASP tej kategorii pokrywa "ustawienia bezpieczeństwa, uprawnienia, i kontrole" szeroko, rozszerz przegląd poza sam APK na dowolną konfigurację backend-as-a-service dołączoną do niego (np. reguły Firebase) -- największe rzeczywiste incydenty w tej kategorii to błędne konfiguracje backendu odkrywalne bezpośrednio z własnej dołączonej konfiguracji apki klienckiej.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: All three research passes independently produced a near-identical ranking -- a rare, strong 3/3 convergence on both the order and the reasoning.
+      pl: Wszystkie trzy przejścia badawcze niezależnie wyprodukowały niemal identyczny ranking -- rzadka, silna zbieżność 3/3 zarówno co do kolejności jak i uzasadnienia.
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: Explicit android:exported="false" + permission enforcement on any IPC surface
+        pl: Jawne android:exported="false" + egzekwowanie uprawnień na każdej powierzchni IPC
+      note:
+        en: 'The single highest-leverage fix: directly closes this category''s flagship attack surface. Reinforced structurally since Android 12 (API 31), where android:exported must be explicitly declared for any component with an intent-filter or the build fails -- reducing accidental implicit exports, though it does nothing about a component deliberately left exported without a permission guard.'
+        pl: 'Pojedyncza naprawa o najwyższej dźwigni: bezpośrednio zamyka flagową powierzchnię ataku tej kategorii. Wzmocnione strukturalnie od Android 12 (API 31), gdzie android:exported musi być jawnie zadeklarowane dla dowolnego komponentu z intent-filter albo build się nie powiedzie -- redukując przypadkowe niejawne eksporty, choć nic nie robi z komponentem celowo pozostawionym eksportowanym bez strażnika uprawnień.'
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: Principle of least privilege for permissions and IPC surface
+        pl: Zasada najmniejszego uprawnienia dla uprawnień i powierzchni IPC
+      note:
+        en: Request only what the app's actual feature set needs, and minimize the number of exported/deep-link entry points to begin with -- a structural reduction that shrinks every other risk in this category proportionally, rather than patching one flag at a time.
+        pl: Żądaj tylko tego czego faktycznie potrzebuje zestaw funkcji apki, i minimalizuj liczbę eksportowanych/deep-link punktów wejścia od samego początku -- strukturalna redukcja która proporcjonalnie zmniejsza każde inne ryzyko w tej kategorii, zamiast łatania jednej flagi na raz.
+    - rank: 3
+      eff: 65
+      kind: strong
+      label:
+        en: android:allowBackup="false" or a scoped custom BackupAgent
+        pl: android:allowBackup="false" albo dedykowany niestandardowy BackupAgent
+      note:
+        en: 'Closes the classic adb-backup exfiltration path. Real caveat, confirmed across research passes: this requires ADB/USB-debugging or physical device access, not a remote attack, and adb backup itself has been progressively restricted since Android 12 -- genuinely useful, but the risk is narrower today than older guides suggest.'
+        pl: 'Zamyka klasyczną ścieżkę eksfiltracji adb-backup. Prawdziwe zastrzeżenie, potwierdzone w przejściach badawczych: to wymaga ADB/debugowania USB albo dostępu fizycznego do urządzenia, nie atak zdalny, a sam adb backup jest stopniowo ograniczany od Android 12 -- naprawdę użyteczne, ale ryzyko jest dzisiaj węższe niż sugerują starsze przewodniki.'
+    - rank: 4
+      eff: 60
+      kind: strong
+      label:
+        en: Network Security Config disabling cleartext
+        pl: Network Security Config wyłączający cleartext
+      note:
+        en: cleartextTrafficPermitted="false", scoped per-domain, with no debug-only exceptions leaking into the release build. Since Android 9 (API 28) blocks cleartext by default, this control's main value today is preventing developers from deliberately re-enabling it, not fighting the platform default.
+        pl: cleartextTrafficPermitted="false", ograniczone per-domena, bez wyjątków tylko-debug wyciekających do builda release. Ponieważ Android 9 (API 28) blokuje cleartext domyślnie, główna wartość tej kontroli dzisiaj to zapobieganie celowemu ponownemu włączeniu go przez deweloperów, nie walka z domyślnym ustawieniem platformy.
+    - rank: 5
+      eff: 50
+      kind: weak
+      label:
+        en: WebView hardening + stripping verbose logging from release builds
+        pl: Utwardzanie WebView + usuwanie szczegółowego logowania z buildów release
+      note:
+        en: Disable JavaScript/file-access unless genuinely needed, block mixed content, and strip Log calls/debug artifacts via ProGuard/R8. Real hygiene, but narrower in scope than the top controls -- each closes one specific channel rather than an entire class of exposure.
+        pl: Wyłącz JavaScript/dostęp do plików chyba że naprawdę potrzebne, zablokuj mixed content, i usuń wywołania Log/artefakty debugowania przez ProGuard/R8. Prawdziwa higiena, ale węższa w zakresie niż główne kontrole -- każda zamyka jeden konkretny kanał zamiast całej klasy ekspozycji.
+    - rank: 6
+      eff: 40
+      kind: weak
+      label:
+        en: Automated configuration-drift scanning in CI/CD
+        pl: Zautomatyzowane skanowanie dryfu konfiguracji w CI/CD
+      note:
+        en: Running MobSF/lint/QARK on every build catches a regression (a dependency silently re-enabling an exported receiver, or allowBackup flipping back to true) before it ships. Detective rather than preventive on its own, but the control that keeps every fix above from silently rotting.
+        pl: Uruchamianie MobSF/lint/QARK przy każdym buildzie wychwytuje regresję (zależność po cichu ponownie włączająca eksportowany receiver, albo allowBackup wracające do true) zanim zostanie wydane. Detektywistyczne zamiast prewencyjne samo w sobie, ale kontrola która utrzymuje każdą powyższą naprawę przed cichym gniciem.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Fitting OWASP's own SEVERE/SEVERE impact rating, the largest real incidents in this category involve tens of millions of records, discovered because the client app itself shipped a misconfigured backend connection -- not because of a single clever exploit.
+      pl: Pasująco do własnej oceny wpływu SEVERE/SEVERE OWASP, największe rzeczywiste incydenty w tej kategorii dotyczą dziesiątek milionów rekordów, odkryte ponieważ sama apka kliencka wysłała błędnie skonfigurowane połączenie z backendem -- nie z powodu pojedynczego sprytnego eksploita.
+    items:
+    - org: Misconfigured Firebase mobile backends (Appthority "HospitalGown" report)
+      year: 2018
+      impact: 3,046 apps (2,446 Android + 600 iOS) writing to 2,271 misconfigured Firebase databases
+      cost: ~113 GB / 100+ million records exposed, including 2.6M plaintext passwords and 4M+ PHI records; affected Android apps had 620M+ combined Play installs
+      description:
+        en: 'Confirmed independently by two of three research passes with matching figures: Appthority''s Q2 2018 report found thousands of mobile apps configured with no authentication on their Firebase backend, exposing passwords, health records, financial data, and GPS logs at massive scale -- the clearest illustration of this deep-dive''s own framing that OWASP''s "security settings, permissions, and controls" scope extends beyond the APK to the backend config it ships bundled with.'
+        pl: 'Potwierdzone niezależnie przez dwa z trzech przejść badawczych z pasującymi liczbami: raport Appthority Q2 2018 znalazł tysiące apek mobilnych skonfigurowanych bez uwierzytelniania na swoim backendzie Firebase, wystawiając hasła, dokumentację medyczną, dane finansowe, i logi GPS w masowej skali -- najczystsza ilustracja własnego ramowania tego deep-dive że zakres "ustawień bezpieczeństwa, uprawnień, i kontroli" OWASP rozciąga się poza APK na konfigurację backendu wysyłaną razem z nim.'
+    - org: StrandHogg task-hijacking (original, 1.0)
+      year: 2019
+      impact: 36 malicious apps found actively exploiting it in the wild
+      cost: Capable of targeting 60 of the top 100 most-downloaded banking apps for credential theft
+      description:
+        en: 'Confirmed identically by two of three research passes with matching figures, sourced to Promon''s own disclosure. Root cause is a manifest configuration weakness (taskAffinity/allowTaskReparenting/launchMode abuse) letting a malicious app disguise itself as a legitimate one in the task switcher -- a genuine configuration-hygiene issue, not a code-level bug. Important distinction verified by the third research pass: this in-the-wild exploitation figure belongs specifically to the ORIGINAL StrandHogg; Promon''s own report states no confirmed in-the-wild exploitation exists for the later OS-level StrandHogg 2.0 (CVE-2020-0096) -- a nuance worth stating explicitly rather than conflating the two.'
+        pl: 'Potwierdzone identycznie przez dwa z trzech przejść badawczych z pasującymi liczbami, źródłowane do własnego ujawnienia Promon. Pierwotna przyczyna to słabość konfiguracji manifestu (nadużycie taskAffinity/allowTaskReparenting/launchMode) pozwalająca złośliwej apce zamaskować się jako legalna w przełączniku zadań -- prawdziwa kwestia higieny konfiguracji, nie błąd na poziomie kodu. Ważne rozróżnienie zweryfikowane przez trzecie przejście badawcze: ta liczba eksploatacji w praktyce należy konkretnie do ORYGINALNEGO StrandHogg; własny raport Promon stwierdza że nie istnieje potwierdzona eksploatacja w praktyce dla późniejszego StrandHogg 2.0 na poziomie systemu (CVE-2020-0096) -- niuans wart jawnego stwierdzenia zamiast łączenia obu.'
+    - org: CVE-2023-36351 — Viatom ViHealth for Android
+      year: 2023
+      impact: CVSS 3.1 score 7.8 (High)
+      cost: Remote code execution via an improperly exported WebView-hosting activity
+      description:
+        en: 'Verified directly on NVD as the cleanest single, named, currently-active CVE illustrating this category''s flagship sub-technique: an exported activity (com.viatom.baselib.mvvm.webWebViewActivity) reachable by any other installed app. No research pass could verify a comparably clean exported-component CVE in a top-tier, household-name app -- stated honestly rather than substituting a less precise example (several superficially similar CVEs, like CVE-2022-30746, turned out on inspection to be WebView JS-bridge issues, not core export misconfiguration).'
+        pl: 'Zweryfikowane bezpośrednio na NVD jako najczystsze pojedyncze, nazwane, aktualnie aktywne CVE ilustrujące flagową pod-technikę tej kategorii: eksportowana aktywność (com.viatom.baselib.mvvm.webWebViewActivity) osiągalna przez dowolną inną zainstalowaną apkę. Żadne przejście badawcze nie mogło zweryfikować porównywalnie czystego CVE eksportowanego komponentu w apce znanej marki najwyższej klasy -- stwierdzone uczciwie zamiast podstawiania mniej precyzyjnego przykładu (kilka powierzchownie podobnych CVE, jak CVE-2022-30746, okazało się przy inspekcji być kwestiami mostka JS WebView, nie podstawową błędną konfiguracją eksportu).'
+    inlineSources:
+    - label: SecurityWeek — Firebase misconfiguration exposes 100M+ records
+      url: https://www.securityweek.com/thousands-android-apps-leak-data-due-firebase-misconfigurations/
+    - label: Promon — The StrandHogg vulnerability
+      url: https://promon.io/security-news/the-strandhogg-vulnerability
+    - label: NVD — CVE-2023-36351
+      url: https://nvd.nist.gov/vuln/detail/CVE-2023-36351
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on the same core toolchain, matching this category's own OWASP-stated EASY detectability rating.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tym samym podstawowym łańcuchu narzędzi, pasującym do własnej deklarowanej przez OWASP oceny wykrywalności EASY tej kategorii.
+    sast:
+    - - apktool + manual manifest analysis
+      - Decompile and read AndroidManifest.xml directly for android:exported, android:allowBackup, android:debuggable, android:usesCleartextTraffic, and the full uses-permission list -- the baseline check every other tool below automates
+    - - MobSF (Mobile Security Framework)
+      - Automates the manifest triage plus WebView configuration, world-readable file modes, and Network Security Config parsing in a single static+dynamic scan
+    - - QARK (Quick Android Review Kit)
+      - Developer-oriented static scanner flagging exported components without permissions, insecure WebView settings, and manifest misconfigurations, with PoC exploit generation for confirmed findings
+    dast:
+    - - drozer
+      - 'The canonical dynamic tool for this category: its app.package.attacksurface module enumerates exported components, and its activity/provider/service modules actually invoke them, query content providers, and send crafted intents/broadcasts -- proving real reachability rather than just flagging a static exported="true"'
+    - - adb backup
+      - Directly verifies allowBackup exposure by attempting to extract the app's private data -- the ground-truth test for that specific sub-technique
+    note:
+      en: <strong>Key signal:</strong> a static exported="true" flag only proves potential exposure. Since exploitability here is rated DIFFICULT by OWASP itself (not EASY, unlike most Mobile Security categories), the dynamic step with drozer -- actually invoking the component and observing what data or functionality it yields -- is what separates a real finding from a theoretical one.
+      pl: <strong>Kluczowy sygnał:</strong> statyczna flaga exported="true" dowodzi tylko potencjalnej ekspozycji. Ponieważ eksploatowalność tutaj jest klasyfikowana przez sam OWASP jako DIFFICULT (nie EASY, w przeciwieństwie do większości kategorii Mobile Security), krok dynamiczny z drozer -- faktyczne wywołanie komponentu i obserwacja jakie dane albo funkcjonalność zwraca -- to co oddziela prawdziwe ustalenie od teoretycznego.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'All three research passes converged on the same honest finding: OWASP''s own M8 page cites no CWE at all, so any mapping here is community best-fit, explicitly stated as such.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym samym uczciwym ustaleniu: własna strona M8 OWASP nie cytuje żadnego CWE, więc dowolne mapowanie tutaj jest najlepszym dopasowaniem społeczności, jawnie stwierdzonym jako takie.'
+    items:
+    - std: CWE (MITRE) — community best-fit, not OWASP-cited
+      items:
+      - CWE-926 — Improper Export of Android Application Components (primary). Verified at MITRE as the tightest fit for the flagship exported-component sub-technique; a child of CWE-285 (Improper Authorization).
+      - CWE-276 — Incorrect Default Permissions (secondary). Good fit for insecure-default and world-readable-storage scenarios; does not cover exported components or cleartext.
+      - CWE-16 — Configuration. The most literal name-match, but flagged by multiple research passes as a broad "Category" node that MITRE discourages using as a precise mapping target -- included here as a thematic label only, not a recommended mapping.
+      - CWE-919 — Weaknesses in Mobile Applications. Umbrella-level only, too broad to be a precise mapping on its own.
+    - std: OWASP
+      items:
+      - 'Mobile Top 10 2024 — M8: Security Misconfiguration. Verified directly: Exploitability DIFFICULT, Prevalence COMMON, Detectability EASY, Technical Impact SEVERE, Business Impact SEVERE. A newly-named category in 2024 (no direct 2014/2016 predecessor of this name), though the underlying concepts were previously scattered mainly under 2016''s M1 (Improper Platform Usage) and M10 (Extraneous Functionality) -- consolidation, not a wholly new problem.'
+      - 'OWASP MASVS-PLATFORM (exported components, IPC, WebView), MASVS-STORAGE (allowBackup), and MASVS-NETWORK (cleartext traffic) are the three control groups this category spans, per all three research passes. Confirmed MASTG test IDs: MASTG-TEST-0029 (Sensitive Functionality Exposure Through IPC), MASTG-TEST-0009 (Testing Backups for Sensitive Data), MASTG-TEST-0235 (Cleartext Traffic Configurations), MASTG-TEST-0032 (WebView Protocol Handlers) -- flagged independently by all three research passes as subject to MASTG''s ongoing test-ID renumbering; verify against the current MASTG release before citing a specific ID in an audit.'
+    inlineSources:
+    - label: OWASP Mobile Top 10 2024 — M8
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m8-security-misconfiguration
+    - label: OWASP MASVS-PLATFORM
+      url: https://mas.owasp.org/checklists/MASVS-PLATFORM/
+    - label: CWE-926 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/926.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If a security-misconfiguration finding (exported component, backup leak, misconfigured backend) is confirmed in production, work this list top to bottom.
+      pl: Po potwierdzeniu ustalenia błędnej konfiguracji bezpieczeństwa (eksportowany komponent, wyciek backupu, błędnie skonfigurowany backend) na produkcji, przejdź tę listę od góry.
+    steps:
+    - en: Confirm real reachability, not just the static flag -- use drozer (or the adb backup command for allowBackup) to prove what data or functionality is actually exposed, matching this deep-dive's own methodology
+      pl: Potwierdź prawdziwą osiągalność, nie tylko statyczną flagę -- użyj drozer (albo komendy adb backup dla allowBackup) by udowodnić jakie dane albo funkcjonalność są faktycznie wystawione, zgodnie z własną metodyką tego deep-dive
+    - en: If the misconfiguration extends to a bundled backend-as-a-service config (Firebase or similar), audit and lock down the backend rules directly -- the largest real incidents in this category were backend, not just client-side, exposures
+      pl: Jeśli błędna konfiguracja rozciąga się na dołączoną konfigurację backend-as-a-service (Firebase albo podobne), przeaudytuj i zablokuj reguły backendu bezpośrednio -- największe rzeczywiste incydenty w tej kategorii to ekspozycje backendu, nie tylko po stronie klienta
+    - en: Ship the specific manifest/config fix (exported="false", allowBackup="false", cleartext disabled, WebView hardened) matching the top-ranked defense for the confirmed finding
+      pl: Wydaj konkretną naprawę manifestu/konfiguracji (exported="false", allowBackup="false", cleartext wyłączony, WebView utwardzony) pasującą do obrony z najwyższą rangą dla potwierdzonego ustalenia
+    - en: Add the specific check to CI/CD configuration-drift scanning so the same flag cannot silently regress in a future release
+      pl: Dodaj konkretną kontrolę do skanowania dryfu konfiguracji CI/CD by ta sama flaga nie mogła po cichu zregresować w przyszłym wydaniu
+    - en: If real user data was exposed (not just a theoretical finding), assess notification obligations per applicable regulation, consistent with this catalog's privacy-controls entry (15.6)
+      pl: Jeśli prawdziwe dane użytkownika zostały wystawione (nie tylko teoretyczne ustalenie), oceń obowiązki powiadomienia zgodnie z obowiązującą regulacją, spójnie z wpisem kontroli prywatności tego katalogu (15.6)
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP Mobile Top 10 2024 — M8
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m8-security-misconfiguration
+    - label: OWASP Mobile Top 10 2016 — M1 (conceptual predecessor)
+      url: https://owasp.org/www-project-mobile-top-10/2016-risks/m1-improper-platform-usage
+    - label: OWASP MASVS-PLATFORM
+      url: https://mas.owasp.org/checklists/MASVS-PLATFORM/
+    - label: CWE-926 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/926.html
+    - label: CWE-276 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/276.html
+    - label: SecurityWeek — Firebase misconfiguration exposes 100M+ records
+      url: https://www.securityweek.com/thousands-android-apps-leak-data-due-firebase-misconfigurations/
+    - label: Promon — The StrandHogg vulnerability
+      url: https://promon.io/security-news/the-strandhogg-vulnerability
+    - label: NVD — CVE-2023-36351
+      url: https://nvd.nist.gov/vuln/detail/CVE-2023-36351

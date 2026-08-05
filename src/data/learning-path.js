@@ -41,6 +41,7 @@ export const LEARNING_PATH = [
   '15.5', // Insecure Communication (Mobile)
   '15.6', // Inadequate Privacy Controls (Mobile)
   '15.7', // Insufficient Binary Protections (Mobile)
+  '15.8', // Security Misconfiguration (Mobile)
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

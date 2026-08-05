@@ -1,0 +1,118 @@
+threatId: '15.8'
+title:
+  en: Security Misconfiguration (Mobile) — knowledge check
+  pl: Security Misconfiguration (Mobile) — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: All three independent research passes converged on the same framing for OWASP Mobile Top 10 2024's M8 (Security Misconfiguration). Which best describes it?
+    pl: Wszystkie trzy niezależne przejścia badawcze zbiegły się na tym samym ramowaniu M8 OWASP Mobile Top 10 2024 (Security Misconfiguration). Które najlepiej to opisuje?
+  choices:
+  - id: a
+    label:
+      en: A new label, not a new idea -- no 2014/2016 category was named this, but the underlying concepts (exported components, permission hygiene) were previously scattered mainly under 2016's M1 "Improper Platform Usage"
+      pl: Nowa etykieta, nie nowa idea -- żadna kategoria z 2014/2016 nie nazywała się tak, ale leżące u podstaw koncepcje (eksportowane komponenty, higiena uprawnień) były wcześniej rozproszone głównie pod 2016 M1 "Improper Platform Usage"
+  - id: b
+    label:
+      en: A direct rename of 2016's M8 "Code Tampering" with no change in scope
+      pl: Bezpośrednia zmiana nazwy 2016 M8 "Code Tampering" bez zmiany zakresu
+  - id: c
+    label:
+      en: A completely novel concern with zero conceptual overlap with any prior OWASP Mobile Top 10 category
+      pl: Całkowicie nowatorska kwestia z zerowym pokrywaniem się koncepcyjnym z żadną wcześniejszą kategorią OWASP Mobile Top 10
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three teams independently checked the 2014 and 2016 archives and reached the same conclusion. Note this is a genuinely different pattern than M7 (which had a clean, direct 2014 predecessor, "M10: Lack of Binary Protections") -- M8 is newly-named with only conceptual overlap, not a rename.'
+    pl: 'Wszystkie trzy zespoły niezależnie sprawdziły archiwa z 2014 i 2016 i doszły do tego samego wniosku. Zauważ że to naprawdę inny wzorzec niż M7 (który miał czystego, bezpośredniego poprzednika z 2014, "M10: Lack of Binary Protections") -- M8 jest nowo nazwana z tylko koncepcyjnym pokrywaniem się, nie zmianą nazwy.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: OWASP rates M8's Exploitability as EASY, the same rating used for most other Mobile Security categories in this catalog. True or false?
+    pl: OWASP klasyfikuje Eksploatowalność M8 jako EASY, tę samą ocenę używaną dla większości innych kategorii Mobile Security w tym katalogu. Prawda czy fałsz?
+  isVulnerable: false
+  cwe: CWE-926
+  explanation:
+    en: 'False -- confirmed identically by all three research passes: OWASP rates M8''s Exploitability as DIFFICULT, distinct from the EASY rating on M1-M5 and M7. Its Technical and Business Impact are both rated SEVERE, however -- a distinctive profile of harder-to-pull-off but worse-when-it-lands, which this deep-dive''s own severity rating reflects.'
+    pl: 'Fałsz -- potwierdzone identycznie przez wszystkie trzy przejścia badawcze: OWASP klasyfikuje Eksploatowalność M8 jako DIFFICULT, odrębnie od oceny EASY na M1-M5 i M7. Jej Wpływ Techniczny i Biznesowy są jednak oba klasyfikowane jako SEVERE -- odrębny profil trudniejsze-do-wykonania-ale-gorsze-gdy-się-uda, co odzwierciedla własna ocena ważności tego deep-dive.'
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: What was the actual scope of the 2018 Appthority-reported Firebase misconfiguration incident, verified independently by two of the three research teams with matching figures?
+    pl: Jaki był faktyczny zakres incydentu błędnej konfiguracji Firebase zgłoszonego przez Appthority w 2018, zweryfikowany niezależnie przez dwa z trzech zespołów badawczych z pasującymi liczbami?
+  choices:
+  - id: a
+    label:
+      en: 3,046 apps writing to 2,271 misconfigured Firebase databases, exposing ~100 million records including plaintext passwords and PHI
+      pl: 3046 apek zapisujących do 2271 błędnie skonfigurowanych baz danych Firebase, wystawiając ~100 milionów rekordów włącznie z hasłami w jawnym tekście i PHI
+  - id: b
+    label:
+      en: A single app leaked approximately 500 user records due to a forgotten debug endpoint
+      pl: Pojedyncza apka wyciekła około 500 rekordów użytkowników z powodu zapomnianego endpointu debug
+  - id: c
+    label:
+      en: The incident involved only iOS apps and was limited to Apple's CloudKit backend, not Firebase
+      pl: Incydent dotyczył tylko apek iOS i był ograniczony do backendu CloudKit Apple, nie Firebase
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Confirmed independently by two of the three teams with matching figures, and both Android and iOS apps were affected (2,446 Android + 600 iOS). This is the clearest real-world illustration of this deep-dive's own point that OWASP's M8 scope extends beyond the APK's manifest to any backend configuration the client app ships bundled with.
+    pl: Potwierdzone niezależnie przez dwa z trzech zespołów z pasującymi liczbami, i dotknięte zostały zarówno apki Android jak i iOS (2446 Android + 600 iOS). To najczystsza ilustracja z praktyki własnego punktu tego deep-dive że zakres M8 OWASP rozciąga się poza manifest APK na dowolną konfigurację backendu wysyłaną przez apkę kliencką razem z nim.
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A security researcher claims a mobile app's android:allowBackup="true" flag means an attacker anywhere on the internet can remotely extract the app's private data. Is this an accurate description of the actual risk, per this deep-dive's cross-team-verified findings?
+    pl: Badacz bezpieczeństwa twierdzi że flaga android:allowBackup="true" apki mobilnej oznacza że atakujący gdziekolwiek w internecie może zdalnie wyodrębnić prywatne dane apki. Czy to dokładny opis faktycznego ryzyka, zgodnie z ustaleniami tego deep-dive zweryfikowanymi międzyzespołowo?
+  isVulnerable: false
+  cwe: CWE-276
+  explanation:
+    en: No -- this overstates the risk. Multiple research passes confirmed exploiting allowBackup requires ADB/USB-debugging access or physical possession of the device, not a remote attack, and adb backup itself has been progressively restricted since Android 12. The risk is real (verified against a genuine disclosed case, the cPanel WebDisk Android app), but it's a physical/local-access threat model, not a remote one -- a distinction this deep-dive states explicitly to avoid overstating the danger.
+    pl: Nie -- to zawyża ryzyko. Wiele przejść badawczych potwierdziło że eksploatacja allowBackup wymaga dostępu ADB/debugowania USB albo fizycznego posiadania urządzenia, nie ataku zdalnego, a sam adb backup jest stopniowo ograniczany od Android 12. Ryzyko jest prawdziwe (zweryfikowane względem faktycznego ujawnionego przypadku, apki cPanel WebDisk Android), ale to model zagrożenia fizyczny/lokalnego dostępu, nie zdalny -- rozróżnienie które ten deep-dive jawnie stwierdza by uniknąć zawyżenia niebezpieczeństwa.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: What important distinction did one research pass verify directly against Promon's own disclosure, regarding the 36-apps-exploiting-StrandHogg-in-the-wild figure?
+    pl: Jakie ważne rozróżnienie zweryfikowało jedno przejście badawcze bezpośrednio względem własnego ujawnienia Promon, dotyczące liczby 36 apek eksploatujących StrandHogg w praktyce?
+  choices:
+  - id: a
+    label:
+      en: That figure belongs specifically to the original StrandHogg (1.0); Promon's own report states no confirmed in-the-wild exploitation exists for the later OS-level StrandHogg 2.0 (CVE-2020-0096)
+      pl: Ta liczba należy konkretnie do oryginalnego StrandHogg (1.0); własny raport Promon stwierdza że nie istnieje potwierdzona eksploatacja w praktyce dla późniejszego StrandHogg 2.0 na poziomie systemu (CVE-2020-0096)
+  - id: b
+    label:
+      en: The 36-apps figure was later retracted by Promon as inaccurate
+      pl: Liczba 36 apek została później wycofana przez Promon jako niedokładna
+  - id: c
+    label:
+      en: Both StrandHogg 1.0 and 2.0 were confirmed exploited by the same 36 apps
+      pl: Zarówno StrandHogg 1.0 jak i 2.0 zostały potwierdzone jako eksploatowane przez te same 36 apek
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is exactly the kind of distinction that makes independent, blind multi-team research valuable: two teams reported the 36-apps figure without qualification, and a third caught, by checking Promon''s own report directly, that it applies only to the original StrandHogg and should not be conflated with the later CVE-2020-0096 variant, which has no confirmed in-the-wild exploitation.'
+    pl: 'To dokładnie rodzaj rozróżnienia które czyni niezależne, ślepe badanie wielozespołowe wartościowym: dwa zespoły zgłosiły liczbę 36 apek bez zastrzeżenia, a trzeci wychwycił, sprawdzając bezpośrednio własny raport Promon, że dotyczy ona tylko oryginalnego StrandHogg i nie powinna być łączona z późniejszym wariantem CVE-2020-0096, który nie ma potwierdzonej eksploatacji w praktyce.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A team needs one activity in their app to remain reachable by a specific partner app they control, while keeping it closed to every other app on the device. Which manifest configuration actually achieves this, per this deep-dive's top-ranked defense?
+    pl: Zespół potrzebuje by jedna aktywność w ich apce pozostała osiągalna dla konkretnej apki partnerskiej którą kontrolują, przy jednoczesnym zamknięciu jej dla każdej innej apki na urządzeniu. Która konfiguracja manifestu faktycznie to osiąga, zgodnie z główną obroną tego deep-dive?
+  variants:
+  - id: v1
+    lang: xml
+    code: '<activity android:name=".PartnerSyncActivity" android:exported="true"/>
+
+      <!-- no permission guard -- reachable by any installed app -->'
+  - id: v2
+    lang: xml
+    code: '<activity android:name=".PartnerSyncActivity" android:exported="false"/>
+
+      <!-- unreachable by any other app at all, including the intended partner -->'
+  - id: v3
+    lang: xml
+    code: "<permission android:name=\"com.example.PARTNER_SYNC\" android:protectionLevel=\"signature\"/>\n<activity android:name=\".PartnerSyncActivity\"\n    android:exported=\"true\"\n    android:permission=\"com.example.PARTNER_SYNC\"/>\n<!-- partner app declares <uses-permission android:name=\"com.example.PARTNER_SYNC\"/>\n     and is signed with a certificate that matches, per signature-level protection -->"
+  correctVariantId: v3
+  explanation:
+    en: v3 exports the component but guards it with a signature-level permission, which only apps signed with a matching certificate can hold -- exactly the "exported=false with permission enforcement" pattern this deep-dive ranks as its top defense, applied to the case where a component genuinely does need to be reachable by one specific other app. v1 exports it to everyone with no guard at all, the flagship attack surface this category describes. v2 is safe but doesn't solve the stated requirement -- it blocks the intended partner app too, since exported="false" makes the component unreachable by any external app, partner or attacker alike.
+    pl: v3 eksportuje komponent ale strzeże go uprawnieniem na poziomie podpisu, które może posiadać tylko apka podpisana pasującym certyfikatem -- dokładnie wzorzec "exported=false z egzekwowaniem uprawnień" który ten deep-dive klasyfikuje jako swoją główną obronę, zastosowany do przypadku gdzie komponent naprawdę musi być osiągalny dla jednej konkretnej innej apki. v1 eksportuje go dla każdego bez żadnego strażnika, flagowa powierzchnia ataku którą opisuje ta kategoria. v2 jest bezpieczne ale nie rozwiązuje podanego wymogu -- blokuje też zamierzoną apkę partnerską, ponieważ exported="false" czyni komponent nieosiągalnym dla dowolnej apki zewnętrznej, partnerskiej czy atakującej.

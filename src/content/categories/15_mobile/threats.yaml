@@ -133,21 +133,22 @@ threats:
 - id: '15.8'
   name: Security Misconfiguration (Mobile)
   severity: High
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
-  - CWE-16
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Insecure default settings, debuggable builds, permissive network security config, or over-broad permissions that weaken the app''s security posture on the device.
+  - CWE-926
+  - CWE-276
+  desc: 'Niezabezpieczone eksportowane komponenty (aktywności/serwisy/receivery/providery), android:allowBackup="true", cleartext dozwolony w Network Security Config, albo nadmierne uprawnienia osłabiające postawę bezpieczeństwa apki na urządzeniu. OWASP nie cytuje żadnego CWE dla tej kategorii -- zweryfikowane bezpośrednio. Zweryfikowany rzeczywisty incydent: 3046 apek wyciekło ~100 mln rekordów przez błędnie skonfigurowane backendy Firebase (2018).
 
     '
-  desc_en: Insecure default settings, debuggable builds, permissive network security config, or over-broad permissions that weaken the app's security posture on the device.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'Insecure default settings, debuggable builds, permissive network security config, or over-broad permissions that weaken the app''s security posture on the device. Includes unprotected exported components (activities/services/receivers/providers), android:allowBackup="true", and cleartext-permitted network config. OWASP cites no CWE for this category -- verified directly. Verified real incident: 3,046 apps leaked ~100M records via misconfigured Firebase backends (2018).'
+  lang: xml
+  vuln: '<!-- VULNERABLE: internal-only activity reachable by any installed app -->
+
+    <activity android:name=".AdminPanelActivity" android:exported="true"/>
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
+  safe: "<!-- SAFE: not exported -- since API 31 this must be explicit;\n     guard with a signature-level permission if it genuinely needs\n     to be reachable by one specific other app -->\n<activity android:name=\".AdminPanelActivity\" android:exported=\"false\"/>\n"
   note_en: 'Source: OWASP Mobile Top 10 2024, M8.'
 - id: '15.9'
   name: Insecure Data Storage
