@@ -152,20 +152,33 @@ threats:
   note_en: 'Source: OWASP Mobile Top 10 2024, M8.'
 - id: '15.9'
   name: Insecure Data Storage
-  severity: High
-  difficulty: Unknown
+  severity: Critical
+  difficulty: Easy
   confidence: POSSIBLE
   cwe:
   - CWE-312
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Sensitive data stored unencrypted in shared preferences, SQLite databases, plist files, external storage, logs, or caches — readable on rooted/jailbroken or backed-up devices.
+  - CWE-921
+  desc: 'Wrażliwe dane przechowywane bez szyfrowania w shared preferences, bazach SQLite, plikach plist, pamięci zewnętrznej, logach, albo cache -- odczytywalne na zrootowanych/jailbreakowanych albo zbackupowanych urządzeniach. Zweryfikowane rzeczywiste CVE: Starbucks iOS (CVE-2014-0647, hasła jawnym tekstem w logu awarii, ~10 mln pobrań) i Subway/ZippyYum (CVE-2013-6986, hasła w cache SQLite jawnym tekstem). Ta sama kategoria co M2 z list OWASP 2014/2016, tylko zdegradowana rangą do M9.
 
     '
-  desc_en: Sensitive data stored unencrypted in shared preferences, SQLite databases, plist files, external storage, logs, or caches — readable on rooted/jailbroken or backed-up devices.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'Sensitive data stored unencrypted in shared preferences, SQLite databases, plist files, external storage, logs, or caches — readable on rooted/jailbroken or backed-up devices. Verified real CVEs: Starbucks iOS (CVE-2014-0647, plaintext passwords in a crash log, ~10M downloads) and Subway/ZippyYum (CVE-2013-6986, passwords in a plaintext SQLite cache). Same category as OWASP''s 2014/2016 M2, just demoted in rank to M9.'
+  lang: kotlin
+  vuln: '// VULNERABLE: plaintext in SharedPreferences, recoverable from any
+
+    // rooted device, backup, or forensic extraction
+
+    val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+
+    prefs.edit().putString("auth_token", token).apply()
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  safe: '// SAFE: token stored encrypted with a key held in Android Keystore
+
+    // (hardware-backed where the device supports it)
+
+    val encryptedToken = KeystoreCipher.encrypt("app_token_key", token)
+
+    prefs.edit().putString("auth_token_enc", encryptedToken).apply()
 
     '
   note_en: 'Source: OWASP Mobile Top 10 2024, M9. Related CWE-922 (insecure storage of sensitive information).'

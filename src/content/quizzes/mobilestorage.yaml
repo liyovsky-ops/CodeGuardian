@@ -1,0 +1,128 @@
+threatId: '15.9'
+title:
+  en: Insecure Data Storage (Mobile) — knowledge check
+  pl: Insecure Data Storage (Mobile) — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: All three independent research passes confirmed the same lineage fact about OWASP Mobile Top 10 2024's M9 (Insecure Data Storage). Which is accurate?
+    pl: Wszystkie trzy niezależne przejścia badawcze potwierdziły ten sam fakt rodowodu o M9 OWASP Mobile Top 10 2024 (Insecure Data Storage). Który jest dokładny?
+  choices:
+  - id: a
+    label:
+      en: 'It was named "M2: Insecure Data Storage" in BOTH the 2014 and 2016 lists, under the identical name, and was simply demoted from rank #2 to #9 in 2024'
+      pl: 'Było nazwane "M2: Insecure Data Storage" zarówno na liście z 2014 jak i 2016, pod identyczną nazwą, i zostało po prostu zdegradowane z rangi #2 do #9 w 2024'
+  - id: b
+    label:
+      en: It is a brand-new category introduced for the first time in 2024
+      pl: To zupełnie nowa kategoria wprowadzona po raz pierwszy w 2024
+  - id: c
+    label:
+      en: 'It replaces the unrelated 2016 category "M8: Code Tampering"'
+      pl: 'Zastępuje niezwiązaną kategorię 2016 "M8: Code Tampering"'
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Verified identically by all three teams checking the 2014 and 2016 OWASP archives directly. This is the cleanest lineage case among the Mobile Security entries built so far -- unlike M7 (renamed with partial overlap) or M8 (new label, scattered prior concepts), M9 kept its exact name and just dropped in rank as credential-specific concerns split off into the new M1.
+    pl: Zweryfikowane identycznie przez wszystkie trzy zespoły sprawdzające bezpośrednio archiwa OWASP z 2014 i 2016. To najczystszy przypadek rodowodu wśród dotychczas zbudowanych wpisów Mobile Security -- w przeciwieństwie do M7 (przemianowana z częściowym pokrywaniem) czy M8 (nowa etykieta, rozproszone wcześniejsze koncepcje), M9 zachowała dokładną nazwę i tylko spadła rangą gdy kwestie specyficzne dla poświadczeń oddzieliły się do nowej M1.
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: The 2014 CVE-2014-0647 (Starbucks iOS app) and CVE-2013-6986 (Subway/ZippyYum kiosk app) are both rated CVSS v2 2.1, which is categorized as "Low" severity. Does this low CVSS score mean these were minor, low-consequence issues?
+    pl: CVE-2014-0647 z 2014 (apka iOS Starbucks) i CVE-2013-6986 (apka kiosku Subway/ZippyYum) są oba klasyfikowane jako CVSS v2 2.1, co jest kategoryzowane jako ważność "Low". Czy ta niska ocena CVSS oznacza że były to drobne, mało konsekwentne problemy?
+  isVulnerable: false
+  cwe: CWE-312
+  explanation:
+    en: 'No -- both scores are low specifically because the attack vector is local/physical device access, which CVSS v2 scores conservatively, not because the consequence was minor. Starbucks exposed plaintext usernames, passwords, and GPS history for an app with ~10 million downloads; Subway exposed password elements directly from an unencrypted SQLite cache. All three research passes flagged this as an honest reminder: low CVSS does not mean low real-world consequence for this category, which OWASP itself rates SEVERE on both Technical and Business Impact.'
+    pl: 'Nie -- oba wyniki są niskie konkretnie ponieważ wektor ataku to lokalny/fizyczny dostęp do urządzenia, który CVSS v2 ocenia konserwatywnie, nie dlatego że konsekwencja była drobna. Starbucks ujawnił jawnym tekstem nazwy użytkowników, hasła, i historię GPS dla apki z ~10 milionami pobrań; Subway ujawnił elementy hasła bezpośrednio z nieszyfrowanego cache SQLite. Wszystkie trzy przejścia badawcze oflagowały to jako uczciwe przypomnienie: niski CVSS nie oznacza niskiej konsekwencji z praktyki dla tej kategorii, którą sam OWASP klasyfikuje jako SEVERE zarówno pod względem Wpływu Technicznego jak i Biznesowego.'
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: All three research teams independently flagged the exact same specific, dated correction about a widely-recommended Android storage library. What is it?
+    pl: Wszystkie trzy zespoły badawcze niezależnie oflagowały dokładnie tę samą konkretną, datowaną korekcję o szeroko rekomendowanej bibliotece przechowywania Android. Co to jest?
+  choices:
+  - id: a
+    label:
+      en: androidx.security:security-crypto (EncryptedSharedPreferences), long recommended as the standard wrapper for encrypted preferences, was deprecated by Google around 2024-2025 with no direct drop-in replacement
+      pl: androidx.security:security-crypto (EncryptedSharedPreferences), długo rekomendowane jako standardowe opakowanie dla zaszyfrowanych preferencji, zostało wycofane przez Google około 2024-2025 bez bezpośredniego zamiennika
+  - id: b
+    label:
+      en: SQLite itself was deprecated in favor of a new Android-only database format
+      pl: Sam SQLite został wycofany na rzecz nowego formatu bazy danych tylko dla Androida
+  - id: c
+    label:
+      en: Android Keystore was replaced entirely by a cloud-based key management service
+      pl: Android Keystore zostało całkowicie zastąpione przez usługę zarządzania kluczami opartą na chmurze
+  correctChoiceIds:
+  - a
+  explanation:
+    en: This deprecation is real and specifically dated by multiple research passes -- many current tutorials and guides still present EncryptedSharedPreferences as the go-to recommendation, which this deep-dive explicitly flags as stale advice. The underlying pattern (a Keystore-backed key plus manual encryption) remains sound even as the specific wrapper library's supported status changes -- a useful lesson that library recommendations need periodic re-verification, not just cryptographic patterns.
+    pl: To wycofanie jest prawdziwe i konkretnie datowane przez wiele przejść badawczych -- wiele aktualnych tutoriali i przewodników wciąż prezentuje EncryptedSharedPreferences jako podstawową rekomendację, co ten deep-dive jawnie oflagowuje jako nieaktualną poradę. Leżący u podstaw wzorzec (klucz wsparty Keystore plus ręczne szyfrowanie) pozostaje solidny nawet gdy zmienia się wspierany status konkretnej biblioteki opakowującej -- użyteczna lekcja że rekomendacje bibliotek wymagają okresowej ponownej weryfikacji, nie tylko wzorce kryptograficzne.
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: An iOS app stores an auth token in the Keychain with kSecAttrAccessibleAlways, reasoning that the app needs background access to the token even before the device is first unlocked. Is this accessibility attribute choice a real security weakness?
+    pl: Apka iOS przechowuje token uwierzytelniania w Keychain z kSecAttrAccessibleAlways, uzasadniając że apka potrzebuje dostępu w tle do tokenu nawet przed pierwszym odblokowaniem urządzenia. Czy ten wybór atrybutu dostępności jest prawdziwą słabością bezpieczeństwa?
+  isVulnerable: true
+  cwe: CWE-312
+  explanation:
+    en: Yes. kSecAttrAccessibleAlways makes the Keychain item readable even while the device is locked, with no passcode required -- confirmed as a real, documented weakness pattern across multiple research passes, and now deprecated by Apple in favor of options like kSecAttrAccessibleWhenUnlockedThisDeviceOnly or ...AfterFirstUnlockThisDeviceOnly for the legitimate background-access case. The correct fix is choosing the least-permissive accessibility class that still meets the app's actual functional need, not defaulting to the most permissive one for convenience.
+    pl: Tak. kSecAttrAccessibleAlways sprawia że element Keychain jest odczytywalny nawet gdy urządzenie jest zablokowane, bez wymaganego kodu dostępu -- potwierdzone jako prawdziwy, udokumentowany wzorzec słabości w wielu przejściach badawczych, i teraz wycofane przez Apple na rzecz opcji jak kSecAttrAccessibleWhenUnlockedThisDeviceOnly albo ...AfterFirstUnlockThisDeviceOnly dla uzasadnionego przypadku dostępu w tle. Poprawną naprawą jest wybór najmniej permisywnej klasy dostępności która wciąż spełnia faktyczną potrzebę funkcjonalną apki, nie domyślne ustawienie najbardziej permisywnej dla wygody.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: This deep-dive notes that the iOS app-switcher snapshot (the screen image cached to Library/Caches/Snapshots/ when an app is backgrounded) is sometimes wrongly dismissed. Why?
+    pl: Ten deep-dive zauważa że zrzut przełącznika apek iOS (obraz ekranu buforowany do Library/Caches/Snapshots/ gdy apka jest wysyłana do tła) jest czasem błędnie lekceważony. Dlaczego?
+  choices:
+  - id: a
+    label:
+      en: It's sometimes treated as "just an ephemeral thumbnail," but it's genuine on-disk data at rest -- a sensitive screen left unmasked leaks its full contents this way, even if every other storage control is correctly implemented
+      pl: Jest czasem traktowany jako "tylko efemeryczna miniatura", ale to prawdziwe dane na dysku w spoczynku -- wrażliwy ekran pozostawiony bez maskowania wycieka w ten sposób swoją pełną zawartość, nawet jeśli każda inna kontrola przechowywania jest poprawnie zaimplementowana
+  - id: b
+    label:
+      en: It only affects jailbroken devices and poses no risk on a standard, non-jailbroken iPhone
+      pl: Dotyczy tylko urządzeń jailbreak i nie stanowi ryzyka na standardowym, niejailbreakowanym iPhonie
+  - id: c
+    label:
+      en: Apple removed this feature entirely in recent iOS versions, so it's no longer a relevant concern
+      pl: Apple całkowicie usunęło tę funkcję w niedawnych wersjach iOS, więc nie jest to już istotna kwestia
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Confirmed across research passes: the OS genuinely writes a screenshot-quality image to disk for the app-switcher UI, independent of any other storage decision the app makes correctly. This is exactly why masking sensitive screens (Android FLAG_SECURE, iOS background blur overlay) is its own distinct defense layer in this deep-dive''s ranking, not something covered by encrypting a database or hardening a preferences file.'
+    pl: 'Potwierdzone w przejściach badawczych: system operacyjny naprawdę zapisuje obraz jakości zrzutu ekranu na dysk dla UI przełącznika apek, niezależnie od jakiejkolwiek innej decyzji przechowywania którą apka podejmuje poprawnie. To dokładnie dlaczego maskowanie wrażliwych ekranów (Android FLAG_SECURE, nakładka rozmycia w tle iOS) jest własną odrębną warstwą obrony w rankingu tego deep-dive, nie czymś pokrytym przez szyfrowanie bazy danych albo utwardzenie pliku preferencji.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A team needs to store a session token locally so the app works offline. Which approach best follows this deep-dive's top-ranked defenses (minimize where possible, then hardware-backed storage)?
+    pl: Zespół potrzebuje przechowywać token sesji lokalnie by apka działała offline. Które podejście najlepiej realizuje główne obrony tego deep-dive (minimalizacja gdzie możliwa, potem przechowywanie wsparte sprzętowo)?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: 'val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+
+      prefs.edit().putString("session_token", token).apply()
+
+      // plaintext, no expiry, never rotated'
+  - id: v2
+    lang: kotlin
+    code: 'val keyAlias = "session_key"
+
+      val encryptedToken = KeystoreCipher.encrypt(keyAlias, token)  // Keystore-backed key
+
+      prefs.edit().putString("session_token_enc", encryptedToken).apply()
+
+      // token is short-lived and refreshed from the server periodically'
+  - id: v3
+    lang: kotlin
+    code: 'val encoded = Base64.encodeToString(token.toByteArray(), Base64.DEFAULT)
+
+      prefs.edit().putString("session_token", encoded).apply()
+
+      // "encoded so it''s not readable in plain text"'
+  correctVariantId: v2
+  explanation:
+    en: 'v2 combines two of this deep-dive''s top defenses: the token is short-lived (approximating "don''t store what you don''t have to") and, for the portion that must persist offline, it''s encrypted with a key held in Android Keystore rather than stored as plain text. v1 is the exact plaintext-SharedPreferences pattern behind this category''s real incidents, made worse by never expiring. v3 is a classic confused defense: Base64 is encoding, not encryption -- trivially reversible by anyone who reads the stored string, and explicitly called out by MASTG as insecure despite "looking" obfuscated.'
+    pl: 'v2 łączy dwie główne obrony tego deep-dive: token jest krótkotrwały (przybliżając "nie przechowuj tego czego nie musisz") i, dla części która musi przetrwać offline, jest szyfrowany kluczem trzymanym w Android Keystore zamiast przechowywany jako zwykły tekst. v1 to dokładny wzorzec jawnego tekstu SharedPreferences stojący za prawdziwymi incydentami tej kategorii, pogorszony przez nigdy niewygasanie. v3 to klasyczna pomylona obrona: Base64 to kodowanie, nie szyfrowanie -- trywialnie odwracalne przez każdego kto odczyta przechowywany string, i jawnie wymienione przez MASTG jako niebezpieczne mimo że "wygląda" na zaobfuskowane.'

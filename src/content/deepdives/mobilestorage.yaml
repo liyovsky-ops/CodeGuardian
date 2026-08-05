@@ -1,0 +1,361 @@
+meta:
+  id: mobilestorage
+  threatId: '15.9'
+  severity: Critical
+  color: '#5b21b6'
+  colorRgb: 91,33,182
+  cwe: CWE-312
+  cvss: N/A (local-storage class -- underlying CVEs are commonly rated Low for a local attack vector despite severe real-world impact, see Incidents)
+  standard: OWASP Mobile Top 10 2024 (M9)
+hero:
+  titleMain: 'Insecure Data '
+  titleGrad: Storage
+  titleTail: ''
+  topbar: Insecure Data Storage (OWASP Mobile Top 10 2024, M9)
+  lead:
+    en: 'The cleanest lineage case in this catalog''s Mobile Security coverage: all three independent research passes confirmed identically that this is not a new or even a renamed category -- it was M2 "Insecure Data Storage" in BOTH the 2014 and 2016 OWASP Mobile Top 10 lists, under the exact same name, and was simply demoted in rank to M9 in the 2024 revision (credential-specific concerns split off into the new M1). OWASP itself rates this category''s Exploitability EASY alongside SEVERE Technical and Business Impact -- the most dangerous rating combination among M6-M9 in this catalog, and the reason this entry''s own severity is set at Critical. OWASP''s own M9 page cites no CWE at all, confirmed directly by all three teams. All three teams also independently converged on the exact same two flagship historical CVEs, an unusually strong level of cross-team corroboration, and on one sharply-dated myth correction: Android''s EncryptedSharedPreferences, still recommended by many current
+      guides, was deprecated by Google around 2024-2025.'
+    pl: 'Najczystszy przypadek rodowodu w pokryciu Mobile Security tego katalogu: wszystkie trzy niezależne przejścia badawcze potwierdziły identycznie że to nie jest nowa ani nawet przemianowana kategoria -- była M2 "Insecure Data Storage" zarówno na liście OWASP Mobile Top 10 z 2014 jak i 2016, pod dokładnie tą samą nazwą, i została po prostu zdegradowana rangą do M9 w rewizji 2024 (kwestie specyficzne dla poświadczeń oddzielone do nowej M1). Sam OWASP klasyfikuje Eksploatowalność tej kategorii jako EASY obok SEVERE Wpływu Technicznego i Biznesowego -- najbardziej niebezpieczna kombinacja ocen wśród M6-M9 w tym katalogu, i powód dla którego własna ważność tego wpisu jest ustawiona na Critical. Własna strona M9 OWASP nie cytuje żadnego CWE, potwierdzone bezpośrednio przez wszystkie trzy zespoły. Wszystkie trzy zespoły niezależnie zbiegły się też na dokładnie tych samych dwóch flagowych historycznych CVE, niezwykle silny poziom międzyzespołowej korroboracji, i na jednej ostro datowanej korekcie
+      mitu: EncryptedSharedPreferences Androida, wciąż rekomendowane przez wiele aktualnych przewodników, zostało wycofane przez Google około 2024-2025.'
+  metrics:
+  - k: EASY / SEVERE
+    v:
+      en: OWASP's own Exploitability / Technical+Business Impact
+      pl: Własna Eksploatowalność / Wpływ Techniczny+Biznesowy OWASP
+  - k: M2 since 2014
+    v:
+      en: same name, same category, just demoted in rank to M9
+      pl: ta sama nazwa, ta sama kategoria, tylko zdegradowana rangą do M9
+  - k: CVE-2014-0647
+    v:
+      en: 'Starbucks iOS: plaintext creds + GPS in a crash log, ~10M downloads'
+      pl: 'Starbucks iOS: hasła jawnym tekstem + GPS w logu awarii, ~10 mln pobrań'
+  - k: Deprecated
+    v:
+      en: Android's EncryptedSharedPreferences, ~2024-2025
+      pl: EncryptedSharedPreferences Androida, ~2024-2025
+  sources:
+  - label: OWASP Mobile Top 10 2024 — M9
+    url: https://owasp.org/www-project-mobile-top-10/2023-risks/m9-insecure-data-storage
+  - label: OWASP Mobile Top 10 2016 — M2 (direct predecessor)
+    url: https://owasp.org/www-project-mobile-top-10/2016-risks/m2-insecure-data-storage
+  - label: NVD — CVE-2014-0647 (Starbucks)
+    url: https://nvd.nist.gov/vuln/detail/CVE-2014-0647
+  - label: CWE-312 — Cleartext Storage of Sensitive Information
+    url: https://cwe.mitre.org/data/definitions/312.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Every variant here shares the same threat model, confirmed identically by all three research passes: an attacker with local or physical access to the device (lost/stolen phone, forensic extraction, a rooted device, or a malicious co-resident app) reads data the app assumed was private.'
+      pl: 'Każdy wariant tutaj dzieli ten sam model zagrożenia, potwierdzony identycznie przez wszystkie trzy przejścia badawcze: atakujący z lokalnym albo fizycznym dostępem do urządzenia (zgubiony/skradziony telefon, ekstrakcja forensyczna, zrootowane urządzenie, albo złośliwa współrezydująca apka) czyta dane które apka zakładała jako prywatne.'
+    items:
+    - name: Cleartext storage in SharedPreferences / NSUserDefaults / SQLite
+      sev: high
+      description:
+        en: Tokens, session data, or PII written unencrypted to Android's XML SharedPreferences or iOS's plist-based NSUserDefaults, or into a plaintext SQLite database in the app sandbox. Verified as the exact mechanism behind both of this deep-dive's flagship CVEs -- Starbucks (crash log, technically closer to logging) and Subway/ZippyYum (SQLite cache database directly).
+        pl: Tokeny, dane sesji, albo PII zapisane bez szyfrowania do XML SharedPreferences Android albo opartego na plist NSUserDefaults iOS, albo do bazy danych SQLite w postaci jawnego tekstu w piaskownicy apki. Zweryfikowane jako dokładny mechanizm stojący za oboma flagowymi CVE tego deep-dive -- Starbucks (log awarii, technicznie bliżej logowania) i Subway/ZippyYum (baza danych cache SQLite bezpośrednio).
+      payload: 'sqlite3 /data/data/com.target.app/databases/app.db "SELECT * FROM users;"  # plaintext rows, no key required'
+    - name: External/SD-card storage without access control
+      sev: high
+      description:
+        en: Sensitive data written to Android external storage, historically world-readable and accessible to any app holding storage permission -- the exact scenario CWE-921's own example text describes. Verified historically against early WhatsApp, which stored its full chat database on the SD card in cleartext before moving to on-device encryption.
+        pl: Wrażliwe dane zapisane do zewnętrznej pamięci Android, historycznie odczytywalne przez cały świat i dostępne dla dowolnej apki posiadającej uprawnienie pamięci -- dokładnie scenariusz który opisuje własny tekst przykładowy CWE-921. Zweryfikowane historycznie względem wczesnego WhatsApp, który przechowywał pełną bazę danych czatu na karcie SD w jawnym tekście zanim przeszedł na szyfrowanie na urządzeniu.
+      payload: 'adb pull /sdcard/Android/data/com.target.app/files/chat.db  # readable by any app with storage permission'
+    - name: Sensitive data leaked into logs and crash reports
+      sev: high
+      description:
+        en: 'Credentials, tokens, or PII written to Logcat/NSLog, or captured verbatim by a third-party crash-reporting SDK. This is precisely CVE-2014-0647: Starbucks'' iOS app wrote usernames, passwords, and email addresses in cleartext into a Crashlytics log file, extractable from device storage without even the device passcode.'
+        pl: 'Poświadczenia, tokeny, albo PII zapisane do Logcat/NSLog, albo przechwycone dosłownie przez SDK raportowania awarii firmy trzeciej. To dokładnie CVE-2014-0647: apka iOS Starbucks zapisywała nazwy użytkowników, hasła, i adresy email jawnym tekstem do pliku logu Crashlytics, wydobywalnego z pamięci urządzenia nawet bez kodu dostępu urządzenia.'
+      payload: 'Log.d("AuthDebug", "login attempt: user=" + username + " pass=" + password)  // shipped to a release build'
+    - name: App-switcher snapshot and memory leakage
+      sev: medium
+      description:
+        en: iOS caches a screenshot of the current screen to disk whenever the app is backgrounded, for the app-switcher UI (Library/Caches/Snapshots/) -- genuine on-disk data-at-rest, not merely an ephemeral thumbnail as it's sometimes dismissed. Android renders an equivalent Recents thumbnail. A sensitive screen (balance, PIN entry) left unmasked leaks its contents this way even if every other storage control is correct.
+        pl: iOS przechowuje w pamięci podręcznej zrzut ekranu bieżącego ekranu na dysku za każdym razem gdy apka jest wysyłana do tła, dla UI przełącznika apek (Library/Caches/Snapshots/) -- prawdziwe dane na dysku w spoczynku, nie tylko efemeryczna miniatura jak jest czasem lekceważone. Android renderuje równoważną miniaturę Recents. Wrażliwy ekran (saldo, wprowadzanie PIN) pozostawiony bez maskowania wycieka swoją zawartość w ten sposób nawet jeśli każda inna kontrola przechowywania jest poprawna.
+      payload: // no FLAG_SECURE / no background-blur overlay -- balance screen snapshot persists to Library/Caches/Snapshots/ on backgrounding
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: Every fix here routes the secret through the platform's hardware-backed store instead of a plain file -- and, per the myth correction confirmed by all three research passes, through a currently-supported API rather than a deprecated one.
+      pl: Każda naprawa tutaj przekierowuje sekret przez wspierany sprzętowo magazyn platformy zamiast zwykły plik -- i, zgodnie z korekcją mitu potwierdzoną przez wszystkie trzy przejścia badawcze, przez aktualnie wspierane API zamiast przestarzałe.
+    languages:
+    - label: Android Kotlin — storing an auth token
+      lang: kotlin
+      vulnerable: '// VULNERABLE: plaintext in SharedPreferences, recoverable from any
+
+        // rooted device, backup, or forensic extraction
+
+        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+
+        prefs.edit().putString("auth_token", token).apply()'
+      safe: '// SAFE: token stored in a value encrypted with a key held in
+
+        // Android Keystore (hardware-backed where the device supports it) --
+
+        // note EncryptedSharedPreferences itself is now deprecated by Google;
+
+        // this shows the underlying pattern rather than that specific wrapper
+
+        val keyAlias = "app_token_key"
+
+        val encryptedToken = KeystoreCipher.encrypt(keyAlias, token)
+
+        prefs.edit().putString("auth_token_enc", encryptedToken).apply()'
+    - label: iOS Swift — Keychain accessibility attribute
+      lang: swift
+      vulnerable: "// VULNERABLE: kSecAttrAccessibleAlways -- readable even while the\n// device is locked, with no passcode required\nlet query: [String: Any] = [\n    kSecClass as String: kSecClassGenericPassword,\n    kSecValueData as String: tokenData,\n    kSecAttrAccessible as String: kSecAttrAccessibleAlways\n]"
+      safe: "// SAFE: item is inaccessible until the device has been unlocked at\n// least once since boot, and never leaves this specific device\nlet query: [String: Any] = [\n    kSecClass as String: kSecClassGenericPassword,\n    kSecValueData as String: tokenData,\n    kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly\n]"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: All three research passes agreed this category's OWASP-stated AVERAGE detectability (not EASY, unlike most other Mobile Security entries) reflects that finding the data requires actually pulling the sandbox and reading files, not just a manifest scan.
+      pl: Wszystkie trzy przejścia badawcze zgodziły się że deklarowana przez OWASP wykrywalność AVERAGE tej kategorii (nie EASY, w przeciwieństwie do większości innych wpisów Mobile Security) odzwierciedla że znalezienie danych wymaga faktycznego wyciągnięcia piaskownicy i odczytania plików, nie tylko skanu manifestu.
+    steps:
+    - title:
+        en: Pull the app sandbox
+        pl: Wyciągnij piaskownicę apki
+      description:
+        en: adb backup / adb pull / run-as on Android, or an iTunes/idevicebackup2 backup extraction (or full jailbreak filesystem access) on iOS, retrieves the app's private storage directory -- SharedPreferences/plist files, SQLite databases, cache, and logs -- exactly as a forensic tool or a thief with the device would.
+        pl: adb backup / adb pull / run-as na Android, albo ekstrakcja backupu iTunes/idevicebackup2 (albo pełny dostęp do systemu plików po jailbreaku) na iOS, wyciąga prywatny katalog przechowywania apki -- pliki SharedPreferences/plist, bazy danych SQLite, cache, i logi -- dokładnie tak jak zrobiłoby narzędzie forensyczne albo złodziej z urządzeniem.
+    - title:
+        en: Inspect with sqlite3 and plutil
+        pl: Zbadaj przez sqlite3 i plutil
+      description:
+        en: sqlite3 CLI opens any recovered .db file directly -- a database encrypted with SQLCipher simply fails to open without the key, itself a useful pass/fail signal. plutil -p decodes iOS plist files (NSUserDefaults) to check for cleartext values.
+        pl: CLI sqlite3 otwiera bezpośrednio dowolny odzyskany plik .db -- baza zaszyfrowana SQLCipher po prostu nie otworzy się bez klucza, sam w sobie użyteczny sygnał zdał/nie zdał. plutil -p dekoduje pliki plist iOS (NSUserDefaults) by sprawdzić wartości jawnego tekstu.
+    - title:
+        en: Runtime instrumentation with Frida/objection
+        pl: Instrumentacja w czasie wykonania przez Frida/objection
+      description:
+        en: objection's `ios keychain dump` lists every Keychain item along with its kSecAttrAccessible protection class in one command -- the exact signal that catches a weak accessibility attribute like kSecAttrAccessibleAlways. Frida hooks on SharedPreferences.Editor, SQLiteDatabase, and Keychain APIs reveal what's actually written and how, at the moment it happens.
+        pl: '`ios keychain dump` z objection wylicza każdy element Keychain wraz z jego klasą ochrony kSecAttrAccessible w jednej komendzie -- dokładny sygnał który wychwytuje słaby atrybut dostępności jak kSecAttrAccessibleAlways. Zahaczki Frida na SharedPreferences.Editor, SQLiteDatabase, i API Keychain ujawniają co jest faktycznie zapisywane i jak, w momencie gdy to się dzieje.'
+    - title:
+        en: Automated static+dynamic scan with MobSF
+        pl: Zautomatyzowany skan statyczny+dynamiczny przez MobSF
+      description:
+        en: 'MobSF automates the above in one pass: flags MODE_WORLD_READABLE/WRITEABLE, plaintext SharedPreferences writes, external-storage APIs, and logging calls statically, then in dynamic mode dumps the actual sandbox contents after exercising the app -- confirmed by all three research passes as the standard first-pass tool for this category.'
+        pl: 'MobSF automatyzuje powyższe w jednym przejściu: statycznie flaguje MODE_WORLD_READABLE/WRITEABLE, zapisy jawnego tekstu SharedPreferences, API pamięci zewnętrznej, i wywołania logowania, potem w trybie dynamicznym zrzuca faktyczną zawartość piaskownicy po przećwiczeniu apki -- potwierdzone przez wszystkie trzy przejścia badawcze jako standardowe narzędzie pierwszego przejścia dla tej kategorii.'
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes independently produced a near-identical ranking, and all three flagged the same specific, dated caveat: a widely-recommended Android library in this ranking has since been deprecated.'
+      pl: 'Wszystkie trzy przejścia badawcze niezależnie wyprodukowały niemal identyczny ranking, i wszystkie trzy oflagowały to samo konkretne, datowane zastrzeżenie: szeroko rekomendowana biblioteka Android w tym rankingu została od tego czasu wycofana.'
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: Don't store the secret at all -- minimize + short-lived tokens
+        pl: Nie przechowuj sekretu wcale -- minimalizacja + krótkotrwałe tokeny
+      note:
+        en: 'All three research passes ranked this highest for the same reason as this catalog''s other categories: data that was never persisted cannot be recovered from a lost device, a backup, or a forensic image. Genuinely infeasible for every use case, but the first question to ask before reaching for encryption.'
+        pl: 'Wszystkie trzy przejścia badawcze sklasyfikowały to najwyżej z tego samego powodu co inne kategorie tego katalogu: dane które nigdy nie zostały utrwalone nie mogą zostać odzyskane ze zgubionego urządzenia, backupu, albo obrazu forensycznego. Naprawdę niewykonalne dla każdego przypadku użycia, ale pierwsze pytanie do zadania zanim sięgnie się po szyfrowanie.'
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: Hardware-backed Keystore/Keychain with the correct accessibility attribute
+        pl: Wsparty sprzętowo Keystore/Keychain z poprawnym atrybutem dostępności
+      note:
+        en: 'kSecAttrAccessibleWhenUnlockedThisDeviceOnly (iOS) or a StrongBox/TEE-backed key (Android), never the deprecated kSecAttrAccessibleAlways. Real caveats confirmed across all three passes: not every Android device has hardware backing (older/cheaper devices fall back to software-only), and none of this protects against a runtime-instrumented app on an already-rooted/jailbroken device -- it defends the lost-but-not-compromised device, this category''s primary threat model.'
+        pl: 'kSecAttrAccessibleWhenUnlockedThisDeviceOnly (iOS) albo klucz wsparty StrongBox/TEE (Android), nigdy przestarzały kSecAttrAccessibleAlways. Prawdziwe zastrzeżenia potwierdzone we wszystkich trzech przejściach: nie każde urządzenie Android ma wsparcie sprzętowe (starsze/tańsze urządzenia spadają do samego oprogramowania), i nic z tego nie chroni przed apką zinstrumentowaną w czasie wykonania na już zrootowanym/jailbreakowanym urządzeniu -- broni zgubionego-ale-nie-skompromitowanego urządzenia, głównego modelu zagrożenia tej kategorii.'
+    - rank: 3
+      eff: 70
+      kind: strong
+      label:
+        en: Database-at-rest encryption (SQLCipher or equivalent)
+        pl: Szyfrowanie bazy danych w spoczynku (SQLCipher albo równoważne)
+      note:
+        en: 'Directly closes this deep-dive''s own flagship attack (plaintext SQLite, as in the real Subway/ZippyYum CVE). Caveat: only as strong as where the encryption key itself lives -- a key derived from a static string or stored in plain SharedPreferences defeats the whole control.'
+        pl: 'Bezpośrednio zamyka własny flagowy atak tego deep-dive (jawny tekst SQLite, jak w prawdziwym CVE Subway/ZippyYum). Zastrzeżenie: tylko tak silne jak to gdzie żyje sam klucz szyfrujący -- klucz wyprowadzony ze statycznego stringa albo przechowywany w zwykłym SharedPreferences pokonuje całą kontrolę.'
+    - rank: 4
+      eff: 55
+      kind: weak
+      label:
+        en: Wrapper libraries -- with an important caveat
+        pl: Biblioteki opakowujące -- z ważnym zastrzeżeniem
+      note:
+        en: 'All three research passes independently flagged the same specific, dated fact: Android''s EncryptedSharedPreferences (androidx.security:security-crypto), long recommended as the standard wrapper, was deprecated by Google around 2024-2025 with no direct drop-in replacement. Any current guide still presenting it as the recommended approach is citing stale advice -- the underlying pattern (Keystore-backed key + manual encryption) remains correct even as the specific wrapper library''s status changes.'
+        pl: 'Wszystkie trzy przejścia badawcze niezależnie oflagowały ten sam konkretny, datowany fakt: EncryptedSharedPreferences Androida (androidx.security:security-crypto), długo rekomendowane jako standardowe opakowanie, zostało wycofane przez Google około 2024-2025 bez bezpośredniego zamiennika. Każdy aktualny przewodnik wciąż prezentujący to jako rekomendowane podejście cytuje nieaktualną poradę -- leżący u podstaw wzorzec (klucz wsparty Keystore + ręczne szyfrowanie) pozostaje poprawny nawet gdy zmienia się status konkretnej biblioteki opakowującej.'
+    - rank: 5
+      eff: 50
+      kind: weak
+      label:
+        en: App-switcher snapshot masking + log scrubbing
+        pl: Maskowanie zrzutu przełącznika apek + czyszczenie logów
+      note:
+        en: 'FLAG_SECURE (Android) or a background blur overlay (iOS) for sensitive screens, plus stripping Log/NSLog calls and third-party crash-SDK payloads from release builds -- directly the fix for this deep-dive''s own flagship Starbucks incident. Narrower in scope than the top controls: each closes one specific channel.'
+        pl: 'FLAG_SECURE (Android) albo nakładka rozmycia w tle (iOS) dla wrażliwych ekranów, plus usunięcie wywołań Log/NSLog i payloadów SDK awarii firm trzecich z buildów release -- bezpośrednio naprawa dla własnego flagowego incydentu Starbucks tego deep-dive. Węższe w zakresie niż główne kontrole: każda zamyka jeden konkretny kanał.'
+    - rank: 6
+      eff: 30
+      kind: weak
+      label:
+        en: Secure deletion / backup exclusion
+        pl: Bezpieczne usuwanie / wykluczenie z backupu
+      note:
+        en: android:allowBackup="false" and iOS's do-not-backup file attribute close the cloud/iTunes-backup copy vector; secure-delete calls (SQLite VACUUM, overwrite temp files) are best-effort only -- flash wear-leveling means true erasure on mobile storage is not guaranteed, all three passes noted.
+        pl: android:allowBackup="false" i atrybut pliku do-not-backup iOS zamykają wektor kopii backupu chmurowego/iTunes; wywołania bezpiecznego usuwania (SQLite VACUUM, nadpisywanie plików tymczasowych) są tylko best-effort -- wyrównywanie zużycia flash oznacza że prawdziwe usunięcie na pamięci mobilnej nie jest gwarantowane, zauważyły wszystkie trzy przejścia.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'An unusually strong result for this deep-dive: all three independent research passes converged on the exact same two flagship CVEs, with matching technical details. Both are rated CVSS Low precisely because the attack vector is local/physical -- an honest reminder that a low CVSS score does not mean low real-world consequence for this category.'
+      pl: 'Niezwykle silny wynik dla tego deep-dive: wszystkie trzy niezależne przejścia badawcze zbiegły się na dokładnie tych samych dwóch flagowych CVE, z pasującymi szczegółami technicznymi. Oba są klasyfikowane jako CVSS Low dokładnie dlatego że wektor ataku jest lokalny/fizyczny -- uczciwe przypomnienie że niska ocena CVSS nie oznacza niskiej konsekwencji z praktyki dla tej kategorii.'
+    items:
+    - org: CVE-2014-0647 — Starbucks iOS app v2.6.1
+      year: 2014
+      impact: ~10 million downloads at time of disclosure
+      cost: CVSS v2 2.1 (Low) -- rated low specifically because the attack vector is local device access, not remote
+      description:
+        en: 'Confirmed identically by all three research passes as this category''s flagship incident: the app wrote usernames, passwords, and email addresses in cleartext to a Crashlytics crash-log file, plus unencrypted GPS location history, both extractable from device storage without even the device passcode. Disclosed January 2014 and fixed shortly after. The clean illustration of this category''s own risk profile: EASY exploitability once you have the device, SEVERE consequence, but a technically local attack vector that CVSS scores as Low.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze jako flagowy incydent tej kategorii: apka zapisywała nazwy użytkowników, hasła, i adresy email jawnym tekstem do pliku logu awarii Crashlytics, plus nieszyfrowaną historię lokalizacji GPS, oba wydobywalne z pamięci urządzenia nawet bez kodu dostępu urządzenia. Ujawnione w styczniu 2014 i naprawione wkrótce potem. Czysta ilustracja własnego profilu ryzyka tej kategorii: EASY eksploatowalność gdy tylko masz urządzenie, SEVERE konsekwencja, ale technicznie lokalny wektor ataku który CVSS ocenia jako Low.'
+    - org: CVE-2013-6986 — ZippyYum Subway CA Kiosk app v3.4 (iOS)
+      year: 2013
+      impact: Password elements recoverable directly from local storage
+      cost: CVSS v2 2.1 (Low), same local-access rating pattern as the Starbucks case
+      description:
+        en: 'Confirmed identically by all three research passes: cleartext storage in SQLite cache databases, letting an attacker who obtains the device read password elements directly with a plain SQLite viewer -- no decryption, no exploit chain, just opening the file. The most literal, textbook illustration of this category''s own dominant sub-technique.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze: przechowywanie jawnym tekstem w bazach danych cache SQLite, pozwalające atakującemu który zdobędzie urządzenie odczytać elementy hasła bezpośrednio zwykłą przeglądarką SQLite -- bez deszyfrowania, bez łańcucha eksploitów, po prostu otwarcie pliku. Najbardziej dosłowna, podręcznikowa ilustracja własnej dominującej pod-techniki tej kategorii.'
+    inlineSources:
+    - label: NVD — CVE-2014-0647
+      url: https://nvd.nist.gov/vuln/detail/CVE-2014-0647
+    - label: NVD — CVE-2013-6986
+      url: https://nvd.nist.gov/vuln/detail/CVE-2013-6986
+    - label: Help Net Security — Starbucks app cleartext password storage
+      url: https://www.helpnetsecurity.com/2014/01/16/starbucks-ios-app-stores-passwords-in-clear-text/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on the same core toolchain, matching this category's own OWASP-stated AVERAGE (not EASY) detectability rating -- finding these findings genuinely requires pulling and inspecting the sandbox, not just a manifest read.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tym samym podstawowym łańcuchu narzędzi, pasującym do własnej deklarowanej przez OWASP oceny wykrywalności AVERAGE (nie EASY) tej kategorii -- znalezienie tych ustaleń naprawdę wymaga wyciągnięcia i zbadania piaskownicy, nie tylko odczytu manifestu.
+    sast:
+    - - MobSF (Mobile Security Framework)
+      - Static pass flags MODE_WORLD_READABLE/WRITEABLE, plaintext SharedPreferences/plist writes, external-storage APIs, and logging calls; dynamic mode dumps the actual sandbox contents (SharedPreferences, databases, logs) after exercising the app
+    - - sqlite3 CLI + plutil
+      - Direct inspection of a recovered .db file (an SQLCipher-encrypted database simply fails to open without the key -- itself a useful pass/fail signal) and of iOS plist files for cleartext values
+    dast:
+    - - Frida / objection
+      - objection's ios keychain dump lists every Keychain item along with its kSecAttrAccessible protection class in one command -- the exact signal that catches a weak accessibility attribute; Frida hooks on SharedPreferences/SQLiteDatabase/Keychain APIs observe what's actually written at the moment it happens
+    - - adb backup/pull + iOS backup extraction
+      - Retrieves the app's private storage directory exactly as a forensic tool or a thief with the device would -- the ground-truth test for this category's local/physical-access threat model
+    note:
+      en: <strong>Key signal:</strong> open-source forensic parsers (ALEAPP/iLEAPP, Autopsy) operationalize the same checks used by commercial extraction suites -- if a free tool can recover plaintext PII or credentials from a pulled backup, so can anyone who gains physical access to a lost or stolen device.
+      pl: <strong>Kluczowy sygnał:</strong> otwartoźródłowe parsery forensyczne (ALEAPP/iLEAPP, Autopsy) realizują te same kontrole co komercyjne zestawy ekstrakcji -- jeśli darmowe narzędzie może odzyskać jawny tekst PII albo poświadczeń z wyciągniętego backupu, może to zrobić każdy kto zdobędzie fizyczny dostęp do zgubionego albo skradzionego urządzenia.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'All three research passes converged on the same honest finding: OWASP''s own M9 page cites no CWE at all, so the mapping here is community best-fit, and the two flagship historical CVEs were themselves tagged with different, older CWEs at the time -- an era artifact worth stating rather than glossing over.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym samym uczciwym ustaleniu: własna strona M9 OWASP nie cytuje żadnego CWE, więc mapowanie tutaj jest najlepszym dopasowaniem społeczności, a oba flagowe historyczne CVE zostały same oznaczone innymi, starszymi CWE w swoim czasie -- artefakt epoki wart stwierdzenia zamiast pominięcia.'
+    items:
+    - std: CWE (MITRE) — community best-fit, not OWASP-cited
+      items:
+      - 'CWE-312 — Cleartext Storage of Sensitive Information (primary). The most precise fit for the dominant real-world failure mode: plaintext in SQLite/SharedPreferences/logs/plist. Its children CWE-313 (on disk/file) and CWE-316 (in memory) refine it further.'
+      - CWE-921 — Storage of Sensitive Data in a Mechanism without Access Control (secondary). Best fit specifically for the external/SD-card storage sub-case -- MITRE's own example text names Android external storage directly.
+      - 'Honesty note: the two flagship CVEs anchoring this deep-dive were tagged CWE-255 (Starbucks) and CWE-310 (Subway) in NVD, not CWE-312 -- both predate CWE-312 becoming the standard modern mapping. This is a mapping-era artifact, not an inconsistency to paper over.'
+    - std: OWASP
+      items:
+      - 'Mobile Top 10 2024 — M9: Insecure Data Storage. Verified directly: Exploitability EASY, Prevalence COMMON, Detectability AVERAGE, Technical Impact SEVERE, Business Impact SEVERE. Identically named "M2: Insecure Data Storage" in both the 2014 and 2016 lists -- the cleanest, least-ambiguous lineage case among the Mobile Security entries built so far, simply demoted from rank #2 to #9 as credential-specific concerns split off into the new M1.'
+      - 'OWASP MASVS-STORAGE-1 (the app securely stores sensitive data) and MASVS-STORAGE-2 (the app prevents leakage of sensitive data) are the two controls this category maps to directly. Confirmed MASTG test IDs: MASTG-TEST-0001 (Android, Testing Local Storage for Sensitive Data) and MASTG-TEST-0052 (iOS, Testing Local Data Storage) as the primary tests, with MASTG-TEST-0003/0296-0297 (logs) and MASTG-TEST-0009/0058 (backups) as related tests -- all three research passes flagged the MASTG test-ID scheme as mid-migration to a newer atomic numbering, so verify against the current MASTG release before citing a specific ID.'
+      - If the app handles cardholder data, storing it unencrypted at rest implicates PCI-DSS Requirement 3 (protect stored account data); if it handles health data, it implicates HIPAA's Security Rule encryption safeguard (45 CFR 164.312(a)(2)(iv)) -- both cited at the requirement-family level, since no research pass could verify the exact sub-clause text against the primary regulatory document this session.
+    inlineSources:
+    - label: OWASP Mobile Top 10 2024 — M9
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m9-insecure-data-storage
+    - label: OWASP MASVS-STORAGE
+      url: https://mas.owasp.org/MASVS/05-MASVS-STORAGE/
+    - label: CWE-312 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/312.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If sensitive data is confirmed recoverable from local device storage (a pentest finding, a lost/stolen device report, or a researcher disclosure), work this list top to bottom.
+      pl: Po potwierdzeniu że wrażliwe dane są odzyskiwalne z lokalnej pamięci urządzenia (ustalenie pentestu, raport zgubionego/skradzionego urządzenia, albo ujawnienie badacza), przejdź tę listę od góry.
+    steps:
+    - en: Confirm exactly what is recoverable and from where -- pull the sandbox and inspect with sqlite3/plutil/objection, matching this deep-dive's own methodology, rather than assuming from a code review alone
+      pl: Potwierdź dokładnie co jest odzyskiwalne i skąd -- wyciągnij piaskownicę i zbadaj przez sqlite3/plutil/objection, zgodnie z własną metodyką tego deep-dive, zamiast zakładać tylko z przeglądu kodu
+    - en: Determine whether the exposed data qualifies as regulated (cardholder data, PHI, credentials) since this changes notification obligations, consistent with this catalog's privacy-controls entry (15.6)
+      pl: Ustal czy ujawnione dane kwalifikują się jako regulowane (dane posiadacza karty, PHI, poświadczenia) ponieważ to zmienia obowiązki powiadomienia, spójnie z wpisem kontroli prywatności tego katalogu (15.6)
+    - en: Ship the specific fix matching the top-ranked defense for the confirmed finding -- move the secret to Keystore/Keychain, encrypt the database, or mask the sensitive screen from the app-switcher snapshot
+      pl: Wydaj konkretną naprawę pasującą do obrony z najwyższą rangą dla potwierdzonego ustalenia -- przenieś sekret do Keystore/Keychain, zaszyfruj bazę danych, albo zamaskuj wrażliwy ekran przed zrzutem przełącznika apek
+    - en: If the fix touches a wrapper library, verify its current support status first -- this deep-dive's own myth correction (EncryptedSharedPreferences deprecation) shows a previously-standard recommendation can go stale
+      pl: Jeśli naprawa dotyka biblioteki opakowującej, najpierw zweryfikuj jej aktualny status wsparcia -- własna korekcja mitu tego deep-dive (wycofanie EncryptedSharedPreferences) pokazuje że wcześniej standardowa rekomendacja może się zdezaktualizować
+    - en: Rotate any credential or token that was confirmed exposed, since a device-level compromise (lost/stolen/forensic) cannot be assumed contained to a single session
+      pl: Obróć każde poświadczenie albo token które zostało potwierdzone jako ujawnione, ponieważ kompromitacja na poziomie urządzenia (zgubione/skradzione/forensyczne) nie może być zakładana jako ograniczona do pojedynczej sesji
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP Mobile Top 10 2024 — M9
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m9-insecure-data-storage
+    - label: OWASP Mobile Top 10 2016 — M2 (direct predecessor)
+      url: https://owasp.org/www-project-mobile-top-10/2016-risks/m2-insecure-data-storage
+    - label: OWASP MASVS-STORAGE
+      url: https://mas.owasp.org/MASVS/05-MASVS-STORAGE/
+    - label: CWE-312 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/312.html
+    - label: CWE-921 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/921.html
+    - label: NVD — CVE-2014-0647
+      url: https://nvd.nist.gov/vuln/detail/CVE-2014-0647
+    - label: NVD — CVE-2013-6986
+      url: https://nvd.nist.gov/vuln/detail/CVE-2013-6986
+    - label: Help Net Security — Starbucks app cleartext password storage
+      url: https://www.helpnetsecurity.com/2014/01/16/starbucks-ios-app-stores-passwords-in-clear-text/
