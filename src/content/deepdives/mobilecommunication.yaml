@@ -1,0 +1,349 @@
+meta:
+  id: mobilecommunication
+  threatId: '15.5'
+  severity: Critical
+  color: '#1d4ed8'
+  colorRgb: 29,78,216
+  cwe: CWE-295
+  cvss: '9.1'
+  standard: OWASP Mobile Top 10 2024 (M5)
+hero:
+  titleMain: 'Insecure '
+  titleGrad: Communication
+  titleTail: ''
+  topbar: Insecure Communication (OWASP Mobile Top 10 2024, M5)
+  lead:
+    en: 'Was M3 in the 2016 Mobile Top 10, renumbered M5 in 2024. All three independent research passes converged on the same root mechanism, verified directly against Android''s own official documentation: a custom X509TrustManager whose checkServerTrusted() method has an empty body -- never throwing on an untrusted chain -- accepts ANY certificate, including an attacker''s self-signed one. This is the canonical "temporary fix" for a self-signed dev/staging certificate that gets copied from Stack Overflow, silences the error, and ships to production because HTTPS still visibly "works" -- there is no functional signal that validation is gone. The class is unusually well-studied academically: the same 13,500-app, 8.0%-vulnerable, 41-of-100-MITM''d findings from a 2012 study were independently confirmed by all three research passes, and a 2021 follow-up study found the problem far from solved a decade later.'
+    pl: 'Był M3 w Mobile Top 10 z 2016, przenumerowany na M5 w 2024. Wszystkie trzy niezależne przejścia badawcze zbiegły się na tym samym mechanizmie źródłowym, zweryfikowanym bezpośrednio względem własnej oficjalnej dokumentacji Android: niestandardowy X509TrustManager którego metoda checkServerTrusted() ma pustą treść -- nigdy nie rzucając na nieufnym łańcuchu -- akceptuje DOWOLNY certyfikat, włącznie z własnoręcznie podpisanym certyfikatem atakującego. To klasyczna "tymczasowa naprawa" dla własnoręcznie podpisanego certyfikatu dev/staging która jest kopiowana ze Stack Overflow, wycisza błąd, i trafia do produkcji bo HTTPS wciąż widocznie "działa" -- nie ma żadnego funkcjonalnego sygnału że walidacja zniknęła. Ta klasa jest niezwykle dobrze zbadana akademicko: te same ustalenia 13500 apek, 8.0% podatnych, 41 z 100 zmuszonych do MITM z badania z 2012 zostały niezależnie potwierdzone przez wszystkie trzy przejścia badawcze, a badanie kontynuacyjne z 2021 znalazło że problem jest daleki
+      od rozwiązanego dekadę później.'
+  metrics:
+  - k: CWE-295
+    v:
+      en: Weakness ID (+ CWE-297, CWE-319)
+      pl: ID słabości (+ CWE-297, CWE-319)
+  - k: 8.0%
+    v: Apps potentially MITM-vulnerable (Fahl et al., CCS 2012)
+  - k: 88.87%
+    v:
+      en: Custom Network Security Configs that WEAKEN security (USENIX 2021)
+      pl: Niestandardowych Network Security Config które OSŁABIAJĄ bezpieczeństwo (USENIX 2021)
+  - k: No CWE listed
+    v:
+      en: OWASP's own M5 page (verified)
+      pl: Własna strona M5 OWASP (zweryfikowane)
+  sources:
+  - label: OWASP Mobile Top 10 2024 — M5
+    url: https://owasp.org/www-project-mobile-top-10/2023-risks/m5-insecure-communication
+  - label: Android Developers — Unsafe X509TrustManager
+    url: https://developer.android.com/privacy-and-security/risks/unsafe-trustmanager
+  - label: Fahl et al. — Why Eve and Mallory Love Android (CCS 2012)
+    url: https://dl.acm.org/doi/10.1145/2382196.2382205
+  - label: FTC v. Fandango / Credit Karma
+    url: https://www.ftc.gov/news-events/news/press-releases/2014/03/fandango-credit-karma-settle-ftc-charges-they-deceived-consumers-failing-secure-mobile-apps
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Four variants confirmed real by all three research passes, from total trust-all compromise down to the narrower pinning-bypass case documented in a real CVE.
+      pl: Cztery warianty potwierdzone jako prawdziwe przez wszystkie trzy przejścia badawcze, od całkowitej kompromitacji trust-all do węższego przypadku obejścia przypinania udokumentowanego w prawdziwym CVE.
+    items:
+    - name: Trust-all X509TrustManager
+      sev: critical
+      description:
+        en: A custom TrustManager whose checkServerTrusted() never throws accepts any certificate from any issuer -- verified as the dominant, most-documented anti-pattern via Android's own official developer documentation, which explicitly warns Google Play scans for and can block apps containing this exact pattern.
+        pl: Niestandardowy TrustManager którego checkServerTrusted() nigdy nie rzuca akceptuje dowolny certyfikat od dowolnego wystawcy -- zweryfikowane jako dominujący, najlepiej udokumentowany antywzorzec przez własną oficjalną dokumentację deweloperską Android, która jawnie ostrzega że Google Play skanuje pod kątem i może zablokować apki zawierające dokładnie ten wzorzec.
+      payload: checkServerTrusted(chain, authType) { /* empty -- never throws CertificateException */ }
+    - name: Always-true HostnameVerifier
+      sev: critical
+      description:
+        en: Even when the certificate chain itself validates correctly, a HostnameVerifier that always returns true defeats the check that the certificate's CN/SAN matches the requested host -- an attacker with ANY valid certificate for ANY domain can impersonate the target.
+        pl: Nawet gdy sam łańcuch certyfikatów poprawnie się waliduje, HostnameVerifier który zawsze zwraca true pokonuje kontrolę czy CN/SAN certyfikatu pasuje do żądanego hosta -- atakujący z DOWOLNYM ważnym certyfikatem dla DOWOLNEJ domeny może podszyć się pod cel.
+      payload: setDefaultHostnameVerifier { hostname, session -> true }
+    - name: Cleartext HTTP via manifest / Network Security Config misconfiguration
+      sev: high
+      description:
+        en: 'Verified against Android''s own documentation: apps targeting API 28 (Android 9)+ have cleartext disabled by default, but a developer can silently re-enable it via android:usesCleartextTraffic="true" or a permissive domain-config, exposing traffic in plaintext on any network the device joins.'
+        pl: 'Zweryfikowane względem własnej dokumentacji Android: apki celujące w API 28 (Android 9)+ mają domyślnie wyłączony cleartext, ale deweloper może po cichu ponownie go włączyć przez android:usesCleartextTraffic="true" albo permisywny domain-config, ujawniając ruch w postaci zwykłego tekstu w dowolnej sieci do której dołączy urządzenie.'
+      payload: <application android:usesCleartextTraffic="true"> -- silently re-enables plaintext HTTP app-wide
+    - name: Certificate-pinning bypass via mixed trust chain
+      sev: high
+      description:
+        en: 'Verified via the real CVE-2016-2402 (OkHttp): even where pinning IS implemented, a flawed implementation can be defeated by an attacker presenting a chain containing both the pinned certificate and a certificate from any other trusted CA, satisfying the pin check while still enabling MITM through the non-pinned path.'
+        pl: 'Zweryfikowane przez prawdziwe CVE-2016-2402 (OkHttp): nawet gdy przypinanie JEST zaimplementowane, wadliwa implementacja może zostać pokonana przez atakującego prezentującego łańcuch zawierający zarówno przypięty certyfikat jak i certyfikat od dowolnego innego zaufanego CA, spełniając kontrolę przypięcia podczas gdy wciąż umożliwia MITM przez nieprzypiętą ścieżkę.'
+      payload: chain = [pinned_cert, untrusted_intermediate_from_different_trusted_CA]  -- satisfies a naive pin check
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The fix is almost always subtraction, not addition: remove the custom TrustManager/HostnameVerifier/delegate entirely and let the platform''s default validation do its job.'
+      pl: 'Naprawa to niemal zawsze odejmowanie, nie dodawanie: całkowicie usuń niestandardowy TrustManager/HostnameVerifier/delegat i pozwól domyślnej walidacji platformy wykonać swoją pracę.'
+    languages:
+    - label: Android (Kotlin) -- trust-all TrustManager
+      lang: kotlin
+      vulnerable: "val trustAll = object : X509TrustManager {\n    override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}\n    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}  // never throws\n    override fun getAcceptedIssuers() = arrayOf<X509Certificate>()\n}\nval client = OkHttpClient.Builder()\n    .sslSocketFactory(sslContext.socketFactory, trustAll)\n    .hostnameVerifier { _, _ -> true }   // also bad\n    .build()"
+      safe: '// SAFE: no custom TrustManager, no custom HostnameVerifier at all --
+
+        // the platform validates chain + hostname against the system trust store.
+
+        val client = OkHttpClient()'
+    - label: Android -- declarative pinning via Network Security Config
+      lang: xml
+      vulnerable: '<!-- VULNERABLE: cleartext re-enabled app-wide -->
+
+        <application android:usesCleartextTraffic="true">'
+      safe: "<!-- res/xml/network_security_config.xml -->\n<network-security-config>\n  <domain-config cleartextTrafficPermitted=\"false\">\n    <domain includeSubdomains=\"true\">api.example.com</domain>\n    <pin-set expiration=\"2027-01-01\">\n      <pin digest=\"SHA-256\">base64SPKIhashPrimary=</pin>\n      <pin digest=\"SHA-256\">base64SPKIhashBackup=</pin>   <!-- backup pin is REQUIRED -->\n    </pin-set>\n  </domain-config>\n</network-security-config>"
+    - label: iOS (Swift) -- URLSession server trust
+      lang: swift
+      vulnerable: "func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,\n                 completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {\n    let trust = challenge.protectionSpace.serverTrust!\n    completionHandler(.useCredential, URLCredential(trust: trust))  // accepts trust WITHOUT evaluating\n}"
+      safe: "// SAFEST: implement no auth-challenge delegate at all --\n// URLSession + App Transport Security validate by default.\n\n// If you must override (e.g. to add pinning), evaluate for real first:\nfunc urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,\n                 completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {\n    guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,\n          let trust = challenge.protectionSpace.serverTrust,\n          SecTrustEvaluateWithError(trust, nil) else {\n        completionHandler(.cancelAuthenticationChallenge, nil); return\n    }\n    completionHandler(.useCredential, URLCredential(trust: trust))\n}"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: A single intercepting-proxy test distinguishes total trust-all compromise from a properly-validating app -- confirmed with real network feasibility, then stress-tested against pinning specifically.
+      pl: Pojedynczy test proxy przechwytującego odróżnia całkowitą kompromitację trust-all od poprawnie walidującej apki -- potwierdzone z prawdziwą wykonalnością sieciową, potem przetestowane pod obciążeniem konkretnie przeciw przypinaniu.
+    steps:
+    - title:
+        en: Intercept with a custom CA
+        pl: Przechwyć własnym CA
+      description:
+        en: Route the app through mitmproxy or Burp Suite with the proxy's CA installed on the test device (a rooted device or a debuggable-build override, since Android has not trusted user-installed CAs by default since API 24). If plaintext traffic appears, TLS validation is broken or absent.
+        pl: Przekieruj apkę przez mitmproxy albo Burp Suite z CA proxy zainstalowanym na urządzeniu testowym (zrootowane urządzenie albo override buildu debugowalnego, ponieważ Android nie ufa domyślnie CA zainstalowanym przez użytkownika od API 24). Jeśli pojawia się ruch w postaci zwykłego tekstu, walidacja TLS jest zepsuta albo nieobecna.
+    - title:
+        en: Confirm real-world feasibility on a controlled network
+        pl: Potwierdź wykonalność z praktyki na kontrolowanej sieci
+      description:
+        en: A rogue AP or ARP spoofing on a network you own confirms an on-path attacker can exploit the finding without any cooperation from the target device -- distinct from the proxy test, which requires installing a CA on the device.
+        pl: Fałszywy AP albo ARP spoofing na sieci którą posiadasz potwierdza że atakujący na ścieżce może wykorzystać ustalenie bez żadnej współpracy urządzenia docelowego -- odrębne od testu proxy, który wymaga zainstalowania CA na urządzeniu.
+    - title:
+        en: Stress-test pinning specifically with Frida/objection
+        pl: Przetestuj pod obciążeniem konkretnie przypinanie przez Frida/objection
+      description:
+        en: If the proxy test fails (pinning present), run objection's android sslpinning disable or a Frida universal-unpinning script -- this hooks the trust-evaluation APIs at runtime and reveals whether pinning is the only thing standing between the app and full interception.
+        pl: Jeśli test proxy zawodzi (przypinanie obecne), uruchom android sslpinning disable objection albo uniwersalny skrypt Frida do odpinania -- to zahaczaja API ewaluacji zaufania w czasie wykonania i ujawnia czy przypinanie jest jedyną rzeczą stojącą między apką a pełnym przechwyceniem.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: All three research passes converged on the same top control and the same explicit demotion of pinning to defense-in-depth -- consistent with this knowledge base's existing M3 precedent.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tej samej głównej kontroli i tej samej jawnej degradacji przypinania do obrony w głąb -- zgodnie z istniejącym precedensem M3 tej bazy wiedzy.
+    items:
+    - rank: 1
+      eff: 95
+      kind: primary
+      label:
+        en: Never override the default TrustManager/HostnameVerifier without a genuine reason
+        pl: Nigdy nie nadpisuj domyślnego TrustManager/HostnameVerifier bez prawdziwego powodu
+      note:
+        en: The single highest-leverage control, verified as eliminating the entire trust-all/hostname-true class at zero operational cost. The platform default already validates chain and hostname correctly against the system trust store.
+        pl: Pojedyncza kontrola o najwyższej dźwigni, zweryfikowana jako eliminująca całą klasę trust-all/hostname-true przy zerowym koszcie operacyjnym. Domyślna platforma już poprawnie waliduje łańcuch i hostname względem systemowego magazynu zaufania.
+    - rank: 2
+      eff: 85
+      kind: primary
+      label:
+        en: Eliminate cleartext entirely
+        pl: Całkowicie wyeliminuj cleartext
+      note:
+        en: cleartextTrafficPermitted="false" (Android's own default on API 28+) plus enforced App Transport Security on iOS (on by default since iOS 9) closes the plaintext-HTTP variant comprehensively at low cost.
+        pl: cleartextTrafficPermitted="false" (własny domyślny stan Android od API 28+) plus wymuszone App Transport Security na iOS (domyślnie włączone od iOS 9) zamyka wariant zwykłego tekstu HTTP kompleksowo przy niskim koszcie.
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Declarative Network Security Config instead of hand-rolled trust code
+        pl: Deklaratywny Network Security Config zamiast ręcznie pisanego kodu zaufania
+      note:
+        en: Moving trust configuration out of imperative Java/Kotlin into XML makes the class of bug this deep-dive covers structurally harder to introduce -- and the real USENIX 2021 finding that 88.87% of custom NSC files actually WEAKEN security shows this discipline is still widely misapplied even when adopted.
+        pl: Przeniesienie konfiguracji zaufania z imperatywnej Javy/Kotlina do XML sprawia że klasa błędu którą pokrywa ten deep-dive jest strukturalnie trudniejsza do wprowadzenia -- a prawdziwe ustalenie USENIX 2021 że 88.87% niestandardowych plików NSC faktycznie OSŁABIA bezpieczeństwo pokazuje że ta dyscyplina jest wciąż szeroko źle stosowana nawet gdy przyjęta.
+    - rank: 4
+      eff: 55
+      kind: strong
+      label:
+        en: Certificate/public-key pinning
+        pl: Przypinanie certyfikatu/klucza publicznego
+      note:
+        en: 'Explicitly defense-in-depth, not primary, matching this knowledge base''s existing M3 stance: it defends against a rogue/compromised/mis-issued CA specifically, does nothing for a trust-all bug (which ignores pins too), is bypassable at runtime on a rooted device, and carries a real operational tradeoff -- rotating the server''s key without a backup pin already deployed breaks every installed app version that pinned the old one. The real USENIX 2021 finding that only 0.67% of apps implement pinning at all shows how rarely this layer is even attempted.'
+        pl: 'Jawnie obrona w głąb, nie główna, zgodnie z istniejącym stanowiskiem M3 tej bazy wiedzy: broni konkretnie przed nieuczciwym/skompromitowanym/błędnie wystawionym CA, nic nie robi dla błędu trust-all (który też ignoruje przypięcia), jest omijalne w czasie wykonania na zrootowanym urządzeniu, i niesie prawdziwy kompromis operacyjny -- rotacja klucza serwera bez już wdrożonego przypięcia zapasowego łamie każdą zainstalowaną wersję apki która przypięła stary. Prawdziwe ustalenie USENIX 2021 że tylko 0.67% apek w ogóle implementuje przypinanie pokazuje jak rzadko ta warstwa jest w ogóle próbowana.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: One of the most heavily-studied mobile vulnerability classes in this knowledge base, anchored by a landmark 2012 academic study independently confirmed by all three research passes down to the exact same numbers, a 2021 follow-up showing the problem persists a decade later, real FTC enforcement actions, and one of the most famous TLS bugs in the industry's history.
+      pl: Jedna z najbardziej dogłębnie zbadanych klas podatności mobile w tej bazie wiedzy, zakotwiczona przełomowym badaniem akademickim z 2012 niezależnie potwierdzonym przez wszystkie trzy przejścia badawcze aż do dokładnie tych samych liczb, kontynuacją z 2021 pokazującą że problem przetrwał dekadę, prawdziwymi działaniami egzekwującymi FTC, i jednym z najsłynniejszych błędów TLS w historii branży.
+    items:
+    - org: Academic study — 13,500 Android apps (Fahl et al.)
+      year: 2012
+      impact: 8.0% potentially MITM-vulnerable; 41 of 100 manually-audited apps successfully MITM'd
+      cost: Introduced the MalloDroid detection tool; ACM CCS 2012
+      description:
+        en: '"Why Eve and Mallory Love Android: An Analysis of Android SSL (In)Security" -- confirmed independently by all three research passes down to the exact same figures: 1,074 of 13,500 popular free Play apps (8.0%) contained SSL/TLS code potentially vulnerable to MITM, and a manual audit of 100 selected apps yielded successful real-world MITM against 41 of them, capturing credentials for major services including American Express, PayPal, Facebook, and Google accounts.'
+        pl: '"Why Eve and Mallory Love Android: An Analysis of Android SSL (In)Security" -- potwierdzone niezależnie przez wszystkie trzy przejścia badawcze aż do dokładnie tych samych liczb: 1074 z 13500 popularnych darmowych apek Play (8.0%) zawierało kod SSL/TLS potencjalnie podatny na MITM, a ręczny audyt 100 wybranych apek dał prawdziwy MITM z praktyki przeciw 41 z nich, przechwytując poświadczenia dla głównych usług włącznie z American Express, PayPal, Facebook, i kontami Google.'
+    - org: Academic follow-up — Oltrogge et al.
+      year: 2021
+      impact: 88.87% of custom Network Security Configs weaken security; only 0.67% of apps implement pinning
+      cost: USENIX Security 2021, "Why Eve and Mallory Still Love Android"
+      description:
+        en: 'A dedicated verification pass confirmed both headline statistics of this direct nine-years-later revisit of the 2012 study: nearly 9 in 10 apps that bother to customize Android''s declarative Network Security Configuration actually make their own security WORSE than the platform defaults, and certificate pinning adoption remains vanishingly rare -- honest evidence that this class was far from solved a decade after it was first documented at scale.'
+        pl: 'Dedykowane przejście weryfikacyjne potwierdziło obie flagowe statystyki tej bezpośredniej kontynuacji badania z 2012 dziewięć lat później: prawie 9 na 10 apek które zadają sobie trud dostosowania deklaratywnej Network Security Configuration Android faktycznie czyni własne bezpieczeństwo GORSZYM niż domyślne ustawienia platformy, a adopcja przypinania certyfikatu pozostaje znikomo rzadka -- uczciwy dowód że ta klasa była daleka od rozwiązania dekadę po tym jak została po raz pierwszy udokumentowana na dużą skalę.'
+    - org: FTC v. Fandango and FTC v. Credit Karma
+      year: 2014
+      impact: 'SSL validation disabled in production (Fandango: March 2009 - February 2013); 20-year mandated security audits'
+      cost: FTC settlements, no monetary penalty but biennial independent security audits for 20 years
+      description:
+        en: 'Verified directly against the FTC''s own press release: both companies shipped mobile apps with SSL certificate validation disabled, defeating the OS''s default MITM protection and exposing credit-card numbers, CVVs, Social Security numbers, and credit-report data. Fandango''s flaw shipped for nearly four years before discovery -- concrete evidence for this deep-dive''s claim that a broken trust check produces no visible failure signal.'
+        pl: 'Zweryfikowane bezpośrednio względem własnego komunikatu prasowego FTC: obie firmy wysłały apki mobilne z wyłączoną walidacją certyfikatu SSL, pokonując domyślną ochronę MITM systemu i ujawniając numery kart kredytowych, CVV, numery ubezpieczenia społecznego, i dane raportów kredytowych. Wada Fandango była wysyłana przez prawie cztery lata przed odkryciem -- konkretny dowód na twierdzenie tego deep-dive że złamana kontrola zaufania nie produkuje żadnego widocznego sygnału awarii.'
+    - org: OkHttp
+      year: 2016
+      impact: CVE-2016-2402 -- CVSS 5.9 Medium, CWE-295
+      cost: Fixed in 2.7.4 / 3.1.2
+      description:
+        en: 'Verified directly against NVD: versions before 2.7.4 (2.x) and 3.1.2 (3.x) had a certificate-pinning bypass reachable by presenting a chain containing both the pinned certificate and a certificate from any other trusted CA -- a real, concrete example that implementing pinning is not automatically sufficient if the verification logic itself has a flaw.'
+        pl: 'Zweryfikowane bezpośrednio względem NVD: wersje przed 2.7.4 (2.x) i 3.1.2 (3.x) miały obejście przypinania certyfikatu osiągalne przez zaprezentowanie łańcucha zawierającego zarówno przypięty certyfikat jak i certyfikat od dowolnego innego zaufanego CA -- prawdziwy, konkretny przykład że zaimplementowanie przypinania nie jest automatycznie wystarczające jeśli sama logika weryfikacji ma wadę.'
+    inlineSources:
+    - label: Fahl et al. — Why Eve and Mallory Love Android (ACM CCS 2012)
+      url: https://dl.acm.org/doi/10.1145/2382196.2382205
+    - label: Oltrogge et al. — Why Eve and Mallory Still Love Android (USENIX Security 2021)
+      url: https://www.usenix.org/conference/usenixsecurity21/presentation/oltrogge
+    - label: FTC — Fandango, Credit Karma Settle FTC Charges
+      url: https://www.ftc.gov/news-events/news/press-releases/2014/03/fandango-credit-karma-settle-ftc-charges-they-deceived-consumers-failing-secure-mobile-apps
+    - label: CVE-2016-2402 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2016-2402
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: The exact tooling that produced the 2012 and 2021 academic findings is the same tooling any team can run today -- this is a well-solved detection problem, unlike the harder-to-automate categories elsewhere in this catalog.
+      pl: Dokładnie te same narzędzia które wyprodukowały ustalenia akademickie z 2012 i 2021 to te same narzędzia które każdy zespół może uruchomić dzisiaj -- to dobrze rozwiązany problem wykrywania, w przeciwieństwie do trudniejszych do zautomatyzowania kategorii gdzie indziej w tym katalogu.
+    sast:
+    - - MobSF (Mobile Security Framework)
+      - Statically flags trust-all TrustManager implementations, always-true HostnameVerifiers, and permissive cleartext/Network Security Config settings
+    - - CodeQL (java/insecure-trustmanager)
+      - A dedicated query specifically named "TrustManager that accepts all certificates" -- purpose-built for exactly this anti-pattern
+    - - MalloDroid
+      - The original academic static analyzer from Fahl et al. 2012 that established this vulnerability class at scale
+    dast:
+    - - mitmproxy / Burp Suite
+      - Install the proxy's own CA on a test device and route app traffic through it -- the primary, fastest confirmation of whether TLS validation is genuinely enforced
+    - - Rogue AP / ARP spoofing on a controlled network
+      - Confirms real-world on-path MITM feasibility without any device-side cooperation, distinct from the proxy-CA test
+    - - Frida / objection SSL-pinning-bypass scripts
+      - objection's android sslpinning disable and universal Frida unpinning scripts hook trust-evaluation APIs at runtime to stress-test pinning specifically
+    note:
+      en: <strong>Key signal:</strong> if a proxy test with an installed CA shows plaintext traffic on a rooted test device, the app has either no pinning or a broken trust check -- but a clean result on that same test does not by itself prove correctness, since Android has not trusted user-installed CAs by default since API 24, so confirm with a genuinely untrusted certificate on a network you control before concluding the app is safe.
+      pl: <strong>Kluczowy sygnał:</strong> jeśli test proxy z zainstalowanym CA pokazuje ruch w postaci zwykłego tekstu na zrootowanym urządzeniu testowym, apka albo nie ma przypinania albo ma złamaną kontrolę zaufania -- ale czysty wynik tego samego testu sam w sobie nie dowodzi poprawności, ponieważ Android nie ufa domyślnie CA zainstalowanym przez użytkownika od API 24, więc potwierdź naprawdę nieufnym certyfikatem na sieci którą kontrolujesz zanim uznasz apkę za bezpieczną.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'All three research passes independently verified the same finding by fetching OWASP''s official M5 page directly: it names no specific CWE, only a generic reference link -- so the multi-CWE mapping below is this knowledge base''s own analytical alignment against MITRE, matching all three teams'' independent recommendation.'
+      pl: 'Wszystkie trzy przejścia badawcze niezależnie zweryfikowały to samo ustalenie pobierając bezpośrednio oficjalną stronę M5 OWASP: nie wymienia ona żadnego konkretnego CWE, tylko generyczny link odnośnika -- więc poniższe mapowanie wielu CWE to własne dopasowanie analityczne tej bazy wiedzy względem MITRE, zgodne z niezależną rekomendacją wszystkich trzech zespołów.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-295 — Improper Certificate Validation (primary). The umbrella weakness for trust-all TrustManager implementations and silently-ignored TLS errors, verified directly at MITRE.
+      - CWE-297 — Improper Validation of Certificate with Host Mismatch (secondary, ChildOf CWE-295). The precise fit for the always-true HostnameVerifier variant.
+      - CWE-319 — Cleartext Transmission of Sensitive Information (secondary, for the plaintext-HTTP facet specifically). This is what this catalog's original stub for this entry used as its sole CWE before this deep-dive expanded the mapping.
+      - 'Related siblings under CWE-295, confirmed to exist at MITRE: CWE-296 (chain-of-trust following), CWE-298 (expiration validation), CWE-299 (revocation checking), CWE-599 (missing OpenSSL certificate validation -- the exact CWE NVD assigned to a real 2025 app CVE for this class).'
+    - std: OWASP
+      items:
+      - 'Mobile Top 10 2024 — M5: Insecure Communication (was M3 in the 2016 list). Verified directly against owasp.org: Exploitability EASY, Prevalence COMMON, Detectability AVERAGE, Technical Impact SEVERE.'
+      - OWASP's own M5 page lists no specific CWE number -- verified by all three research passes fetching the page directly, not the community/MITRE mapping presented above.
+      - Maps to OWASP MASVS-NETWORK, with dedicated MASTG test cases covering both TLS configuration and certificate/public-key pinning implementation.
+    inlineSources:
+    - label: OWASP Mobile Top 10 2024 — M5
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m5-insecure-communication
+    - label: CWE-295 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/295.html
+    - label: CWE-297 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/297.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If active exploitation of broken TLS validation is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu aktywnej eksploatacji złamanej walidacji TLS, przejdź tę listę od góry.
+    steps:
+    - en: 'Confirm the exact scope: total trust-all compromise (every session on every network is exposed) versus a narrower pinning-implementation flaw (only on-path attackers with a mis-issued cert)'
+      pl: 'Potwierdź dokładny zakres: całkowita kompromitacja trust-all (każda sesja w każdej sieci jest narażona) w porównaniu do węższej wady implementacji przypinania (tylko atakujący na ścieżce z błędnie wystawionym certyfikatem)'
+    - en: Treat every credential, token, and piece of sensitive data the app has ever transmitted since the vulnerable version shipped as potentially exposed, not just data transmitted after discovery
+      pl: Traktuj każde poświadczenie, token, i element wrażliwych danych które apka kiedykolwiek przesłała odkąd podatna wersja została wydana jako potencjalnie narażone, nie tylko dane przesłane po odkryciu
+    - en: Ship a fix that removes the custom TrustManager/HostnameVerifier/delegate entirely rather than patching its logic -- the FTC cases show a "fixed" version of a trust-all pattern is easy to get wrong again
+      pl: Wydaj naprawę która całkowicie usuwa niestandardowy TrustManager/HostnameVerifier/delegat zamiast łatać jego logikę -- przypadki FTC pokazują że "naprawiona" wersja wzorca trust-all łatwo znów się myli
+    - en: Force logout and require re-authentication for all users on the affected version, since any session token could have been intercepted
+      pl: Wymuś wylogowanie i wymagaj ponownego uwierzytelnienia dla wszystkich użytkowników na dotkniętej wersji, ponieważ każdy token sesji mógł zostać przechwycony
+    - en: Rotate any long-lived credentials or API keys that may have transited the broken channel
+      pl: Zrotuj wszelkie długożyjące poświadczenia albo klucze API które mogły przejść przez złamany kanał
+    - en: Notify per applicable data-breach obligations, following the FTC precedent that this class carries real regulatory consequences even without a monetary penalty
+      pl: Powiadom zgodnie z obowiązującymi wymogami dot. naruszenia danych, podążając za precedensem FTC że ta klasa niesie prawdziwe konsekwencje regulacyjne nawet bez kary pieniężnej
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP Mobile Top 10 2024 — M5
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m5-insecure-communication
+    - label: Android Developers — Unsafe X509TrustManager
+      url: https://developer.android.com/privacy-and-security/risks/unsafe-trustmanager
+    - label: CWE-295 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/295.html
+    - label: CWE-297 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/297.html
+    - label: Fahl et al. — Why Eve and Mallory Love Android (ACM CCS 2012)
+      url: https://dl.acm.org/doi/10.1145/2382196.2382205
+    - label: Oltrogge et al. — Why Eve and Mallory Still Love Android (USENIX Security 2021)
+      url: https://www.usenix.org/conference/usenixsecurity21/presentation/oltrogge
+    - label: FTC — Fandango, Credit Karma Settle FTC Charges
+      url: https://www.ftc.gov/news-events/news/press-releases/2014/03/fandango-credit-karma-settle-ftc-charges-they-deceived-consumers-failing-secure-mobile-apps
+    - label: CVE-2016-2402 (NVD)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2016-2402

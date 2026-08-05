@@ -66,20 +66,24 @@ threats:
   note_en: 'Source: OWASP Mobile Top 10 2024, M4.'
 - id: '15.5'
   name: Insecure Communication (Mobile)
-  severity: High
-  difficulty: Unknown
+  severity: Critical
+  difficulty: Easy
   confidence: POSSIBLE
   cwe:
+  - CWE-295
+  - CWE-297
   - CWE-319
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Data transmitted over cleartext or with improper TLS certificate/hostname validation, allowing man-in-the-middle interception on hostile networks.
+  desc: 'Dane przesyłane przez cleartext albo z niepoprawną walidacją certyfikatu/hostname TLS, pozwalające na przechwycenie man-in-the-middle w wrogich sieciach. Klasyczny wzorzec: niestandardowy X509TrustManager z pustym checkServerTrusted() akceptuje DOWOLNY certyfikat -- zweryfikowane badanie akademickie z 2012 znalazło 8.0% z 13500 apek potencjalnie podatnych, a kontynuacja z 2021 pokazała że 88.87% niestandardowych Network Security Config faktycznie OSŁABIA bezpieczeństwo.
 
     '
-  desc_en: Data transmitted over cleartext or with improper TLS certificate/hostname validation, allowing man-in-the-middle interception on hostile networks.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'Data transmitted over cleartext or with improper TLS certificate/hostname validation, allowing man-in-the-middle interception on hostile networks. The classic pattern: a custom X509TrustManager with an empty checkServerTrusted() accepts ANY certificate -- a verified 2012 academic study found 8.0% of 13,500 apps potentially vulnerable, and a 2021 follow-up found 88.87% of custom Network Security Configs actually WEAKEN security.'
+  lang: kotlin
+  vuln: "val trustAll = object : X509TrustManager {\n    override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}\n    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}  // never throws\n    override fun getAcceptedIssuers() = arrayOf<X509Certificate>()\n}\n"
+  safe: '// SAFE: no custom TrustManager, no custom HostnameVerifier --
 
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+    // the platform validates chain + hostname against the system trust store.
+
+    val client = OkHttpClient()
 
     '
   note_en: 'Source: OWASP Mobile Top 10 2024, M5. Related CWE-295 (improper certificate validation) — covers missing certificate pinning.'

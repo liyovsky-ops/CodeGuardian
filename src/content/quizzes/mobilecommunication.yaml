@@ -1,0 +1,101 @@
+threatId: '15.5'
+title:
+  en: Insecure Communication — knowledge check
+  pl: Insecure Communication — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: An Android app's custom X509TrustManager has an empty checkServerTrusted() method body -- it never throws CertificateException regardless of the certificate presented. Is this exploitable by an on-path attacker who has never touched the target device?
+    pl: Niestandardowy X509TrustManager apki Android ma pustą treść metody checkServerTrusted() -- nigdy nie rzuca CertificateException niezależnie od zaprezentowanego certyfikatu. Czy to jest podatne na wykorzystanie przez atakującego na ścieżce który nigdy nie dotknął urządzenia docelowego?
+  isVulnerable: true
+  cwe: CWE-295
+  explanation:
+    en: 'Yes -- this is the total-compromise variant, verified directly against Android''s own official documentation, which explicitly states this pattern lets an attacker perform a machine-in-the-middle attack. No device cooperation is needed: on any network the device joins (a rogue AP, a compromised Wi-Fi router), the attacker''s own self-signed certificate is accepted without complaint, because the check that would reject it never actually runs.'
+    pl: 'Tak -- to wariant całkowitej kompromitacji, zweryfikowany bezpośrednio względem własnej oficjalnej dokumentacji Android, która jawnie stwierdza że ten wzorzec pozwala atakującemu wykonać atak machine-in-the-middle. Nie jest potrzebna żadna współpraca urządzenia: w dowolnej sieci do której dołączy urządzenie (fałszywy AP, skompromitowany router Wi-Fi), własny własnoręcznie podpisany certyfikat atakującego jest akceptowany bez sprzeciwu, ponieważ kontrola która by go odrzuciła nigdy faktycznie nie działa.'
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: According to the real, independently-verified academic study anchoring this deep-dive, what did Fahl et al.'s 2012 analysis of 13,500 popular Android apps find?
+    pl: Zgodnie z prawdziwym, niezależnie zweryfikowanym badaniem akademickim zakotwiczającym ten deep-dive, co znalazła analiza Fahl i in. z 2012 badająca 13500 popularnych apek Android?
+  choices:
+  - id: a
+    label:
+      en: 1,074 apps (8.0%) contained SSL/TLS code potentially vulnerable to MITM, and a manual audit of 100 selected apps yielded successful real-world MITM against 41 of them, including capturing credentials for major services
+      pl: 1074 apki (8.0%) zawierało kod SSL/TLS potencjalnie podatny na MITM, a ręczny audyt 100 wybranych apek dał prawdziwy MITM z praktyki przeciw 41 z nich, włącznie z przechwyceniem poświadczeń dla głównych usług
+  - id: b
+    label:
+      en: Fewer than 1% of apps had any TLS issues, showing the class was already well-controlled by 2012
+      pl: Mniej niż 1% apek miało jakiekolwiek problemy TLS, pokazując że klasa była już dobrze kontrolowana do 2012
+  - id: c
+    label:
+      en: The study focused exclusively on iOS apps, not Android
+      pl: Badanie skupiało się wyłącznie na apkach iOS, nie Android
+  correctChoiceIds:
+  - a
+  explanation:
+    en: All three independent research passes converged on these exact same figures for the CCS 2012 paper "Why Eve and Mallory Love Android" -- an unusually strong level of cross-team numerical agreement for an academic citation, and the reason this study anchors the incidents section as the strongest verified evidence in this deep-dive.
+    pl: Wszystkie trzy niezależne przejścia badawcze zbiegły się na dokładnie tych samych liczbach dla artykułu CCS 2012 "Why Eve and Mallory Love Android" -- niezwykle silny poziom międzyzespołowej zgodności liczbowej dla cytatu akademickiego, i powód dla którego to badanie zakotwicza sekcję incydentów jako najsilniejszy zweryfikowany dowód w tym deep-dive.
+- id: q3
+  type: vuln-or-not
+  prompt:
+    en: A team implements certificate pinning correctly and considers TLS security "solved" for their app, deprioritizing a code review that would have caught a trust-all TrustManager left over from early development. Is treating pinning as the primary defense here a meaningful gap?
+    pl: Zespół poprawnie implementuje przypinanie certyfikatu i uznaje bezpieczeństwo TLS za "rozwiązane" dla swojej apki, obniżając priorytet przeglądu kodu który wychwyciłby trust-all TrustManager pozostały z wczesnego etapu developmentu. Czy traktowanie przypinania jako głównej obrony jest tutaj istotną luką?
+  isVulnerable: true
+  cwe: CWE-295
+  explanation:
+    en: 'Yes. All three research passes explicitly ranked pinning as defense-in-depth, not primary -- and for exactly this reason: pinning defends against a rogue or mis-issued CA specifically, but a trust-all TrustManager bypasses trust evaluation entirely, which means it ignores pin checks too. Correct pinning provides zero protection against the underlying total-compromise bug this deep-dive''s top-ranked defense (never override the default TrustManager) actually closes.'
+    pl: 'Tak. Wszystkie trzy przejścia badawcze jawnie sklasyfikowały przypinanie jako obronę w głąb, nie główną -- i dokładnie z tego powodu: przypinanie broni konkretnie przed nieuczciwym albo błędnie wystawionym CA, ale trust-all TrustManager całkowicie omija ewaluację zaufania, co oznacza że ignoruje też kontrole przypięcia. Poprawne przypinanie daje zerową ochronę przed leżącym u podstaw błędem całkowitej kompromitacji który zamyka główna obrona tego deep-dive z najwyższą rangą (nigdy nie nadpisuj domyślnego TrustManager).'
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: This deep-dive cites a 2021 USENIX follow-up study (Oltrogge et al.) alongside the 2012 Fahl et al. study. What did the 2021 study find about custom Network Security Configurations?
+    pl: Ten deep-dive cytuje badanie kontynuacyjne USENIX z 2021 (Oltrogge i in.) obok badania Fahl i in. z 2012. Co znalazło badanie z 2021 na temat niestandardowych Network Security Configuration?
+  choices:
+  - id: a
+    label:
+      en: 88.87% of apps that customize the Network Security Configuration actually make their own security WORSE than the platform defaults, and only 0.67% of apps implement certificate pinning at all
+      pl: 88.87% apek dostosowujących Network Security Configuration faktycznie czyni własne bezpieczeństwo GORSZYM niż domyślne ustawienia platformy, a tylko 0.67% apek w ogóle implementuje przypinanie certyfikatu
+  - id: b
+    label:
+      en: The vulnerability class from 2012 had been essentially eliminated by 2021, with under 1% of apps affected
+      pl: Klasa podatności z 2012 została zasadniczo wyeliminowana do 2021, z mniej niż 1% dotkniętych apek
+  - id: c
+    label:
+      en: Network Security Configuration adoption made no measurable difference to app security either way
+      pl: Adopcja Network Security Configuration nie zrobiła mierzalnej różnicy dla bezpieczeństwa apki w żadną stronę
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Confirmed via a dedicated verification pass against the paper''s own presentation page. This is a genuinely sobering finding: the platform gave developers a safer, declarative way to configure trust (Network Security Config) specifically to reduce this bug class, and the study found that when developers actually customize it, they overwhelmingly make things worse rather than better -- and almost nobody adopts pinning at all.'
+    pl: 'Potwierdzone przez dedykowane przejście weryfikacyjne względem własnej strony prezentacji artykułu. To naprawdę otrzeźwiające ustalenie: platforma dała deweloperom bezpieczniejszy, deklaratywny sposób konfiguracji zaufania (Network Security Config) konkretnie by zredukować tę klasę błędów, a badanie znalazło że gdy deweloperzy faktycznie go dostosowują, w przytłaczającej większości pogarszają sprawy zamiast je poprawiać -- i prawie nikt w ogóle nie adoptuje przypinania.'
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: A mobile app disabled SSL certificate validation in production for nearly four years before the flaw was discovered, during which the app appeared to function completely normally to users -- no crashes, no visible errors, the padlock still "worked." Does this pattern of silent, undetected persistence match how real incidents in this class have actually unfolded?
+    pl: Apka mobilna wyłączyła walidację certyfikatu SSL na produkcji przez prawie cztery lata zanim wada została odkryta, podczas czego apka wydawała się działać całkowicie normalnie dla użytkowników -- żadnych awarii, żadnych widocznych błędów, kłódka wciąż "działała". Czy ten wzorzec cichego, niewykrytego przetrwania pasuje do tego jak faktycznie rozwinęły się prawdziwe incydenty w tej klasie?
+  isVulnerable: true
+  cwe: CWE-295
+  explanation:
+    en: 'Yes -- this is not a hypothetical, it''s the real, verified FTC v. Fandango case: SSL validation was disabled in the company''s iOS app from March 2009 to February 2013, nearly four years, before discovery. This is the concrete, primary-source-verified evidence for this deep-dive''s central point: a broken trust check produces no functional failure signal, which is exactly why it survives so long once introduced.'
+    pl: 'Tak -- to nie hipoteza, to prawdziwy, zweryfikowany przypadek FTC v. Fandango: walidacja SSL była wyłączona w apce iOS firmy od marca 2009 do lutego 2013, prawie cztery lata, zanim została odkryta. To konkretny, zweryfikowany względem źródła pierwotnego dowód na centralny punkt tego deep-dive: złamana kontrola zaufania nie produkuje żadnego funkcjonalnego sygnału awarii, dlatego dokładnie przetrwa tak długo raz wprowadzona.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A developer needs their Android app to work against a staging server using a self-signed certificate during development, without breaking TLS validation in the production build. Which variant actually achieves this safely?
+    pl: Deweloper potrzebuje by apka Android działała przeciw serwerowi staging używającemu własnoręcznie podpisanego certyfikatu podczas developmentu, bez łamania walidacji TLS w buildzie produkcyjnym. Który wariant faktycznie osiąga to bezpiecznie?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: "val trustAll = object : X509TrustManager {\n    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}\n    // ... installed globally via SSLContext, ships in every build\n}"
+  - id: v2
+    lang: xml
+    code: "<!-- res/xml/network_security_config.xml -->\n<network-security-config>\n  <debug-overrides>\n    <trust-anchors>\n      <certificates src=\"@raw/staging_ca\"/>\n    </trust-anchors>\n  </debug-overrides>\n</network-security-config>\n<!-- <debug-overrides> only applies when android:debuggable=\"true\",\n     which release/Play Store builds reject -->"
+  - id: v3
+    lang: kotlin
+    code: "val client = OkHttpClient.Builder()\n    .hostnameVerifier { hostname, _ -> hostname.contains(\"staging\") }\n    .build()"
+  correctVariantId: v2
+  explanation:
+    en: 'v2 uses Android''s own purpose-built mechanism, verified directly in Android''s official documentation: <debug-overrides> only takes effect when android:debuggable="true", and release/Play Store builds cannot ship with that flag set -- so the staging CA trust is automatically confined to development builds with no risk of shipping to production. v1 is the exact global, permanent trust-all pattern this deep-dive''s incidents were built on -- it ships in every build including production. v3''s hostname substring check is trivially bypassed by any attacker-controlled domain containing the word "staging" (e.g. staging.attacker.com), and does nothing to validate the certificate chain itself.'
+    pl: 'v2 używa własnego, dedykowanego mechanizmu Android, zweryfikowanego bezpośrednio we własnej dokumentacji Android: <debug-overrides> działa tylko gdy android:debuggable="true", a buildy release/Play Store nie mogą być wysłane z tą flagą ustawioną -- więc zaufanie CA staging jest automatycznie ograniczone do buildów deweloperskich bez ryzyka wysłania na produkcję. v1 to dokładnie globalny, trwały wzorzec trust-all na którym zbudowane były incydenty tego deep-dive -- wysyłany w każdym buildzie włącznie z produkcyjnym. Kontrola podciągu hostname z v3 jest trywialnie omijana przez dowolną kontrolowaną przez atakującego domenę zawierającą słowo "staging" (np. staging.attacker.com), i nic nie robi by zwalidować sam łańcuch certyfikatów.'

@@ -48,6 +48,7 @@ import mobilecredentialsData from '../content/deepdives/mobilecredentials.yaml';
 import mobilesupplychainData from '../content/deepdives/mobilesupplychain.yaml';
 import mobileauthData from '../content/deepdives/mobileauth.yaml';
 import mobileiovalidationData from '../content/deepdives/mobileiovalidation.yaml';
+import mobilecommunicationData from '../content/deepdives/mobilecommunication.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -93,6 +94,7 @@ import mobilecredentialsQuiz from '../content/quizzes/mobilecredentials.yaml';
 import mobilesupplychainQuiz from '../content/quizzes/mobilesupplychain.yaml';
 import mobileauthQuiz from '../content/quizzes/mobileauth.yaml';
 import mobileiovalidationQuiz from '../content/quizzes/mobileiovalidation.yaml';
+import mobilecommunicationQuiz from '../content/quizzes/mobilecommunication.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -140,6 +142,7 @@ export const DEEPDIVES = {
   '15.2': mobilesupplychainData, // Inadequate Supply Chain Security (Mobile)
   '15.3': mobileauthData, // Insecure Authentication/Authorization (Mobile)
   '15.4': mobileiovalidationData, // Insufficient Input/Output Validation (Mobile)
+  '15.5': mobilecommunicationData, // Insecure Communication (Mobile)
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -190,4 +193,5 @@ export const QUIZZES = {
   '15.2': mobilesupplychainQuiz,
   '15.3': mobileauthQuiz,
   '15.4': mobileiovalidationQuiz,
+  '15.5': mobilecommunicationQuiz,
 };
