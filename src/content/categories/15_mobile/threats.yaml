@@ -89,22 +89,29 @@ threats:
   note_en: 'Source: OWASP Mobile Top 10 2024, M5. Related CWE-295 (improper certificate validation) — covers missing certificate pinning.'
 - id: '15.6'
   name: Inadequate Privacy Controls
-  severity: Medium
-  difficulty: Unknown
+  severity: High
+  difficulty: Easy
   confidence: POSSIBLE
   cwe:
   - CWE-359
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Collection, storage, or transmission of PII, location, contacts, or device identifiers beyond need or without consent, exposing users to privacy harm and regulatory violations.
+  - CWE-200
+  desc: 'Zbieranie, przechowywanie albo przesyłanie PII, lokalizacji, kontaktów, albo identyfikatorów urządzenia ponad potrzebę albo bez zgody. Zweryfikowany przypadek Grindr: dane GPS, IP, ID reklamowe i sam status użytkownika Grindr (implikujący orientację seksualną) dzielone z partnerami reklamowymi na łącznej zgodzie wszystko-albo-nic -- norweski DPA uznał to za nieważne i nałożył karę GDPR NOK 65 mln (~6.5 mln EUR), utrzymaną w 2023.
 
     '
-  desc_en: Collection, storage, or transmission of PII, location, contacts, or device identifiers beyond need or without consent, exposing users to privacy harm and regulatory violations.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'Collection, storage, or transmission of PII, location, contacts, or device identifiers beyond need or without consent. Verified real case: Grindr shared GPS, IP, advertising ID, and the fact of being a Grindr user itself (implying sexual orientation) with ad partners on bundled, take-it-or-leave-it consent -- Norway''s DPA ruled this invalid and imposed a GDPR fine of NOK 65 million (~€6.5 million), upheld on appeal in 2023.'
+  lang: kotlin
+  vuln: '<!-- VULNERABLE: permissions requested up front, beyond the single-player game''s needs -->
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
+
+    <!-- driven by a bundled ad SDK the developer never audited -->
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
+  safe: "<!-- SAFE: only what the shipped feature genuinely needs, requested just-in-time -->\n<uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\"/>\n<!-- requested at the moment the location feature is used, with a contextual rationale;\n     BACKGROUND_LOCATION and READ_CONTACTS omitted -- nothing in the app uses them -->\n"
   note_en: 'Source: OWASP Mobile Top 10 2024, M6.'
 - id: '15.7'
   name: Insufficient Binary Protections

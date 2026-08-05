@@ -1,0 +1,353 @@
+meta:
+  id: mobileprivacy
+  threatId: '15.6'
+  severity: High
+  color: '#a21caf'
+  colorRgb: 162,28,175
+  cwe: CWE-359
+  cvss: N/A (privacy/regulatory violation, not a technical exploit)
+  standard: OWASP Mobile Top 10 2024 (M6)
+hero:
+  titleMain: 'Inadequate Privacy '
+  titleGrad: Controls
+  titleTail: ''
+  topbar: Inadequate Privacy Controls (OWASP Mobile Top 10 2024, M6)
+  lead:
+    en: 'Genuinely new in the 2024 revision -- the 2016 list''s M6 was an entirely different topic, "Insecure Authorization." All three independent research passes flagged the same important nuance, mirroring a pattern already seen elsewhere in this catalog: OWASP''s own official M6 page is narrower and more storage/transmission-centric (PII in logs, PII in URL parameters, PII in device backups) than the broader "over-collection, disclosure, consent, third-party SDK" framing that dominates industry commentary and this deep-dive''s own scope. That broader framing is real and well-supported -- OWASP''s own text does open with apps collecting "more than they need to fulfill their purpose" -- but it is documented here as the community''s expansion of a terser official page, not misattributed as OWASP''s literal wording. Fittingly, OWASP itself rates this category''s Technical Impact LOW but Business Impact SEVERE: this is fundamentally a disclosure and consent failure, not a traditional technical
+      exploit, and the real incidents anchoring this deep-dive are regulatory enforcement actions, not CVEs.'
+    pl: 'Naprawdę nowa w rewizji 2024 -- M6 z listy 2016 był zupełnie innym tematem, "Insecure Authorization". Wszystkie trzy niezależne przejścia badawcze oflagowały ten sam ważny niuans, powtarzający wzorzec już widziany gdzie indziej w tym katalogu: własna oficjalna strona M6 OWASP jest węższa i bardziej skoncentrowana na przechowywaniu/transmisji (PII w logach, PII w parametrach URL, PII w backupach urządzenia) niż szersze ramowanie "nadmierne zbieranie, ujawnienie, zgoda, SDK firmy trzeciej" które dominuje w komentarzach branżowych i własnym zakresie tego deep-dive. To szersze ramowanie jest prawdziwe i dobrze poparte -- własny tekst OWASP zaczyna się od apek zbierających "więcej niż potrzebują do spełnienia swojego celu" -- ale jest tutaj udokumentowane jako rozszerzenie społeczności zwięzłej oficjalnej strony, nie błędnie przypisane jako dosłowne brzmienie OWASP. Stosownie, sam OWASP klasyfikuje wpływ techniczny tej kategorii jako NISKI ale wpływ biznesowy jako SEVERE: to fundamentalnie
+      awaria ujawnienia i zgody, nie tradycyjny exploit techniczny, a prawdziwe incydenty zakotwiczające ten deep-dive to działania egzekwujące regulatora, nie CVE.'
+  metrics:
+  - k: CWE-359
+    v:
+      en: Weakness ID (imperfect fit -- disclosure-focused)
+      pl: ID słabości (niedoskonałe dopasowanie -- skupione na ujawnieniu)
+  - k: NOK 65M
+    v:
+      en: Grindr GDPR fine, upheld 2023 (~€6.5M)
+      pl: Kara GDPR Grindr, utrzymana w 2023 (~6.5 mln EUR)
+  - k: ~53
+    v:
+      en: Apps caught reading clipboard, iOS 14 (2020)
+      pl: Apek złapanych na czytaniu schowka, iOS 14 (2020)
+  - k: LOW/SEVERE
+    v:
+      en: OWASP's own Technical/Business impact split
+      pl: Własny podział wpływu techniczny/biznesowy OWASP
+  sources:
+  - label: OWASP Mobile Top 10 2024 — M6
+    url: https://owasp.org/www-project-mobile-top-10/2023-risks/m6-inadequate-privacy-controls
+  - label: FTC — Goldenshores "Brightest Flashlight Free" settlement
+    url: https://www.ftc.gov/news-events/news/press-releases/2013/12/android-flashlight-app-developer-settles-ftc-charges-it-deceived-consumers
+  - label: Datatilsynet — Grindr fine confirmed (2023)
+    url: https://www.datatilsynet.no/en/news/aktuelle-nyheter-2023/record-fine-grindr-confirmed/
+  - label: CWE-359 (MITRE)
+    url: https://cwe.mitre.org/data/definitions/359.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Every variant here shares a common thread: personal data reaches somewhere the user was never clearly told it would go, whether through over-broad permission requests, a bundled SDK''s own behavior, or an OS-level channel like the clipboard.'
+      pl: 'Każdy wariant tutaj dzieli wspólny wątek: dane osobowe docierają gdzieś o czym użytkownik nigdy nie został jasno poinformowany, czy to przez nadmiernie szerokie żądania uprawnień, własne zachowanie dołączonego SDK, czy kanał na poziomie systemu jak schowek.'
+    items:
+    - name: Over-broad permission requests beyond stated feature need
+      sev: high
+      description:
+        en: 'An app requests or a bundled SDK pulls in access to location, contacts, or persistent device identifiers that the app''s advertised feature never actually requires. Verified via the real FTC v. Goldenshores case -- with an important myth-correction all three research passes independently made: the app transmitted geolocation and device ID to ad networks, NOT contacts as the popular retelling often claims.'
+        pl: 'Apka żąda albo dołączony SDK wciąga dostęp do lokalizacji, kontaktów, albo trwałych identyfikatorów urządzenia których reklamowana funkcja apki wcale nie wymaga. Zweryfikowane przez prawdziwy przypadek FTC v. Goldenshores -- z ważną korektą mitu którą wszystkie trzy przejścia badawcze niezależnie dokonały: apka przesyłała geolokalizację i ID urządzenia do sieci reklamowych, NIE kontakty jak często twierdzi popularna wersja opowieści.'
+      payload: Manifest requests ACCESS_FINE_LOCATION + ACCESS_BACKGROUND_LOCATION + a persistent device ID, for an app whose only feature is a flashlight toggle
+    - name: Third-party SDK data collection beyond the app developer's own disclosure
+      sev: high
+      description:
+        en: A bundled ad/analytics SDK runs with the host app's permissions and collects/transmits more than the app's own privacy label discloses -- distinct from this catalog's Inadequate Supply Chain Security entry (M2), which covers a compromised or malicious SDK. Here the SDK is nominally legitimate; the failure is disclosure and consent, not compromise. TikTok's own explanation for its clipboard reads (an outdated Google Ads SDK) is a real, verified illustration of exactly this boundary.
+        pl: Dołączony SDK reklamowy/analityczny działa z uprawnieniami apki-hosta i zbiera/przesyła więcej niż ujawnia własna etykieta prywatności apki -- odrębne od wpisu Inadequate Supply Chain Security (M2) tego katalogu, który pokrywa skompromitowany albo złośliwy SDK. Tutaj SDK jest nominalnie legalny; awaria to ujawnienie i zgoda, nie kompromitacja. Własne wyjaśnienie TikTok dla swoich odczytów schowka (przestarzały SDK Google Ads) to prawdziwa, zweryfikowana ilustracja dokładnie tej granicy.
+      payload: Bundled ad SDK silently reads UIPasteboard/clipboard on every app launch, regardless of whether the app's own feature set ever needs clipboard access
+    - name: Clipboard monitoring/scraping
+      sev: medium
+      description:
+        en: 'Verified in full detail: March 2020 research by Talal Haj Bakry and Tommy Mysk found dozens of iOS apps silently reading the pasteboard on every launch; iOS 14''s June 2020 paste-notification banner made this visible to end users for the first time. TikTok was the flagship exposed case, and had already promised to stop once before being caught again.'
+        pl: 'Zweryfikowane w pełnym szczególe: badanie Talala Haj Bakry i Tommy''ego Myska z marca 2020 znalazło dziesiątki apek iOS po cichu czytających schowek przy każdym uruchomieniu; baner powiadomienia o wklejaniu iOS 14 z czerwca 2020 uczynił to widocznym dla użytkowników końcowych po raz pierwszy. TikTok był flagowym ujawnionym przypadkiem, i już wcześniej obiecał przestać zanim został ponownie złapany.'
+      payload: applicationDidBecomeActive { UIPasteboard.general.string }  -- reads clipboard content on every app foreground, unrelated to any paste action by the user
+    - name: Accessibility Service permission misuse for undisclosed data harvesting
+      sev: medium
+      description:
+        en: 'Android''s Accessibility Service grants screen-content reading and input capabilities far beyond accessibility use cases. All three research passes confirmed this is a real, heavily-documented abuse pattern (catalogued as MITRE ATT&CK Mobile T1453) -- but with an honest caveat: the best-documented cases are outright banking trojans and malware, which sit closer to this catalog''s Supply Chain / malware entries. The genuinely M6-specific angle is a legitimate, non-malicious app requesting Accessibility for undisclosed data harvesting rather than accessibility itself.'
+        pl: 'Accessibility Service Androida udziela odczytu zawartości ekranu i możliwości wejścia znacznie wykraczających poza przypadki użycia dostępności. Wszystkie trzy przejścia badawcze potwierdziły że to prawdziwy, dogłębnie udokumentowany wzorzec nadużycia (skatalogowany jako MITRE ATT&CK Mobile T1453) -- ale z uczciwym zastrzeżeniem: najlepiej udokumentowane przypadki to wprost trojany bankowe i malware, które siedzą bliżej wpisów Supply Chain / malware tego katalogu. Naprawdę specyficzny dla M6 kąt to legalna, niezłośliwa apka żądająca Accessibility dla nieujawnionego zbierania danych zamiast samej dostępności.'
+      payload: BIND_ACCESSIBILITY_SERVICE requested with a generic justification, then used to read on-screen content across other apps for undisclosed analytics purposes
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: Unlike most other topics in this catalog, the fix here is rarely a code-level patch -- it's a design and disclosure discipline applied before a single permission is requested.
+      pl: W przeciwieństwie do większości innych tematów w tym katalogu, naprawa tutaj rzadko jest łatką na poziomie kodu -- to dyscyplina projektowania i ujawnienia stosowana zanim choć jedno uprawnienie zostanie zażądane.
+    languages:
+    - label: Android -- permission manifest
+      lang: xml
+      vulnerable: '<!-- VULNERABLE: an app whose only feature is a single-player game -->
+
+        <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
+        <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+
+        <uses-permission android:name="android.permission.READ_CONTACTS"/>
+
+        <!-- all requested up front at first launch, driven by a bundled ad SDK -->'
+      safe: "<!-- SAFE: request only what the shipped feature genuinely needs -->\n<uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\"/>\n<!-- requested just-in-time, at the moment the location-based feature is used,\n     with a contextual pre-prompt explaining why; ACCESS_BACKGROUND_LOCATION\n     and READ_CONTACTS omitted entirely -- nothing in the app uses them -->"
+    - label: iOS -- just-in-time permission with rationale
+      lang: swift
+      vulnerable: '// VULNERABLE: requests every sensitive permission at first launch
+
+        // regardless of whether the user has reached a feature that needs it
+
+        requestLocationPermission()
+
+        requestContactsPermission()
+
+        requestMicrophonePermission()'
+      safe: "// SAFE: requested only when the user taps the specific feature,\n// with a contextual explanation shown first (Info.plist purpose string\n// + an in-app pre-prompt), and only the permission that feature needs.\nfunc userTappedRecordVoiceNote() {\n    showRationale(\"Microphone access lets you record a voice note.\") {\n        AVAudioSession.sharedInstance().requestRecordPermission { granted in ... }\n    }\n}"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: All three research passes agreed this category is audit and compliance detection more than traditional exploitation -- establishing over-collection means comparing what an app declares against what it actually does.
+      pl: Wszystkie trzy przejścia badawcze zgodziły się że ta kategoria to audyt i wykrywanie zgodności bardziej niż tradycyjna eksploatacja -- ustalenie nadmiernego zbierania oznacza porównanie tego co apka deklaruje z tym co faktycznie robi.
+    steps:
+    - title:
+        en: Static permission and SDK analysis
+        pl: Statyczna analiza uprawnień i SDK
+      description:
+        en: Decompile with MobSF to enumerate declared permissions and bundled third-party SDKs, then compare each against the app's advertised feature set and its own privacy nutrition label / Data Safety declaration -- any permission or SDK with no user-facing justification is a finding.
+        pl: Dekompiluj przez MobSF by wyliczyć zadeklarowane uprawnienia i dołączone SDK firm trzecich, potem porównaj każde względem reklamowanego zestawu funkcji apki i jej własnej deklaracji etykiety prywatności / Data Safety -- każde uprawnienie albo SDK bez uzasadnienia widocznego dla użytkownika to ustalenie.
+    - title:
+        en: Dynamic runtime API monitoring
+        pl: Dynamiczne monitorowanie API w czasie wykonania
+      description:
+        en: Hook privacy-sensitive APIs (location, clipboard, contacts, camera/mic) with Frida to observe what the app actually invokes at runtime versus what it discloses -- the exact technique that would have caught the real clipboard-reading pattern before iOS 14 made it publicly visible.
+        pl: Zahaczaj wrażliwe na prywatność API (lokalizacja, schowek, kontakty, kamera/mikrofon) przez Frida by obserwować co apka faktycznie wywołuje w czasie wykonania w porównaniu do tego co ujawnia -- dokładnie technika która wychwyciłaby prawdziwy wzorzec czytania schowka zanim iOS 14 uczynił go publicznie widocznym.
+    - title:
+        en: Network traffic analysis for actual exfiltration
+        pl: Analiza ruchu sieciowego pod kątem faktycznej eksfiltracji
+      description:
+        en: 'mitmproxy or Burp Suite (with certificate-pinning bypass where needed) reveals the ground truth: what PII and identifiers actually leave the device, and to which third-party ad/analytics endpoints -- this is how the real Grindr case''s data sharing with advertising partners was established.'
+        pl: 'mitmproxy albo Burp Suite (z obejściem przypinania certyfikatu gdzie potrzebne) ujawnia prawdę: jakie PII i identyfikatory faktycznie opuszczają urządzenie, i do jakich endpointów reklamowych/analitycznych firm trzecich -- tak został ustalony prawdziwy przypadek Grindr dzielenia się danymi z partnerami reklamowymi.'
+    - title:
+        en: Reconcile against declared disclosures
+        pl: Uzgodnij względem zadeklarowanych ujawnień
+      description:
+        en: Cross-check the observed permission usage, SDK behavior, and network traffic against the app's Apple Privacy Nutrition Label, Google Play Data Safety section, and posted privacy policy -- any gap between claimed and observed behavior is the actual compliance finding.
+        pl: Skrzyżuj obserwowane użycie uprawnień, zachowanie SDK, i ruch sieciowy z Apple Privacy Nutrition Label apki, sekcją Google Play Data Safety, i opublikowaną polityką prywatności -- każda luka między deklarowanym a obserwowanym zachowaniem to faktyczne ustalenie zgodności.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes independently ranked data minimization as the top control, echoing OWASP''s own stated position: data that was never collected cannot be leaked, sold, subpoenaed, or fined.'
+      pl: 'Wszystkie trzy przejścia badawcze niezależnie sklasyfikowały minimalizację danych jako główną kontrolę, powtarzając własne stanowisko OWASP: dane które nigdy nie zostały zebrane nie mogą zostać wyciekiete, sprzedane, wezwane sądowo, albo ukarane grzywną.'
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: Data minimization -- don't collect what isn't genuinely needed
+        pl: Minimalizacja danych -- nie zbieraj tego co nie jest naprawdę potrzebne
+      note:
+        en: 'OWASP''s own stated top prevention, quoted directly: something that does not exist cannot be attacked. Eliminates the risk class at its root rather than mitigating downstream consequences -- the single highest-leverage control precisely because every other defense here is damage control by comparison.'
+        pl: 'Własna deklarowana główna prewencja OWASP, zacytowana bezpośrednio: coś co nie istnieje nie może zostać zaatakowane. Eliminuje klasę ryzyka u korzenia zamiast łagodzić konsekwencje dalsze -- pojedyncza kontrola o najwyższej dźwigni dokładnie dlatego że każda inna obrona tutaj jest w porównaniu kontrolą szkód.'
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: Auditing and controlling third-party SDK data practices
+        pl: Audytowanie i kontrolowanie praktyk danych SDK firm trzecich
+      note:
+        en: The dominant hidden-collection vector in real incidents -- TikTok's own explanation for its clipboard reads was a bundled ad SDK. Since an SDK runs with the host app's full permissions, the developer is legally accountable for its behavior even when they don't fully control or audit it, making this the highest-value blind spot to close.
+        pl: Dominujący ukryty wektor zbierania w prawdziwych incydentach -- własne wyjaśnienie TikTok dla swoich odczytów schowka to dołączony SDK reklamowy. Ponieważ SDK działa z pełnymi uprawnieniami apki-hosta, deweloper jest prawnie odpowiedzialny za jego zachowanie nawet gdy go w pełni nie kontroluje ani nie audytuje, czyniąc to najbardziej wartościową martwą strefą do zamknięcia.
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Purpose limitation and valid, specific consent
+        pl: Ograniczenie celu i ważna, konkretna zgoda
+      note:
+        en: 'The real Grindr penalty was fundamentally a consent-validity failure, not an encryption or storage failure: bundled, take-it-or-leave-it consent for sharing special-category-adjacent data with ad partners was ruled invalid under GDPR. Data collected for one stated purpose being silently repurposed for advertising is exactly what this control prevents.'
+        pl: 'Prawdziwa kara Grindr była fundamentalnie awarią ważności zgody, nie awarią szyfrowania czy przechowywania: łączna zgoda typu wszystko-albo-nic na dzielenie się danymi zbliżonymi do specjalnej kategorii z partnerami reklamowymi została uznana za nieważną pod GDPR. Dane zebrane dla jednego zadeklarowanego celu po cichu przeznaczone na reklamę to dokładnie to czemu zapobiega ta kontrola.'
+    - rank: 4
+      eff: 65
+      kind: strong
+      label:
+        en: Just-in-time, contextual permission requests
+        pl: Żądania uprawnień w odpowiednim czasie, kontekstowe
+      note:
+        en: Requesting a permission at the moment the feature is actually used, with a clear explanation, reduces over-granting and produces genuinely informed consent -- distinct from front-loading every permission request at first launch, which trains users to tap through without reading.
+        pl: Żądanie uprawnienia w chwili gdy funkcja jest faktycznie używana, z jasnym wyjaśnieniem, redukuje nadmierne przyznawanie i produkuje naprawdę świadomą zgodę -- odrębne od ładowania z góry każdego żądania uprawnienia przy pierwszym uruchomieniu, co uczy użytkowników klikania bez czytania.
+    - rank: 5
+      eff: 45
+      kind: weak
+      label:
+        en: Accurate privacy nutrition labels / Data Safety disclosures alone
+        pl: Same dokładne etykiety odżywcze prywatności / ujawnienia Data Safety
+      note:
+        en: Necessary for legal compliance and platform-store rules, but self-attested and doesn't itself reduce what's collected -- transparency without minimization lowers legal exposure without lowering actual privacy risk, which is why this ranks lowest despite being the most visible control to end users.
+        pl: Niezbędne dla zgodności prawnej i zasad sklepu platformy, ale samodzielnie deklarowane i samo w sobie nie redukuje tego co jest zbierane -- przejrzystość bez minimalizacji obniża ekspozycję prawną bez obniżania faktycznego ryzyka prywatności, dlatego plasuje się najniżej mimo bycia najbardziej widoczną kontrolą dla użytkowników końcowych.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Fittingly for a category OWASP itself rates LOW on technical impact but SEVERE on business impact, every real incident here is a regulatory enforcement action or a public research disclosure -- not a CVE. All figures below were independently corroborated by all three research passes, including a shared correction of a widely-repeated myth.
+      pl: Stosownie dla kategorii którą sam OWASP klasyfikuje jako NISKI wpływ techniczny ale SEVERE wpływ biznesowy, każdy prawdziwy incydent tutaj to działanie egzekwujące regulatora albo publiczne ujawnienie badawcze -- nie CVE. Wszystkie poniższe liczby zostały niezależnie potwierdzone przez wszystkie trzy przejścia badawcze, włącznie ze wspólną korektą szeroko powtarzanego mitu.
+    items:
+    - org: Goldenshores Technologies — "Brightest Flashlight Free"
+      year: 2013
+      impact: FTC settlement -- consent order, no monetary fine
+      cost: Required just-in-time disclosure, affirmative express consent, and deletion of previously collected data
+      description:
+        en: 'Confirmed by all three research passes with an identical myth-correction: the app transmitted precise geolocation and a persistent device identifier to third-party ad networks without adequate disclosure -- not contacts, as the popular retelling of this story usually claims. Collection also began before the user had even accepted or rejected the app''s own EULA. A consent order, not a monetary penalty, was the actual outcome, a detail frequently mis-stated.'
+        pl: 'Potwierdzone przez wszystkie trzy przejścia badawcze z identyczną korektą mitu: apka przesyłała precyzyjną geolokalizację i trwały identyfikator urządzenia do sieci reklamowych firm trzecich bez odpowiedniego ujawnienia -- nie kontakty, jak zwykle twierdzi popularna wersja tej opowieści. Zbieranie zaczynało się też zanim użytkownik zdążył zaakceptować albo odrzucić własną EULA apki. Nakaz zgody, nie kara pieniężna, był faktycznym wynikiem, szczegół często błędnie podawany.'
+    - org: ~53 iOS apps, flagship case TikTok
+      year: 2020
+      impact: Clipboard reads exposed by iOS 14's paste-notification banner
+      cost: Public research disclosure by Talal Haj Bakry and Tommy Mysk, March 2020
+      description:
+        en: 'Confirmed by all three research passes: iOS 14''s June 2020 banner that visibly notified users whenever an app read the clipboard exposed silent, undisclosed pasteboard reads across dozens of popular apps, with TikTok as the flagship case -- caught reading the clipboard repeatedly despite having already promised to stop, and attributing the behavior to an outdated bundled Google Ads SDK. A direct, real illustration of this deep-dive''s third-party-SDK attack variant.'
+        pl: 'Potwierdzone przez wszystkie trzy przejścia badawcze: baner iOS 14 z czerwca 2020 który widocznie powiadamiał użytkowników za każdym razem gdy apka odczytała schowek ujawnił ciche, nieujawnione odczyty schowka w dziesiątkach popularnych apek, z TikTok jako flagowym przypadkiem -- złapanym na wielokrotnym czytaniu schowka mimo że już wcześniej obiecał przestać, i przypisującym zachowanie przestarzałemu dołączonemu SDK Google Ads. Bezpośrednia, prawdziwa ilustracja wariantu ataku SDK firmy trzeciej tego deep-dive.'
+    - org: Grindr — Norwegian Data Protection Authority (Datatilsynet)
+      year: 2021
+      impact: GDPR fine of NOK 65 million (~€6.5 million), upheld on appeal in 2023
+      cost: Initial intended fine was €10 million; finalized lower, then confirmed by the Privacy Appeals Board
+      description:
+        en: 'Confirmed by all three research passes: Grindr shared users'' GPS location, IP address, advertising ID, age, and gender -- plus the fact of being a Grindr user, which itself implies likely sexual orientation and constitutes GDPR special-category data -- with multiple advertising partners on bundled, take-it-or-leave-it consent that Norway''s DPA ruled invalid. The strongest verified real-world example in this deep-dive of an app developer''s own data-sharing practices, not a compromised third party, triggering major regulatory consequence.'
+        pl: 'Potwierdzone przez wszystkie trzy przejścia badawcze: Grindr dzielił lokalizację GPS użytkowników, adres IP, ID reklamowy, wiek, i płeć -- plus sam fakt bycia użytkownikiem Grindr, co samo w sobie implikuje prawdopodobną orientację seksualną i stanowi dane specjalnej kategorii GDPR -- z wieloma partnerami reklamowymi na łącznej zgodzie typu wszystko-albo-nic którą norweski DPA uznał za nieważną. Najsilniejszy zweryfikowany przykład z praktyki w tym deep-dive gdzie własne praktyki dzielenia danych dewelopera apki, nie skompromitowana strona trzecia, wywołały poważną konsekwencję regulacyjną.'
+    inlineSources:
+    - label: FTC — Goldenshores settlement press release
+      url: https://www.ftc.gov/news-events/news/press-releases/2013/12/android-flashlight-app-developer-settles-ftc-charges-it-deceived-consumers
+    - label: Sophos — iOS 14 flags TikTok, 53 other apps spying on iPhone clipboards
+      url: https://www.sophos.com/en-us/blog/ios-14-flags-tiktok-53-other-apps-spying-on-iphone-clipboards
+    - label: Datatilsynet — Record fine against Grindr confirmed (2023)
+      url: https://www.datatilsynet.no/en/news/aktuelle-nyheter-2023/record-fine-grindr-confirmed/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: The same tooling that surfaced every real incident in this deep-dive is freely available today -- this is a well-solved detection problem once someone actually looks.
+      pl: Te same narzędzia które ujawniły każdy prawdziwy incydent w tym deep-dive są dzisiaj swobodnie dostępne -- to dobrze rozwiązany problem wykrywania gdy tylko ktoś faktycznie spojrzy.
+    sast:
+    - - MobSF (Mobile Security Framework)
+      - Statically enumerates declared permissions and bundled third-party SDKs/trackers, the standard first pass for a permission-vs-purpose audit
+    - - Exodus Privacy
+      - Open-source Android tracker and permission scanner purpose-built for identifying embedded third-party SDK data collection
+    dast:
+    - - Frida
+      - Dynamic instrumentation to hook and log actual runtime calls to privacy-sensitive APIs (location, clipboard, contacts, camera/mic) -- exactly the technique that would have caught the clipboard pattern before iOS 14's banner made it public
+    - - mitmproxy / Burp Suite
+      - Network interception (with certificate-pinning bypass where needed) to observe what PII actually leaves the device and to which third-party ad/analytics endpoints -- the ground truth behind the real Grindr finding
+    note:
+      en: <strong>Key signal:</strong> the platform's own review process is self-attested, not independently verified -- Apple's Privacy Nutrition Labels and Google Play's Data Safety section are both developer-declared. A clean label is not proof of clean behavior; the dynamic and network-analysis tools above are what actually establish ground truth.
+      pl: <strong>Kluczowy sygnał:</strong> własny proces przeglądu platformy jest samodzielnie deklarowany, nie niezależnie weryfikowany -- zarówno etykiety odżywcze prywatności Apple jak i sekcja Data Safety Google Play są deklarowane przez dewelopera. Czysta etykieta to nie dowód czystego zachowania; powyższe narzędzia dynamiczne i analizy sieciowej to co faktycznie ustala prawdę.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'All three research passes converged on the same honest finding: this category is fundamentally a privacy-compliance/regulatory issue, and no single CWE cleanly captures it -- the closest available mapping is explicitly imperfect, and the real "standards" this deep-dive answers to are regulatory frameworks, not a weakness taxonomy.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym samym uczciwym ustaleniu: ta kategoria jest fundamentalnie kwestią zgodności prywatności/regulacyjną, i żadne pojedyncze CWE nie uchwytuje jej czysto -- najbliższe dostępne mapowanie jest jawnie niedoskonałe, a prawdziwe "standardy" którym odpowiada ten deep-dive to ramy regulacyjne, nie taksonomia słabości.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - 'CWE-359 — Exposure of Private Personal Information to an Unauthorized Actor (primary, but explicitly imperfect). Verified at MITRE: its own text references GDPR and CCPA directly, but it centers on disclosure/unauthorized-access to PII, not the over-collection half of this category -- there is no single CWE for "collected more personal data than the feature genuinely needed."'
+      - CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor (parent of CWE-359).
+      - CWE-532 — Insertion of Sensitive Information into Log File is worth citing for the narrower, storage-centric attack vectors OWASP's own M6 page actually emphasizes (PII in logs/crash reports).
+    - std: OWASP
+      items:
+      - 'Mobile Top 10 2024 — M6: Inadequate Privacy Controls, genuinely new to the 2024 revision (the 2016 list''s M6 was the unrelated "Insecure Authorization"). Verified directly: Exploitability AVERAGE, Prevalence COMMON, Detectability EASY, Technical Impact LOW, Business Impact SEVERE -- an unusually explicit split confirming this is a regulatory/reputational risk more than a traditional exploit.'
+      - OWASP's own M6 page text is narrower and more storage/transmission-focused (PII in logs, URL parameters, device backups) than the broader over-collection/disclosure/consent/SDK framing this deep-dive covers -- documented here explicitly as a community expansion of a terser official page, per all three research passes.
+      - 'The real standards this category answers to are regulatory frameworks: GDPR (Art. 5 data minimization and purpose limitation, Art. 6-7 lawful basis and consent, Art. 9 special-category data -- the exact basis of the Grindr fine), CCPA/CPRA, Apple App Tracking Transparency, and Google Play''s Data Safety section. Also maps to MASVS-PRIVACY, a dedicated control group in OWASP MASVS.'
+    inlineSources:
+    - label: OWASP Mobile Top 10 2024 — M6
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m6-inadequate-privacy-controls
+    - label: CWE-359 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/359.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If undisclosed over-collection or improper data sharing is confirmed, work this list top to bottom.
+      pl: Po potwierdzeniu nieujawnionego nadmiernego zbierania albo niewłaściwego dzielenia się danymi, przejdź tę listę od góry.
+    steps:
+    - en: Identify exactly what data was collected/shared beyond disclosure, and to which third parties -- network traffic analysis, not just a manifest review, establishes the actual scope
+      pl: Zidentyfikuj dokładnie jakie dane zostały zebrane/udostępnione poza ujawnieniem, i którym stronom trzecim -- analiza ruchu sieciowego, nie tylko przegląd manifestu, ustala faktyczny zakres
+    - en: Determine whether any collected data qualifies as special-category/sensitive under applicable regulation (health, sexual orientation, religion, etc.), since this materially changes the regulatory exposure as it did in the real Grindr case
+      pl: Ustal czy jakiekolwiek zebrane dane kwalifikują się jako dane specjalnej kategorii/wrażliwe pod obowiązującą regulacją (zdrowie, orientacja seksualna, religia itd.), ponieważ to istotnie zmienia ekspozycję regulacyjną jak w prawdziwym przypadku Grindr
+    - en: Audit every third-party SDK bundled in the app for its actual data practices, not just its stated purpose -- TikTok's own explanation shows even an app developer can be genuinely unaware of an SDK's real behavior
+      pl: Przeaudytuj każdy SDK firmy trzeciej dołączony do apki pod kątem jego faktycznych praktyk danych, nie tylko zadeklarowanego celu -- własne wyjaśnienie TikTok pokazuje że nawet deweloper apki może być naprawdę nieświadomy faktycznego zachowania SDK
+    - en: Correct the privacy nutrition label / Data Safety declaration to match actual observed behavior, not just the intended behavior
+      pl: Popraw etykietę odżywczą prywatności / deklarację Data Safety by pasowała do faktycznie obserwowanego zachowania, nie tylko zamierzonego zachowania
+    - en: Ship a fix that removes the over-collection at the source (data minimization) rather than only adding disclosure for data that continues to be collected
+      pl: Wydaj naprawę która usuwa nadmierne zbieranie u źródła (minimalizacja danych) zamiast tylko dodawać ujawnienie dla danych które nadal są zbierane
+    - en: Notify per applicable regulatory obligations (GDPR, CCPA, or the relevant jurisdiction's DPA) -- the real cases in this deep-dive show enforcement can follow years after the practice began
+      pl: Powiadom zgodnie z obowiązującymi wymogami regulacyjnymi (GDPR, CCPA, albo odpowiedni DPA jurysdykcji) -- prawdziwe przypadki w tym deep-dive pokazują że egzekwowanie może nastąpić lata po rozpoczęciu praktyki
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP Mobile Top 10 2024 — M6
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m6-inadequate-privacy-controls
+    - label: CWE-359 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/359.html
+    - label: CWE-200 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/200.html
+    - label: FTC — Goldenshores settlement press release
+      url: https://www.ftc.gov/news-events/news/press-releases/2013/12/android-flashlight-app-developer-settles-ftc-charges-it-deceived-consumers
+    - label: Sophos — iOS 14 flags TikTok, 53 other apps spying on iPhone clipboards
+      url: https://www.sophos.com/en-us/blog/ios-14-flags-tiktok-53-other-apps-spying-on-iphone-clipboards
+    - label: Datatilsynet — Record fine against Grindr confirmed (2023)
+      url: https://www.datatilsynet.no/en/news/aktuelle-nyheter-2023/record-fine-grindr-confirmed/

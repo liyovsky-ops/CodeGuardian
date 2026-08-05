@@ -1,0 +1,101 @@
+threatId: '15.6'
+title:
+  en: Inadequate Privacy Controls — knowledge check
+  pl: Inadequate Privacy Controls — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: A flashlight app requests ACCESS_FINE_LOCATION and a persistent device identifier, then transmits both to third-party ad networks, without disclosing this in its privacy policy or at the point of collection. Is this the real, verified pattern from the FTC v. Goldenshores case?
+    pl: Apka latarki żąda ACCESS_FINE_LOCATION i trwałego identyfikatora urządzenia, potem przesyła oba do sieci reklamowych firm trzecich, bez ujawnienia tego w polityce prywatności ani w momencie zbierania. Czy to prawdziwy, zweryfikowany wzorzec z przypadku FTC v. Goldenshores?
+  isVulnerable: true
+  cwe: CWE-359
+  explanation:
+    en: 'Yes -- confirmed directly against the FTC''s own press release. Note the common myth this corrects: the popular retelling often claims the app requested users'' contacts. The actual, verified complaint concerned undisclosed geolocation and persistent device ID transmitted to ad networks, with collection starting before the user had even accepted or rejected the app''s own EULA.'
+    pl: 'Tak -- potwierdzone bezpośrednio względem własnego komunikatu prasowego FTC. Zauważ powszechny mit który to koryguje: popularna wersja opowieści często twierdzi że apka żądała kontaktów użytkowników. Faktyczna, zweryfikowana skarga dotyczyła nieujawnionej geolokalizacji i trwałego ID urządzenia przesyłanych do sieci reklamowych, ze zbieraniem zaczynającym się zanim użytkownik zdążył zaakceptować albo odrzucić własną EULA apki.'
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: What was the actual regulatory outcome of the FTC v. Goldenshores ("Brightest Flashlight Free") case?
+    pl: Jaki był faktyczny wynik regulacyjny przypadku FTC v. Goldenshores ("Brightest Flashlight Free")?
+  choices:
+  - id: a
+    label:
+      en: A consent order requiring just-in-time disclosure, affirmative express consent, and deletion of previously collected data -- no monetary fine
+      pl: Nakaz zgody wymagający ujawnienia w odpowiednim czasie, jednoznacznej wyraźnej zgody, i usunięcia wcześniej zebranych danych -- bez kary pieniężnej
+  - id: b
+    label:
+      en: A $10 million monetary penalty, one of the largest privacy fines of its era
+      pl: Kara pieniężna 10 milionów dolarów, jedna z największych kar prywatności swojej ery
+  - id: c
+    label:
+      en: The app was permanently banned from both the Google Play Store and Apple App Store
+      pl: Apka została na stałe zbanowana zarówno w Google Play Store jak i Apple App Store
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three research passes confirmed this identically: the actual outcome was an injunctive consent order, not a monetary penalty -- a detail frequently mis-stated alongside the contacts myth. This matters because it illustrates that regulatory consequence in this category is often about forced behavior change, not a fine, especially for older cases predating GDPR-era penalty structures.'
+    pl: 'Wszystkie trzy przejścia badawcze potwierdziły to identycznie: faktycznym wynikiem był nakaz zgody typu injunctive, nie kara pieniężna -- szczegół często błędnie podawany obok mitu o kontaktach. To ważne bo ilustruje że konsekwencja regulacyjna w tej kategorii często dotyczy wymuszonej zmiany zachowania, nie kary, zwłaszcza dla starszych przypadków sprzed struktur kar ery GDPR.'
+- id: q3
+  type: vuln-or-not
+  prompt:
+    en: An app's own privacy policy makes no mention of clipboard access, but a bundled third-party ad SDK silently reads the pasteboard on every app launch, unrelated to any paste action taken by the user. Is this the real pattern exposed by iOS 14's 2020 paste-notification banner?
+    pl: Własna polityka prywatności apki nie wspomina o dostępie do schowka, ale dołączony SDK reklamowy firmy trzeciej po cichu czyta schowek przy każdym uruchomieniu apki, niezwiązane z żadną akcją wklejenia podjętą przez użytkownika. Czy to prawdziwy wzorzec ujawniony przez baner powiadomienia o wklejaniu iOS 14 z 2020?
+  isVulnerable: true
+  cwe: CWE-359
+  explanation:
+    en: Yes -- confirmed against the original Mysk/Haj Bakry research and TikTok's own public explanation. TikTok was the flagship exposed case, attributing the reads to an outdated bundled Google Ads SDK -- a real illustration of this deep-dive's third-party-SDK attack variant, where the app developer isn't necessarily the one directly writing the offending code.
+    pl: Tak -- potwierdzone względem oryginalnego badania Mysk/Haj Bakry i własnego publicznego wyjaśnienia TikTok. TikTok był flagowym ujawnionym przypadkiem, przypisującym odczyty przestarzałemu dołączonemu SDK Google Ads -- prawdziwa ilustracja wariantu ataku SDK firmy trzeciej tego deep-dive, gdzie deweloper apki niekoniecznie jest tym kto bezpośrednio pisze obraźliwy kod.
+- id: q4
+  type: multiple-choice
+  prompt:
+    en: What made the Grindr GDPR fine (Norwegian Datatilsynet, upheld 2023) legally distinctive compared to a typical data-breach fine?
+    pl: Co uczyniło karę GDPR Grindr (norweski Datatilsynet, utrzymana w 2023) prawnie odrębną od typowej kary za wyciek danych?
+  choices:
+  - id: a
+    label:
+      en: It was not caused by a breach or hack at all -- it penalized Grindr's own intentional data-sharing practices with ad partners, ruled invalid because consent was bundled (take-it-or-leave-it) rather than specific and freely given, and because app-user status itself implied special-category data
+      pl: W ogóle nie była spowodowana wyciekiem ani włamaniem -- ukarała własne zamierzone praktyki dzielenia się danymi Grindr z partnerami reklamowymi, uznane za nieważne bo zgoda była łączna (wszystko-albo-nic) zamiast konkretna i swobodnie udzielona, i bo sam status użytkownika apki implikował dane specjalnej kategorii
+  - id: b
+    label:
+      en: A third-party contractor was hacked and Grindr was fined for inadequate vendor security review
+      pl: Kontrahent firmy trzeciej został zhakowany a Grindr został ukarany za nieodpowiedni przegląd bezpieczeństwa dostawcy
+  - id: c
+    label:
+      en: An employee accidentally exposed a database backup on a public cloud bucket
+      pl: Pracownik przypadkowo wystawił kopię zapasową bazy danych na publicznym cloud bucket
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Confirmed against Datatilsynet's own published decision. This is the strongest real-world example in this deep-dive of an app developer's own first-party data-sharing design -- not a compromised third party -- triggering major regulatory consequence, and it's fundamentally a consent-validity failure rather than a storage or encryption failure.
+    pl: Potwierdzone względem własnej opublikowanej decyzji Datatilsynet. To najsilniejszy przykład z praktyki w tym deep-dive gdzie własny, pierwszoosobowy projekt dzielenia się danymi dewelopera apki -- nie skompromitowana strona trzecia -- wywołał poważną konsekwencję regulacyjną, i jest to fundamentalnie awaria ważności zgody a nie awaria przechowywania czy szyfrowania.
+- id: q5
+  type: vuln-or-not
+  prompt:
+    en: OWASP's own Mobile Top 10 2024 page for this category rates its Technical Impact as LOW but its Business Impact as SEVERE. Does this split accurately reflect why the real incidents anchoring this deep-dive are regulatory enforcement actions rather than technical exploits with CVE numbers?
+    pl: Własna strona OWASP Mobile Top 10 2024 dla tej kategorii klasyfikuje Wpływ Techniczny jako NISKI ale Wpływ Biznesowy jako SEVERE. Czy ten podział dokładnie odzwierciedla dlaczego prawdziwe incydenty zakotwiczające ten deep-dive to działania egzekwujące regulatora zamiast eksploitów technicznych z numerami CVE?
+  isVulnerable: true
+  cwe: CWE-359
+  explanation:
+    en: Yes -- verified directly on OWASP's own M6 page. None of Goldenshores, the clipboard-reading disclosure, or Grindr involved a technical compromise; each was a disclosure or consent failure with legal/reputational consequence. This is precisely why no CVSS score applies to any of them, and why this deep-dive's compliance section points to GDPR/CCPA rather than a purely technical standard.
+    pl: Tak -- zweryfikowane bezpośrednio na własnej stronie M6 OWASP. Ani Goldenshores, ani ujawnienie czytania schowka, ani Grindr nie wiązały się z kompromitacją techniczną; każdy był awarią ujawnienia albo zgody z konsekwencją prawną/reputacyjną. To dokładnie dlaczego żadna ocena CVSS się nie stosuje do żadnego z nich, i dlaczego sekcja zgodności tego deep-dive wskazuje na GDPR/CCPA zamiast czysto techniczny standard.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: An app has a single optional feature ("find nearby stores") that needs coarse location. Which permission-request approach best follows this deep-dive's top-ranked defense (data minimization) plus its second-ranked defense (SDK auditing)?
+    pl: Apka ma jedną opcjonalną funkcję ("znajdź pobliskie sklepy") która potrzebuje przybliżonej lokalizacji. Które podejście do żądania uprawnień najlepiej realizuje główną obronę tego deep-dive (minimalizacja danych) plus drugą w rankingu obronę (audyt SDK)?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: "// requested at app launch, before any screen is shown\nActivityCompat.requestPermissions(this,\n    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,\n            Manifest.permission.ACCESS_BACKGROUND_LOCATION),\n    REQUEST_CODE)\n// bundled ad SDK also silently reads location in the background, undocumented"
+  - id: v2
+    lang: kotlin
+    code: "// requested only when the user taps \"Find nearby stores\",\n// with ACCESS_COARSE_LOCATION only (not FINE, not BACKGROUND)\nfun onFindStoresTapped() {\n    showRationale(\"Used only to find stores near you.\") {\n        ActivityCompat.requestPermissions(this,\n            arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), REQUEST_CODE)\n    }\n}\n// third-party SDKs audited pre-release; none request location independently"
+  - id: v3
+    lang: kotlin
+    code: "// requests FINE + BACKGROUND location up front, justified internally as\n// \"might be useful for future features\"\nActivityCompat.requestPermissions(this,\n    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,\n            Manifest.permission.ACCESS_BACKGROUND_LOCATION),\n    REQUEST_CODE)"
+  correctVariantId: v2
+  explanation:
+    en: v2 requests only ACCESS_COARSE_LOCATION (matching what "nearby stores" genuinely needs, not FINE or BACKGROUND), asks just-in-time with a contextual rationale, and pairs it with SDK auditing to close the exact blind spot that caused the real TikTok clipboard incident. v1 front-loads unnecessary BACKGROUND access and has an unaudited SDK reading location independently -- the two dominant real-incident patterns in this deep-dive combined. v3's "might be useful for future features" justification is the literal opposite of purpose limitation, one of this deep-dive's top-ranked controls.
+    pl: v2 żąda tylko ACCESS_COARSE_LOCATION (pasujące do tego czego naprawdę potrzebują "pobliskie sklepy", nie FINE ani BACKGROUND), pyta w odpowiednim czasie z kontekstowym uzasadnieniem, i łączy to z audytem SDK by zamknąć dokładnie tę martwą strefę która spowodowała prawdziwy incydent schowka TikTok. v1 ładuje z góry niepotrzebny dostęp BACKGROUND i ma nieaudytowany SDK czytający lokalizację niezależnie -- dwa dominujące wzorce prawdziwych incydentów tego deep-dive połączone. Uzasadnienie v3 "może się przydać do przyszłych funkcji" to dosłowne przeciwieństwo ograniczenia celu, jednej z głównych kontroli tego deep-dive.
