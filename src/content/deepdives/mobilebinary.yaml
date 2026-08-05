@@ -1,0 +1,347 @@
+meta:
+  id: mobilebinary
+  threatId: '15.7'
+  severity: Medium
+  color: '#4338ca'
+  colorRgb: 67,56,202
+  cwe: CWE-693
+  cvss: N/A (binary-hardening posture, not a single scored CVE)
+  standard: OWASP Mobile Top 10 2024 (M7)
+hero:
+  titleMain: 'Insufficient Binary '
+  titleGrad: Protections
+  titleTail: ''
+  topbar: Insufficient Binary Protections (OWASP Mobile Top 10 2024, M7)
+  lead:
+    en: 'Unlike M5 and M6, this is NOT a new concept in the 2024 revision -- all three independent research passes converged on a fact worth stating honestly: the 2014/2016 Mobile Top 10 already had a direct predecessor, "M10: Lack of Binary Protections," defining the same core idea ("a lack of binary protections results in a mobile app that can be analyzed, reverse-engineered, and modified by an adversary in rapid fashion"). What''s new in 2024 is the category''s promotion to rank 7, its consolidation of the old 2016 M8 (Code Tampering) and M9 (Reverse Engineering) into one entry, and its expanded framing to cover modern attestation (Play Integrity, App Attest) and AI/ML model theft. OWASP''s own page cites no CWE at all -- confirmed directly, the only CWE-related content on the page is a generic link to cwe.mitre.org -- so any CWE mapping here is the community''s best-fit inference, not an OWASP-sanctioned one. OWASP itself rates this category Exploitability EASY, Prevalence COMMON, Detectability
+      EASY, but both Technical and Business Impact only MODERATE -- notably lower than the Critical/High severities used elsewhere in this Mobile Security category, honestly reflected in this entry''s own severity rating.'
+    pl: 'W przeciwieństwie do M5 i M6, to NIE jest nowa koncepcja w rewizji 2024 -- wszystkie trzy niezależne przejścia badawcze zbiegły się na fakcie wartym uczciwego stwierdzenia: Mobile Top 10 z 2014/2016 już miał bezpośredniego poprzednika, "M10: Lack of Binary Protections", definiującego tę samą podstawową ideę ("brak ochrony binarnej skutkuje apką mobilną która może zostać przeanalizowana, poddana inżynierii wstecznej, i zmodyfikowana przez przeciwnika w szybkim tempie"). Co jest nowe w 2024 to awans kategorii na pozycję 7, konsolidacja starych 2016 M8 (Code Tampering) i M9 (Reverse Engineering) w jeden wpis, i rozszerzone ramowanie obejmujące nowoczesną atestację (Play Integrity, App Attest) i kradzież modeli AI/ML. Własna strona OWASP nie cytuje żadnego CWE -- potwierdzone bezpośrednio, jedyna treść związana z CWE na stronie to generyczny link do cwe.mitre.org -- więc dowolne mapowanie CWE tutaj jest wnioskiem społeczności o najlepszym dopasowaniu, nie usankcjonowanym przez OWASP.
+      Sam OWASP klasyfikuje tę kategorię jako Exploitability EASY, Prevalence COMMON, Detectability EASY, ale zarówno Wpływ Techniczny jak i Biznesowy tylko MODERATE -- zauważalnie niżej niż poziomy Critical/High używane gdzie indziej w tej kategorii Mobile Security, uczciwie odzwierciedlone we własnej ocenie ważności tego wpisu.'
+  metrics:
+  - k: No CWE
+    v:
+      en: OWASP's own M7 page cites none
+      pl: Własna strona M7 OWASP nie cytuje żadnego
+  - k: 86%
+    v:
+      en: of malware samples were repackaged apps (Zhou & Jiang 2012)
+      pl: próbek malware to przepakowane apki (Zhou i Jiang 2012)
+  - k: MODERATE
+    v:
+      en: OWASP's own Technical + Business Impact rating
+      pl: Własna ocena Wpływu Technicznego + Biznesowego OWASP
+  - k: '2014'
+    v:
+      en: year the direct predecessor category (M10) first appeared
+      pl: rok gdy bezpośredni poprzednik kategorii (M10) pierwszy raz się pojawił
+  sources:
+  - label: OWASP Mobile Top 10 2024 — M7
+    url: https://owasp.org/www-project-mobile-top-10/2023-risks/m7-insufficient-binary-protection
+  - label: OWASP Mobile Top 10 2014 — M10 (predecessor)
+    url: https://owasp.org/www-project-mobile-top-10/2014-risks/m10-lack-of-binary-protections
+  - label: Zhou & Jiang — Dissecting Android Malware (IEEE S&P 2012)
+    url: https://oaklandsok.github.io/papers/zhou2012.pdf
+  - label: CWE-693 — Protection Mechanism Failure (MITRE)
+    url: https://cwe.mitre.org/data/definitions/693.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'OWASP itself names exactly two attack vectors -- reverse engineering to extract secrets, and code tampering to modify behavior -- but the concrete techniques underneath split into several distinct sub-attacks, all converging on the same root cause: nothing about the binary resists inspection or modification.'
+      pl: 'Sam OWASP nazywa dokładnie dwa wektory ataku -- inżynierię wsteczną by wyodrębnić sekrety, i manipulację kodem by zmodyfikować zachowanie -- ale konkretne techniki pod spodem rozdzielają się na kilka odrębnych pod-ataków, wszystkie zbiegające się na tej samej pierwotnej przyczynie: nic w binarce nie opiera się inspekcji ani modyfikacji.'
+    items:
+    - name: Decompilation-based secret extraction (reverse engineering)
+      sev: high
+      description:
+        en: 'Android DEX bytecode decompiles to near-original Java/Kotlin via jadx or apktool; unobfuscated builds hand an attacker hardcoded API keys, crypto secrets, and business logic almost for free. OWASP''s own example scenario is exactly this: an app hardcodes a commercial API key, an attacker decompiles it, and gains unauthorized backend access.'
+        pl: 'Bajtkod DEX Androida dekompiluje się do niemal oryginalnej Java/Kotlin przez jadx albo apktool; niezaobfuskowane buildy dają atakującemu zakodowane na sztywno klucze API, sekrety kryptograficzne, i logikę biznesową niemal za darmo. Własny scenariusz przykładowy OWASP to dokładnie to: apka koduje na sztywno komercyjny klucz API, atakujący go dekompiluje, i zyskuje nieautoryzowany dostęp do backendu.'
+      payload: 'jadx-gui app-release.apk  # decompiles to readable Java in seconds if unobfuscated -- API_KEY = "sk_..." appears as plaintext'
+    - name: Repackaging / code tampering to bypass license or payment checks
+      sev: high
+      description:
+        en: Decompile with apktool, edit the smali to stub out or invert a license/paywall check, rebuild, self-sign with an attacker-controlled key, and redistribute via a third-party store. Real, named tools (Lucky Patcher, Freedom APK) exist specifically to automate this against apps with no server-side or runtime integrity verification.
+        pl: Dekompiluj przez apktool, edytuj smali by wyzerować albo odwrócić kontrolę licencji/paywall, przebuduj, podpisz własnym kluczem kontrolowanym przez atakującego, i redystrybuuj przez sklep firmy trzeciej. Prawdziwe, nazwane narzędzia (Lucky Patcher, Freedom APK) istnieją konkretnie by zautomatyzować to przeciw apkom bez weryfikacji integralności po stronie serwera albo w czasie wykonania.
+      payload: 'apktool d app.apk -o app_mod && # edit smali to force isLicenseValid() -> true && apktool b app_mod -o cracked.apk && jarsigner cracked.apk attacker_key'
+    - name: Malware repackaging of legitimate apps (trojanized clones)
+      sev: high
+      description:
+        en: An attacker clones a popular legitimate app, bundles a malicious payload (commonly a banking trojan), re-signs, and distributes via third-party markets -- verified real families include Anubis/BankBot, corroborated across multiple vendor reports as found bundled inside cloned Google Play apps in 2017, targeting Wells Fargo, Chase, Citibank, and DiBa users.
+        pl: Atakujący klonuje popularną legalną apkę, dołącza złośliwy payload (zwykle trojan bankowy), przepodpisuje, i dystrybuuje przez rynki firm trzecich -- zweryfikowane prawdziwe rodziny to Anubis/BankBot, potwierdzone w wielu raportach dostawców jako znalezione dołączone wewnątrz sklonowanych apek Google Play w 2017, celujące w użytkowników Wells Fargo, Chase, Citibank, i DiBa.
+      payload: cloned_app.apk = legit_app.apk + injected_trojan_payload.dex, re-signed with attacker key, distributed via a third-party store or sideload link
+    - name: Runtime attack via debuggable binary or missing anti-instrumentation
+      sev: medium
+      description:
+        en: A production build shipped with android:debuggable="true" or with no Frida/objection detection allows an attacker to attach a debugger or dynamic instrumentation framework and directly manipulate the app's logic, memory, or in-flight checks at runtime -- distinct from static decompilation, and often used specifically to defeat a client-side check that decompilation alone couldn't bypass.
+        pl: Build produkcyjny wysłany z android:debuggable="true" albo bez wykrywania Frida/objection pozwala atakującemu podłączyć debugger albo framework dynamicznej instrumentacji i bezpośrednio manipulować logiką apki, pamięcią, albo kontrolami w locie w czasie wykonania -- odrębne od statycznej dekompilacji, i często używane konkretnie by pokonać kontrolę po stronie klienta której sama dekompilacja nie mogła obejść.
+      payload: 'frida -U -f com.target.app -l bypass_license_check.js --no-pause  # hooks and overrides the return value of isLicenseValid() live'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'OWASP''s own top prevention item is the one most teams skip: never trust a client-side check alone. Everything else here raises the attacker''s cost; only server-side enforcement actually closes the hole.'
+      pl: 'Własny główny punkt prewencji OWASP to ten który większość zespołów pomija: nigdy nie ufaj samej kontroli po stronie klienta. Wszystko inne tutaj podnosi koszt atakującego; tylko egzekwowanie po stronie serwera faktycznie zamyka lukę.'
+    languages:
+    - label: Android Kotlin — license/entitlement check
+      lang: kotlin
+      vulnerable: "// VULNERABLE: purely client-side, no obfuscation, no server verification --\n// trivially patched out with apktool or hooked with Frida\nfun unlockPremiumFeature(): Boolean {\n    return LocalLicenseStore.isLicenseValid()  // local flag only, never checked server-side\n}"
+      safe: "// SAFE: the client-side check is only a UX shortcut; the feature only\n// actually activates after the backend verifies a signed entitlement token\n// tied to the account, independent of anything in the binary\nsuspend fun unlockPremiumFeature(): Boolean {\n    val token = AccountApi.fetchEntitlementToken()  // server-issued, signed\n    return BackendApi.verifyEntitlement(token)       // re-verified server-side on every use\n}"
+    - label: Android manifest — debuggable flag
+      lang: xml
+      vulnerable: '<!-- VULNERABLE: shipped to production, allows jdb/run-as attach -->
+
+        <application android:debuggable="true" ...>'
+      safe: "<!-- SAFE: debuggable omitted entirely from release builds\n     (Android Gradle Plugin sets this automatically per build type;\n     never hardcode true in a manifest shared across build variants) -->\n<application ...>"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes agreed this is an assessment-first category: establishing whether a binary is adequately hardened means actually attempting to defeat each layer, not just checking a box for its presence.'
+      pl: 'Wszystkie trzy przejścia badawcze zgodziły się że to kategoria najpierw-ocena: ustalenie czy binarka jest adekwatnie zabezpieczona oznacza faktyczną próbę pokonania każdej warstwy, nie tylko odhaczenie jej obecności.'
+    steps:
+    - title:
+        en: Static triage with APKiD and MobSF
+        pl: Statyczna klasyfikacja przez APKiD i MobSF
+      description:
+        en: APKiD fingerprints the compiler, packer, protector, and obfuscator used to build the APK -- a mismatch (e.g. dexlib/dexmerge signatures instead of stock dx/d8) is itself a repackaging tell. MobSF layers on signing-scheme version, the debuggable flag, and hardcoded-secret scanning in one pass.
+        pl: APKiD odciska palcowo kompilator, packer, protector, i obfuskator użyty do zbudowania APK -- niezgodność (np. sygnatury dexlib/dexmerge zamiast standardowego dx/d8) jest sama w sobie oznaką przepakowania. MobSF nakłada wersję schematu podpisywania, flagę debuggable, i skanowanie zakodowanych na sztywno sekretów w jednym przejściu.
+    - title:
+        en: Decompilation quality check
+        pl: Kontrola jakości dekompilacji
+      description:
+        en: 'Run the APK through jadx: if the output is clean, readable Java/Kotlin with original class and method names intact, obfuscation is absent or trivial. Native libraries get the same treatment via Ghidra/IDA to check for stripped symbols.'
+        pl: 'Przepuść APK przez jadx: jeśli wynik to czysta, czytelna Java/Kotlin z nienaruszonymi oryginalnymi nazwami klas i metod, obfuskacja jest nieobecna albo trywialna. Biblioteki natywne dostają to samo traktowanie przez Ghidra/IDA by sprawdzić usunięte symbole.'
+    - title:
+        en: Dynamic instrumentation with Frida/objection
+        pl: Dynamiczna instrumentacja przez Frida/objection
+      description:
+        en: Attempt to attach Frida to the running app. If it attaches without resistance, anti-instrumentation is missing (the sub-technique this category names explicitly). objection then automates common bypass attempts against root/jailbreak checks and SSL pinning to see whether they hold under active attack, not just under a static read.
+        pl: Spróbuj podłączyć Frida do działającej apki. Jeśli podłącza się bez oporu, brakuje anty-instrumentacji (pod-technika którą ta kategoria jawnie nazywa). objection potem automatyzuje typowe próby obejścia kontroli root/jailbreak i przypinania SSL by zobaczyć czy trzymają pod aktywnym atakiem, nie tylko przy statycznym odczycie.
+    - title:
+        en: Repackage-and-reinstall test
+        pl: Test przepakowania i ponownej instalacji
+      description:
+        en: 'The ground-truth test: decompile with apktool, make a trivial modification (flip a feature flag, patch out a check), rebuild, self-sign, and reinstall. If the modified app runs normally with no detection, tamper protection genuinely does not exist -- this is exactly the technique Lucky Patcher and similar tools automate against real apps in the wild.'
+        pl: 'Test prawdy podstawowej: dekompiluj przez apktool, dokonaj trywialnej modyfikacji (przełącz flagę funkcji, wyłącz kontrolę), przebuduj, podpisz własnym kluczem, i zainstaluj ponownie. Jeśli zmodyfikowana apka działa normalnie bez wykrycia, ochrona przed manipulacją naprawdę nie istnieje -- to dokładnie technika którą Lucky Patcher i podobne narzędzia automatyzują przeciw prawdziwym apkom w praktyce.'
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes converged on the same cross-cutting truth, which is also OWASP''s own leading prevention item: every purely client-side control is ultimately bypassable by a sufficiently determined attacker with Frida. Real security requires the verdict to be checked somewhere the attacker doesn''t control.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej wspólnej prawdzie, która jest też głównym punktem prewencji OWASP: każda czysto kliencka kontrola jest ostatecznie omijalna przez wystarczająco zdeterminowanego atakującego z Frida. Prawdziwe bezpieczeństwo wymaga by werdykt był sprawdzany gdzieś czego atakujący nie kontroluje.'
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: Server-side enforcement of every security-relevant check
+        pl: Egzekwowanie po stronie serwera każdej kontroli istotnej dla bezpieczeństwa
+      note:
+        en: 'OWASP''s own explicit top recommendation: never trust the client alone. A license, entitlement, or integrity check that only lives in the binary can always be patched out; the same check re-verified server-side on every use cannot be bypassed by modifying the client at all.'
+        pl: 'Własna jawna główna rekomendacja OWASP: nigdy nie ufaj samemu klientowi. Kontrola licencji, uprawnienia, albo integralności która żyje tylko w binarce zawsze może zostać usunięta; ta sama kontrola ponownie weryfikowana po stronie serwera przy każdym użyciu w ogóle nie może zostać ominięta przez modyfikację klienta.'
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: 'Hardware-backed attestation: Play Integrity API / App Attest + DeviceCheck'
+        pl: 'Atestacja wsparta sprzętowo: Play Integrity API / App Attest + DeviceCheck'
+      note:
+        en: 'The strongest available signal because the trust decision is rooted in hardware (Secure Enclave on iOS, hardware-backed key attestation at Android''s strongest verdict level) and validated server-side, not on the device. Caveat, confirmed across all three research passes: rooted-device bypasses (Magisk/Zygisk hiding, cert-chain spoofing) exist against weaker verdict levels, and SafetyNet -- the older Android mechanism many older guides still recommend -- was fully shut down and replaced by Play Integrity API; citing SafetyNet as current guidance is now outdated.'
+        pl: 'Najsilniejszy dostępny sygnał ponieważ decyzja zaufania jest zakorzeniona sprzętowo (Secure Enclave na iOS, atestacja klucza wsparta sprzętowo na najsilniejszym poziomie werdyktu Androida) i walidowana po stronie serwera, nie na urządzeniu. Zastrzeżenie, potwierdzone przez wszystkie trzy przejścia badawcze: obejścia na zrootowanym urządzeniu (ukrywanie Magisk/Zygisk, spoofing łańcucha certyfikatów) istnieją przeciw słabszym poziomom werdyktu, a SafetyNet -- starszy mechanizm Android który wiele starszych przewodników wciąż rekomenduje -- został całkowicie wyłączony i zastąpiony przez Play Integrity API; cytowanie SafetyNet jako aktualnej wskazówki jest teraz przestarzałe.'
+    - rank: 3
+      eff: 65
+      kind: strong
+      label:
+        en: Runtime integrity self-verification (signing cert + resource checksums)
+        pl: Samoweryfikacja integralności w czasie wykonania (cert podpisujący + sumy kontrolne zasobów)
+      note:
+        en: The app checks its own signing certificate and code/resource checksums at runtime, catching naive repackaging (a resigned APK has a different cert hash). Real value against opportunistic attackers, but the check itself lives in the binary and can be patched out or hooked unless its result is also confirmed server-side -- it's a detector, not a lock.
+        pl: Apka sprawdza własny certyfikat podpisujący i sumy kontrolne kodu/zasobów w czasie wykonania, wychwytując naiwne przepakowanie (przepodpisany APK ma inny hash certyfikatu). Prawdziwa wartość przeciw okazjonalnym atakującym, ale sama kontrola żyje w binarce i może zostać usunięta albo zahaczona chyba że jej wynik jest też potwierdzany po stronie serwera -- to detektor, nie zamek.
+    - rank: 4
+      eff: 55
+      kind: strong
+      label:
+        en: RASP + anti-debugging + anti-instrumentation, layered together
+        pl: RASP + anty-debugowanie + anty-instrumentacja, warstwowo razem
+      note:
+        en: Individually weak (any single check has documented Frida bypass scripts), but combined and cross-checking each other, they meaningfully raise the cost and time required for a successful attack -- most valuable as a delay/detection layer that buys time to react (e.g. revoke a compromised account server-side), not as a hard barrier.
+        pl: Indywidualnie słabe (każda pojedyncza kontrola ma udokumentowane skrypty obejścia Frida), ale połączone i wzajemnie się sprawdzające, znacząco podnoszą koszt i czas wymagany na udany atak -- najbardziej wartościowe jako warstwa opóźnienia/wykrycia która kupuje czas na reakcję (np. odwołanie skompromitowanego konta po stronie serwera), nie jako twarda bariera.
+    - rank: 5
+      eff: 35
+      kind: weak
+      label:
+        en: Code obfuscation alone (ProGuard/R8, DexGuard, iXGuard)
+        pl: Sama obfuskacja kodu (ProGuard/R8, DexGuard, iXGuard)
+      note:
+        en: 'Directly implicated by CWE-656 (Reliance on Security Through Obscurity): obfuscation raises the cost of static analysis but does nothing against dynamic instrumentation with Frida, and free-tier ProGuard/R8 is mostly identifier renaming plus shrinking -- not encryption. Genuinely useful as one layer among several; actively dangerous when a team treats it as sufficient on its own and skips server-side checks.'
+        pl: 'Bezpośrednio powiązane z CWE-656 (Poleganie na Bezpieczeństwie przez Niejasność): obfuskacja podnosi koszt analizy statycznej ale nic nie robi przeciw dynamicznej instrumentacji przez Frida, a darmowy ProGuard/R8 to głównie zmiana nazw identyfikatorów plus zmniejszanie -- nie szyfrowanie. Naprawdę użyteczne jako jedna warstwa spośród kilku; aktywnie niebezpieczne gdy zespół traktuje ją jako wystarczającą samą w sobie i pomija kontrole po stronie serwera.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: The strongest verified evidence for this category is academic and vendor-reported rather than a single named breach -- fitting OWASP's own MODERATE/MODERATE impact rating. One popular statistic did NOT survive cross-team verification and is corrected below.
+      pl: Najsilniejszy zweryfikowany dowód dla tej kategorii jest akademicki i raportowany przez dostawców zamiast pojedynczego nazwanego wycieku -- pasujące do własnej oceny wpływu MODERATE/MODERATE OWASP. Jedna popularna statystyka NIE przetrwała weryfikacji międzyzespołowej i jest skorygowana poniżej.
+    items:
+    - org: Android Malware Genome Project (Zhou & Jiang, IEEE S&P 2012)
+      year: 2012
+      impact: 86% of a 1,260-sample malware dataset were repackaged versions of legitimate apps
+      cost: Academic study, not a single company incident -- the canonical citable figure for repackaging prevalence
+      description:
+        en: 'Confirmed identically by all three independent research passes as the strongest primary source available: of 1,260 malware samples analyzed, 1,083 (86.0%) were repackaged legitimate apps carrying an injected malicious payload. Note this deep-dive''s own research brief initially asked about a widely-circulated "one in three" figure for this same claim -- all three teams independently could not verify it against any primary source and flagged it as likely a garbled misremembering of the real, much higher 86% figure. Later surveys report a similar ~80% range, reinforcing that 86% (not 33%) is the sourced number.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy niezależne przejścia badawcze jako najsilniejsze dostępne źródło pierwotne: z 1260 przeanalizowanych próbek malware, 1083 (86.0%) to przepakowane legalne apki niosące wstrzyknięty złośliwy payload. Zauważ że własny brief badawczy tego deep-dive początkowo pytał o szeroko rozpowszechnioną liczbę "jeden na trzy" dla tego samego twierdzenia -- wszystkie trzy zespoły niezależnie nie mogły jej zweryfikować względem żadnego źródła pierwotnego i oflagowały ją jako prawdopodobnie zniekształcone błędne zapamiętanie prawdziwej, znacznie wyższej liczby 86%. Późniejsze badania raportują podobny zakres ~80%, wzmacniając że 86% (nie 33%) to podparta liczba.'
+    - org: Anubis / BankBot banking-trojan repackaging campaign
+      year: 2017
+      impact: Found bundled inside 10 cloned Google Play apps, targeting Wells Fargo, Chase, Citibank, and DiBa customers
+      cost: Joint vendor analysis by Avast, ESET, and SfyLabs, November 2017
+      description:
+        en: 'Confirmed by two of three research passes with matching specifics: attackers cloned legitimate, popular apps, bundled a banking-trojan payload, re-signed, and distributed via Google Play itself (the dropper installed the real cloned app on top of the trojan to avoid raising suspicion). A concrete, real illustration of this deep-dive''s repackaging attack variant operating at meaningful scale, not just as a theoretical technique.'
+        pl: 'Potwierdzone przez dwa z trzech przejść badawczych z pasującymi szczegółami: atakujący klonowali legalne, popularne apki, dołączali payload trojana bankowego, przepodpisywali, i dystrybuowali przez sam Google Play (dropper instalował prawdziwą sklonowaną apkę na wierzchu trojana by nie wzbudzać podejrzeń). Konkretna, prawdziwa ilustracja wariantu ataku przepakowania tego deep-dive działającego w znaczącej skali, nie tylko jako teoretyczna technika.'
+    - org: '"Master Key" vulnerability (CVE-2013-4787, Bluebox Security)'
+      year: 2013
+      impact: Estimated ~99% of Android devices (~900 million) affected at time of disclosure
+      cost: Fixed in Android 4.3; malicious apps exploiting it found in the wild shortly after disclosure
+      description:
+        en: 'Confirmed by two of three research passes with the exact CVE number: Android 1.6-4.2 failed to properly verify signatures when an APK''s ZIP archive contained two entries with the same filename (e.g. two classes.dex) -- one entry was verified, a different one was installed and executed, letting an attacker modify a signed APK without invalidating its signature. This is the historical root cause illustrating exactly why runtime, not just install-time, integrity verification matters.'
+        pl: 'Potwierdzone przez dwa z trzech przejść badawczych z dokładnym numerem CVE: Android 1.6-4.2 nie weryfikował poprawnie podpisów gdy archiwum ZIP APK zawierało dwa wpisy o tej samej nazwie pliku (np. dwa classes.dex) -- jeden wpis był weryfikowany, inny był instalowany i wykonywany, pozwalając atakującemu zmodyfikować podpisany APK bez unieważnienia jego podpisu. To historyczna pierwotna przyczyna ilustrująca dokładnie dlaczego weryfikacja integralności w czasie wykonania, nie tylko instalacji, ma znaczenie.'
+    inlineSources:
+    - label: Zhou & Jiang — Dissecting Android Malware (IEEE S&P 2012, primary PDF)
+      url: https://oaklandsok.github.io/papers/zhou2012.pdf
+    - label: The Hacker News — BankBot/Anubis found in Google Play apps
+      url: https://thehackernews.com/2017/11/bankbot-android-malware.html
+    - label: NVD — CVE-2013-4787
+      url: https://nvd.nist.gov/vuln/detail/CVE-2013-4787
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: OWASP's own page names MobSF, otool, apktool, and Ghidra directly as assessment tools for this category -- confirmed across all three research passes as the real, current toolchain.
+      pl: Własna strona OWASP nazywa MobSF, otool, apktool, i Ghidra bezpośrednio jako narzędzia oceny dla tej kategorii -- potwierdzone przez wszystkie trzy przejścia badawcze jako prawdziwy, aktualny łańcuch narzędzi.
+    sast:
+    - - APKiD
+      - YARA-rule-based fingerprinting of the compiler, packer, protector, and obfuscator used to build an APK -- a compiler-signature mismatch (e.g. dexlib/dexmerge instead of stock dx/d8) is itself a strong repackaging signal, and is integrated directly into MobSF's scan pipeline
+    - - MobSF (Mobile Security Framework)
+      - Named directly on OWASP's own M7 page; automated static+dynamic scan surfacing the debuggable flag, signing-scheme version, hardcoded secrets, and (via its APKiD integration) obfuscation/packer status in one pass
+    - - jadx / apktool
+      - Named directly on OWASP's own M7 page; decompiles DEX to near-original Java/Kotlin -- clean, readable output is itself the finding (obfuscation absent or trivial)
+    dast:
+    - - Frida / objection
+      - 'Dynamic instrumentation used to test whether anti-debugging and anti-instrumentation actually hold: if Frida attaches to the running app without resistance, that protection layer is confirmed absent, not just theoretically weak'
+    - - Ghidra / otool / class-dump
+      - Named directly on OWASP's own M7 page (Ghidra, otool); native binary and Mach-O analysis to check for stripped symbols and native-layer protection on iOS/native Android code
+    note:
+      en: <strong>Key signal:</strong> the ground-truth test isn't any single tool's output -- it's whether a full decompile-modify-rebuild-reinstall cycle (the same technique Lucky Patcher and similar cracking tools automate) actually succeeds against the app with no detection or server-side rejection. Static findings only predict this; the repackage test confirms it.
+      pl: <strong>Kluczowy sygnał:</strong> test prawdy podstawowej to nie wynik żadnego pojedynczego narzędzia -- to czy pełny cykl dekompilacja-modyfikacja-przebudowa-reinstalacja (ta sama technika którą automatyzują Lucky Patcher i podobne narzędzia do crackowania) faktycznie się powiedzie przeciw apce bez wykrycia albo odrzucenia po stronie serwera. Ustalenia statyczne tylko to przewidują; test przepakowania to potwierdza.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'All three research passes converged on the same honest finding: OWASP''s own M7 page cites no CWE at all, so any mapping here is community best-fit, explicitly stated as such rather than presented as an OWASP-sanctioned mapping.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym samym uczciwym ustaleniu: własna strona M7 OWASP nie cytuje żadnego CWE, więc dowolne mapowanie tutaj jest najlepszym dopasowaniem społeczności, jawnie stwierdzonym jako takie zamiast prezentowanym jako mapowanie usankcjonowane przez OWASP.'
+    items:
+    - std: CWE (MITRE) — community best-fit, not OWASP-cited
+      items:
+      - 'CWE-693 — Protection Mechanism Failure (primary/umbrella). Verified at MITRE as a broad "Pillar" weakness: "the product does not use or incorrectly uses a protection mechanism that provides sufficient defense against directed attacks." Genuinely captures "the app lacks tamper/RE defenses" but is deliberately abstract -- all three teams agreed this is the best available umbrella, not a precise fit.'
+      - 'CWE-656 — Reliance on Security Through Obscurity. Best fit specifically for the obfuscation-as-sole-defense anti-pattern: relying on a protection mechanism whose strength depends on obscurity rather than a real security boundary.'
+      - CWE-489 — Active Debug Code. Best fit for the narrower debuggable-flag-in-production sub-case specifically, distinct from the broader hardening question.
+    - std: OWASP
+      items:
+      - 'Mobile Top 10 2024 — M7: Insufficient Binary Protections. Verified directly: Exploitability EASY, Prevalence COMMON, Detectability EASY, Technical Impact MODERATE, Business Impact MODERATE -- consolidates the 2016 list''s separate M8 (Code Tampering) and M9 (Reverse Engineering), and traces back further to 2014''s M10 (Lack of Binary Protections), so unlike M5/M6 this is not a genuinely new concept, only a repositioned and expanded one.'
+      - OWASP MASVS-RESILIENCE control group ("Resilience Against Reverse Engineering and Tampering") is the canonical mapping OWASP itself points to. Individual MASTG test IDs confirmed across research passes include MASTG-TEST-0045 (Root Detection), -0046 (Anti-Debugging), -0047 (File Integrity Checks), -0048 (RE Tools Detection), -0049 (Emulator Detection), -0050 (Runtime Integrity Checks), -0051 (Obfuscation), -0039 (Debuggable), -0040 (Debug Symbols), -0226 (Debuggable Flag in Manifest) -- flagged by multiple research passes as legacy v1 IDs that may be renumbered under MASTG's ongoing "atomic tests" migration; verify against the current MASTG release before citing a specific ID in an audit.
+      - PCI MPoC (Mobile Payments on COTS, successor to SPoC/CPoC) mandates runtime attestation and integrity monitoring for payment apps on consumer devices -- the clearest regulatory anchor for this category, though exact clause numbers were not independently verified by any research pass and are omitted here rather than guessed.
+    inlineSources:
+    - label: OWASP Mobile Top 10 2024 — M7
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m7-insufficient-binary-protection
+    - label: OWASP MASVS-RESILIENCE
+      url: https://mas.owasp.org/MASVS/11-MASVS-RESILIENCE/
+    - label: CWE-693 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/693.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If a repackaged, cracked, or tampered variant of the app is discovered in the wild, work this list top to bottom.
+      pl: Po odkryciu przepakowanego, crackowanego, albo zmanipulowanego wariantu apki w praktyce, przejdź tę listę od góry.
+    steps:
+    - en: Confirm the sample is genuinely a modified build, not a false positive -- diff its signing certificate hash and DEX/resource checksums against the official release
+      pl: Potwierdź że próbka to naprawdę zmodyfikowany build, nie fałszywy alarm -- porównaj hash certyfikatu podpisującego i sumy kontrolne DEX/zasobów względem oficjalnego wydania
+    - en: Identify exactly what was modified (a license check stubbed out, a malicious payload injected, a paywall bypassed) to scope the actual business/security impact
+      pl: Zidentyfikuj dokładnie co zostało zmodyfikowane (wyzerowana kontrola licencji, wstrzyknięty złośliwy payload, ominięty paywall) by ustalić faktyczny wpływ biznesowy/bezpieczeństwa
+    - en: Revoke server-side access for any account or session tied to the tampered client if the modification affects entitlements, payments, or authentication -- this is why server-side enforcement is the top-ranked defense
+      pl: Odwołaj dostęp po stronie serwera dla dowolnego konta albo sesji powiązanej ze zmanipulowanym klientem jeśli modyfikacja dotyczy uprawnień, płatności, albo uwierzytelniania -- to dlaczego egzekwowanie po stronie serwera to obrona z najwyższą rangą
+    - en: File a takedown request with the distributing store/platform for the tampered build, per OWASP's own recommendation for automated reporting of unauthorized redistribution
+      pl: Złóż wniosek o usunięcie do dystrybuującego sklepu/platformy dla zmanipulowanego builda, zgodnie z własną rekomendacją OWASP dotyczącą automatycznego zgłaszania nieautoryzowanej redystrybucji
+    - en: Add or strengthen the specific runtime integrity check that failed to catch this variant, and verify the fix by re-running the repackage-and-reinstall test from the methodology section
+      pl: Dodaj albo wzmocnij konkretną kontrolę integralności w czasie wykonania która nie wychwyciła tego wariantu, i zweryfikuj naprawę ponownie uruchamiając test przepakowania i reinstalacji z sekcji metodyki
+    - en: If the tampered variant bundles malware (not just a cracked legitimate feature), coordinate with the platform's security team and, where users may be compromised, issue a user-facing advisory
+      pl: Jeśli zmanipulowany wariant dołącza malware (nie tylko crackowaną legalną funkcję), skoordynuj z zespołem bezpieczeństwa platformy i, gdzie użytkownicy mogą być skompromitowani, wydaj poradnik skierowany do użytkowników
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP Mobile Top 10 2024 — M7
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m7-insufficient-binary-protection
+    - label: OWASP Mobile Top 10 2014 — M10 (predecessor)
+      url: https://owasp.org/www-project-mobile-top-10/2014-risks/m10-lack-of-binary-protections
+    - label: OWASP MASVS-RESILIENCE
+      url: https://mas.owasp.org/MASVS/11-MASVS-RESILIENCE/
+    - label: CWE-693 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/693.html
+    - label: CWE-656 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/656.html
+    - label: Zhou & Jiang — Dissecting Android Malware (IEEE S&P 2012)
+      url: https://oaklandsok.github.io/papers/zhou2012.pdf
+    - label: The Hacker News — BankBot/Anubis found in Google Play apps
+      url: https://thehackernews.com/2017/11/bankbot-android-malware.html
+    - label: NVD — CVE-2013-4787
+      url: https://nvd.nist.gov/vuln/detail/CVE-2013-4787

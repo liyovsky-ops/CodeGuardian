@@ -116,21 +116,19 @@ threats:
 - id: '15.7'
   name: Insufficient Binary Protections
   severity: Medium
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-693
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Lack of code obfuscation, anti-tampering, and anti-debugging lets attackers reverse-engineer the app, extract secrets/business logic, patch it, and repackage trojanized versions.
+  - CWE-656
+  - CWE-489
+  desc: 'Brak obfuskacji kodu, anty-tamperingu, i anty-debugowania pozwala atakującym poddać apkę inżynierii wstecznej, wyodrębnić sekrety/logikę biznesową, załatać ją, i redystrybuować trojanizowane wersje. OWASP nie cytuje żadnego CWE dla tej kategorii -- zweryfikowane bezpośrednio na oficjalnej stronie. Zweryfikowany akademicki punkt odniesienia: 86% z 1260 próbek malware w Android Malware Genome Project (2012) to przepakowane legalne apki.
 
     '
-  desc_en: Lack of code obfuscation, anti-tampering, and anti-debugging lets attackers reverse-engineer the app, extract secrets/business logic, patch it, and repackage trojanized versions.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
+  desc_en: 'Lack of code obfuscation, anti-tampering, and anti-debugging lets attackers reverse-engineer the app, extract secrets/business logic, patch it, and repackage trojanized versions. OWASP cites no CWE for this category -- verified directly on the official page. Verified academic benchmark: 86% of 1,260 malware samples in the Android Malware Genome Project (2012) were repackaged legitimate apps.'
+  lang: kotlin
+  vuln: "// VULNERABLE: purely client-side, no server verification --\n// trivially patched out with apktool or hooked with Frida\nfun unlockPremiumFeature(): Boolean {\n    return LocalLicenseStore.isLicenseValid()\n}\n"
+  safe: "// SAFE: the local check is only a UX shortcut; the feature only\n// activates after the backend verifies a signed entitlement token\nsuspend fun unlockPremiumFeature(): Boolean {\n    val token = AccountApi.fetchEntitlementToken()\n    return BackendApi.verifyEntitlement(token)\n}\n"
   note_en: 'Source: OWASP Mobile Top 10 2024, M7. Umbrella for root/jailbreak-detection bypass and repackaging.'
 - id: '15.8'
   name: Security Misconfiguration (Mobile)

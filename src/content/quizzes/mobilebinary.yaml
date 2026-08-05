@@ -1,0 +1,114 @@
+threatId: '15.7'
+title:
+  en: Insufficient Binary Protections — knowledge check
+  pl: Insufficient Binary Protections — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: According to all three independent research passes for this deep-dive, is OWASP Mobile Top 10 2024's M7 (Insufficient Binary Protections) a genuinely new category, unlike M5 (Insecure Communication) and M6 (Inadequate Privacy Controls)?
+    pl: Zgodnie ze wszystkimi trzema niezależnymi przejściami badawczymi dla tego deep-dive, czy M7 OWASP Mobile Top 10 2024 (Insufficient Binary Protections) jest naprawdę nową kategorią, w przeciwieństwie do M5 (Insecure Communication) i M6 (Inadequate Privacy Controls)?
+  choices:
+  - id: a
+    label:
+      en: 'No -- it has a direct 2014/2016 predecessor, "M10: Lack of Binary Protections," and 2024 mainly consolidates the old M8 (Code Tampering) + M9 (Reverse Engineering) into one entry'
+      pl: 'Nie -- ma bezpośredniego poprzednika z 2014/2016, "M10: Lack of Binary Protections", a 2024 głównie konsoliduje stare M8 (Code Tampering) + M9 (Reverse Engineering) w jeden wpis'
+  - id: b
+    label:
+      en: Yes -- binary hardening was never addressed by any prior OWASP Mobile Top 10 list before 2024
+      pl: Tak -- utwardzanie binarne nigdy nie było poruszane przez żadną wcześniejszą listę OWASP Mobile Top 10 przed 2024
+  - id: c
+    label:
+      en: It is unrelated to any historical OWASP mobile category and was introduced solely because of AI/ML model theft concerns
+      pl: Jest niezwiązana z żadną historyczną kategorią mobilną OWASP i została wprowadzona wyłącznie z powodu obaw o kradzież modeli AI/ML
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Verified directly by fetching the 2014 OWASP page: "M10: Lack of Binary Protections" already existed, defining the same core idea. This is an important honesty check -- unlike the earlier Mobile Security entries in this deep-dive series, M7''s framing as "new" would have been inaccurate, and catching that required actually fetching the historical page rather than assuming.'
+    pl: 'Zweryfikowane bezpośrednio przez pobranie strony OWASP z 2014: "M10: Lack of Binary Protections" już istniało, definiując tę samą podstawową ideę. To ważna kontrola uczciwości -- w przeciwieństwie do wcześniejszych wpisów Mobile Security w tej serii deep-dive, ramowanie M7 jako "nowej" byłoby niedokładne, a wychwycenie tego wymagało faktycznego pobrania strony historycznej zamiast zakładania.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: OWASP's own M7 page directly cites and links CWE-693 as the official CWE mapping for this category. True or false?
+    pl: Własna strona M7 OWASP bezpośrednio cytuje i linkuje CWE-693 jako oficjalne mapowanie CWE dla tej kategorii. Prawda czy fałsz?
+  isVulnerable: false
+  cwe: CWE-693
+  explanation:
+    en: 'False -- confirmed directly by fetching the live page: the only CWE-related content is a generic link to cwe.mitre.org, with no specific CWE number cited anywhere. CWE-693 is this deep-dive''s own best-fit community inference, explicitly labeled as such rather than presented as an OWASP-sanctioned mapping. All three independent research passes flagged this identically.'
+    pl: 'Fałsz -- potwierdzone bezpośrednio przez pobranie żywej strony: jedyna treść związana z CWE to generyczny link do cwe.mitre.org, bez żadnego konkretnego numeru CWE cytowanego gdziekolwiek. CWE-693 to własny wniosek najlepszego dopasowania społeczności tego deep-dive, jawnie oznaczony jako taki zamiast prezentowany jako mapowanie usankcjonowane przez OWASP. Wszystkie trzy niezależne przejścia badawcze oflagowały to identycznie.'
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: This deep-dive's own research brief asked about a widely-repeated claim that "one in three Android malware samples is a repackaged legitimate app." What did all three independent research teams find?
+    pl: Własny brief badawczy tego deep-dive pytał o szeroko powtarzane twierdzenie że "jeden na trzy próbki malware Android to przepakowana legalna apka". Co znalazły wszystkie trzy niezależne zespoły badawcze?
+  choices:
+  - id: a
+    label:
+      en: None could verify "one in three" against any primary source; the well-sourced figure from the Android Malware Genome Project (Zhou & Jiang, 2012) is 86% (1,083 of 1,260 samples)
+      pl: Żaden nie mógł zweryfikować "jeden na trzy" względem żadnego źródła pierwotnego; dobrze podparta liczba z Android Malware Genome Project (Zhou i Jiang, 2012) to 86% (1083 z 1260 próbek)
+  - id: b
+    label:
+      en: All three confirmed "one in three" as accurate, citing the same 2012 study
+      pl: Wszystkie trzy potwierdziły "jeden na trzy" jako dokładne, cytując to samo badanie z 2012
+  - id: c
+    label:
+      en: The claim could not be evaluated because no academic study on Android malware repackaging exists
+      pl: Twierdzenie nie mogło zostać ocenione ponieważ nie istnieje żadne badanie akademickie na temat przepakowania malware Android
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'A genuine correction the research process caught: the figure I asked about in the brief itself turned out to be wrong. This is a useful reminder that even a research brief''s own framing can embed an inaccurate popular claim -- which is exactly why independent, blind verification across multiple teams matters, rather than trusting the premise of the question.'
+    pl: 'Prawdziwa korekta którą wychwycił proces badawczy: liczba o którą pytałem w samym briefie okazała się błędna. To użyteczne przypomnienie że nawet własne ramowanie briefu badawczego może zawierać niedokładne popularne twierdzenie -- dokładnie dlatego niezależna, ślepa weryfikacja przez wiele zespołów ma znaczenie, zamiast ufania przesłance pytania.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A mobile app implements strong code obfuscation (DexGuard with string encryption and control-flow obfuscation) and, based on this, the team considers the app's license-check logic secure against tampering, without any server-side re-verification. Is treating obfuscation as sufficient on its own a real gap, per CWE-656?
+    pl: Apka mobilna implementuje silną obfuskację kodu (DexGuard ze szyfrowaniem stringów i obfuskacją control-flow) i, na tej podstawie, zespół uznaje logikę kontroli licencji apki za bezpieczną przed manipulacją, bez żadnej ponownej weryfikacji po stronie serwera. Czy traktowanie obfuskacji jako wystarczającej samej w sobie jest prawdziwą luką, zgodnie z CWE-656?
+  isVulnerable: true
+  cwe: CWE-656
+  explanation:
+    en: 'Yes. All three research passes converged on this exact point: obfuscation raises the cost of static analysis but does nothing against dynamic instrumentation with Frida -- a determined attacker can still hook and override the license check''s return value at runtime regardless of how obfuscated the surrounding code is. This is precisely the failure mode CWE-656 (Reliance on Security Through Obscurity) describes, and it''s why this deep-dive ranks obfuscation-alone as its weakest defense layer, well below server-side enforcement.'
+    pl: 'Tak. Wszystkie trzy przejścia badawcze zbiegły się na dokładnie tym punkcie: obfuskacja podnosi koszt analizy statycznej ale nic nie robi przeciw dynamicznej instrumentacji przez Frida -- zdeterminowany atakujący wciąż może zahaczyć i nadpisać wartość zwracaną kontroli licencji w czasie wykonania niezależnie od tego jak zaobfuskowany jest otaczający kod. To dokładnie tryb awarii który opisuje CWE-656 (Poleganie na Bezpieczeństwie przez Niejasność), i dlatego ten deep-dive klasyfikuje samą obfuskację jako swoją najsłabszą warstwę obrony, znacznie poniżej egzekwowania po stronie serwera.'
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: What happened to SafetyNet Attestation, the older Android attestation mechanism, and why does this deep-dive flag guides that still recommend it as outdated?
+    pl: Co stało się z SafetyNet Attestation, starszym mechanizmem atestacji Android, i dlaczego ten deep-dive flaguje przewodniki które wciąż go rekomendują jako przestarzałe?
+  choices:
+  - id: a
+    label:
+      en: It was fully shut down and replaced by the Play Integrity API, which provides hardware-backed verdicts validated server-side
+      pl: Zostało całkowicie wyłączone i zastąpione przez Play Integrity API, które dostarcza werdykty wsparte sprzętowo, walidowane po stronie serwera
+  - id: b
+    label:
+      en: It was renamed to Play Integrity API but functions identically, so the distinction is purely cosmetic
+      pl: Zostało przemianowane na Play Integrity API ale funkcjonuje identycznie, więc rozróżnienie jest czysto kosmetyczne
+  - id: c
+    label:
+      en: It remains the current, actively recommended mechanism and Play Integrity API is only for iOS
+      pl: Pozostaje aktualnym, aktywnie rekomendowanym mechanizmem a Play Integrity API jest tylko dla iOS
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Confirmed across multiple research passes with explicit dates: SafetyNet Attestation was fully shut down and Play Integrity API is its mandatory replacement, offering hardware-backed verdicts at its strongest tier. Any current guide still pointing developers to SafetyNet as the recommended Android attestation mechanism is citing deprecated, no-longer-functional advice.'
+    pl: 'Potwierdzone przez wiele przejść badawczych z jawnymi datami: SafetyNet Attestation zostało całkowicie wyłączone a Play Integrity API to jego obowiązkowy zamiennik, oferujący werdykty wsparte sprzętowo na swoim najsilniejszym poziomie. Każdy aktualny przewodnik wciąż kierujący deweloperów do SafetyNet jako rekomendowanego mechanizmu atestacji Android cytuje przestarzałą, już niedziałającą poradę.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A team wants to protect a premium-feature unlock in their Android app against tampering by a repackaged/cracked build. Which approach actually follows this deep-dive's top-ranked defense (server-side enforcement)?
+    pl: Zespół chce chronić odblokowanie funkcji premium w swojej apce Android przed manipulacją przez przepakowany/crackowany build. Które podejście faktycznie realizuje główną obronę tego deep-dive (egzekwowanie po stronie serwera)?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: "fun unlockPremiumFeature(): Boolean {\n    return LocalLicenseStore.isLicenseValid()  // local flag only\n}\n// heavily obfuscated with DexGuard, no server involved"
+  - id: v2
+    lang: kotlin
+    code: "fun unlockPremiumFeature(): Boolean {\n    return !RootDetector.isDeviceRooted() && LocalLicenseStore.isLicenseValid()\n}\n// adds a root check on top of the same local-only flag"
+  - id: v3
+    lang: kotlin
+    code: "suspend fun unlockPremiumFeature(): Boolean {\n    val token = AccountApi.fetchEntitlementToken()  // server-issued, signed\n    return BackendApi.verifyEntitlement(token)       // re-verified server-side on every use\n}"
+  correctVariantId: v3
+  explanation:
+    en: v3 makes the actual unlock decision server-side on every use, so no amount of client-side patching (repackaging, Frida hooking, obfuscation removal) can force the feature open -- exactly OWASP's own top prevention item. v1 relies purely on a local flag protected only by obfuscation, defeatable with apktool alone. v2 adds a root check, but it's still evaluated entirely client-side and combined with the same local-only license flag -- both checks can be patched out or hooked together in a single Frida script, since neither is ever confirmed anywhere the attacker doesn't control.
+    pl: v3 podejmuje faktyczną decyzję odblokowania po stronie serwera przy każdym użyciu, więc żadna ilość łatania po stronie klienta (przepakowanie, hakowanie Frida, usunięcie obfuskacji) nie może wymusić otwarcia funkcji -- dokładnie główny punkt prewencji OWASP. v1 polega czysto na lokalnej fladze chronionej tylko obfuskacją, do pokonania samym apktool. v2 dodaje kontrolę root, ale wciąż jest oceniana całkowicie po stronie klienta i połączona z tą samą lokalną flagą licencji -- obie kontrole mogą zostać usunięte albo zahaczone razem w jednym skrypcie Frida, ponieważ żadna nigdy nie jest potwierdzana gdziekolwiek czego atakujący nie kontroluje.
