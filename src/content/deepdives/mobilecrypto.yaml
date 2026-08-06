@@ -1,0 +1,375 @@
+meta:
+  id: mobilecrypto
+  threatId: '15.10'
+  severity: High
+  color: '#0e2a47'
+  colorRgb: 14,42,71
+  cwe: CWE-327
+  cvss: N/A (crypto-misuse class spanning many mechanisms; flagship CVE-2020-11500 scored 7.5 High)
+  standard: OWASP Mobile Top 10 2024 (M10)
+hero:
+  titleMain: 'Insufficient '
+  titleGrad: Cryptography
+  titleTail: ''
+  topbar: Insufficient Cryptography (OWASP Mobile Top 10 2024, M10)
+  lead:
+    en: 'Another clean lineage case, confirmed identically by all three research passes: M10 carries the exact title of 2016''s M5 "Insufficient Cryptography," itself descended from 2014''s M6 "Broken Cryptography" -- the same pattern already established for M9/Insecure Data Storage. The single most important finding, independently caught by all three teams and directly verified by one against MobSF''s own scanner source code: on Java/Android, calling Cipher.getInstance("AES") with no mode specified silently defaults to AES/ECB/PKCS5Padding. A developer who believes they "used AES" can still ship broken cryptography without ever choosing ECB explicitly. This entry is distinct from M9 (Insecure Data Storage, about WHETHER data is protected at all) and M5 (Insecure Communication, transport-layer) -- M10 is specifically about the cryptography itself being weak, broken, or misused, even when the developer genuinely did try to encrypt something.'
+    pl: 'Kolejny czysty przypadek rodowodu, potwierdzony identycznie przez wszystkie trzy przejścia badawcze: M10 niesie dokładny tytuł M5 z 2016 "Insufficient Cryptography", samo pochodzące od M6 z 2014 "Broken Cryptography" -- ten sam wzorzec już ustalony dla M9/Insecure Data Storage. Pojedyncze najważniejsze ustalenie, niezależnie wychwycone przez wszystkie trzy zespoły i bezpośrednio zweryfikowane przez jeden względem własnego kodu źródłowego skanera MobSF: na Java/Android wywołanie Cipher.getInstance("AES") bez podanego trybu po cichu domyślnie ustawia AES/ECB/PKCS5Padding. Deweloper który wierzy że "użył AES" wciąż może wysłać złamaną kryptografię nigdy jawnie nie wybierając ECB. Ten wpis jest odrębny od M9 (Insecure Data Storage, o TYM CZY dane są w ogóle chronione) i M5 (Insecure Communication, warstwa transportowa) -- M10 dotyczy konkretnie samej kryptografii będącej słabą, złamaną, albo niewłaściwie użytą, nawet gdy deweloper naprawdę próbował coś zaszyfrować.'
+  metrics:
+  - k: 88%
+    v:
+      en: of 11,748 audited apps made a crypto mistake (Egele et al., CCS 2013)
+      pl: z 11748 audytowanych apek popełniło błąd kryptograficzny (Egele i in., CCS 2013)
+  - k: CVE-2020-11500
+    v:
+      en: 'Zoom: single AES-128-ECB key shared by all meeting participants'
+      pl: 'Zoom: pojedynczy klucz AES-128-ECB dzielony przez wszystkich uczestników spotkania'
+  - k: ~55 BTC
+    v:
+      en: stolen via the 2013 Android SecureRandom / ECDSA nonce-reuse flaw
+      pl: skradzione przez wadę SecureRandom Android / ponownego użycia nonce ECDSA z 2013
+  - k: No CWE
+    v:
+      en: OWASP's own M10 page cites none
+      pl: Własna strona M10 OWASP nie cytuje żadnego
+  sources:
+  - label: OWASP Mobile Top 10 2024 — M10
+    url: https://owasp.org/www-project-mobile-top-10/2023-risks/m10-insufficient-cryptography
+  - label: OWASP Mobile Top 10 2016 — M5 (direct predecessor)
+    url: https://owasp.org/www-project-mobile-top-10/2016-risks/m5-insufficient-cryptography
+  - label: Citizen Lab — Zoom "Move Fast and Roll Your Own Crypto"
+    url: https://citizenlab.ca/2020/04/move-fast-roll-your-own-crypto-a-quick-look-at-the-confidentiality-of-zoom-meetings/
+  - label: CWE-327 — Use of a Broken or Risky Cryptographic Algorithm
+    url: https://cwe.mitre.org/data/definitions/327.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Every variant here shares the same shape: the developer did attempt encryption, but a specific mechanical choice -- the mode, the key source, the randomness, or the derivation -- undermines it entirely.'
+      pl: 'Każdy wariant tutaj dzieli ten sam kształt: deweloper faktycznie próbował szyfrować, ale konkretny mechaniczny wybór -- tryb, źródło klucza, losowość, albo derywacja -- całkowicie to podważa.'
+    items:
+    - name: ECB mode leaking plaintext structure
+      sev: high
+      description:
+        en: 'AES in ECB mode encrypts identical plaintext blocks to identical ciphertext blocks, preserving visible structure -- the classic "ECB penguin" effect. Verified as this category''s flagship real incident: Zoom''s meeting encryption (CVE-2020-11500) used a single AES-128 key in ECB mode shared by every participant, despite marketing claims of AES-256.'
+        pl: 'AES w trybie ECB szyfruje identyczne bloki jawnego tekstu do identycznych bloków szyfrogramu, zachowując widoczną strukturę -- klasyczny efekt "pingwina ECB". Zweryfikowane jako flagowy prawdziwy incydent tej kategorii: szyfrowanie spotkań Zoom (CVE-2020-11500) używało pojedynczego klucza AES-128 w trybie ECB dzielonego przez każdego uczestnika, mimo marketingowych twierdzeń o AES-256.'
+      payload: Cipher.getInstance("AES")  // no mode specified -- silently resolves to AES/ECB/PKCS5Padding on the default Java/Android provider
+    - name: Predictable randomness for keys, IVs, and tokens
+      sev: high
+      description:
+        en: 'Using a statistical PRNG (java.util.Random, Math.random(), a time-seeded generator) instead of a cryptographically secure one for keys, IVs, nonces, session tokens, or OTPs. Verified as the exact mechanism behind the 2013 Android SecureRandom flaw: a mis-seeded platform PRNG produced repeated ECDSA nonces, letting attackers recover Bitcoin wallet private keys and steal funds.'
+        pl: 'Użycie statystycznego PRNG (java.util.Random, Math.random(), generator z ziarnem czasowym) zamiast kryptograficznie bezpiecznego dla kluczy, IV, nonce, tokenów sesji, albo OTP. Zweryfikowane jako dokładny mechanizm stojący za wadą Android SecureRandom z 2013: błędnie zainicjalizowany PRNG platformy produkował powtarzające się nonce ECDSA, pozwalając atakującym odzyskać klucze prywatne portfeli Bitcoin i ukraść fundusze.'
+      payload: val iv = ByteArray(16); Random().nextBytes(iv)  // statistical PRNG, not SecureRandom -- predictable IV
+    - name: Hardcoded or predictable encryption keys
+      sev: high
+      description:
+        en: A key embedded directly in the APK/IPA (string resource, BuildConfig constant, or native library) is recoverable by trivial decompilation -- and because it's identical across every install, extracting it once compromises every user of the app, not just one.
+        pl: Klucz osadzony bezpośrednio w APK/IPA (zasób string, stała BuildConfig, albo biblioteka natywna) jest odzyskiwalny przez trywialną dekompilację -- a ponieważ jest identyczny w każdej instalacji, wyodrębnienie go raz kompromituje każdego użytkownika apki, nie tylko jednego.
+      payload: private static final String KEY = "MySecretAESKey16";  // same value in every APK ever shipped
+    - name: Broken or missing key derivation
+      sev: medium
+      description:
+        en: Deriving an encryption key from a user password via a single unsalted hash pass, or a PBKDF2 call with a constant salt and too few iterations, instead of a real KDF with a unique random salt and adequate work factor -- academically confirmed as a dominant, recurring pattern (constant salt and sub-1000 PBE iterations are two of the six specific rules the flagship CryptoLint study checked for).
+        pl: Wyprowadzenie klucza szyfrującego z hasła użytkownika przez pojedyncze niezasolonе przejście hasza, albo wywołanie PBKDF2 ze stałą solą i zbyt małą liczbą iteracji, zamiast prawdziwego KDF z unikalną losową solą i adekwatnym współczynnikiem pracy -- akademicko potwierdzone jako dominujący, powracający wzorzec (stała sól i mniej niż 1000 iteracji PBE to dwie z sześciu konkretnych reguł które sprawdzało flagowe badanie CryptoLint).
+      payload: val key = MessageDigest.getInstance("SHA-256").digest(password.toByteArray())  // a single hash pass, not a KDF -- no salt, no work factor
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The single most important correction in this category, confirmed by all three research passes and directly verified against real scanner source code: specifying "AES" alone is not the same as specifying safe AES.'
+      pl: 'Pojedyncza najważniejsza korekta w tej kategorii, potwierdzona przez wszystkie trzy przejścia badawcze i bezpośrednio zweryfikowana względem prawdziwego kodu źródłowego skanera: podanie samego "AES" to nie to samo co podanie bezpiecznego AES.'
+    languages:
+    - label: Android Kotlin — the ECB default trap
+      lang: kotlin
+      vulnerable: '// VULNERABLE: no mode specified -- silently resolves to
+
+        // AES/ECB/PKCS5Padding on the default Java/Android provider.
+
+        // Verified directly against MobSF''s own scanner rule (aes_ecb.yaml),
+
+        // which flags bare Cipher.getInstance("AES") for exactly this reason.
+
+        val cipher = Cipher.getInstance("AES")'
+      safe: '// SAFE: explicit authenticated-encryption mode, unique random IV/nonce
+
+        // per encryption, key held in Android Keystore rather than in code
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+
+        val iv = ByteArray(12)
+
+        SecureRandom().nextBytes(iv)  // fresh nonce every time -- GCM nonce reuse is catastrophic
+
+        cipher.init(Cipher.ENCRYPT_MODE, keystoreKey, GCMParameterSpec(128, iv))'
+    - label: Kotlin — password-derived key
+      lang: kotlin
+      vulnerable: '// VULNERABLE: a single unsalted hash pass used directly as a key --
+
+        // no salt, no work factor, brute-forceable at hashing speed
+
+        val key = MessageDigest.getInstance("SHA-256").digest(password.toByteArray())'
+      safe: '// SAFE: PBKDF2 with a unique random salt and a high iteration count
+
+        val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
+
+        val spec = PBEKeySpec(password.toCharArray(), salt, 210_000, 256)
+
+        val key = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec)'
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: All three research passes agreed this category rewards direct inspection of the actual Cipher/KeyGenerator/SecureRandom calls over assuming from the algorithm name alone -- "uses AES" tells you almost nothing about whether the encryption is actually safe.
+      pl: Wszystkie trzy przejścia badawcze zgodziły się że ta kategoria nagradza bezpośrednią inspekcję faktycznych wywołań Cipher/KeyGenerator/SecureRandom zamiast zakładania z samej nazwy algorytmu -- "używa AES" mówi prawie nic o tym czy szyfrowanie jest faktycznie bezpieczne.
+    steps:
+    - title:
+        en: Static scan for algorithm and mode strings
+        pl: Statyczny skan pod kątem stringów algorytmu i trybu
+      description:
+        en: Grep or run mobsfscan/MobSF for every Cipher.getInstance(), MessageDigest.getInstance(), and SecretKeyFactory call, checking the exact transformation string -- a bare "AES" with no mode is itself the finding, not just an incomplete one, per this deep-dive's own verified ECB-default fact.
+        pl: Grepuj albo uruchom mobsfscan/MobSF dla każdego wywołania Cipher.getInstance(), MessageDigest.getInstance(), i SecretKeyFactory, sprawdzając dokładny string transformacji -- samo "AES" bez trybu jest samo w sobie ustaleniem, nie tylko niekompletnym, zgodnie z własnym zweryfikowanym faktem domyślnego ECB tego deep-dive.
+    - title:
+        en: Check key and IV/salt sourcing
+        pl: Sprawdź źródło klucza i IV/soli
+      description:
+        en: 'Trace where the key, IV, and any KDF salt actually come from: a string literal or resource means hardcoded (CWE-321); a fixed byte array reused across calls means a static IV; a constant salt with a low PBKDF2 iteration count fails two of the six specific rules the flagship CryptoLint academic study checked for.'
+        pl: 'Prześledź skąd faktycznie pochodzi klucz, IV, i jakakolwiek sól KDF: literał stringa albo zasób oznacza zakodowane na sztywno (CWE-321); stała tablica bajtów używana ponownie w wywołaniach oznacza statyczny IV; stała sól z niską liczbą iteracji PBKDF2 nie spełnia dwóch z sześciu konkretnych reguł które sprawdzało flagowe badanie akademickie CryptoLint.'
+    - title:
+        en: Verify randomness source at runtime with Frida
+        pl: Zweryfikuj źródło losowości w czasie wykonania przez Frida
+      description:
+        en: Hook SecureRandom, Random, and Cipher APIs at runtime to observe the actual class and seeding behavior in use -- catches cases where the transformation string is built dynamically or obfuscated, which static analysis alone misses, and confirms whether SecureRandom is genuinely unseeded versus seeded with a static value.
+        pl: Zahacz API SecureRandom, Random, i Cipher w czasie wykonania by obserwować faktyczną klasę i zachowanie inicjalizacji w użyciu -- wychwytuje przypadki gdzie string transformacji jest budowany dynamicznie albo zaobfuskowany, co sama analiza statyczna pomija, i potwierdza czy SecureRandom jest naprawdę bez ziarna w porównaniu do zainicjalizowanego stałą wartością.
+    - title:
+        en: Cross-check against NIST-disallowed algorithms
+        pl: Skrzyżuj z algorytmami zabronionymi przez NIST
+      description:
+        en: Flag any use of MD5, SHA-1 (for signatures), single-DES, or two-key 3DES against NIST SP 800-131A's explicit deprecation/disallowal timeline -- these aren't matters of opinion, they're dated regulatory thresholds an app can be measured against directly.
+        pl: Oflaguj dowolne użycie MD5, SHA-1 (dla podpisów), pojedynczego DES, albo dwukluczowego 3DES względem jawnego harmonogramu wycofania/zakazu NIST SP 800-131A -- to nie kwestie opinii, to datowane progi regulacyjne względem których apka może być bezpośrednio zmierzona.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: All three research passes independently produced a near-identical ranking, converging especially strongly on the GCM nonce-reuse caveat as the single sharpest failure mode within an otherwise-correct modern defense.
+      pl: Wszystkie trzy przejścia badawcze niezależnie wyprodukowały niemal identyczny ranking, zbiegając się szczególnie silnie na zastrzeżeniu ponownego użycia nonce GCM jako pojedynczym najostrzejszym trybie awarii w skądinąd poprawnej nowoczesnej obronie.
+    items:
+    - rank: 1
+      eff: 85
+      kind: primary
+      label:
+        en: Vetted platform crypto libraries, never homegrown
+        pl: Sprawdzone biblioteki kryptograficzne platformy, nigdy własnoręczne
+      note:
+        en: 'Android''s default provider, iOS CryptoKit/CommonCrypto, or Google Tink instead of a custom cipher scheme. Real caveat, confirmed across all three passes: a vetted library used wrong (bare "AES", a static IV) is still broken -- library choice raises the floor but does not guarantee correct usage, which is exactly what happened at Zoom.'
+        pl: 'Domyślny dostawca Androida, iOS CryptoKit/CommonCrypto, albo Google Tink zamiast niestandardowego schematu szyfru. Prawdziwe zastrzeżenie, potwierdzone we wszystkich trzech przejściach: sprawdzona biblioteka użyta niepoprawnie (samo "AES", statyczny IV) wciąż jest złamana -- wybór biblioteki podnosi podłogę ale nie gwarantuje poprawnego użycia, co dokładnie stało się w Zoom.'
+    - rank: 2
+      eff: 85
+      kind: primary
+      label:
+        en: Authenticated encryption (AES-GCM), never ECB or unauthenticated CBC
+        pl: Szyfrowanie uwierzytelnione (AES-GCM), nigdy ECB albo nieuwierzytelnione CBC
+      note:
+        en: 'Directly closes this deep-dive''s own flagship attack. Sharp caveat all three passes flagged identically: GCM nonce reuse is catastrophic -- it doesn''t just weaken confidentiality the way a repeated CBC IV does, it can recover the authentication key entirely. A fresh, unique nonce per encryption is mandatory, not optional.'
+        pl: 'Bezpośrednio zamyka własny flagowy atak tego deep-dive. Ostre zastrzeżenie które wszystkie trzy przejścia oflagowały identycznie: ponowne użycie nonce GCM jest katastrofalne -- nie tylko osłabia poufność tak jak powtórzony IV CBC, może całkowicie odzyskać klucz uwierzytelniania. Świeży, unikalny nonce na szyfrowanie jest obowiązkowy, nie opcjonalny.'
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Hardware-backed key management via Keystore/Keychain
+        pl: Zarządzanie kluczami wsparte sprzętowo przez Keystore/Keychain
+      note:
+        en: 'Cross-references this catalog''s own Insecure Data Storage entry (15.9): keys generated and held inside Android Keystore or iOS Secure Enclave never exist in app-readable form, closing the hardcoded-key attack variant at the root. Caveat: rooted/jailbroken devices and non-hardware-backed Keystore implementations weaken this guarantee, the same caveat established for M9.'
+        pl: 'Odsyła do własnego wpisu Insecure Data Storage tego katalogu (15.9): klucze generowane i trzymane wewnątrz Android Keystore albo iOS Secure Enclave nigdy nie istnieją w formie czytelnej dla apki, zamykając wariant ataku zakodowanego na sztywno klucza u korzenia. Zastrzeżenie: zrootowane/jailbreakowane urządzenia i implementacje Keystore niewsparte sprzętowo osłabiają tę gwarancję, to samo zastrzeżenie ustalone dla M9.'
+    - rank: 4
+      eff: 70
+      kind: strong
+      label:
+        en: CSPRNG for every security-relevant random value
+        pl: CSPRNG dla każdej istotnej dla bezpieczeństwa wartości losowej
+      note:
+        en: 'SecureRandom (Android) / SecRandomCopyBytes (iOS) for every key, IV, nonce, session token, and OTP -- never java.util.Random, Math.random(), or a fixed-seed generator. Honest caveat, directly evidenced by this deep-dive''s own flagship incident: even a correctly-named CSPRNG can fail if the underlying platform implementation itself is defective, as the 2013 Android SecureRandom flaw showed.'
+        pl: 'SecureRandom (Android) / SecRandomCopyBytes (iOS) dla każdego klucza, IV, nonce, tokenu sesji, i OTP -- nigdy java.util.Random, Math.random(), albo generator ze stałym ziarnem. Uczciwe zastrzeżenie, bezpośrednio poparte własnym flagowym incydentem tego deep-dive: nawet poprawnie nazwany CSPRNG może zawieść jeśli sama leżąca u podstaw implementacja platformy jest wadliwa, jak pokazała wada Android SecureRandom z 2013.'
+    - rank: 5
+      eff: 60
+      kind: weak
+      label:
+        en: Proper KDF with a unique salt (PBKDF2/scrypt/Argon2)
+        pl: Poprawny KDF z unikalną solą (PBKDF2/scrypt/Argon2)
+      note:
+        en: 'A high iteration count and a fresh random salt per user, never a single unsalted hash pass. Caveat: "high enough" iteration counts drift upward as hardware improves -- a count that was adequate guidance years ago can be inadequate against current GPU-cracking rates, so this control needs periodic re-verification, not a one-time setting.'
+        pl: 'Wysoka liczba iteracji i świeża losowa sól na użytkownika, nigdy pojedyncze niezasolone przejście hasza. Zastrzeżenie: "wystarczająco wysokie" liczby iteracji dryfują w górę wraz z poprawą sprzętu -- liczba która była adekwatną wskazówką lata temu może być niewystarczająca przeciw aktualnym tempom łamania GPU, więc ta kontrola wymaga okresowej ponownej weryfikacji, nie jednorazowego ustawienia.'
+    - rank: 6
+      eff: 40
+      kind: weak
+      label:
+        en: Sufficient key length per current NIST/OWASP guidance
+        pl: Wystarczająca długość klucza zgodnie z aktualnymi wskazówkami NIST/OWASP
+      note:
+        en: AES-128 minimum (256 preferred), RSA at least 2048 bits. Ranked lowest not because it's unimportant, but because it's rarely the actual cause of real M10 incidents -- Zoom's break was ECB mode, not key length; the 2013 Bitcoin thefts were nonce reuse, not key length. Key length is necessary but the least-often the actual failure point.
+        pl: Minimum AES-128 (256 preferowane), RSA co najmniej 2048 bitów. Sklasyfikowane najniżej nie dlatego że jest nieważne, ale dlatego że rzadko jest faktyczną przyczyną prawdziwych incydentów M10 -- złamanie Zoom to był tryb ECB, nie długość klucza; kradzieże Bitcoin z 2013 to było ponowne użycie nonce, nie długość klucza. Długość klucza jest niezbędna ale najrzadziej faktycznym punktem awarii.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: All three research passes converged on the exact same two flagship real-world cases, and on the exact same academic benchmark for how common this failure class is across the ecosystem.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na dokładnie tych samych dwóch flagowych prawdziwych przypadkach, i na dokładnie tym samym akademickim punkcie odniesienia dla tego jak powszechna jest ta klasa awarii w całym ekosystemie.
+    items:
+    - org: CVE-2020-11500 — Zoom Client for Meetings
+      year: 2020
+      impact: CVSS 3.1 7.5 (High) -- every meeting participant shared a single AES-128 key in ECB mode
+      cost: Disclosed by Citizen Lab, April 2020; fixed in Zoom 5.0 with authenticated AES-256-GCM, May 2020
+      description:
+        en: 'Confirmed identically by all three research passes as this category''s flagship incident: Zoom marketed "AES-256" encryption for meetings, but the actual implementation used a single AES-128 key in ECB mode shared by every participant, with keys in some cases distributed via servers in China even for meetings with no China-based participants. The clean, real illustration of this deep-dive''s central lesson -- "used AES" and "encrypted safely" are not the same claim.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze jako flagowy incydent tej kategorii: Zoom reklamował szyfrowanie "AES-256" dla spotkań, ale faktyczna implementacja używała pojedynczego klucza AES-128 w trybie ECB dzielonego przez każdego uczestnika, z kluczami w niektórych przypadkach dystrybuowanymi przez serwery w Chinach nawet dla spotkań bez uczestników z Chin. Czysta, prawdziwa ilustracja centralnej lekcji tego deep-dive -- "użył AES" i "zaszyfrował bezpiecznie" to nie to samo twierdzenie.'
+    - org: Android SecureRandom flaw / Bitcoin wallet thefts
+      year: 2013
+      impact: ~55 BTC reportedly stolen via ECDSA private-key recovery from reused nonces
+      cost: Affected Bitcoin Wallet, blockchain.info wallet, BitcoinSpinner, and Mycelium Wallet; patched by Google, August 2013
+      description:
+        en: 'Confirmed identically by all three research passes: improper initialization of Android''s SecureRandom/JCA PRNG produced repeated ECDSA signing nonces across multiple wallet apps. Because ECDSA reveals the private key the moment a nonce is reused across two signatures, attackers recovered wallet keys and drained funds within hours of the flaw becoming public. The definitive real-world illustration of why a CSPRNG''s implementation, not just its name, has to be correct.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze: niepoprawna inicjalizacja PRNG SecureRandom/JCA Androida produkowała powtarzające się nonce podpisywania ECDSA w wielu apkach portfeli. Ponieważ ECDSA ujawnia klucz prywatny w momencie ponownego użycia nonce w dwóch podpisach, atakujący odzyskali klucze portfeli i wyczyścili fundusze w ciągu godzin od upublicznienia wady. Definitywna ilustracja z praktyki dlaczego implementacja CSPRNG, nie tylko jego nazwa, musi być poprawna.'
+    - org: Egele et al. — "An Empirical Study of Cryptographic Misuse in Android Applications" (ACM CCS 2013)
+      year: 2013
+      impact: 10,327 of 11,748 audited apps (88%) violated at least one of six basic crypto-usage rules
+      cost: The flagship academic benchmark for how common this failure class is -- built the tool "CryptoLint" specifically to check for it
+      description:
+        en: 'Confirmed identically by all three research passes down to the exact figures. The six specific rules checked -- no ECB, no non-random CBC IV, no constant key, no constant PBE salt, at least 1000 PBE iterations, no static SecureRandom seed -- map directly onto every attack variant this deep-dive documents. The single strongest evidence that insufficient cryptography is common, not a rare edge case, matching OWASP''s own Prevalence: COMMON rating.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze aż do dokładnych liczb. Sześć konkretnych sprawdzanych reguł -- brak ECB, brak niesolosowego IV CBC, brak stałego klucza, brak stałej soli PBE, co najmniej 1000 iteracji PBE, brak statycznego ziarna SecureRandom -- mapuje się bezpośrednio na każdy wariant ataku który dokumentuje ten deep-dive. Pojedynczy najsilniejszy dowód że niewystarczająca kryptografia jest powszechna, nie rzadkim przypadkiem brzegowym, pasujący do własnej oceny Prevalence: COMMON OWASP.'
+    inlineSources:
+    - label: NVD — CVE-2020-11500
+      url: https://nvd.nist.gov/vuln/detail/CVE-2020-11500
+    - label: Citizen Lab — Zoom encryption analysis
+      url: https://citizenlab.ca/2020/04/move-fast-roll-your-own-crypto-a-quick-look-at-the-confidentiality-of-zoom-meetings/
+    - label: Bitcoin.org — Android Security Vulnerability alert
+      url: https://bitcoin.org/en/alert/2013-08-11-android
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on the same core toolchain -- and one team directly verified a real, currently-shipping detection rule, confirming this deep-dive's own central ECB-default finding against production scanner code.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tym samym podstawowym łańcuchu narzędzi -- i jeden zespół bezpośrednio zweryfikował prawdziwą, aktualnie działającą regułę wykrywania, potwierdzając własne centralne ustalenie domyślnego ECB tego deep-dive względem kodu skanera produkcyjnego.
+    sast:
+    - - MobSF / mobsfscan
+      - 'Verified directly against its actual source (rule aes_ecb.yaml): matches both explicit AES/ECB/... and bare Cipher.getInstance("AES") -- catching the exact silent-default footgun this deep-dive centers on -- tagged internally with CWE-327 and MASVS crypto-2. Also flags MD5/SHA-1 usage, weak PRNG, and hardcoded keys'
+    - - QARK (Quick Android Review Kit)
+      - Static scanner flagging weak crypto patterns and insecure API usage during APK/source review
+    dast:
+    - - Frida
+      - Runtime hooks on Cipher.getInstance/doFinal, SecretKeySpec, IvParameterSpec, SecureRandom, and MessageDigest.getInstance observe the actual algorithm/mode/key/IV values in use at runtime -- catches obfuscated or dynamically-built transformation strings that static analysis alone misses
+    - - OWASP MASTG crypto test procedures
+      - Manual/tooling test procedures enumerating every javax.crypto.*/java.security.*/android.security.* call and checking algorithm, mode, key source, and randomness source against the MASVS-CRYPTO control group
+    note:
+      en: <strong>Key signal:</strong> a bare algorithm name like "AES" in a static scan result is not an incomplete finding -- it IS the finding, since the platform default it silently resolves to is exactly the broken mode this category's flagship real incident was built on.
+      pl: <strong>Kluczowy sygnał:</strong> sama nazwa algorytmu jak "AES" w wyniku skanu statycznego to nie niekompletne ustalenie -- to JEST ustalenie, ponieważ domyślne ustawienie platformy do którego się po cichu rozwiązuje to dokładnie złamany tryb na którym zbudowany był flagowy prawdziwy incydent tej kategorii.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'All three research passes converged on the same honest finding: OWASP''s own M10 page cites no CWE at all, so the mapping here is community best-fit -- but this deep-dive''s primary mapping (CWE-327) is unusually well-corroborated, since real production tooling (MobSF''s own scanner) independently tags its findings with that exact CWE.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym samym uczciwym ustaleniu: własna strona M10 OWASP nie cytuje żadnego CWE, więc mapowanie tutaj jest najlepszym dopasowaniem społeczności -- ale główne mapowanie tego deep-dive (CWE-327) jest niezwykle dobrze poparte, ponieważ prawdziwe narzędzie produkcyjne (własny skaner MobSF) niezależnie oznacza swoje ustalenia dokładnie tym CWE.'
+    items:
+    - std: CWE (MITRE) — community best-fit, not OWASP-cited
+      items:
+      - CWE-327 — Use of a Broken or Risky Cryptographic Algorithm (primary). Best overall fit and the CWE real tooling (MobSF's mobsfscan) actually tags its ECB-detection rule with -- unusually strong tooling corroboration for a community-inferred mapping.
+      - CWE-326 — Inadequate Encryption Strength (secondary, for insufficient key length). CWE-330 — Use of Insufficiently Random Values (secondary, for the weak-PRNG sub-case, directly matching this deep-dive's flagship Bitcoin incident). CWE-321 — Use of Hard-coded Cryptographic Key (secondary, for the hardcoded-key sub-case). CWE-1240 — Use of a Cryptographic Primitive with a Risky Implementation (secondary, for homegrown/custom crypto).
+    - std: OWASP
+      items:
+      - 'Mobile Top 10 2024 — M10: Insufficient Cryptography. Verified directly: Exploitability AVERAGE, Prevalence COMMON, Detectability AVERAGE, Technical Impact SEVERE, Business Impact SEVERE. Carries the identical title of 2016''s M5 "Insufficient Cryptography," itself descended from 2014''s M6 "Broken Cryptography" -- notably, 2016 rated Exploitability EASY where 2024 downgraded it to AVERAGE, an editorial change rather than evidence the underlying risk changed.'
+      - OWASP MASVS-CRYPTO-1 (current strong cryptography, used per industry best practice) and MASVS-CRYPTO-2 (key management across the full lifecycle) are the two controls this category maps to directly. Confirmed MASTG test IDs include the classic MASTG-TEST-0013 through -0016 (symmetric crypto, algorithm config, key purposes, random number generation) alongside newer atomic tests (-0204 insecure random API, -0212 hardcoded keys, -0221 broken algorithms, -0232 broken modes) -- all three research passes flagged that MASTG is actively migrating to a new MASWE weakness-enumeration scheme (announced July 2024), so verify current IDs before citing one in an audit.
+      - 'NIST SP 800-131A sets concrete, dated thresholds worth citing directly rather than vaguely: SHA-1 deprecated for signatures through 2030 then disallowed; two-key 3DES encryption disallowed since 2015; three-key 3DES key-wrapping disallowed since 2023. PCI-DSS v4.0 Requirement 3 (stored account data) and Requirement 4 (data in transit) both mandate "strong cryptography" per these same industry standards for any payment-handling app.'
+    inlineSources:
+    - label: OWASP Mobile Top 10 2024 — M10
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m10-insufficient-cryptography
+    - label: OWASP MASVS-CRYPTO
+      url: https://mas.owasp.org/MASVS/06-MASVS-CRYPTO/
+    - label: CWE-327 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/327.html
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If weak, broken, or misused cryptography is confirmed in a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu słabej, złamanej, albo niewłaściwie użytej kryptografii w wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: Identify the exact mechanism (algorithm, mode, key source, randomness source) rather than assuming from the algorithm name alone -- matching this deep-dive's own methodology, since "uses AES" says almost nothing on its own
+      pl: Zidentyfikuj dokładny mechanizm (algorytm, tryb, źródło klucza, źródło losowości) zamiast zakładać z samej nazwy algorytmu -- zgodnie z własną metodyką tego deep-dive, ponieważ "używa AES" mówi prawie nic samo w sobie
+    - en: Determine whether the flaw is per-install (hardcoded key/predictable value, affecting all users identically) or per-session (weak randomness affecting individual sessions) -- this changes the blast radius and urgency
+      pl: Ustal czy wada jest per-instalacja (zakodowany klucz/przewidywalna wartość, dotykająca wszystkich użytkowników identycznie) czy per-sesja (słaba losowość dotykająca poszczególnych sesji) -- to zmienia promień rażenia i pilność
+    - en: If a hardcoded or shared key is confirmed, treat every historical ciphertext protected by it as potentially compromised, not just future traffic -- rotating the key going forward does not retroactively protect already-captured data
+      pl: Jeśli zakodowany albo dzielony klucz jest potwierdzony, traktuj każdy historyczny szyfrogram chroniony przez niego jako potencjalnie skompromitowany, nie tylko przyszły ruch -- rotacja klucza na przyszłość nie chroni retroaktywnie już przechwyconych danych
+    - en: 'Ship the fix matching this deep-dive''s top-ranked defenses: move to a vetted library call with an explicit authenticated mode (AES-GCM), move key generation/storage into Keystore/Keychain, and replace any non-CSPRNG randomness source'
+      pl: 'Wydaj naprawę pasującą do głównych obron tego deep-dive: przejdź na wywołanie sprawdzonej biblioteki z jawnym uwierzytelnionym trybem (AES-GCM), przenieś generowanie/przechowywanie klucza do Keystore/Keychain, i zastąp dowolne źródło losowości nie będące CSPRNG'
+    - en: Re-scan with the same static (MobSF/mobsfscan) and dynamic (Frida) tooling used to find the original flaw to confirm the fix actually changed the resolved algorithm/mode, not just the visible source string
+      pl: Przeskanuj ponownie tymi samymi narzędziami statycznymi (MobSF/mobsfscan) i dynamicznymi (Frida) użytymi do znalezienia oryginalnej wady by potwierdzić że naprawa faktycznie zmieniła rozwiązany algorytm/tryb, nie tylko widoczny string źródłowy
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: OWASP Mobile Top 10 2024 — M10
+      url: https://owasp.org/www-project-mobile-top-10/2023-risks/m10-insufficient-cryptography
+    - label: OWASP Mobile Top 10 2016 — M5 (direct predecessor)
+      url: https://owasp.org/www-project-mobile-top-10/2016-risks/m5-insufficient-cryptography
+    - label: OWASP MASVS-CRYPTO
+      url: https://mas.owasp.org/MASVS/06-MASVS-CRYPTO/
+    - label: CWE-327 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/327.html
+    - label: NVD — CVE-2020-11500
+      url: https://nvd.nist.gov/vuln/detail/CVE-2020-11500
+    - label: Citizen Lab — Zoom encryption analysis
+      url: https://citizenlab.ca/2020/04/move-fast-roll-your-own-crypto-a-quick-look-at-the-confidentiality-of-zoom-meetings/
+    - label: Bitcoin.org — Android Security Vulnerability alert
+      url: https://bitcoin.org/en/alert/2013-08-11-android
+    - label: Egele et al. — Cryptographic Misuse in Android Applications (CCS 2013)
+      url: https://dl.acm.org/doi/10.1145/2508859.2516693

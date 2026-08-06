@@ -53,6 +53,7 @@ import mobileprivacyData from '../content/deepdives/mobileprivacy.yaml';
 import mobilebinaryData from '../content/deepdives/mobilebinary.yaml';
 import mobilemisconfigData from '../content/deepdives/mobilemisconfig.yaml';
 import mobilestorageData from '../content/deepdives/mobilestorage.yaml';
+import mobilecryptoData from '../content/deepdives/mobilecrypto.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -103,6 +104,7 @@ import mobileprivacyQuiz from '../content/quizzes/mobileprivacy.yaml';
 import mobilebinaryQuiz from '../content/quizzes/mobilebinary.yaml';
 import mobilemisconfigQuiz from '../content/quizzes/mobilemisconfig.yaml';
 import mobilestorageQuiz from '../content/quizzes/mobilestorage.yaml';
+import mobilecryptoQuiz from '../content/quizzes/mobilecrypto.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -155,6 +157,7 @@ export const DEEPDIVES = {
   '15.7': mobilebinaryData, // Insufficient Binary Protections (Mobile)
   '15.8': mobilemisconfigData, // Security Misconfiguration (Mobile)
   '15.9': mobilestorageData, // Insecure Data Storage (Mobile)
+  '15.10': mobilecryptoData, // Insufficient Cryptography (Mobile)
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -210,4 +213,5 @@ export const QUIZZES = {
   '15.7': mobilebinaryQuiz,
   '15.8': mobilemisconfigQuiz,
   '15.9': mobilestorageQuiz,
+  '15.10': mobilecryptoQuiz,
 };

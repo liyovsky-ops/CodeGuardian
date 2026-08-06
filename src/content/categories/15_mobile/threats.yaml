@@ -185,19 +185,33 @@ threats:
 - id: '15.10'
   name: Insufficient Cryptography (Mobile)
   severity: High
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-327
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Use of weak/broken ciphers, hardcoded or predictable keys, ECB mode, or improper key management on-device, allowing decryption of protected mobile data.
+  - CWE-330
+  - CWE-321
+  desc: 'Użycie słabych/złamanych szyfrów, zakodowanych na sztywno albo przewidywalnych kluczy, trybu ECB, albo niepoprawnego zarządzania kluczami na urządzeniu, pozwalające na deszyfrowanie chronionych danych mobilnych. Kluczowa pułapka: Cipher.getInstance("AES") bez trybu po cichu domyślnie ustawia ECB. Zweryfikowane rzeczywiste CVE-2020-11500 (Zoom, pojedynczy klucz AES-128-ECB dzielony przez wszystkich uczestników spotkania) i wada Android SecureRandom z 2013 (przewidywalne nonce ECDSA, ~55 BTC skradzione).
 
     '
-  desc_en: Use of weak/broken ciphers, hardcoded or predictable keys, ECB mode, or improper key management on-device, allowing decryption of protected mobile data.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'Use of weak/broken ciphers, hardcoded or predictable keys, ECB mode, or improper key management on-device, allowing decryption of protected mobile data. Key footgun: Cipher.getInstance("AES") with no mode silently defaults to ECB. Verified real CVE-2020-11500 (Zoom, a single AES-128-ECB key shared by every meeting participant) and the 2013 Android SecureRandom flaw (predictable ECDSA nonces, ~55 BTC stolen).'
+  lang: kotlin
+  vuln: '// VULNERABLE: no mode specified -- silently resolves to
+
+    // AES/ECB/PKCS5Padding on the default Java/Android provider
+
+    val cipher = Cipher.getInstance("AES")
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  safe: '// SAFE: explicit authenticated mode, unique nonce per encryption,
+
+    // key held in Android Keystore
+
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+
+    val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
+
+    cipher.init(Cipher.ENCRYPT_MODE, keystoreKey, GCMParameterSpec(128, iv))
 
     '
   note_en: 'Source: OWASP Mobile Top 10 2024, M10. Related CWE-321 (hardcoded cryptographic key).'

@@ -1,0 +1,124 @@
+threatId: '15.10'
+title:
+  en: Insufficient Cryptography (Mobile) — knowledge check
+  pl: Insufficient Cryptography (Mobile) — sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: A developer calls Cipher.getInstance("AES") on Android with no mode specified, reasoning that since AES is a strong, modern algorithm, the encryption is safe. All three independent research passes for this deep-dive flagged this as a critical footgun. Is the developer's reasoning correct?
+    pl: Deweloper wywołuje Cipher.getInstance("AES") na Android bez podanego trybu, uzasadniając że skoro AES to silny, nowoczesny algorytm, szyfrowanie jest bezpieczne. Wszystkie trzy niezależne przejścia badawcze dla tego deep-dive oflagowały to jako krytyczną pułapkę. Czy rozumowanie dewelopera jest poprawne?
+  isVulnerable: true
+  cwe: CWE-327
+  explanation:
+    en: No. On the default Java/Android provider, Cipher.getInstance("AES") with no mode specified silently resolves to AES/ECB/PKCS5Padding -- the least secure mode, which leaks visible structure in the ciphertext. One research pass verified this directly against MobSF's own scanner source code (its aes_ecb.yaml rule specifically matches bare "AES" for this exact reason). "Uses AES" and "encrypted safely" are not the same claim -- the mode matters as much as the algorithm.
+    pl: Nie. Na domyślnym dostawcy Java/Android, Cipher.getInstance("AES") bez podanego trybu po cichu rozwiązuje się do AES/ECB/PKCS5Padding -- najmniej bezpiecznego trybu, który ujawnia widoczną strukturę w szyfrogramie. Jedno przejście badawcze zweryfikowało to bezpośrednio względem własnego kodu źródłowego skanera MobSF (jego reguła aes_ecb.yaml konkretnie dopasowuje samo "AES" dokładnie z tego powodu). "Używa AES" i "zaszyfrował bezpiecznie" to nie to samo twierdzenie -- tryb ma tak samo duże znaczenie jak algorytm.
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: All three research teams independently confirmed the same lineage fact about OWASP Mobile Top 10 2024's M10 (Insufficient Cryptography). Which is accurate?
+    pl: Wszystkie trzy zespoły badawcze niezależnie potwierdziły ten sam fakt rodowodu o M10 OWASP Mobile Top 10 2024 (Insufficient Cryptography). Który jest dokładny?
+  choices:
+  - id: a
+    label:
+      en: It carries the exact title of 2016's M5 "Insufficient Cryptography," itself descended from 2014's M6 "Broken Cryptography" -- the same clean-lineage pattern already established for M9/Insecure Data Storage
+      pl: Niesie dokładny tytuł M5 z 2016 "Insufficient Cryptography", samo pochodzące od M6 z 2014 "Broken Cryptography" -- ten sam wzorzec czystego rodowodu już ustalony dla M9/Insecure Data Storage
+  - id: b
+    label:
+      en: It is a completely new category introduced for the first time in the 2024 revision
+      pl: To zupełnie nowa kategoria wprowadzona po raz pierwszy w rewizji 2024
+  - id: c
+    label:
+      en: It merges 2016's M8 (Code Tampering) and M9 (Reverse Engineering) into one entry
+      pl: Łączy M8 z 2016 (Code Tampering) i M9 (Reverse Engineering) w jeden wpis
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Confirmed identically by all three teams checking the OWASP archives directly. Interesting detail one team caught: 2016 rated this category''s Exploitability as EASY, while 2024 downgraded it to AVERAGE -- an editorial rating change, not evidence the underlying risk itself changed. (The merge of Code Tampering + Reverse Engineering into one entry describes M7/Insufficient Binary Protections, a different category in this catalog.)'
+    pl: 'Potwierdzone identycznie przez wszystkie trzy zespoły sprawdzające bezpośrednio archiwa OWASP. Interesujący szczegół który wychwycił jeden zespół: 2016 klasyfikował Eksploatowalność tej kategorii jako EASY, podczas gdy 2024 obniżył ją do AVERAGE -- redakcyjna zmiana oceny, nie dowód że samo leżące u podstaw ryzyko się zmieniło. (Połączenie Code Tampering + Reverse Engineering w jeden wpis opisuje M7/Insufficient Binary Protections, inną kategorię w tym katalogu.)'
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: The flagship academic study anchoring this deep-dive (Egele et al., ACM CCS 2013, "CryptoLint") audited 11,748 Android apps using cryptographic APIs. What did it find, confirmed identically by all three research passes?
+    pl: Flagowe badanie akademickie zakotwiczające ten deep-dive (Egele i in., ACM CCS 2013, "CryptoLint") audytowało 11748 apek Android używających API kryptograficznych. Co znalazło, potwierdzone identycznie przez wszystkie trzy przejścia badawcze?
+  choices:
+  - id: a
+    label:
+      en: 10,327 apps (88%) violated at least one of six basic crypto-usage rules -- including using ECB, a non-random CBC IV, a constant key, a constant PBE salt, fewer than 1,000 PBE iterations, or a static SecureRandom seed
+      pl: 10327 apek (88%) naruszyło co najmniej jedną z sześciu podstawowych reguł użycia kryptografii -- włącznie z użyciem ECB, niesolosowego IV CBC, stałego klucza, stałej soli PBE, mniej niż 1000 iteracji PBE, albo statycznego ziarna SecureRandom
+  - id: b
+    label:
+      en: Fewer than 5% of apps had any cryptographic issues, showing the ecosystem was already well-secured by 2013
+      pl: Mniej niż 5% apek miało jakiekolwiek problemy kryptograficzne, pokazując że ekosystem był już dobrze zabezpieczony do 2013
+  - id: c
+    label:
+      en: The study focused exclusively on iOS apps and found no issues on Android
+      pl: Badanie skupiało się wyłącznie na apkach iOS i nie znalazło żadnych problemów na Android
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three independent research passes converged on these exact figures. The six specific rules checked map directly onto every attack variant this deep-dive documents, and the 88% figure is the strongest available evidence that insufficient cryptography is common rather than a rare edge case -- matching OWASP''s own Prevalence: COMMON rating for this category.'
+    pl: 'Wszystkie trzy niezależne przejścia badawcze zbiegły się na dokładnie tych liczbach. Sześć konkretnych sprawdzanych reguł mapuje się bezpośrednio na każdy wariant ataku który dokumentuje ten deep-dive, a liczba 88% to najsilniejszy dostępny dowód że niewystarczająca kryptografia jest powszechna zamiast rzadkim przypadkiem brzegowym -- pasujący do własnej oceny Prevalence: COMMON OWASP dla tej kategorii.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A team migrates their app from AES-CBC to AES-GCM, correctly reasoning that GCM provides authenticated encryption. They reuse the same fixed 12-byte IV/nonce for every encryption operation to keep the migration simple. Is this a meaningful security regression despite using a stronger mode?
+    pl: Zespół migruje swoją apkę z AES-CBC do AES-GCM, poprawnie rozumując że GCM zapewnia szyfrowanie uwierzytelnione. Ponownie używają tego samego stałego 12-bajtowego IV/nonce dla każdej operacji szyfrowania by uprościć migrację. Czy to znacząca regresja bezpieczeństwa mimo użycia silniejszego trybu?
+  isVulnerable: true
+  cwe: CWE-330
+  explanation:
+    en: 'Yes, and it''s worse than the CBC problem they were trying to fix. All three research passes flagged this exact caveat identically: GCM nonce reuse is catastrophic -- unlike a repeated CBC IV, which only weakens confidentiality, a reused GCM nonce can let an attacker recover the authentication key entirely, defeating the very authentication guarantee GCM was chosen for. A fresh, unique nonce per encryption operation is mandatory, not a nice-to-have.'
+    pl: 'Tak, i jest to gorsze niż problem CBC który próbowali naprawić. Wszystkie trzy przejścia badawcze oflagowały to dokładne zastrzeżenie identycznie: ponowne użycie nonce GCM jest katastrofalne -- w przeciwieństwie do powtórzonego IV CBC, który tylko osłabia poufność, ponownie użyty nonce GCM może pozwolić atakującemu całkowicie odzyskać klucz uwierzytelniania, pokonując samą gwarancję uwierzytelniania dla której GCM został wybrany. Świeży, unikalny nonce na operację szyfrowania jest obowiązkowy, nie miłym dodatkiem.'
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: What was the actual root cause of the 2013 Android SecureRandom incident that let attackers steal Bitcoin from wallet apps, confirmed identically by all three research passes?
+    pl: Jaka była faktyczna pierwotna przyczyna incydentu Android SecureRandom z 2013 który pozwolił atakującym ukraść Bitcoin z apek portfeli, potwierdzona identycznie przez wszystkie trzy przejścia badawcze?
+  choices:
+  - id: a
+    label:
+      en: Improper initialization of Android's SecureRandom/JCA PRNG caused repeated ECDSA signing nonces; because ECDSA reveals the private key when a nonce is reused across two signatures, attackers recovered wallet private keys directly
+      pl: Niepoprawna inicjalizacja PRNG SecureRandom/JCA Androida spowodowała powtarzające się nonce podpisywania ECDSA; ponieważ ECDSA ujawnia klucz prywatny gdy nonce jest ponownie użyty w dwóch podpisach, atakujący odzyskali klucze prywatne portfeli bezpośrednio
+  - id: b
+    label:
+      en: The wallet apps stored private keys in plaintext SharedPreferences with no encryption at all
+      pl: Apki portfeli przechowywały klucze prywatne jawnym tekstem w SharedPreferences bez żadnego szyfrowania
+  - id: c
+    label:
+      en: Attackers exploited a buffer overflow in the wallet apps' native code to extract keys from memory
+      pl: Atakujący wykorzystali przepełnienie bufora w kodzie natywnym apek portfeli by wyodrębnić klucze z pamięci
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Confirmed identically by all three research passes, including the affected wallets (Bitcoin Wallet, blockchain.info, BitcoinSpinner, Mycelium) and the approximate loss (~55 BTC). This is the definitive real-world illustration of why a CSPRNG's actual implementation, not just calling something named SecureRandom, has to be correct -- even the right API name doesn't guarantee the right behavior underneath it.
+    pl: Potwierdzone identycznie przez wszystkie trzy przejścia badawcze, włącznie z dotkniętymi portfelami (Bitcoin Wallet, blockchain.info, BitcoinSpinner, Mycelium) i przybliżoną stratą (~55 BTC). To definitywna ilustracja z praktyki dlaczego faktyczna implementacja CSPRNG, nie tylko wywołanie czegoś nazwanego SecureRandom, musi być poprawna -- nawet właściwa nazwa API nie gwarantuje właściwego zachowania pod spodem.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A team needs to derive an encryption key from a user's password. Which approach actually follows this deep-dive's own defense ranking (proper KDF with a unique salt, not just a strong hash function)?
+    pl: Zespół potrzebuje wyprowadzić klucz szyfrujący z hasła użytkownika. Które podejście faktycznie realizuje własny ranking obrony tego deep-dive (poprawny KDF z unikalną solą, nie tylko silna funkcja hashująca)?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: 'val key = MessageDigest.getInstance("SHA-256").digest(password.toByteArray())
+
+      // "SHA-256 is a strong, modern hash function"'
+  - id: v2
+    lang: kotlin
+    code: 'val salt = "fixed_app_salt_v1".toByteArray()  // same for every user, hardcoded in the app
+
+      val spec = PBEKeySpec(password.toCharArray(), salt, 210_000, 256)
+
+      val key = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec)'
+  - id: v3
+    lang: kotlin
+    code: 'val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }  // unique per user, stored alongside the derived data
+
+      val spec = PBEKeySpec(password.toCharArray(), salt, 210_000, 256)
+
+      val key = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec)'
+  correctVariantId: v3
+  explanation:
+    en: 'v3 uses a real KDF (PBKDF2) with a high iteration count AND a unique random salt generated per user via SecureRandom -- exactly this deep-dive''s ranked defense. v1 is a single unsalted hash pass, brute-forceable at raw hashing speed with no work factor at all, regardless of how "strong" the underlying hash function is -- a hash is not a KDF. v2 uses the right KDF algorithm and iteration count but fails one of the flagship CryptoLint study''s own six specific rules: a constant salt shared across every user means an attacker who cracks one password''s derivation can reuse the same precomputed work against every other user.'
+    pl: 'v3 używa prawdziwego KDF (PBKDF2) z wysoką liczbą iteracji ORAZ unikalną losową solą generowaną per użytkownik przez SecureRandom -- dokładnie ranking obrony tego deep-dive. v1 to pojedyncze niezasolone przejście hasza, łamliwe siłową metodą przy surowej prędkości haszowania bez żadnego współczynnika pracy, niezależnie od tego jak "silna" jest leżąca u podstaw funkcja haszująca -- hash to nie KDF. v2 używa właściwego algorytmu KDF i liczby iteracji ale nie spełnia jednej z sześciu konkretnych reguł własnych flagowego badania CryptoLint: stała sól dzielona przez każdego użytkownika oznacza że atakujący który złamie derywację jednego hasła może ponownie użyć tej samej wstępnie obliczonej pracy przeciw każdemu innemu użytkownikowi.'
