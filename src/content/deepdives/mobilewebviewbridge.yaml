@@ -1,0 +1,380 @@
+meta:
+  id: mobilewebviewbridge
+  threatId: '15.11'
+  severity: High
+  color: '#c2410c'
+  colorRgb: 194,65,12
+  cwe: CWE-749
+  cvss: N/A (technique class spanning platform and app-level cases; flagship modern CVE-2022-30746 scored 7.5 High, foundational platform CVE-2012-6636 scored 6.8 Medium under CVSSv2)
+  standard: OWASP MASVS-PLATFORM (MASTG-TEST-0033)
+hero:
+  titleMain: 'WebView JavaScript '
+  titleGrad: Bridge Exposure
+  titleTail: ''
+  topbar: WebView JavaScript Bridge Exposure (addJavascriptInterface)
+  lead:
+    en: 'All three research passes converged tightly on the same shape of this technique: WebView.addJavascriptInterface() binds a Java/Kotlin object to a JavaScript global, and that binding belongs to the WebView instance, not to any specific page -- Android''s own official risk page states plainly that "there is no mechanism for the application to verify the origin of the calling frame within the WebView." Before API 17 (JELLY_BEAN_MR1, Android 4.2), every public method of the bound object -- including the inherited getClass() -- was reachable, letting attacker JavaScript pivot via Java reflection into Runtime.exec() for full remote code execution (CVE-2012-6636). API 17+ closes that specific reflection path by requiring an explicit @JavascriptInterface annotation, gated on the app''s targetSdkVersion (not minSdkVersion -- a precision error all three teams flagged as common). The single most important corrective finding, confirmed identically by all three passes: "API 17+ makes it safe" is a dangerous myth. The annotation narrows *which* methods are reachable, not *who* may call them -- any page the WebView ever loads, including a malicious iframe embedded in an otherwise-trusted page (CWE-749''s own Example 4), can still invoke every annotated method. The 2022 Samsung SmartThings case (CVE-2022-30746) shows this is not historical: a modern, fully-patched app shipped a missing-caller-check bridge that leaked sensitive data to remote content a decade after the reflection fix.'
+    pl: 'Wszystkie trzy przejścia badawcze zbiegły się ściśle na tym samym kształcie tej techniki: WebView.addJavascriptInterface() wiąże obiekt Java/Kotlin z globalną zmienną JavaScript, a to wiązanie należy do instancji WebView, nie do konkretnej strony -- własna oficjalna strona ryzyka Android stwierdza wprost że "nie ma mechanizmu dla aplikacji by zweryfikować pochodzenie wywołującej ramki wewnątrz WebView". Przed API 17 (JELLY_BEAN_MR1, Android 4.2), każda publiczna metoda związanego obiektu -- włącznie z odziedziczoną getClass() -- była osiągalna, pozwalając atakującemu JavaScript przejść przez refleksję Java do Runtime.exec() dla pełnego zdalnego wykonania kodu (CVE-2012-6636). API 17+ zamyka tę konkretną ścieżkę refleksji wymagając jawnej adnotacji @JavascriptInterface, uzależnionej od targetSdkVersion apki (nie minSdkVersion -- błąd precyzji który wszystkie trzy zespoły oflagowały jako powszechny). Pojedyncze najważniejsze ustalenie korygujące, potwierdzone identycznie przez wszystkie trzy przejścia: "API 17+ czyni to bezpiecznym" to niebezpieczny mit. Adnotacja zawęża KTÓRE metody są osiągalne, nie KTO może je wywołać -- dowolna strona którą WebView kiedykolwiek załaduje, włącznie ze złośliwym iframe osadzonym w skądinąd zaufanej stronie (własny Przykład 4 CWE-749), wciąż może wywołać każdą oznaczoną metodę. Przypadek Samsung SmartThings z 2022 (CVE-2022-30746) pokazuje że to nie historia: nowoczesna, w pełni załatana apka wysłała bridge z brakującym sprawdzeniem wywołującego który wyciekał wrażliwe dane do zdalnej zawartości dekadę po naprawie refleksji.'
+  metrics:
+  - k: API 17
+    v:
+      en: targetSdkVersion boundary (JELLY_BEAN_MR1) closing reflection RCE -- not a full fix
+      pl: granica targetSdkVersion (JELLY_BEAN_MR1) zamykająca RCE refleksji -- nie pełna naprawa
+  - k: CVE-2012-6636
+    v:
+      en: 'foundational platform RCE: Java Reflection API abuse of addJavascriptInterface'
+      pl: 'fundamentalne RCE platformy: nadużycie Java Reflection API na addJavascriptInterface'
+  - k: CVE-2022-30746
+    v:
+      en: 'Samsung SmartThings, 2022: missing caller check in JS interface API, CVSS 7.5 High'
+      pl: 'Samsung SmartThings, 2022: brak sprawdzenia wywołującego w API interfejsu JS, CVSS 7.5 High'
+  - k: 62/100
+    v:
+      en: top Google Play apps flagged "potentially vulnerable" by MWR's 2013 audit -- a dated snapshot, not current prevalence
+      pl: czołowych apek Google Play oflagowanych jako "potencjalnie podatne" przez audyt MWR z 2013 -- datowany zrzut, nie aktualna powszechność
+  sources:
+  - label: Android WebView guide -- addJavascriptInterface security warning
+    url: https://developer.android.com/develop/ui/views/layout/webapps/webview
+  - label: Android official risk page -- Insecure WebView native bridges
+    url: https://developer.android.com/privacy-and-security/risks/insecure-webview-native-bridges
+  - label: CWE-749 -- Exposed Dangerous Method or Function
+    url: https://cwe.mitre.org/data/definitions/749.html
+  - label: OWASP MASTG-TEST-0033 -- Testing for Java Objects Exposed Through WebViews
+    url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0033/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Every variant here shares the same root cause identified across all three research passes: the bridge object has no notion of which page is calling it, only of which methods are reachable.'
+      pl: 'Każdy wariant tutaj dzieli tę samą pierwotną przyczynę zidentyfikowaną przez wszystkie trzy przejścia badawcze: obiekt bridge nie ma pojęcia która strona go wywołuje, tylko które metody są osiągalne.'
+    items:
+    - name: Pre-API 17 reflection RCE via getClass()
+      sev: high
+      description:
+        en: 'Before API 17, all public methods of the injected object -- including the inherited java.lang.Object.getClass() -- were reachable from JavaScript, letting attacker code pivot via Java reflection into Runtime.exec() for arbitrary command execution with the app''s own UID and permissions. Tracked as CVE-2012-6636 and weaponized as the Metasploit module webview_addjavascriptinterface. Two teams flagged an easy-to-conflate provenance detail: the foundational academic paper on WebView attacks is Luo et al. (ACSAC 2011), while the reflection-to-RCE weaponization specifically is an MWR InfoSecurity industry advisory (Dec 2012) -- sources merging these into one "2012-2013 paper" are imprecise.'
+        pl: 'Przed API 17, wszystkie publiczne metody wstrzykniętego obiektu -- włącznie z odziedziczoną java.lang.Object.getClass() -- były osiągalne z JavaScript, pozwalając kodowi atakującego przejść przez refleksję Java do Runtime.exec() dla dowolnego wykonania komend z UID i uprawnieniami samej apki. Śledzone jako CVE-2012-6636 i uzbrojone jako moduł Metasploit webview_addjavascriptinterface. Dwa zespoły oflagowały łatwy do pomylenia szczegół pochodzenia: fundamentalna praca akademicka o atakach WebView to Luo i in. (ACSAC 2011), podczas gdy uzbrojenie refleksji-do-RCE konkretnie to przemysłowe ostrzeżenie MWR InfoSecurity (grudzień 2012) -- źródła łączące to w jedną "pracę z 2012-2013" są nieprecyzyjne.'
+      payload: '// JS reachable pre-API 17 via any loaded page:
+
+        injectedObj.getClass().forName(''java.lang.Runtime'').getMethod(''getRuntime'', null).invoke(null, null).exec([''/system/bin/sh'', ''-c'', ''CMD''])'
+    - name: Intentionally exposed dangerous @JavascriptInterface methods
+      sev: high
+      description:
+        en: 'The @JavascriptInterface annotation restricts which methods are reachable, not what those methods do or who may call them. A method that returns tokens/credentials, reads/writes files, launches intents, or changes settings is a fully-functional attack primitive for any page the WebView loads -- confirmed by all three teams as the single most common modern misconception ("API 17+ makes it safe"). Verified as the exact mechanism behind CVE-2022-30746 (Samsung SmartThings, 2022): a missing caller check in the JS interface API let remote content read sensitive data, a decade after the reflection-RCE fix.'
+        pl: 'Adnotacja @JavascriptInterface ogranicza które metody są osiągalne, nie to co te metody robią albo kto może je wywołać. Metoda zwracająca tokeny/dane uwierzytelniające, czytająca/pisząca pliki, uruchamiająca intenty, albo zmieniająca ustawienia jest w pełni funkcjonalnym prymitywem ataku dla dowolnej strony którą WebView załaduje -- potwierdzone przez wszystkie trzy zespoły jako pojedyncze najczęstsze nowoczesne błędne przekonanie ("API 17+ czyni to bezpiecznym"). Zweryfikowane jako dokładny mechanizm stojący za CVE-2022-30746 (Samsung SmartThings, 2022): brak sprawdzenia wywołującego w API interfejsu JS pozwolił zdalnej zawartości czytać wrażliwe dane, dekadę po naprawie RCE refleksji.'
+      payload: "class Bridge {\n  @JavascriptInterface\n  fun getAuthToken(): String = sessionManager.token  // callable by ANY loaded page, no caller check\n}"
+    - name: Malicious iframe reaching a bridge inside an otherwise-trusted page
+      sev: high
+      description:
+        en: 'CWE-749''s own Example 4 makes this explicit: even the post-4.2 annotated bridge "still exposes user information to malicious iframes loaded within trusted pages." Top-frame origin checks (e.g. verifying WebView.getUrl()) do not extend to embedded third-party iframes -- an ad network, a compromised widget, or injected content inside a trusted page reaches the same bridge object as the trusted page itself.'
+        pl: 'Własny Przykład 4 CWE-749 czyni to jawnym: nawet oznaczony adnotacją bridge po 4.2 "wciąż wystawia informacje użytkownika złośliwym iframe załadowanym wewnątrz zaufanych stron". Sprawdzenia pochodzenia górnej ramki (np. weryfikacja WebView.getUrl()) nie rozciągają się na osadzone zewnętrzne iframe -- sieć reklamowa, skompromitowany widget, albo wstrzyknięta zawartość wewnątrz zaufanej strony osiąga ten sam obiekt bridge co sama zaufana strona.'
+      payload: '<!-- inside an otherwise-trusted, allowlisted page -->
+
+        <iframe src="https://ad-network.example/slot"></iframe>
+
+        <!-- ad frame JS: -->
+
+        <script>window.Android.getAuthToken()</script>'
+    - name: Transitive exposure via bundled SDKs compiled below API 17
+      sev: medium
+      description:
+        en: If a bundled ad or analytics SDK creates its own WebView and calls addJavascriptInterface from code compiled against API < 17, the reflection-RCE path reopens regardless of the host app's own targetSdkVersion -- the annotation enforcement is evaluated per the calling code's compile target, not the app's. MWR's 2013 audit found this the primary vector behind a large share of vulnerable top-100 apps; the often-cited follow-on figure of 570/1,000 apps could not be confirmed against a primary source by any team and should be treated as unverified, unlike the sourced 62/100 figure.
+        pl: Jeśli dołączony SDK reklamowy albo analityczny tworzy własny WebView i wywołuje addJavascriptInterface z kodu skompilowanego względem API < 17, ścieżka RCE refleksji otwiera się ponownie niezależnie od własnego targetSdkVersion apki-hosta -- egzekwowanie adnotacji jest oceniane względem celu kompilacji wywołującego kodu, nie apki. Audyt MWR z 2013 znalazł to jako główny wektor stojący za dużą częścią podatnych apek top-100; często cytowana dalsza liczba 570/1000 apek nie mogła zostać potwierdzona względem źródła pierwotnego przez żaden zespół i powinna być traktowana jako niezweryfikowana, w przeciwieństwie do udokumentowanej liczby 62/100.
+      payload: '// Host app: targetSdkVersion 34
+
+        // Bundled ad SDK (separate .aar, compiled targetSdkVersion 15):
+
+        webView.addJavascriptInterface(AdBridge(), "AdBridge")  // annotation NOT enforced -- SDK''s own compile target governs'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The single most important correction confirmed by all three research passes: the @JavascriptInterface annotation is a method-reachability filter, not an origin check -- a genuinely safe bridge needs an explicit allowlisted-origin mechanism, not just the annotation and a modern targetSdkVersion.'
+      pl: 'Pojedyncza najważniejsza korekta potwierdzona przez wszystkie trzy przejścia badawcze: adnotacja @JavascriptInterface to filtr osiągalności metod, nie sprawdzenie pochodzenia -- naprawdę bezpieczny bridge potrzebuje jawnego mechanizmu dozwolonego pochodzenia, nie tylko adnotacji i nowoczesnego targetSdkVersion.'
+    languages:
+    - label: Android Kotlin -- annotation without an origin check
+      lang: kotlin
+      vulnerable: "// VULNERABLE: targetSdkVersion 21+, method IS annotated --\n// but there is still no check on which page is calling it,\n// and the WebView loads a remote, non-allowlisted URL.\nclass Bridge(private val session: SessionManager) {\n    @JavascriptInterface\n    fun getAuthToken(): String = session.token\n}\n\nwebView.settings.javaScriptEnabled = true\nwebView.addJavascriptInterface(Bridge(session), \"Android\")\nwebView.loadUrl(intent.getStringExtra(\"target_url\"))  // attacker-influenceable via deep link"
+      safe: "// SAFE: minimal, non-sensitive bridge surface; explicit origin allowlist\n// via WebViewCompat.addWebMessageListener instead of raw object binding;\n// remote/mixed content and cleartext blocked outright.\nwebView.settings.javaScriptEnabled = true\nwebView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW\n\nif (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {\n    WebViewCompat.addWebMessageListener(\n        webView, \"Android\",\n        setOf(\"https://app.example.com\"),  // allowedOriginRules -- never \"*\"\n    ) { _, message, sourceOrigin, _, replyProxy ->\n        if (sourceOrigin.toString() != \"https://app.example.com\") return@addWebMessageListener\n        replyProxy.postMessage(handleTrustedRequest(message.data))\n    }\n}\nwebView.loadUrl(\"https://app.example.com/hybrid\")  // fixed, not attacker-influenceable"
+    - label: Android Kotlin -- pre-API 17 reflection exposure
+      lang: kotlin
+      vulnerable: '// VULNERABLE: targetSdkVersion 16, unannotated object --
+
+        // EVERY public method, including inherited getClass(), is reachable
+
+        webView.addJavascriptInterface(Object(), "unsafeBridge")
+
+        // attacker JS: unsafeBridge.getClass().forName(''java.lang.Runtime'')...'
+      safe: "// SAFE: targetSdkVersion >= 21 (closes both method AND public-field\n// reflection per Android's own risk-page guidance), only intended,\n// non-sensitive methods annotated -- combined with the origin-allowlist\n// pattern above, since the annotation alone is not sufficient\nclass Bridge {\n    @JavascriptInterface\n    fun getAppVersionName(): String = BuildConfig.VERSION_NAME  // harmless, non-sensitive\n}"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: locate every bridge registration, then evaluate it against the three questions the annotation alone never answers -- what can it do, who can reach it, and does a bundled SDK create its own.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: zlokalizuj każdą rejestrację bridge, następnie oceń ją względem trzech pytań na które sama adnotacja nigdy nie odpowiada -- co potrafi zrobić, kto może ją osiągnąć, i czy dołączony SDK tworzy własną.'
+    steps:
+    - title:
+        en: Locate every addJavascriptInterface call
+        pl: Zlokalizuj każde wywołanie addJavascriptInterface
+      description:
+        en: Grep decompiled/source code (jadx-gui, MobSF, mobsfscan) for addJavascriptInterface across the app AND every bundled SDK/.aar -- transitive bridges created by ad, analytics, or payment SDKs are the most commonly missed instance, per all three teams' consensus on the SDK-compile-target caveat.
+        pl: Grepuj zdekompilowany/źródłowy kod (jadx-gui, MobSF, mobsfscan) pod kątem addJavascriptInterface w całej apce ORAZ każdym dołączonym SDK/.aar -- przechodnie bridge tworzone przez SDK reklamowe, analityczne, albo płatnicze to najczęściej pomijana instancja, zgodnie z konsensusem wszystkich trzech zespołów o zastrzeżeniu celu kompilacji SDK.
+    - title:
+        en: Check the annotation gate and the API-17/API-21 boundary
+        pl: Sprawdź bramkę adnotacji i granicę API-17/API-21
+      description:
+        en: 'Confirm @JavascriptInterface is present, that effective targetSdkVersion is >= 17 (closes method reflection) and ideally >= 21 (Android''s own risk page: before API 21, JavaScript could still reflect to reach public fields) -- but treat this as necessary, not sufficient, since it says nothing about what the annotated methods actually do.'
+        pl: 'Potwierdź że @JavascriptInterface jest obecna, że efektywny targetSdkVersion to >= 17 (zamyka refleksję metod) i idealnie >= 21 (własna strona ryzyka Android: przed API 21, JavaScript wciąż mógł refleksją osiągnąć publiczne pola) -- ale traktuj to jako niezbędne, nie wystarczające, ponieważ nic nie mówi o tym co faktycznie robią oznaczone metody.'
+    - title:
+        en: Evaluate every annotated method's capability and content reachability
+        pl: Oceń zdolność i osiągalność zawartości każdej oznaczonej metody
+      description:
+        en: For each @JavascriptInterface method, ask what it returns or does (tokens, files, intents, settings), then trace whether the WebView ever loads remote, mixed, or attacker-influenceable content (deep-link-supplied URLs, open redirects, ad frames, iframes) -- CWE-749's malicious-iframe case means even a fully allowlisted top frame does not guarantee a safe bridge.
+        pl: Dla każdej metody @JavascriptInterface, zapytaj co zwraca albo robi (tokeny, pliki, intenty, ustawienia), następnie prześledź czy WebView kiedykolwiek ładuje zdalną, mieszaną, albo osiągalną dla atakującego zawartość (URL-e dostarczone deep-linkiem, otwarte przekierowania, ramki reklamowe, iframe) -- przypadek złośliwego iframe z CWE-749 oznacza że nawet w pełni dozwolona górna ramka nie gwarantuje bezpiecznego bridge.
+    - title:
+        en: Confirm reachability dynamically with Frida or drozer
+        pl: Potwierdź osiągalność dynamicznie przez Frida albo drozer
+      description:
+        en: Hook addJavascriptInterface at runtime to see every object/method actually registered (catching cases built dynamically or obfuscated), and attempt the classic reflection payload from a test page loaded in the target WebView to empirically confirm whether the annotation gate is actually enforced for the app's real, effective targetSdkVersion.
+        pl: Zahacz addJavascriptInterface w czasie wykonania by zobaczyć każdy obiekt/metodę faktycznie zarejestrowaną (wychwytując przypadki budowane dynamicznie albo zaobfuskowane), i spróbuj klasycznego payloadu refleksji ze strony testowej załadowanej w docelowym WebView by empirycznie potwierdzić czy bramka adnotacji jest faktycznie egzekwowana dla rzeczywistego, efektywnego targetSdkVersion apki.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes independently produced a near-identical ranking, converging especially strongly on one point: API-level enforcement is necessary but ranks below capability minimization and origin control, because it only ever closes the *unintended* reflection path, never the *intended* one.'
+      pl: 'Wszystkie trzy przejścia badawcze niezależnie wyprodukowały niemal identyczny ranking, zbiegając się szczególnie silnie na jednym punkcie: egzekwowanie poziomu API jest niezbędne ale plasuje się poniżej minimalizacji zdolności i kontroli pochodzenia, ponieważ zawsze zamyka tylko NIEZAMIERZONĄ ścieżkę refleksji, nigdy ZAMIERZONĄ.'
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: Never expose dangerous capabilities through the bridge
+        pl: Nigdy nie wystawiaj niebezpiecznych zdolności przez bridge
+      note:
+        en: No filesystem access, no arbitrary intent launching, no auth tokens/credentials, no settings mutation. Keep every @JavascriptInterface method narrow and non-sensitive. Confirmed by all three teams as the one control that caps blast radius even when every other layer fails -- CERT DRD13's own Compliant Solution 1 is simply "don't call addJavascriptInterface()" at all if avoidable.
+        pl: Brak dostępu do systemu plików, brak uruchamiania dowolnych intentów, brak tokenów/danych uwierzytelniających, brak mutacji ustawień. Utrzymuj każdą metodę @JavascriptInterface wąską i niewrażliwą. Potwierdzone przez wszystkie trzy zespoły jako jedyna kontrola ograniczająca promień rażenia nawet gdy każda inna warstwa zawiedzie -- własne Rozwiązanie Zgodne 1 CERT DRD13 to po prostu "nie wywołuj addJavascriptInterface()" w ogóle jeśli można tego uniknąć.
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: Restrict the WebView to trusted origins; remove the interface before untrusted loads
+        pl: Ogranicz WebView do zaufanych pochodzeń; usuń interfejs przed niezaufanymi ładowaniami
+      note:
+        en: 'Allowlist both scheme and host in shouldOverrideUrlLoading/WebViewClient; open non-allowlisted URLs in the system browser; call removeJavascriptInterface() before any untrusted content loads. Caveat all three teams noted: allowlist checks on the top frame do not cover embedded iframes, and a single XSS on an allowlisted page defeats it -- must be layered, not relied on alone.'
+        pl: 'Dozwól zarówno schemat jak i host w shouldOverrideUrlLoading/WebViewClient; otwieraj URL-e spoza listy w przeglądarce systemowej; wywołaj removeJavascriptInterface() przed jakimkolwiek ładowaniem niezaufanej zawartości. Zastrzeżenie odnotowane przez wszystkie trzy zespoły: sprawdzenia listy dozwolonych na górnej ramce nie pokrywają osadzonych iframe, a pojedyncze XSS na dozwolonej stronie to pokonuje -- musi być warstwowe, nie jedyne poleganie.'
+    - rank: 3
+      eff: 75
+      kind: strong
+      label:
+        en: Prefer WebMessageListener/postMessage with an explicit origin allowlist over raw object binding
+        pl: Preferuj WebMessageListener/postMessage z jawną listą dozwolonych pochodzeń zamiast surowego wiązania obiektu
+      note:
+        en: 'AndroidX WebViewCompat.addWebMessageListener() takes an explicit allowedOriginRules set and gives the native side the actual source origin of each message -- the closest Android analog to a real origin check, and structurally safer than raw addJavascriptInterface. Caveat: only origin-verifying if allowedOriginRules is genuinely scoped and never wildcarded to "*", and requires checking WebViewFeature.isFeatureSupported at runtime.'
+        pl: 'AndroidX WebViewCompat.addWebMessageListener() przyjmuje jawny zestaw allowedOriginRules i daje stronie natywnej faktyczne pochodzenie źródłowe każdej wiadomości -- najbliższy Androidowy odpowiednik prawdziwego sprawdzenia pochodzenia, i strukturalnie bezpieczniejszy niż surowe addJavascriptInterface. Zastrzeżenie: weryfikuje pochodzenie tylko jeśli allowedOriginRules jest naprawdę zawężone i nigdy nie ma symbolu wieloznacznego "*", i wymaga sprawdzenia WebViewFeature.isFeatureSupported w czasie wykonania.'
+    - rank: 4
+      eff: 65
+      kind: strong
+      label:
+        en: Enforce HTTPS only; block cleartext and mixed content
+        pl: Egzekwuj wyłącznie HTTPS; blokuj cleartext i mieszaną zawartość
+      note:
+        en: 'android:usesCleartextTraffic="false" plus MIXED_CONTENT_NEVER_ALLOW removes the MITM-injection path on both the initial and subsequent loads. Caveat: protects transport only -- does nothing against a compromised-but-HTTPS origin, a malicious ad served over HTTPS, or on-page XSS, all of which still reach an exposed bridge.'
+        pl: 'android:usesCleartextTraffic="false" plus MIXED_CONTENT_NEVER_ALLOW usuwa ścieżkę wstrzyknięcia MITM zarówno przy początkowym jak i kolejnych ładowaniach. Zastrzeżenie: chroni tylko transport -- nic nie robi przeciw skompromitowanemu-ale-HTTPS pochodzeniu, złośliwej reklamie serwowanej przez HTTPS, albo XSS na stronie, które wszystkie wciąż osiągają wystawiony bridge.'
+    - rank: 5
+      eff: 55
+      kind: weak
+      label:
+        en: Enforce targetSdkVersion >= 17 (ideally >= 21)
+        pl: Egzekwuj targetSdkVersion >= 17 (idealnie >= 21)
+      note:
+        en: 'Necessary baseline that all three teams independently confirmed is NOT sufficient alone: API 17 gates unannotated-method reflection via targetSdkVersion (not minSdkVersion -- a commonly conflated pair); Android''s own risk page recommends API 21+ to also close pre-21 public-field reflection. Fails outright if a bundled SDK''s own WebView code is compiled below the threshold, regardless of the host app''s target.'
+        pl: 'Niezbędna podstawa którą wszystkie trzy zespoły niezależnie potwierdziły jako NIEwystarczającą samą w sobie: API 17 bramkuje refleksję nieoznaczonych metod przez targetSdkVersion (nie minSdkVersion -- powszechnie mylona para); własna strona ryzyka Android zaleca API 21+ by też zamknąć refleksję publicznych pól sprzed 21. Zawodzi całkowicie jeśli własny kod WebView dołączonego SDK jest skompilowany poniżej progu, niezależnie od celu apki-hosta.'
+    - rank: 6
+      eff: 45
+      kind: weak
+      label:
+        en: Treat all data crossing the bridge as untrusted input
+        pl: Traktuj wszystkie dane przekraczające bridge jako niezaufany input
+      note:
+        en: 'Validate and sanitize every JS-supplied parameter (types, ranges, path canonicalization) on the native side before use. Caveat: mitigates injection into native sinks but does nothing about the fact that a dangerous method is reachable at all -- it''s a second layer, not a substitute for capability minimization.'
+        pl: 'Waliduj i sanityzuj każdy parametr dostarczony z JS (typy, zakresy, kanonizacja ścieżek) po stronie natywnej przed użyciem. Zastrzeżenie: łagodzi wstrzyknięcie w natywne ujścia ale nic nie robi z faktem że niebezpieczna metoda jest w ogóle osiągalna -- to druga warstwa, nie zamiennik minimalizacji zdolności.'
+    - rank: 7
+      eff: 35
+      kind: weak
+      label:
+        en: Disable JavaScript entirely when the WebView doesn't need it
+        pl: Wyłącz JavaScript całkowicie gdy WebView tego nie potrzebuje
+      note:
+        en: 'setJavaScriptEnabled defaults to false; leaving it off for purely static/content WebViews removes the entire class outright. Caveat: only applicable to non-interactive WebViews -- most hybrid-app use cases genuinely require JS, which is exactly why this ranks lowest despite being conceptually the simplest fix.'
+        pl: 'setJavaScriptEnabled domyślnie jest false; pozostawienie wyłączonego dla czysto statycznych/treściowych WebView usuwa całą klasę problemu. Zastrzeżenie: dotyczy tylko nieinteraktywnych WebView -- większość przypadków użycia apek hybrydowych naprawdę wymaga JS, co dokładnie dlatego to plasuje się najniżej mimo bycia koncepcyjnie najprostszą naprawą.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: All three research passes converged on the same platform-level CVE and independently surfaced the same modern app-level case, fifteen years apart, illustrating that this is a persistent technique class, not a closed historical bug.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tym samym CVE poziomu platformy i niezależnie ujawniły ten sam nowoczesny przypadek na poziomie apki, piętnaście lat później, ilustrując że to trwała klasa techniki, nie zamknięty historyczny błąd.
+    items:
+    - org: CVE-2012-6636 -- Android WebView addJavascriptInterface (platform)
+      year: 2012
+      impact: Remote code execution with the host app's own UID/permissions on any app compiled against API < 17 that renders untrusted content
+      cost: 'Weaponized as the public Metasploit module exploit/android/browser/webview_addjavascriptinterface (rank: Excellent); MWR InfoSecurity''s 2013 audit found 62 of the top 100 Google Play apps potentially vulnerable'
+      description:
+        en: 'Confirmed identically by all three research passes: the Android API before 17 did not properly restrict addJavascriptInterface, letting remote attackers execute arbitrary Java methods via the Reflection API from crafted JavaScript in the WebView. The related CVE-2013-4710 affected specific OEM/carrier browser builds (Disney Mobile, KDDI, NTT DOCOMO, SoftBank among them, per CVE Details). A closely related auto-injected object, searchBoxJavaBridge_ (CVE-2014-1939, present in stock/AOSP browsers from Android 4.0 until removed in 4.2), reopened the same reflection path even for apps that never called addJavascriptInterface themselves -- and was demonstrated compromising Google Glass (XE12) via the same Metasploit module.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze: Android API sprzed 17 niepoprawnie ograniczał addJavascriptInterface, pozwalając zdalnym atakującym wykonać dowolne metody Java przez Reflection API ze spreparowanego JavaScript w WebView. Powiązane CVE-2013-4710 dotyczyło konkretnych buildów przeglądarek OEM/operatorów (Disney Mobile, KDDI, NTT DOCOMO, SoftBank między innymi, wg CVE Details). Blisko powiązany automatycznie wstrzykiwany obiekt, searchBoxJavaBridge_ (CVE-2014-1939, obecny w stockowych/AOSP przeglądarkach od Android 4.0 do usunięcia w 4.2), otwierał ponownie tę samą ścieżkę refleksji nawet dla apek które nigdy same nie wywołały addJavascriptInterface -- i został zademonstrowany kompromitując Google Glass (XE12) przez ten sam moduł Metasploit.'
+    - org: CVE-2022-30746 -- Samsung SmartThings
+      year: 2022
+      impact: CVSS 3.1 7.5 (High) -- remote attacker reads sensitive information via the JS interface API with no user interaction required
+      cost: 'Fixed in SmartThings 1.7.85.12; NVD text: "Missing caller check in Smart Things prior to version 1.7.85.12 allows attacker to access sensitive information remotely using javascript interface API"'
+      description:
+        en: 'Verified directly on NVD by two independent teams: a decade after the API-17 reflection fix, a major-vendor app shipped a JS-interface bridge with a missing caller/origin check, letting remote content read sensitive data with no reflection involved at all -- the exact residual risk this deep-dive''s core myth-correction warns about. NVD tags it CWE-862/CWE-285 (authorization framing) rather than CWE-749, illustrating that real incidents in this class get inconsistently categorized across CWE-749 (dangerous exposed method), CWE-940 (missing origin verification), and CWE-862/285 (missing authorization) depending on which facet the analyst emphasizes.'
+        pl: 'Zweryfikowane bezpośrednio na NVD przez dwa niezależne zespoły: dekadę po naprawie refleksji API-17, apka głównego dostawcy wysłała bridge interfejsu JS z brakującym sprawdzeniem wywołującego/pochodzenia, pozwalając zdalnej zawartości czytać wrażliwe dane bez żadnej refleksji w ogóle -- dokładnie resztkowe ryzyko przed którym ostrzega centralna korekta mitu tego deep-dive. NVD oznacza to CWE-862/CWE-285 (ujęcie autoryzacji) zamiast CWE-749, ilustrując że prawdziwe incydenty w tej klasie są niespójnie kategoryzowane między CWE-749 (niebezpieczna wystawiona metoda), CWE-940 (brak weryfikacji pochodzenia), i CWE-862/285 (brak autoryzacji) zależnie od tego który aspekt analityk podkreśla.'
+    inlineSources:
+    - label: NVD -- CVE-2012-6636
+      url: https://nvd.nist.gov/vuln/detail/CVE-2012-6636
+    - label: NVD -- CVE-2022-30746
+      url: https://nvd.nist.gov/vuln/detail/CVE-2022-30746
+    - label: Rapid7 -- Metasploit module webview_addjavascriptinterface
+      url: https://www.rapid7.com/db/modules/exploit/android/browser/webview_addjavascriptinterface/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: 'All three research passes converged on the same core toolchain and, importantly, on the same high-signal combination: a lone addJavascriptInterface match is a starting point, not a finding -- the useful signal is that call plus JavaScript enabled plus reachable untrusted content.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym samym podstawowym łańcuchu narzędzi i, co ważne, na tej samej wysoko-sygnałowej kombinacji: samotne dopasowanie addJavascriptInterface to punkt wyjścia, nie ustalenie -- użyteczny sygnał to to wywołanie plus włączony JavaScript plus osiągalna niezaufana zawartość.'
+    sast:
+    - - MobSF / mobsfscan
+      - Semgrep/libsast-powered rules flag addJavascriptInterface usage plus dangerous co-occurring WebSettings (setAllowFileAccess, setAllowUniversalAccessFromFileURLs); MobSF's full scanner also reports the app's effective target/min SDK for correlation against the API-17/21 boundary
+    - - Semgrep (custom rules)
+      - 'Practitioner-recommended combinatorial rule: addJavascriptInterface + setJavaScriptEnabled(true) + remote/mixed content loading, rather than flagging the bare API call alone -- reduces false positives on legitimate, well-scoped bridges'
+    - - QARK (Quick Android Review Kit)
+      - Static APK/source review flagging insecure WebView configuration including JS-interface exposure and low minSdkVersion; maintenance currency should be verified before relying on it
+    - - CodeSonar (JAVA.JS.RI checker)
+      - Commercial static analyzer implementing CERT/SEI's DRD13 rule ("risky JavaScript interface"), tagged Severity High / Likelihood Probable
+    dast:
+    - - Frida
+      - Runtime hooks on addJavascriptInterface and the resulting bound object catch bridges registered dynamically or with obfuscated names that static analysis misses, and let a tester attempt the classic reflection payload against the app's real, effective targetSdkVersion
+    - - drozer / Metasploit (webview_addjavascriptinterface)
+      - Automated dynamic exploitation of the pre-API-17 reflection path where present; useful as a definitive empirical confirmation that the annotation gate is (or is not) actually enforced
+    note:
+      en: <strong>Key signal:</strong> treat a bare addJavascriptInterface match as a lead requiring manual triage of every annotated method's capability and every content-loading path the WebView can reach -- not as a self-contained finding, since the modern residual risk (CVE-2022-30746-class) has nothing to do with the annotation or API level at all.
+      pl: <strong>Kluczowy sygnał:</strong> traktuj samotne dopasowanie addJavascriptInterface jako trop wymagający manualnej triage każdej zdolności oznaczonej metody i każdej ścieżki ładowania zawartości którą WebView może osiągnąć -- nie jako samodzielne ustalenie, ponieważ nowoczesne resztkowe ryzyko (klasa CVE-2022-30746) nie ma nic wspólnego z adnotacją ani poziomem API w ogóle.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes independently confirmed CWE-749 as correct and best-fit -- MITRE's own page uses addJavascriptInterface as a named demonstrative example -- with CWE-940 as a well-supported secondary mapping for the missing-origin-verification facet, and unanimously rejected CWE-927 (that CWE belongs to this catalog's sibling Intent redirection entry, 15.12).
+      pl: Wszystkie trzy przejścia badawcze niezależnie potwierdziły CWE-749 jako poprawne i najlepiej dopasowane -- własna strona MITRE używa addJavascriptInterface jako nazwanego przykładu demonstracyjnego -- z CWE-940 jako dobrze wspartym drugorzędnym mapowaniem dla aspektu braku weryfikacji pochodzenia, i jednomyślnie odrzuciły CWE-927 (ten CWE należy do siostrzanego wpisu Intent redirection tego katalogu, 15.12).
+    items:
+    - std: CWE (MITRE)
+      items:
+      - 'CWE-749 -- Exposed Dangerous Method or Function (primary). Confirmed on the live MITRE page by all three teams: Example 3 is the pre-4.2 addJavascriptInterface reflection case (SMS-sending via reflection), Example 4 is the post-4.2 annotated-but-still-iframe-reachable case. This is the textbook illustration, not an inferred fit.'
+      - CWE-940 -- Improper Verification of Source of a Communication Channel (secondary). Captures the "no mechanism to verify the origin of the calling frame" gap Android's own risk page describes; its own Example 2 covers WebView/URL-scheme interception without origin verification. CWE-927 (Use of Implicit Intent for Sensitive Communication) does NOT apply here -- it is exclusively about Android implicit Intents/broadcasts, a different mechanism covered by this catalog's Intent redirection entry (15.12).
+      - 'Note on NVD inconsistency: CVE-2012-6636 is tagged CWE-264 on NVD (a stale legacy mapping) and CVE-2022-30746 is tagged CWE-862/285 (authorization framing) -- neither contradicts CWE-749 as this technique''s best-fit catalog mapping; real incidents in this class are simply categorized inconsistently across sources depending on which facet is emphasized.'
+    - std: OWASP
+      items:
+      - MASTG-TEST-0033 -- "Testing for Java Objects Exposed Through WebViews" (Android), verified live at mas.owasp.org and carried into MASTG v2.0.0. Checks whether a WebView has JS enabled, registers a bridge, uses the @JavascriptInterface annotation, and whether the bound object's methods verify the calling page (e.g. via WebView.getUrl()) before acting.
+      - MASVS-PLATFORM, specifically MASVS-PLATFORM-2 (secure platform/WebView interaction) -- formerly MSTG-PLATFORM-7 under MASVS v1. The iOS counterpart is MASTG-TEST-0078 ("Determining Whether Native Methods Are Exposed Through WebViews"), confirming this is a cross-platform MASTG test family even though the reflection-RCE history and API-17/21 boundaries below are Android-specific.
+      - 'OWASP Mobile Top 10 2024 cross-reference: this technique sits at the intersection of M8 (Security Misconfiguration -- exposing a bridge with the wrong target SDK or to untrusted content) and M4 (Insufficient Input/Output Validation -- unvalidated data crossing the bridge), both already covered as full deep-dives elsewhere in this catalog. This entry is scoped narrowly to the WebView-bridge-specific mechanism -- cross-link to M4/M8 rather than re-teaching general misconfiguration or input validation here.'
+    inlineSources:
+    - label: CWE-749 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/749.html
+    - label: CWE-940 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/940.html
+    - label: OWASP MASTG-TEST-0033
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0033/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If a bridge exposure is confirmed in a shipped app, work this list top to bottom -- distinguishing which sub-case applies changes both the urgency and the fix.
+      pl: Po potwierdzeniu ekspozycji bridge w wysłanej apce, przejdź tę listę od góry -- rozróżnienie który podprzypadek ma zastosowanie zmienia zarówno pilność jak i naprawę.
+    steps:
+    - en: 'Identify which sub-case applies: pre-API-17 reflection RCE (unannotated methods, low targetSdkVersion), or a post-annotation intentional exposure (dangerous @JavascriptInterface methods reachable by untrusted/iframe content) -- these require different fixes, not the same patch'
+      pl: 'Zidentyfikuj który podprzypadek ma zastosowanie: RCE refleksji sprzed API-17 (nieoznaczone metody, niski targetSdkVersion), czy zamierzona ekspozycja po adnotacji (niebezpieczne metody @JavascriptInterface osiągalne przez niezaufaną/iframe zawartość) -- wymagają różnych napraw, nie tej samej łatki'
+    - en: Check whether any bundled SDK creates its own WebView with its own addJavascriptInterface call, compiled against a lower API level than the host app -- a very common miss per this deep-dive's own consensus finding, and one the host app's own targetSdkVersion does nothing to fix
+      pl: Sprawdź czy jakikolwiek dołączony SDK tworzy własny WebView z własnym wywołaniem addJavascriptInterface, skompilowany względem niższego poziomu API niż apka-host -- bardzo powszechne przeoczenie zgodnie z własnym ustaleniem konsensusu tego deep-dive, którego własny targetSdkVersion apki-hosta w żaden sposób nie naprawia
+    - en: Enumerate every exposed method's real capability and every content path (deep links, redirects, ad frames, iframes) that can reach it -- treat any method returning credentials/tokens or performing file/intent/settings actions as critical regardless of API level
+      pl: Wylicz rzeczywistą zdolność każdej wystawionej metody i każdą ścieżkę zawartości (deep linki, przekierowania, ramki reklamowe, iframe) która może ją osiągnąć -- traktuj każdą metodę zwracającą dane uwierzytelniające/tokeny albo wykonującą akcje plikowe/intent/ustawień jako krytyczną niezależnie od poziomu API
+    - en: 'Ship the fix matching this deep-dive''s top-ranked defenses: strip dangerous capability from bridge methods first, add strict origin allowlisting (or migrate to WebMessageListener with allowedOriginRules), enforce HTTPS-only, then raise targetSdkVersion to >= 21 -- in that order, since API level alone was never the actual root cause of the modern residual risk'
+      pl: 'Wydaj naprawę pasującą do najwyżej sklasyfikowanych obron tego deep-dive: najpierw usuń niebezpieczną zdolność z metod bridge, dodaj ścisłą listę dozwolonych pochodzeń (albo migruj do WebMessageListener z allowedOriginRules), egzekwuj wyłącznie HTTPS, następnie podnieś targetSdkVersion do >= 21 -- w tej kolejności, ponieważ sam poziom API nigdy nie był faktyczną pierwotną przyczyną nowoczesnego resztkowego ryzyka'
+    - en: Re-scan with the same static (MobSF/mobsfscan, including every bundled SDK) and dynamic (Frida) tooling used to find the original flaw to confirm the fix actually removed reachability -- not just added an annotation that leaves the underlying capability and content-loading path unchanged
+      pl: Przeskanuj ponownie tymi samymi narzędziami statycznymi (MobSF/mobsfscan, włącznie z każdym dołączonym SDK) i dynamicznymi (Frida) użytymi do znalezienia oryginalnej wady by potwierdzić że naprawa faktycznie usunęła osiągalność -- nie tylko dodała adnotację pozostawiając leżącą u podstaw zdolność i ścieżkę ładowania zawartości niezmienioną
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: Android WebView guide -- addJavascriptInterface security warning
+      url: https://developer.android.com/develop/ui/views/layout/webapps/webview
+    - label: Android official risk page -- Insecure WebView native bridges
+      url: https://developer.android.com/privacy-and-security/risks/insecure-webview-native-bridges
+    - label: CWE-749 -- Exposed Dangerous Method or Function
+      url: https://cwe.mitre.org/data/definitions/749.html
+    - label: CWE-940 -- Improper Verification of Source of a Communication Channel
+      url: https://cwe.mitre.org/data/definitions/940.html
+    - label: OWASP MASTG-TEST-0033 -- Testing for Java Objects Exposed Through WebViews
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0033/
+    - label: OWASP MASTG-TEST-0078 -- iOS counterpart (WKWebView native methods)
+      url: https://mas.owasp.org/MASTG/tests/ios/MASVS-PLATFORM/MASTG-TEST-0078/
+    - label: NVD -- CVE-2012-6636
+      url: https://nvd.nist.gov/vuln/detail/CVE-2012-6636
+    - label: NVD -- CVE-2022-30746 (Samsung SmartThings)
+      url: https://nvd.nist.gov/vuln/detail/CVE-2022-30746
+    - label: MWR InfoSecurity / WithSecure -- WebView addJavascriptInterface Remote Code Execution
+      url: https://labs.mwrinfosecurity.com/advisories/webview-addjavascriptinterface-remote-code-execution/
+    - label: Luo, Hao, Du, Wang, Yin -- "Attacks on WebView in the Android System" (ACSAC 2011)
+      url: https://dl.acm.org/doi/10.1145/2076732.2076781
+    - label: CERT/SEI DRD13 -- Do not provide addJavascriptInterface method access to untrusted content
+      url: https://cmu-sei.github.io/secure-coding-standards/android-secure-coding-standard/rules/webview-wbv/drd13-do-not-provide-addjavascriptinterface-method-access-in-a-webview-which-could-contain-untrusted-content-api-level-jelly_bean-or-below
+    - label: mobsfscan (MobSF static analysis rules)
+      url: https://github.com/MobSF/mobsfscan

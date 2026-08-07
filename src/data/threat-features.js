@@ -54,6 +54,7 @@ import mobilebinaryData from '../content/deepdives/mobilebinary.yaml';
 import mobilemisconfigData from '../content/deepdives/mobilemisconfig.yaml';
 import mobilestorageData from '../content/deepdives/mobilestorage.yaml';
 import mobilecryptoData from '../content/deepdives/mobilecrypto.yaml';
+import mobilewebviewbridgeData from '../content/deepdives/mobilewebviewbridge.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -105,6 +106,7 @@ import mobilebinaryQuiz from '../content/quizzes/mobilebinary.yaml';
 import mobilemisconfigQuiz from '../content/quizzes/mobilemisconfig.yaml';
 import mobilestorageQuiz from '../content/quizzes/mobilestorage.yaml';
 import mobilecryptoQuiz from '../content/quizzes/mobilecrypto.yaml';
+import mobilewebviewbridgeQuiz from '../content/quizzes/mobilewebviewbridge.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -158,6 +160,7 @@ export const DEEPDIVES = {
   '15.8': mobilemisconfigData, // Security Misconfiguration (Mobile)
   '15.9': mobilestorageData, // Insecure Data Storage (Mobile)
   '15.10': mobilecryptoData, // Insufficient Cryptography (Mobile)
+  '15.11': mobilewebviewbridgeData, // WebView JavaScript Bridge Exposure
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -214,4 +217,5 @@ export const QUIZZES = {
   '15.8': mobilemisconfigQuiz,
   '15.9': mobilestorageQuiz,
   '15.10': mobilecryptoQuiz,
+  '15.11': mobilewebviewbridgeQuiz,
 };

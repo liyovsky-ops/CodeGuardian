@@ -218,22 +218,19 @@ threats:
 - id: '15.11'
   name: WebView JavaScript Bridge Exposure (addJavascriptInterface)
   severity: High
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-749
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Native objects exposed to WebView JavaScript via addJavascriptInterface are reachable by any loaded page; untrusted/remote content can invoke native methods, read local files, or achieve code execution (RCE on API < 17 via reflection).
+  - CWE-940
+  desc: 'Obiekty natywne wystawione na JavaScript WebView przez addJavascriptInterface są osiągalne przez KAŻDĄ załadowaną stronę, nie tylko własną -- WebView nie ma mechanizmu weryfikacji pochodzenia wywołującej ramki. Przed API 17 (Android 4.2) każda publiczna metoda, włącznie z odziedziczoną getClass(), była osiągalna przez refleksję Java, dając pełne RCE (CVE-2012-6636). Kluczowy mit: adnotacja @JavascriptInterface (API 17+) zamyka tylko tę niezamierzoną refleksję -- NIE dodaje sprawdzenia pochodzenia. Zamierzone, niebezpieczne metody (zwracające tokeny, czytające pliki) wciąż są osiągalne przez dowolną załadowaną stronę albo złośliwy iframe, co potwierdza rzeczywiste CVE-2022-30746 (Samsung SmartThings, 2022, brak sprawdzenia wywołującego w API interfejsu JS).
 
     '
-  desc_en: Native objects exposed to WebView JavaScript via addJavascriptInterface are reachable by any loaded page; untrusted/remote content can invoke native methods, read local files, or achieve code execution (RCE on API < 17 via reflection).
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: OWASP MASTG-TEST-0033 (Testing for Java Objects Exposed Through WebViews), MASVS-PLATFORM. Android Developers advisory on insecure WebView native bridges.'
+  desc_en: 'Native objects exposed to WebView JavaScript via addJavascriptInterface are reachable by ANY loaded page, not just the app''s own -- the WebView has no mechanism to verify the origin of the calling frame. Before API 17 (Android 4.2), every public method, including the inherited getClass(), was reachable via Java reflection, yielding full RCE (CVE-2012-6636). Key myth: the @JavascriptInterface annotation (API 17+) only closes that unintended reflection -- it adds NO origin check. Intentionally exposed, dangerous methods (returning tokens, reading files) remain reachable by any loaded page or a malicious iframe, as confirmed by the real CVE-2022-30746 (Samsung SmartThings, 2022, missing caller check in the JS interface API).'
+  lang: kotlin
+  vuln: "// VULNERABLE: annotated, targetSdkVersion 21+ -- but no origin check,\n// and the WebView loads an attacker-influenceable, deep-link-supplied URL\nclass Bridge(private val session: SessionManager) {\n    @JavascriptInterface\n    fun getAuthToken(): String = session.token\n}\nwebView.addJavascriptInterface(Bridge(session), \"Android\")\nwebView.loadUrl(intent.getStringExtra(\"target_url\"))\n"
+  safe: "// SAFE: explicit origin allowlist via WebMessageListener, no raw\n// credential exposed through the bridge, fixed non-attacker URL\nWebViewCompat.addWebMessageListener(\n    webView, \"Android\", setOf(\"https://app.example.com\"),\n) { _, message, sourceOrigin, _, replyProxy ->\n    if (sourceOrigin.toString() != \"https://app.example.com\") return@addWebMessageListener\n    replyProxy.postMessage(handleScopedRequest(message.data))\n}\nwebView.loadUrl(\"https://app.example.com/hybrid\")\n"
+  note_en: 'Source: OWASP MASTG-TEST-0033 (Testing for Java Objects Exposed Through WebViews), MASVS-PLATFORM-2. CVE-2012-6636 (platform reflection RCE, API<17), CVE-2022-30746 (Samsung SmartThings, missing caller check, CVSS 7.5 High). Related CWE-940 (missing origin verification).'
 - id: '15.12'
   name: Android Intent Redirection / Hijacking
   severity: High

@@ -1,0 +1,118 @@
+threatId: '15.11'
+title:
+  en: WebView JavaScript Bridge Exposure -- knowledge check
+  pl: WebView JavaScript Bridge Exposure -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: A developer targets API 21+, annotates only two intended methods with @JavascriptInterface, and believes the bridge is now fully safe from any web content the WebView might ever load. All three independent research passes for this deep-dive flagged this exact reasoning as the single most common modern misconception. Is the developer's belief correct?
+    pl: Deweloper celuje w API 21+, oznacza adnotacją @JavascriptInterface tylko dwie zamierzone metody, i wierzy że bridge jest teraz w pełni bezpieczny przed dowolną zawartością web którą WebView kiedykolwiek załaduje. Wszystkie trzy niezależne przejścia badawcze dla tego deep-dive oflagowały dokładnie to rozumowanie jako pojedyncze najczęstsze nowoczesne błędne przekonanie. Czy przekonanie dewelopera jest poprawne?
+  isVulnerable: true
+  cwe: CWE-749
+  explanation:
+    en: No. The @JavascriptInterface annotation and a modern targetSdkVersion only close the *unintended* reflection path (getClass() -> Runtime.exec()). They add no origin check at all -- Android's own official risk page states there is no mechanism to verify which frame is calling the bridge. Any page the WebView loads, including a malicious iframe embedded in an otherwise-trusted page (CWE-749's own Example 4), can still call the two intentionally annotated methods. This is exactly the residual risk that produced CVE-2022-30746 (Samsung SmartThings, 2022) a decade after the reflection fix.
+    pl: Nie. Adnotacja @JavascriptInterface i nowoczesny targetSdkVersion zamykają tylko NIEZAMIERZONĄ ścieżkę refleksji (getClass() -> Runtime.exec()). Nie dodają żadnego sprawdzenia pochodzenia -- własna oficjalna strona ryzyka Android stwierdza że nie ma mechanizmu by zweryfikować która ramka wywołuje bridge. Dowolna strona którą WebView załaduje, włącznie ze złośliwym iframe osadzonym w skądinąd zaufanej stronie (własny Przykład 4 CWE-749), wciąż może wywołać obie zamierzone oznaczone metody. To dokładnie resztkowe ryzyko które wyprodukowało CVE-2022-30746 (Samsung SmartThings, 2022) dekadę po naprawie refleksji.
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: Which statement about the API 17 boundary for addJavascriptInterface is accurate, confirmed identically by all three independent research teams?
+    pl: Które stwierdzenie o granicy API 17 dla addJavascriptInterface jest dokładne, potwierdzone identycznie przez wszystkie trzy niezależne zespoły badawcze?
+  choices:
+  - id: a
+    label:
+      en: The @JavascriptInterface annotation requirement is gated on the app's targetSdkVersion (not minSdkVersion), requires the device to run Android 4.2+, and only closes reflection to unannotated methods -- not abuse of the methods a developer chooses to annotate
+      pl: Wymóg adnotacji @JavascriptInterface jest uzależniony od targetSdkVersion apki (nie minSdkVersion), wymaga urządzenia z Android 4.2+, i zamyka tylko refleksję do nieoznaczonych metod -- nie nadużycie metod które deweloper wybiera by oznaczyć
+  - id: b
+    label:
+      en: Setting minSdkVersion to 17 in the manifest is sufficient by itself to enable the annotation enforcement, regardless of what the app's targetSdkVersion is set to
+      pl: Ustawienie minSdkVersion na 17 w manifeście jest samo w sobie wystarczające by włączyć egzekwowanie adnotacji, niezależnie od tego na co jest ustawiony targetSdkVersion apki
+  - id: c
+    label:
+      en: API 17 removed addJavascriptInterface from the platform entirely, replacing it with a mandatory WebMessageListener-only API
+      pl: API 17 całkowicie usunęło addJavascriptInterface z platformy, zastępując je obowiązkowym API wyłącznie WebMessageListener
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three teams independently flagged the minSdkVersion/targetSdkVersion confusion as the most common imprecision in secondary sources: the annotation gate keys off targetSdkVersion, and even then the device must run 4.2+ (API 17, JELLY_BEAN_MR1). addJavascriptInterface itself was never removed or deprecated -- it remains a documented, valid (if dangerous if misused) API.'
+    pl: 'Wszystkie trzy zespoły niezależnie oflagowały pomylenie minSdkVersion/targetSdkVersion jako najczęstszą nieprecyzyjność w źródłach drugorzędnych: bramka adnotacji jest uzależniona od targetSdkVersion, i nawet wtedy urządzenie musi działać na 4.2+ (API 17, JELLY_BEAN_MR1). Samo addJavascriptInterface nigdy nie zostało usunięte ani wycofane -- pozostaje udokumentowanym, ważnym (choć niebezpiecznym jeśli źle użytym) API.'
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Why is CWE-749 (Exposed Dangerous Method or Function) confirmed as the best-fit primary CWE for this technique, rather than CWE-927 (Use of Implicit Intent for Sensitive Communication)?
+    pl: Dlaczego CWE-749 (Exposed Dangerous Method or Function) jest potwierdzone jako najlepiej dopasowane główne CWE dla tej techniki, zamiast CWE-927 (Use of Implicit Intent for Sensitive Communication)?
+  choices:
+  - id: a
+    label:
+      en: MITRE's own CWE-749 page uses addJavascriptInterface as a named demonstrative example (both the pre-4.2 reflection case and the post-4.2 iframe-reachability case); CWE-927 is exclusively about Android implicit Intents/broadcasts, an unrelated IPC mechanism covered by this catalog's separate Intent redirection entry
+      pl: Własna strona CWE-749 MITRE używa addJavascriptInterface jako nazwanego przykładu demonstracyjnego (zarówno przypadek refleksji sprzed 4.2 jak i przypadek osiągalności iframe po 4.2); CWE-927 dotyczy wyłącznie implicit Intentów/broadcastów Android, niepowiązanego mechanizmu IPC pokrytego przez osobny wpis Intent redirection tego katalogu
+  - id: b
+    label:
+      en: CWE-927 is a more specific, newer CWE ID and newer IDs always supersede older ones for any Android vulnerability
+      pl: CWE-927 to bardziej specyficzne, nowsze ID CWE i nowsze ID zawsze zastępują starsze dla dowolnej podatności Android
+  - id: c
+    label:
+      en: NVD tags CVE-2012-6636 with CWE-749 directly, which settles the question definitively
+      pl: NVD oznacza CVE-2012-6636 bezpośrednio CWE-749, co rozstrzyga sprawę definitywnie
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three teams independently verified the live CWE-749 page and rejected CWE-927 as inapplicable. Option c is actually backwards: NVD tags CVE-2012-6636 as the legacy CWE-264, not CWE-749 -- a stale platform-level mapping that doesn''t contradict CWE-749 as this technique''s best-fit catalog classification, since MITRE''s own worked examples use exactly this API.'
+    pl: 'Wszystkie trzy zespoły niezależnie zweryfikowały żywą stronę CWE-749 i odrzuciły CWE-927 jako nieadekwatne. Opcja c jest w rzeczywistości odwrócona: NVD oznacza CVE-2012-6636 jako starsze CWE-264, nie CWE-749 -- przestarzałe mapowanie na poziomie platformy które nie zaprzecza CWE-749 jako najlepiej dopasowanej klasyfikacji katalogowej tej techniki, ponieważ własne przykłady robocze MITRE używają dokładnie tego API.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: An app targets API 34 and follows every bridge best practice in its own code. It bundles a third-party ad SDK as a separate .aar that creates its own WebView and calls addJavascriptInterface from code compiled against API 15. Is the host app still exposed to the pre-API-17 reflection RCE through that SDK?
+    pl: Apka celuje w API 34 i przestrzega każdej dobrej praktyki bridge we własnym kodzie. Dołącza zewnętrzny SDK reklamowy jako osobny .aar który tworzy własny WebView i wywołuje addJavascriptInterface z kodu skompilowanego względem API 15. Czy apka-host jest wciąż narażona na RCE refleksji sprzed API-17 przez ten SDK?
+  isVulnerable: true
+  cwe: CWE-749
+  explanation:
+    en: Yes. The @JavascriptInterface annotation enforcement is evaluated per the calling code's own compile target, not the host app's targetSdkVersion -- a bundled SDK compiled against API < 17 reopens the reflection path regardless of how modern the host app's own manifest is. All three research passes flagged this transitive-SDK gap as commonly missed in reviews that only check the host app's own manifest and source.
+    pl: Tak. Egzekwowanie adnotacji @JavascriptInterface jest oceniane względem własnego celu kompilacji wywołującego kodu, nie targetSdkVersion apki-hosta -- dołączony SDK skompilowany względem API < 17 otwiera ponownie ścieżkę refleksji niezależnie od tego jak nowoczesny jest własny manifest apki-hosta. Wszystkie trzy przejścia badawcze oflagowały tę przechodnią lukę SDK jako powszechnie pomijaną w przeglądach które sprawdzają tylko własny manifest i kod źródłowy apki-hosta.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: What was the actual missing control behind CVE-2022-30746 (Samsung SmartThings, 2022), verified directly on NVD?
+    pl: Jaka była faktyczna brakująca kontrola stojąca za CVE-2022-30746 (Samsung SmartThings, 2022), zweryfikowana bezpośrednio na NVD?
+  choices:
+  - id: a
+    label:
+      en: A missing caller/origin check in the JS interface API let a remote attacker access sensitive information with no reflection or pre-API-17 exploitation involved at all
+      pl: Brakujące sprawdzenie wywołującego/pochodzenia w API interfejsu JS pozwoliło zdalnemu atakującemu uzyskać dostęp do wrażliwych informacji bez żadnej refleksji albo eksploatacji sprzed API-17
+  - id: b
+    label:
+      en: SmartThings shipped with JavaScript disabled entirely, and the CVE describes a bypass of that restriction
+      pl: SmartThings był wysyłany z całkowicie wyłączonym JavaScript, a CVE opisuje obejście tego ograniczenia
+  - id: c
+    label:
+      en: The vulnerability required the device to be rooted and physically accessed by the attacker
+      pl: Podatność wymagała zrootowanego urządzenia i fizycznego dostępu atakującego
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Confirmed on NVD by two independent teams: "Missing caller check in Smart Things prior to version 1.7.85.12 allows attacker to access sensitive information remotely using javascript interface API," CVSS 3.1 7.5 High, no user interaction required. This is the cleanest modern illustration that the residual bridge risk is about missing origin verification, not about API level or reflection at all.'
+    pl: 'Potwierdzone na NVD przez dwa niezależne zespoły: "Missing caller check in Smart Things prior to version 1.7.85.12 allows attacker to access sensitive information remotely using javascript interface API", CVSS 3.1 7.5 High, bez wymaganej interakcji użytkownika. To najczystsza nowoczesna ilustracja że resztkowe ryzyko bridge dotyczy braku weryfikacji pochodzenia, nie poziomu API ani refleksji w ogóle.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A team needs a WebView bridge that returns the user's auth token to a hybrid page. Which implementation actually closes the residual risk this deep-dive centers on, not just the pre-API-17 reflection path?
+    pl: Zespół potrzebuje bridge WebView który zwraca token uwierzytelniający użytkownika do strony hybrydowej. Która implementacja faktycznie zamyka resztkowe ryzyko na którym skupia się ten deep-dive, nie tylko ścieżkę refleksji sprzed API-17?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: '// targetSdkVersion 16, no annotation
+
+      class Bridge { fun getAuthToken(): String = session.token }
+
+      webView.addJavascriptInterface(Bridge(), "Android")'
+  - id: v2
+    lang: kotlin
+    code: "// targetSdkVersion 21, annotated -- but WebView still loads\n// an attacker-influenceable, deep-link-supplied URL\nclass Bridge {\n    @JavascriptInterface\n    fun getAuthToken(): String = session.token\n}\nwebView.addJavascriptInterface(Bridge(), \"Android\")\nwebView.loadUrl(intent.getStringExtra(\"target_url\"))"
+  - id: v3
+    lang: kotlin
+    code: "// Fixed, non-attacker-influenceable origin; explicit allowedOriginRules;\n// no auth-token exposure through the bridge -- request is scoped and\n// the reply proxy only fires for the verified source origin\nWebViewCompat.addWebMessageListener(\n    webView, \"Android\",\n    setOf(\"https://app.example.com\"),\n) { _, message, sourceOrigin, _, replyProxy ->\n    if (sourceOrigin.toString() != \"https://app.example.com\") return@addWebMessageListener\n    replyProxy.postMessage(handleScopedRequest(message.data))  // never raw token\n}\nwebView.loadUrl(\"https://app.example.com/hybrid\")"
+  correctVariantId: v3
+  explanation:
+    en: 'v3 fixes the actual residual risk: a fixed, non-attacker-influenceable origin, an explicit allowedOriginRules allowlist verified per message, and no raw credential returned through the bridge at all. v1 is the classic pre-API-17 reflection RCE. v2 is the subtle trap this deep-dive''s whole myth-correction centers on: the annotation and a modern targetSdkVersion are present, but the WebView loads a URL supplied via deep link/Intent extra -- an attacker who controls that URL controls what page can call getAuthToken(), and the annotation does nothing to stop it.'
+    pl: 'v3 naprawia faktyczne resztkowe ryzyko: stałe, nieosiągalne dla atakującego pochodzenie, jawną listę dozwolonych allowedOriginRules weryfikowaną per wiadomość, i brak surowego zwracania danych uwierzytelniających przez bridge w ogóle. v1 to klasyczne RCE refleksji sprzed API-17. v2 to subtelna pułapka na której skupia się cała korekta mitu tego deep-dive: adnotacja i nowoczesny targetSdkVersion są obecne, ale WebView ładuje URL dostarczony przez deep link/Intent extra -- atakujący który kontroluje ten URL kontroluje jaka strona może wywołać getAuthToken(), a adnotacja nic nie robi by to zatrzymać.'
