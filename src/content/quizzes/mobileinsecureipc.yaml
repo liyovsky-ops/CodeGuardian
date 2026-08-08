@@ -1,0 +1,114 @@
+threatId: '15.13'
+title:
+  en: Insecure IPC via Exported Components -- knowledge check
+  pl: Insecure IPC via Exported Components -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: All three independent research passes flagged the same imprecise claim about Android 12 (API 31). What is the accurate version?
+    pl: Wszystkie trzy niezależne przejścia badawcze oflagowały to samo nieprecyzyjne twierdzenie o Android 12 (API 31). Jaka jest dokładna wersja?
+  choices:
+  - id: a
+    label:
+      en: API 31 did not change any default value for android:exported -- it made the attribute mandatory to declare explicitly whenever a component has an intent-filter, and the build/install fails without it
+      pl: API 31 nie zmienił żadnej wartości domyślnej dla android:exported -- uczynił atrybut obowiązkowym do jawnej deklaracji ilekroć komponent ma intent-filter, a build/instalacja zawodzi bez tego
+  - id: b
+    label:
+      en: API 31 flipped the default value of android:exported to false for every component type, including ContentProviders
+      pl: API 31 zmienił domyślną wartość android:exported na false dla każdego typu komponentu, włącznie z ContentProvider
+  - id: c
+    label:
+      en: API 31 removed the android:exported attribute entirely in favor of automatic permission inference
+      pl: API 31 całkowicie usunął atrybut android:exported na rzecz automatycznego wnioskowania uprawnień
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three teams independently confirmed this precise distinction: it''s a mandatory-declaration requirement, not a default-value flip. The historical implicit default (intent-filter present -> exported=true) is unchanged for older targets. ContentProviders had a separate, earlier default change -- to exported=false -- at API 17 (Android 4.2), which is commonly and incorrectly conflated with the API 31 change.'
+    pl: 'Wszystkie trzy zespoły niezależnie potwierdziły to precyzyjne rozróżnienie: to wymóg obowiązkowej deklaracji, nie zmiana wartości domyślnej. Historyczna domyślna wartość niejawna (obecny intent-filter -> exported=true) jest niezmieniona dla starszych celów. ContentProvider miał osobną, wcześniejszą zmianę domyślnej wartości -- na exported=false -- w API 17 (Android 4.2), co jest powszechnie i błędnie mylone ze zmianą API 31.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: A ContentProvider implementation binds all caller-supplied values into `selectionArgs` before building its SQLite query, and the developer concludes the provider is now safe from SQL injection. All three research passes flagged this exact reasoning as commonly incomplete. Is the developer correct?
+    pl: Implementacja ContentProvider wiąże wszystkie dostarczone przez wywołującego wartości do `selectionArgs` przed zbudowaniem zapytania SQLite, a deweloper wnioskuje że provider jest teraz bezpieczny przed SQL injection. Wszystkie trzy przejścia badawcze oflagowały dokładnie to rozumowanie jako powszechnie niekompletne. Czy deweloper ma rację?
+  isVulnerable: true
+  cwe: CWE-89
+  explanation:
+    en: No. selectionArgs binding protects only the selection clause. The projection parameter -- the caller-supplied column list -- is typically passed straight into the query builder as raw text. An attacker who controls the projection can supply arbitrary column expressions, including subqueries against entirely different tables, leaking data the selection-clause protection never touches.
+    pl: Nie. Wiązanie selectionArgs chroni tylko klauzulę selection. Parametr projection -- dostarczona przez wywołującego lista kolumn -- jest zazwyczaj przekazywana wprost do budowniczego zapytań jako surowy tekst. Atakujący który kontroluje projection może dostarczyć dowolne wyrażenia kolumn, włącznie z podzapytaniami przeciwko zupełnie innym tabelom, wyciekając dane których ochrona klauzuli selection nigdy nie dotyka.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: All three research passes unanimously agreed on CWE-926 as this entry's primary mapping -- a rare unanimous result compared to the sibling 15.12 entry's contested CWE choice. Why does CWE-926 fit cleanly?
+    pl: Wszystkie trzy przejścia badawcze jednomyślnie zgodziły się na CWE-926 jako główne mapowanie tego wpisu -- rzadki jednomyślny wynik w porównaniu do spornego wyboru CWE siostrzanego wpisu 15.12. Dlaczego CWE-926 pasuje czysto?
+  choices:
+  - id: a
+    label:
+      en: CWE-926's own MITRE text and extended description explicitly enumerate Activities, Services, and Content Providers as the components this weakness covers -- an exact match for this entry's scope
+      pl: Własny tekst MITRE CWE-926 i rozszerzony opis jawnie wyliczają Activities, Services, i Content Providers jako komponenty które ta słabość pokrywa -- dokładne dopasowanie do zakresu tego wpisu
+  - id: b
+    label:
+      en: CWE-926 was created specifically for this catalog entry and has no independent MITRE definition
+      pl: CWE-926 zostało stworzone specjalnie dla tego wpisu katalogu i nie ma niezależnej definicji MITRE
+  - id: c
+    label:
+      en: CWE-926 is the parent of CWE-749 and CWE-940, so using it here automatically supersedes both sibling entries' mappings
+      pl: CWE-926 jest rodzicem CWE-749 i CWE-940, więc użycie go tutaj automatycznie zastępuje mapowania obu siostrzanych wpisów
+  correctChoiceIds:
+  - a
+  explanation:
+    en: CWE-926 is a real, independent MITRE weakness (ChildOf CWE-285, Improper Authorization) whose own examples cover exactly this entry's scope. It is not a parent of CWE-749 or CWE-940 -- all three are distinct, unrelated nodes in the CWE graph, which is precisely why 15.11, 15.12, and 15.13 can each anchor on a different one without overlap.
+    pl: CWE-926 to prawdziwa, niezależna słabość MITRE (ChildOf CWE-285, Improper Authorization) której własne przykłady pokrywają dokładnie zakres tego wpisu. Nie jest rodzicem CWE-749 ani CWE-940 -- wszystkie trzy to odrębne, niepowiązane węzły w grafie CWE, co jest dokładnie dlaczego 15.11, 15.12, i 15.13 mogą każdy zakotwiczyć się na innym bez nakładania się.
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A developer protects an exported Service by referencing a custom <permission> in its android:permission attribute, but forgets to set protectionLevel on that permission declaration. Is the Service now meaningfully protected against other apps on the device?
+    pl: Deweloper chroni wyeksportowaną Service przywołując własne <permission> w jej atrybucie android:permission, ale zapomina ustawić protectionLevel na tej deklaracji uprawnienia. Czy Service jest teraz znacząco chroniona przed innymi apkami na urządzeniu?
+  isVulnerable: true
+  cwe: CWE-926
+  explanation:
+    en: No. Omitting protectionLevel silently defaults it to "normal", which Android auto-grants to any requesting app with no user interaction -- creating no real cross-app trust boundary at all. All three research passes confirmed only "signature" (or signatureOrSystem/knownSigner) protection levels meaningfully restrict access, to callers signed with the same key.
+    pl: Nie. Pominięcie protectionLevel po cichu domyślnie ustawia "normal", które Android automatycznie przyznaje dowolnej żądającej apce bez interakcji użytkownika -- nie tworząc żadnej prawdziwej granicy zaufania międzyapkowego. Wszystkie trzy przejścia badawcze potwierdziły że tylko poziomy ochrony "signature" (albo signatureOrSystem/knownSigner) znacząco ograniczają dostęp, do wywołujących podpisanych tym samym kluczem.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: What made CVE-2021-25337 (Samsung clipboard ContentProvider) an unusually strong flagship incident for this entry, per Google Project Zero's own analysis?
+    pl: Co uczyniło CVE-2021-25337 (ContentProvider schowka Samsung) niezwykle silnym flagowym incydentem dla tego wpisu, zgodnie z własną analizą Google Project Zero?
+  choices:
+  - id: a
+    label:
+      en: It wasn't just a theoretical finding -- Project Zero reverse-engineered it as one link in a real attack chain that was actually being exploited against devices in the wild
+      pl: Nie był tylko teoretycznym ustaleniem -- Project Zero zdekompilował go jako jedno ogniwo w prawdziwym łańcuchu ataku który był faktycznie wykorzystywany przeciwko urządzeniom in-the-wild
+  - id: b
+    label:
+      en: It was the first CVE ever assigned to an Android ContentProvider vulnerability
+      pl: Był pierwszym CVE kiedykolwiek przypisanym do podatności ContentProvider Android
+  - id: c
+    label:
+      en: It was discovered through automated fuzzing with no manual analysis required
+      pl: Został odkryty przez automatyczny fuzzing bez wymaganej analizy manualnej
+  correctChoiceIds:
+  - a
+  explanation:
+    en: The distinguishing fact all three teams (and specifically Team C's research) confirmed is that this wasn't a synthetic or theoretical bug report -- it was reverse-engineered from a real, in-the-wild exploit chain, with Project Zero publishing a full root-cause analysis. That's a much stronger evidentiary anchor than a bug-bounty report or a static-analysis finding alone.
+    pl: Wyróżniający fakt który wszystkie trzy zespoły (a konkretnie badania Zespołu C) potwierdziły to że to nie był syntetyczny albo teoretyczny raport błędu -- został zdekompilowany z prawdziwego, wykorzystywanego in-the-wild łańcucha ataku, z Project Zero publikującym pełną analizę pierwotnej przyczyny. To dużo silniejsze oparcie dowodowe niż sam raport bug bounty albo ustalenie analizy statycznej.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A ContentProvider exposes a `notes` table and needs to remain exported for a companion app to read it. Which manifest + code combination actually closes the risk this deep-dive centers on?
+    pl: ContentProvider wystawia tabelę `notes` i musi pozostać wyeksportowany by aplikacja towarzysząca mogła ją czytać. Która kombinacja manifestu + kodu faktycznie zamyka ryzyko na którym skupia się ten deep-dive?
+  variants:
+  - id: v1
+    lang: xml
+    code: "<provider android:name=\".NotesProvider\"\n    android:authorities=\"com.app.provider\"\n    android:exported=\"true\" />\n<!-- no permission at all -->"
+  - id: v2
+    lang: xml
+    code: "<provider android:name=\".NotesProvider\"\n    android:authorities=\"com.app.provider\"\n    android:exported=\"true\"\n    android:permission=\"com.app.permission.ACCESS_NOTES\" />\n<permission android:name=\"com.app.permission.ACCESS_NOTES\" />\n<!-- protectionLevel omitted -->"
+  - id: v3
+    lang: xml
+    code: "<provider android:name=\".NotesProvider\"\n    android:authorities=\"com.app.provider\"\n    android:exported=\"true\"\n    android:permission=\"com.app.permission.ACCESS_NOTES\" />\n<permission android:name=\"com.app.permission.ACCESS_NOTES\"\n    android:protectionLevel=\"signature\" />\n<!-- plus: provider code whitelists projection columns -->"
+  correctVariantId: v3
+  explanation:
+    en: 'v3 closes both halves of the risk: a signature-level permission genuinely restricts access to co-signed companion apps (not just "any app that asks"), and projection whitelisting in the provider''s own query() implementation closes the SQL injection sub-case that a permission check alone does not address. v1 has no protection at all. v2 is the subtle trap this deep-dive''s defense ranking centers on: a permission attribute is present, but omitting protectionLevel silently downgrades it to "normal", which any app can hold with zero friction.'
+    pl: 'v3 zamyka obie połowy ryzyka: uprawnienie poziomu signature naprawdę ogranicza dostęp do współpodpisanych apek towarzyszących (nie tylko "dowolna apka która poprosi"), a whitelistowanie projection we własnej implementacji query() providera zamyka podprzypadek SQL injection którego samo sprawdzenie uprawnienia nie adresuje. v1 nie ma żadnej ochrony. v2 to subtelna pułapka na której skupia się ranking obrony tego deep-dive: atrybut permission jest obecny, ale pominięcie protectionLevel po cichu obniża go do "normal", które dowolna apka może posiadać bez żadnego tarcia.'

@@ -56,6 +56,7 @@ import mobilestorageData from '../content/deepdives/mobilestorage.yaml';
 import mobilecryptoData from '../content/deepdives/mobilecrypto.yaml';
 import mobilewebviewbridgeData from '../content/deepdives/mobilewebviewbridge.yaml';
 import mobileintentredirectionData from '../content/deepdives/mobileintentredirection.yaml';
+import mobileinsecureipcData from '../content/deepdives/mobileinsecureipc.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -109,6 +110,7 @@ import mobilestorageQuiz from '../content/quizzes/mobilestorage.yaml';
 import mobilecryptoQuiz from '../content/quizzes/mobilecrypto.yaml';
 import mobilewebviewbridgeQuiz from '../content/quizzes/mobilewebviewbridge.yaml';
 import mobileintentredirectionQuiz from '../content/quizzes/mobileintentredirection.yaml';
+import mobileinsecureipcQuiz from '../content/quizzes/mobileinsecureipc.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -164,6 +166,7 @@ export const DEEPDIVES = {
   '15.10': mobilecryptoData, // Insufficient Cryptography (Mobile)
   '15.11': mobilewebviewbridgeData, // WebView JavaScript Bridge Exposure
   '15.12': mobileintentredirectionData, // Intent Redirection
+  '15.13': mobileinsecureipcData, // Insecure IPC via Exported Components
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -222,4 +225,5 @@ export const QUIZZES = {
   '15.10': mobilecryptoQuiz,
   '15.11': mobilewebviewbridgeQuiz,
   '15.12': mobileintentredirectionQuiz,
+  '15.13': mobileinsecureipcQuiz,
 };

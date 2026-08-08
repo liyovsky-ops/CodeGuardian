@@ -1,0 +1,355 @@
+meta:
+  id: mobileinsecureipc
+  threatId: '15.13'
+  severity: High
+  color: '#b91c1c'
+  colorRgb: 185,28,28
+  cwe: CWE-926
+  cvss: N/A (technique class spanning exported Activities/Services/Receivers/Providers; flagship in-the-wild case CVE-2021-25337 was exploited as part of a real attack chain per Google Project Zero)
+  standard: OWASP MASVS-PLATFORM-1 (MASTG-TEST-0029 / MASTG-TEST-0364-0366)
+hero:
+  titleMain: 'Insecure '
+  titleGrad: IPC
+  titleTail: ' via Exported Components'
+  topbar: Insecure IPC via Exported Android Components
+  lead:
+    en: 'All three research passes converged cleanly on scope and mapping (unlike the 15.12 entry, where the CWE choice was contested): the core defect is an exported Activity, Service, BroadcastReceiver, or ContentProvider reachable by any other app on the device with zero privileges, that performs a sensitive action -- reads/writes private data, triggers a privileged operation, or exposes a post-authentication screen -- without validating the caller. This is CWE-926 (Improper Export of Android Application Components), whose own MITRE text names all three component families this entry covers, and is distinct from the sibling entries: 15.11''s WebView bridge (CWE-749) is a different mechanism, and 15.12''s Intent redirection (CWE-940/926) is specifically about a trusted deputy forwarding an attacker-controlled Intent -- 15.13 covers the component simply being reachable and unprotected in the first place. The single most important corrective finding, confirmed identically by all three passes: Android 12 (API 31) did NOT change any default value for android:exported -- it made the attribute mandatory to declare explicitly whenever a component has an intent-filter, and the build/install fails without it. The historical implicit default (intent-filter present -> exported=true) is unchanged for older targets. ContentProviders had an earlier, separate default flip -- to exported=false -- at API 17 (Android 4.2), only when the app''s target/minSdkVersion is 17+. A second, well-documented but under-appreciated finding all three teams independently flagged: parameterized selectionArgs on a ContentProvider protects only the selection clause -- the projection (column list) is not automatically sanitized, and an unwhitelisted projection can pull data from entirely different tables through a single exposed URI.'
+    pl: 'Wszystkie trzy przejścia badawcze zbiegły się czysto co do zakresu i mapowania (w przeciwieństwie do wpisu 15.12, gdzie wybór CWE był sporny): pierwotną wadą jest wyeksportowana Activity, Service, BroadcastReceiver, albo ContentProvider osiągalna przez dowolną inną apkę na urządzeniu z zerowymi uprawnieniami, która wykonuje wrażliwą akcję -- czyta/pisze prywatne dane, wyzwala uprzywilejowaną operację, albo wystawia ekran po-uwierzytelnieniu -- bez walidacji wywołującego. To CWE-926 (Improper Export of Android Application Components), którego własny tekst MITRE nazywa wszystkie trzy rodziny komponentów które ten wpis pokrywa, i jest odrębne od siostrzanych wpisów: mostek WebView 15.11 (CWE-749) to inny mechanizm, a Intent redirection 15.12 (CWE-940/926) dotyczy konkretnie zaufanego pośrednika przekazującego kontrolowany przez atakującego Intent -- 15.13 pokrywa sam komponent będący osiągalnym i niechronionym w pierwszej kolejności. Pojedyncze najważniejsze ustalenie korygujące, potwierdzone identycznie przez wszystkie trzy przejścia: Android 12 (API 31) NIE zmienił żadnej wartości domyślnej dla android:exported -- uczynił atrybut obowiązkowym do jawnej deklaracji ilekroć komponent ma intent-filter, a build/instalacja zawodzi bez tego. Historyczna domyślna wartość niejawna (obecny intent-filter -> exported=true) jest niezmieniona dla starszych celów. ContentProvider miał wcześniejszą, osobną zmianę domyślnej wartości -- na exported=false -- w API 17 (Android 4.2), tylko gdy target/minSdkVersion apki to 17+. Drugie, dobrze udokumentowane ale niedocenione ustalenie które wszystkie trzy zespoły niezależnie oflagowały: sparametryzowane selectionArgs na ContentProvider chroni tylko klauzulę selection -- projection (lista kolumn) nie jest automatycznie sanityzowana, a niewhitelistowana projection może wyciągnąć dane z zupełnie innych tabel przez pojedynczy wystawiony URI.'
+  metrics:
+  - k: CVE-2021-25337
+    v:
+      en: 'Samsung clipboard ContentProvider: exploited as part of a real in-the-wild attack chain (Google Project Zero)'
+      pl: 'ContentProvider schowka Samsung: wykorzystane jako część prawdziwego łańcucha ataku in-the-wild (Google Project Zero)'
+  - k: CWE-926
+    v:
+      en: MITRE's own definition names Activities, Services, and Content Providers directly -- confirmed by all 3 teams as the clean best-fit
+      pl: Własna definicja MITRE nazywa bezpośrednio Activities, Services, i Content Providers -- potwierdzone przez wszystkie 3 zespoły jako czyste najlepsze dopasowanie
+  - k: API 17 vs API 31
+    v:
+      en: 'two separate, often-conflated default-export changes: ContentProvider (4.2) vs mandatory declaration (Android 12)'
+      pl: 'dwie osobne, często mylone zmiany domyślnego eksportu: ContentProvider (4.2) vs obowiązkowa deklaracja (Android 12)'
+  - k: selectionArgs
+    v:
+      en: protects only the selection clause -- the projection column list remains a common, under-protected SQL injection vector
+      pl: chroni tylko klauzulę selection -- lista kolumn projection pozostaje powszechnym, niedostatecznie chronionym wektorem SQL injection
+  sources:
+  - label: CWE-926 -- Improper Export of Android Application Components
+    url: https://cwe.mitre.org/data/definitions/926.html
+  - label: Android -- android:exported risk page
+    url: https://developer.android.com/privacy-and-security/risks/android-exported
+  - label: Android -- SQL injection risk page
+    url: https://developer.android.com/privacy-and-security/risks/sql-injection
+  - label: Google Project Zero -- A Very Powerful Clipboard (CVE-2021-25337 RCA)
+    url: https://googleprojectzero.github.io/0days-in-the-wild/0day-RCAs/2021/CVE-2021-25337.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Each of Android''s four IPC component types has a distinct risk profile, but all four share the same root cause all three research passes converged on: reachability by any zero-privilege app combined with no caller/authorization check.'
+      pl: 'Każdy z czterech typów komponentów IPC Android ma odrębny profil ryzyka, ale wszystkie cztery dzielą tę samą pierwotną przyczynę na której zbiegły się wszystkie trzy przejścia badawcze: osiągalność przez dowolną apkę bez uprawnień połączona z brakiem sprawdzenia wywołującego/autoryzacji.'
+    items:
+    - name: Exported Activity -- auth-screen bypass / UI hijacking
+      sev: high
+      description:
+        en: 'Any app can startActivity() a post-authentication screen directly, skipping the login/PIN gate the app''s own navigation flow assumed was enforced -- because that ordering exists only in the UI layer, not at the IPC boundary. CWE-926''s own text: the attacker may "gain access to sensitive information, modify the internal state... or trick a user into interacting with the victim application."'
+        pl: 'Dowolna apka może startActivity() ekran po-uwierzytelnieniu bezpośrednio, pomijając bramkę logowania/PIN którą własny przepływ nawigacji apki zakładał że jest egzekwowana -- ponieważ ta kolejność istnieje tylko w warstwie UI, nie na granicy IPC. Własny tekst CWE-926: atakujący może "uzyskać dostęp do wrażliwych informacji, zmodyfikować wewnętrzny stan... albo nakłonić użytkownika by wchodził w interakcję z ofiarną aplikacją".'
+      payload: '<activity android:name=".AccountDetailsActivity" android:exported="true" />
+
+        <!-- attacker: startActivity(Intent().setClassName("victim.pkg", "victim.pkg.AccountDetailsActivity")) -->'
+    - name: Exported Service -- unauthorized privileged operation
+      sev: high
+      description:
+        en: An unprivileged app can start/bind an exported Service with no permission attribute and invoke whatever operation it performs -- background data sync, file operations, or a bound AIDL/Messenger interface -- entirely outside the app's own UI-gated flow.
+        pl: Nieuprzywilejowana apka może uruchomić/związać wyeksportowaną Service bez atrybutu permission i wywołać jakąkolwiek operację którą wykonuje -- synchronizację danych w tle, operacje na plikach, albo związany interfejs AIDL/Messenger -- całkowicie poza własnym przepływem apki bramkowanym przez UI.
+      payload: '<service android:name=".SyncService" android:exported="true" />
+
+        <!-- no android:permission -- any app can startService()/bindService() -->'
+    - name: Exported BroadcastReceiver -- action-spoofing injection and payload sniffing
+      sev: high
+      description:
+        en: 'Two symmetric risks confirmed by all three teams: (1) injection -- a receiver registered for a system-only implicit action still receives explicit intents from any app, letting an attacker spoof a "protected" system event (CWE-925); (2) sniffing, the inverse -- a broadcast sent without a receiver permission is readable by any app that registers a matching filter, leaking whatever the sender put in the Intent.'
+        pl: 'Dwa symetryczne ryzyka potwierdzone przez wszystkie trzy zespoły: (1) wstrzyknięcie -- odbiornik zarejestrowany dla akcji implicit tylko-systemowej wciąż otrzymuje explicit intenty od dowolnej apki, pozwalając atakującemu podszyć się pod "chronione" zdarzenie systemowe (CWE-925); (2) podsłuch, odwrotność -- broadcast wysłany bez uprawnienia odbiornika jest czytelny przez dowolną apkę która rejestruje pasujący filtr, wyciekając cokolwiek nadawca umieścił w Intent.'
+      payload: "// attacker sends an EXPLICIT intent -- the receiver's implicit-action\n// registration does not stop it from being delivered:\nsendBroadcast(Intent().setClassName(\"victim.pkg\", \"victim.pkg.SystemEventReceiver\")\n    .setAction(\"android.intent.action.BOOT_COMPLETED\"))"
+    - name: Exported ContentProvider -- data leak and SQL injection via projection
+      sev: high
+      description:
+        en: 'The richest attack surface: unauthorized query() reads private data outright, but the well-documented sub-technique is SQL injection through the selection or, more dangerously, the projection parameter. Parameterized selectionArgs binds the selection clause, but the projection is passed as raw column-expression text -- an attacker who controls it can pull columns from entirely different tables through a single exposed URI, confirmed identically by all three research passes as the commonly-missed half of the fix.'
+        pl: 'Najbogatsza powierzchnia ataku: nieautoryzowany odczyt query() czyta prywatne dane wprost, ale dobrze udokumentowaną podtechniką jest SQL injection przez selection albo, bardziej niebezpiecznie, przez parametr projection. Sparametryzowane selectionArgs wiąże klauzulę selection, ale projection jest przekazywana jako surowy tekst wyrażenia kolumn -- atakujący który ją kontroluje może wyciągnąć kolumny z zupełnie innych tabel przez pojedynczy wystawiony URI, potwierdzone identycznie przez wszystkie trzy przejścia badawcze jako powszechnie pomijana połowa naprawy.'
+      payload: "// attacker-controlled projection reaches raw SQLite column expressions:\ncontentResolver.query(\n    Uri.parse(\"content://victim.pkg.provider/notes\"),\n    arrayOf(\"(SELECT password FROM other_table LIMIT 1)\"),  // malicious projection\n    null, null, null\n)"
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The correction confirmed by all three research passes: exported="false" alone doesn''t cover a component that legitimately needs cross-app reach, and selectionArgs alone doesn''t cover a ContentProvider whose projection is unwhitelisted -- both need the second, less-obvious half of the fix.'
+      pl: 'Korekta potwierdzona przez wszystkie trzy przejścia badawcze: samo exported="false" nie pokrywa komponentu który legalnie potrzebuje osiągalności międzyapkowej, a samo selectionArgs nie pokrywa ContentProvider którego projection jest niewhitelistowana -- oba potrzebują drugiej, mniej oczywistej połowy naprawy.'
+    languages:
+    - label: AndroidManifest.xml -- exported component with no protection
+      lang: xml
+      vulnerable: "<!-- VULNERABLE: exported, no permission attribute --\n     any app on the device can reach this at zero cost -->\n<provider\n    android:name=\".NotesProvider\"\n    android:authorities=\"com.victim.app.provider\"\n    android:exported=\"true\" />"
+      safe: "<!-- SAFE: not exported at all if no cross-app need exists;\n     if it must be exported, gate with a signature-level permission\n     shared only with your own co-signed apps -->\n<provider\n    android:name=\".NotesProvider\"\n    android:authorities=\"com.victim.app.provider\"\n    android:exported=\"true\"\n    android:permission=\"com.victim.app.permission.ACCESS_NOTES\" />\n\n<permission\n    android:name=\"com.victim.app.permission.ACCESS_NOTES\"\n    android:protectionLevel=\"signature\" />"
+    - label: Kotlin -- ContentProvider query() sanitization
+      lang: kotlin
+      vulnerable: "// VULNERABLE: selectionArgs binds `selection`, but `projection`\n// (the caller-supplied column list) is passed through unsanitized\noverride fun query(\n    uri: Uri, projection: Array<String>?, selection: String?,\n    selectionArgs: Array<String>?, sortOrder: String?\n): Cursor {\n    return db.query(\"notes\", projection, selection, selectionArgs, null, null, sortOrder)\n    // projection can contain arbitrary column expressions, e.g. a subquery\n    // against a completely different table\n}"
+      safe: "// SAFE: projection whitelisted against known-safe columns;\n// selection/selectionArgs still bound as parameters\nprivate val ALLOWED_COLUMNS = setOf(\"_id\", \"title\", \"body\", \"created_at\")\n\noverride fun query(\n    uri: Uri, projection: Array<String>?, selection: String?,\n    selectionArgs: Array<String>?, sortOrder: String?\n): Cursor {\n    val safeProjection = projection?.filter { it in ALLOWED_COLUMNS }?.toTypedArray()\n        ?: ALLOWED_COLUMNS.toTypedArray()\n    return db.query(\"notes\", safeProjection, selection, selectionArgs, null, null, sortOrder)\n}"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: enumerate every exported component first, then evaluate each against the two checks a permission-only or selectionArgs-only fix each individually misses.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: wylicz najpierw każdy wyeksportowany komponent, następnie oceń każdy względem dwóch sprawdzeń które naprawa oparta tylko na permission albo tylko na selectionArgs każda osobno pomija.'
+    steps:
+    - title:
+        en: Enumerate every exported component, including the merged manifest
+        pl: Wylicz każdy wyeksportowany komponent, włącznie z połączonym manifestem
+      description:
+        en: Read the effective, merged AndroidManifest.xml (apkanalyzer / aapt dump badging), not just the app's own source manifest -- a bundled library's manifest can silently re-export a component via manifest merger. Drozer's app.package.attacksurface automates the same enumeration dynamically against an installed APK.
+        pl: Czytaj efektywny, połączony AndroidManifest.xml (apkanalyzer / aapt dump badging), nie tylko własny manifest źródłowy apki -- manifest dołączonej biblioteki może po cichu ponownie wyeksportować komponent przez scalanie manifestów. app.package.attacksurface Drozer automatyzuje to samo wyliczenie dynamicznie względem zainstalowanego APK.
+    - title:
+        en: Check exported=true against the actual protection level, not just presence of a permission
+        pl: Sprawdź exported=true względem faktycznego poziomu ochrony, nie tylko obecności permission
+      description:
+        en: A permission attribute alone isn't enough -- confirm the referenced <permission>'s protectionLevel is genuinely signature (or signatureOrSystem/knownSigner), not normal or dangerous, which create no real cross-app trust boundary. Also check whether omitting protectionLevel silently downgraded it to normal.
+        pl: Sam atrybut permission nie wystarczy -- potwierdź że protectionLevel przywoływanego <permission> jest naprawdę signature (albo signatureOrSystem/knownSigner), nie normal albo dangerous, które nie tworzą prawdziwej granicy zaufania międzyapkowego. Sprawdź też czy pominięcie protectionLevel po cichu obniżyło go do normal.
+    - title:
+        en: For ContentProviders, probe both selection AND projection
+        pl: Dla ContentProvider, sprawdź zarówno selection JAK I projection
+      description:
+        en: Drozer's scanner.provider.injection module tests both parameters; manually confirm the implementation whitelists projection columns rather than passing the caller-supplied array straight into the SQLite query builder -- this is the specific gap all three research passes flagged as commonly missed even in providers that correctly bind selectionArgs.
+        pl: Moduł scanner.provider.injection Drozer testuje oba parametry; ręcznie potwierdź że implementacja whitelistuje kolumny projection zamiast przekazywać dostarczoną przez wywołującego tablicę wprost do budowniczego zapytań SQLite -- to konkretna luka którą wszystkie trzy przejścia badawcze oflagowały jako powszechnie pomijaną nawet w providerach które poprawnie wiążą selectionArgs.
+    - title:
+        en: Confirm reachability dynamically as a zero-privilege attacker
+        pl: Potwierdź osiągalność dynamicznie jako atakujący bez uprawnień
+      description:
+        en: Use Drozer's app.activity.info/app.provider.info/app.broadcast.info to confirm the real caller-facing permission requirement (not just what the manifest claims), and attempt the actual invocation (launch the activity, query the provider, send the broadcast) from an unprivileged test app to empirically verify what a real malicious app could do.
+        pl: Użyj app.activity.info/app.provider.info/app.broadcast.info Drozer by potwierdzić prawdziwy wymóg uprawnień skierowany do wywołującego (nie tylko to co twierdzi manifest), i spróbuj faktycznego wywołania (uruchom aktywność, odpytaj provider, wyślij broadcast) z nieuprzywilejowanej apki testowej by empirycznie zweryfikować co mogłaby zrobić prawdziwa złośliwa apka.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: All three research passes independently produced a near-identical ranking, converging especially strongly on the projection-whitelisting gap and on rejecting normal/dangerous protection levels as a real trust boundary.
+      pl: Wszystkie trzy przejścia badawcze niezależnie wyprodukowały niemal identyczny ranking, zbiegając się szczególnie silnie na luce whitelistowania projection i na odrzuceniu poziomów ochrony normal/dangerous jako prawdziwej granicy zaufania.
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: android:exported="false" for anything not deliberately meant for cross-app use
+        pl: android:exported="false" dla wszystkiego co nie jest celowo przeznaczone do użytku międzyapkowego
+      note:
+        en: 'Removes the component from the cross-app attack surface entirely -- the strongest and simplest control. Caveat all three teams flagged: a bundled library''s manifest can silently re-export a component via manifest merger, so always verify the merged manifest, not just your own source.'
+        pl: 'Usuwa komponent z powierzchni ataku międzyapkowej całkowicie -- najsilniejsza i najprostsza kontrola. Zastrzeżenie oflagowane przez wszystkie trzy zespoły: manifest dołączonej biblioteki może po cichu ponownie wyeksportować komponent przez scalanie manifestów, więc zawsze weryfikuj połączony manifest, nie tylko własne źródło.'
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: Signature-level custom permission for components that must be exported to your own apps
+        pl: Uprawnienie własne poziomu signature dla komponentów które muszą być wyeksportowane do własnych apek
+      note:
+        en: 'android:permission referencing a <permission> with protectionLevel="signature" restricts access to callers signed with the same key. Critical caveat, confirmed by all three teams: protectionLevel="normal" or "dangerous" is NOT a real cross-app trust boundary -- normal is auto-granted to any app, and omitting protectionLevel silently defaults to normal.'
+        pl: 'android:permission przywołujące <permission> z protectionLevel="signature" ogranicza dostęp do wywołujących podpisanych tym samym kluczem. Krytyczne zastrzeżenie, potwierdzone przez wszystkie trzy zespoły: protectionLevel="normal" albo "dangerous" NIE jest prawdziwą granicą zaufania międzyapkowego -- normal jest automatycznie przyznawane dowolnej apce, a pominięcie protectionLevel po cichu domyślnie ustawia normal.'
+    - rank: 3
+      eff: 70
+      kind: strong
+      label:
+        en: Whitelist ContentProvider projection columns, not just parameterized selection
+        pl: Whitelistuj kolumny projection ContentProvider, nie tylko sparametryzowaną selection
+      note:
+        en: 'Bind selectionArgs AND explicitly filter the caller-supplied projection against a fixed set of known-safe columns before passing it to the query builder. Caveat all three teams independently flagged: selectionArgs binding alone leaves the projection -- a raw column-expression list -- as the commonly-missed injection vector.'
+        pl: 'Wiąż selectionArgs ORAZ jawnie filtruj dostarczoną przez wywołującego projection względem stałego zestawu znanych-bezpiecznych kolumn przed przekazaniem do budowniczego zapytań. Zastrzeżenie niezależnie oflagowane przez wszystkie trzy zespoły: samo wiązanie selectionArgs pozostawia projection -- surową listę wyrażeń kolumn -- jako powszechnie pomijany wektor wstrzyknięcia.'
+    - rank: 4
+      eff: 60
+      kind: strong
+      label:
+        en: Scope grantUriPermissions narrowly; avoid wildcard content:// path patterns
+        pl: Zawężaj grantUriPermissions wąsko; unikaj wieloznacznych wzorców ścieżek content://
+      note:
+        en: 'Prefer per-URI FLAG_GRANT_READ_URI_PERMISSION grants over blanket grantUriPermissions="true", and use exact <grant-uri-permission android:path> rather than pathPattern wildcards. Caveat: a permissive <path-permission> can override a provider''s otherwise-correct base permission, and forwarded URI grants can leak via the 15.12 redirection mechanism -- this control and 15.12''s defenses are complementary, not substitutes for each other.'
+        pl: 'Preferuj granty FLAG_GRANT_READ_URI_PERMISSION per-URI zamiast ogólnego grantUriPermissions="true", i używaj dokładnego <grant-uri-permission android:path> zamiast symboli wieloznacznych pathPattern. Zastrzeżenie: permisywne <path-permission> może nadpisać skądinąd poprawne bazowe uprawnienie providera, a przekazane dalej granty URI mogą wyciec przez mechanizm redirection z 15.12 -- ta kontrola i obrony 15.12 są komplementarne, nie zamiennikami.'
+    - rank: 5
+      eff: 45
+      kind: weak
+      label:
+        en: In-code caller verification as a backstop
+        pl: Weryfikacja wywołującego w kodzie jako zabezpieczenie
+      note:
+        en: 'Binder.getCallingUid()/getCallingPackage() or checkCallingPermission() as a defense-in-depth layer even on a permission-protected component. Caveat, echoing 15.12''s own weakest-control finding: getCallingPackage() returns null for started (non-bound) components and must not be trusted if sourced from intent extras rather than the actual Binder identity.'
+        pl: 'Binder.getCallingUid()/getCallingPackage() albo checkCallingPermission() jako warstwa obrony w głąb nawet na komponencie chronionym uprawnieniem. Zastrzeżenie, echo własnego ustalenia najsłabszej kontroli z 15.12: getCallingPackage() zwraca puste dla uruchomionych (niezwiązanych) komponentów i nie może być zaufane jeśli pochodzi z extras intentu zamiast faktycznej tożsamości Binder.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: All three research passes surfaced real, primary-source-verified CVEs spanning the full range of this entry's scope -- an in-the-wild exploited ContentProvider, a bug-bounty-disclosed SQL injection, and independently-confirmed exported BroadcastReceiver cases.
+      pl: Wszystkie trzy przejścia badawcze ujawniły prawdziwe, zweryfikowane źródłem pierwotnym CVE obejmujące pełny zakres tego wpisu -- ContentProvider wykorzystany in-the-wild, SQL injection ujawnione przez bug bounty, i niezależnie potwierdzone przypadki wyeksportowanego BroadcastReceiver.
+    items:
+    - org: CVE-2021-25337 -- Samsung clipboard ContentProvider (SemClipboardProvider)
+      year: 2021
+      impact: Untrusted apps could read/write certain local files as the system user through an improperly access-controlled ContentProvider
+      cost: Reverse-engineered by Google Project Zero as part of an actual in-the-wild exploit chain, not just a theoretical finding -- full root-cause analysis published
+      description:
+        en: 'The flagship real-world case for this entry, verified via Google Project Zero''s own root-cause analysis: an exported Samsung clipboard provider with insufficient access control was one link in a real attack chain observed being exploited against actual devices. This is the clearest possible demonstration that exported-component misconfiguration is not a theoretical risk category.'
+        pl: 'Flagowy prawdziwy przypadek dla tego wpisu, zweryfikowany przez własną analizę pierwotnej przyczyny Google Project Zero: wyeksportowany provider schowka Samsung z niewystarczającą kontrolą dostępu był jednym ogniwem w prawdziwym łańcuchu ataku obserwowanym jako wykorzystywany przeciwko rzeczywistym urządzeniom. To najjaśniejsza możliwa demonstracja że błędna konfiguracja wyeksportowanego komponentu nie jest teoretyczną kategorią ryzyka.'
+    - org: CVE-2019-5454 / CVE-2021-43863 -- Nextcloud Android app ContentProvider SQL injection
+      year: 2021
+      impact: SQL injection via unsanitized ContentProvider parameters allowed corrupting or extracting local cache data beyond the intended scope
+      cost: 'Disclosed via HackerOne #291764 and GitHub Security Lab advisory GHSL-2021-1007; fixed in Nextcloud Android 3.0.0 and 3.18.1 respectively'
+      description:
+        en: 'Confirmed identically by all three research passes: two related, real, publicly-disclosed SQL injection vulnerabilities in the same widely-used app''s ContentProvider, verifiable via both a bug-bounty report and a formal GitHub Security Lab advisory -- concrete evidence this specific sub-technique recurs in production apps, not just synthetic examples.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze: dwie powiązane, prawdziwe, publicznie ujawnione podatności SQL injection w ContentProvider tej samej szeroko używanej apki, weryfikowalne zarówno przez raport bug bounty jak i formalne doradztwo GitHub Security Lab -- konkretny dowód że ta konkretna podtechnika powraca w produkcyjnych apkach, nie tylko syntetycznych przykładach.'
+    - org: CVE-2021-25397 -- Samsung TelephonyUI exported BroadcastReceiver
+      year: 2021
+      impact: Arbitrary file write in the telephony process, running as UID 1001, triggered by an untrusted app
+      cost: Independently identified and verified against NVD by two of the three research teams -- unusually strong cross-team corroboration
+      description:
+        en: An exported BroadcastReceiver accepted an attacker-controlled file path with no permission gate, letting a zero-privilege app write files with the telephony process's elevated UID. A related CWE-925 case, CVE-2023-42543 (Samsung Bixby Voice), independently verified by one research team, shows the same action-spoofing pattern recurring across different Samsung components years apart.
+        pl: Wyeksportowany BroadcastReceiver akceptował kontrolowaną przez atakującego ścieżkę pliku bez bramki uprawnień, pozwalając apce bez uprawnień pisać pliki z podniesionym UID procesu telefonii. Powiązany przypadek CWE-925, CVE-2023-42543 (Samsung Bixby Voice), niezależnie zweryfikowany przez jeden zespół badawczy, pokazuje ten sam wzorzec podszywania się pod akcję powracający w różnych komponentach Samsung lata później.
+    inlineSources:
+    - label: Google Project Zero -- A Very Powerful Clipboard (CVE-2021-25337)
+      url: https://googleprojectzero.github.io/0days-in-the-wild/0day-RCAs/2021/CVE-2021-25337.html
+    - label: GitHub Security Lab GHSL-2021-1007 -- Nextcloud Android ContentProvider
+      url: https://securitylab.github.com/advisories/GHSL-2021-1007-Nextcloud_Android_app/
+    - label: NVD -- CVE-2021-25397
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-25397
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on Drozer as the canonical tool for this exact threat model -- it deliberately acts as a zero-privilege malicious app, which is precisely the attacker this entry's core vulnerability class assumes.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na Drozer jako kanonicznym narzędziu dla dokładnie tego modelu zagrożenia -- celowo działa jako złośliwa apka bez uprawnień, co jest dokładnie atakującym którego zakłada podstawowa klasa podatności tego wpisu.
+    sast:
+    - - MobSF
+      - Static manifest analysis flags every exported component lacking permission protection, enumerates the full IPC surface, and reports grantUriPermissions/debuggable misconfigurations
+    - - QARK (LinkedIn)
+      - 'Static analyzer specialized in exported-component and IPC misconfiguration: exported without permission, improperly protected providers, tapjacking-adjacent issues'
+    - - apkanalyzer / aapt dump badging
+      - Ground-truth read of the effective, merged AndroidManifest.xml -- catches components silently re-exported by a bundled library's own manifest
+    - - Android Lint (ExportedContentProvider et al.)
+      - Build-time warnings for providers/services/receivers/activities exported without an explicit permission
+    dast:
+    - - Drozer -- app.package.attacksurface / app.activity.info / app.provider.info / app.broadcast.info
+      - Enumerates every exported component and its actual caller-facing permission requirement from a zero-privilege attacker's perspective, not just what the manifest claims
+    - - Drozer -- scanner.provider.injection / scanner.provider.traversal / scanner.provider.finduris
+      - Actively probes ContentProviders for selection/projection SQL injection and openFile() path traversal
+    note:
+      en: <strong>Key signal:</strong> a ContentProvider that correctly binds selectionArgs but passes the caller-supplied projection straight through is still vulnerable -- treat parameterized selection alone as an incomplete finding, not a closed one.
+      pl: <strong>Kluczowy sygnał:</strong> ContentProvider który poprawnie wiąże selectionArgs ale przekazuje dostarczoną przez wywołującego projection wprost nadal jest podatny -- traktuj samo sparametryzowane selection jako niekompletne ustalenie, nie zamknięte.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: Unlike the sibling 15.12 entry, all three research passes reached unanimous agreement on the CWE mapping here -- CWE-926's own MITRE text names Activities, Services, and Content Providers directly as the components this weakness covers.
+      pl: W przeciwieństwie do siostrzanego wpisu 15.12, wszystkie trzy przejścia badawcze osiągnęły jednomyślną zgodę co do mapowania CWE tutaj -- własny tekst MITRE CWE-926 nazywa bezpośrednio Activities, Services, i Content Providers jako komponenty które ta słabość pokrywa.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-926 -- Improper Export of Android Application Components (primary, unanimous across all three research passes). Extended description explicitly enumerates Activities, Services, and Content Providers. ChildOf CWE-285 (Improper Authorization).
+      - CWE-925 -- Improper Verification of Intent by Broadcast Receiver (secondary, for the receiver action-spoofing sub-case). ChildOf CWE-940 -- the same CWE family sibling entry 15.12 uses as its primary, confirming the two entries' mechanisms are related but the weaknesses are genuinely distinct nodes.
+      - CWE-89 -- SQL Injection (secondary, for the ContentProvider selection/projection sub-case).
+    - std: OWASP
+      items:
+      - MASVS-PLATFORM-1 -- "The app uses IPC mechanisms securely" -- the control group all three teams converged on.
+      - MASTG-TEST-0029 -- "Testing for Sensitive Functionality Exposure Through IPC" (the classic, broad test), now split in MASTG v2 into atomic tests MASTG-TEST-0364 (Activities), MASTG-TEST-0365 (Services), MASTG-TEST-0366 (BroadcastReceivers) -- MASTG-TEST-0364 confirmed mapped to weakness MASWE-0018 ("Lack of Authentication or Authorization on App Components"). ContentProvider-specific testing remains covered under the broader MASVS-PLATFORM-1 control.
+      - 'Cross-reference, not duplicate: this entry owns the exported-component/authorization topic broadly; sibling 15.12 (Intent Redirection) owns the confused-deputy forwarding mechanism specifically, and 15.11 (WebView Bridge) owns the JavaScript-interface mechanism -- all three cite each other rather than re-explaining shared IPC fundamentals.'
+    inlineSources:
+    - label: CWE-926 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/926.html
+    - label: CWE-925 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/925.html
+    - label: OWASP MASTG-TEST-0364
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0364/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If an exported-component vulnerability is confirmed in a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu podatności wyeksportowanego komponentu w wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: Identify which component type and sub-case applies -- Activity (auth bypass), Service (privileged operation), BroadcastReceiver (injection or sniffing), or ContentProvider (data leak or SQL injection via selection/projection) -- each needs a different specific fix
+      pl: Zidentyfikuj który typ komponentu i podprzypadek ma zastosowanie -- Activity (ominięcie uwierzytelnienia), Service (uprzywilejowana operacja), BroadcastReceiver (wstrzyknięcie albo podsłuch), albo ContentProvider (wyciek danych albo SQL injection przez selection/projection) -- każdy potrzebuje innej konkretnej naprawy
+    - en: Check whether the merged manifest (not just your own source) actually exports the component, since a bundled library can silently re-export it via manifest merger
+      pl: Sprawdź czy połączony manifest (nie tylko własne źródło) faktycznie eksportuje komponent, ponieważ dołączona biblioteka może po cichu ponownie wyeksportować go przez scalanie manifestów
+    - en: For ContentProviders specifically, verify both selection AND projection are protected -- a provider that already binds selectionArgs may still be vulnerable through an unwhitelisted projection, the specific gap this deep-dive's research found commonly missed
+      pl: Dla ContentProvider konkretnie, zweryfikuj że zarówno selection JAK I projection są chronione -- provider który już wiąże selectionArgs może wciąż być podatny przez niewhitelistowaną projection, konkretna luka którą badania tego deep-dive znalazły jako powszechnie pomijaną
+    - en: 'Ship the fix matching this deep-dive''s top-ranked defenses: set exported="false" where no cross-app need exists, or gate genuinely-needed exports with a signature-level permission (never normal/dangerous) plus projection whitelisting for providers'
+      pl: 'Wydaj naprawę pasującą do najwyżej sklasyfikowanych obron tego deep-dive: ustaw exported="false" tam gdzie nie istnieje potrzeba międzyapkowa, albo bramkuj naprawdę potrzebne eksporty uprawnieniem poziomu signature (nigdy normal/dangerous) plus whitelistowaniem projection dla providerów'
+    - en: Re-scan with Drozer's app.package.attacksurface and scanner.provider.injection modules, acting as a zero-privilege attacker, to confirm the fix actually removed reachability rather than just adding a permission attribute referencing an unintentionally-normal-level permission
+      pl: Przeskanuj ponownie modułami app.package.attacksurface i scanner.provider.injection Drozer, działając jako atakujący bez uprawnień, by potwierdzić że naprawa faktycznie usunęła osiągalność zamiast tylko dodać atrybut permission przywołujący niezamierzenie poziom normal
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: CWE-926 -- Improper Export of Android Application Components
+      url: https://cwe.mitre.org/data/definitions/926.html
+    - label: CWE-925 -- Improper Verification of Intent by Broadcast Receiver
+      url: https://cwe.mitre.org/data/definitions/925.html
+    - label: Android -- android:exported risk page
+      url: https://developer.android.com/privacy-and-security/risks/android-exported
+    - label: Android -- SQL injection risk page (ContentProvider)
+      url: https://developer.android.com/privacy-and-security/risks/sql-injection
+    - label: Android -- Let's be explicit about our intent(-filters) (API 31 change)
+      url: https://medium.com/androiddevelopers/lets-be-explicit-about-our-intent-filters-c5dbe2dbdce0
+    - label: Android -- <provider> element (API 17 default change)
+      url: https://developer.android.com/guide/topics/manifest/provider-element
+    - label: Google Project Zero -- A Very Powerful Clipboard (CVE-2021-25337)
+      url: https://googleprojectzero.github.io/0days-in-the-wild/0day-RCAs/2021/CVE-2021-25337.html
+    - label: GitHub Security Lab GHSL-2021-1007 -- Nextcloud Android ContentProvider
+      url: https://securitylab.github.com/advisories/GHSL-2021-1007-Nextcloud_Android_app/
+    - label: NVD -- CVE-2021-25397
+      url: https://nvd.nist.gov/vuln/detail/CVE-2021-25397
+    - label: OWASP MASTG-TEST-0364
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0364/
+    - label: Drozer (MASTG-TOOL-0015)
+      url: https://mas.owasp.org/MASTG/tools/android/MASTG-TOOL-0015/
+    - label: Ostorlab -- Android, SQL and ContentProviders
+      url: https://blog.ostorlab.co/android-sql-contentProvider-sql-injections.html

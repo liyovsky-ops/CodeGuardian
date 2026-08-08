@@ -258,22 +258,20 @@ threats:
 - id: '15.13'
   name: Insecure IPC via Exported Components
   severity: High
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-926
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Activities, services, broadcast receivers, or content providers exported without proper permission checks (android:exported=true) let any installed app invoke privileged functionality or read/write internal data.
+  - CWE-925
+  - CWE-89
+  desc: 'Wyeksportowana Activity/Service/BroadcastReceiver/ContentProvider osiągalna przez DOWOLNĄ apkę na urządzeniu z zerowymi uprawnieniami, bez sprawdzenia wywołującego, wykonująca wrażliwą akcję. Kluczowy mit: API 31 nie zmienił wartości domyślnej exported -- uczynił jej deklarację obowiązkową; ContentProvider miał osobną, wcześniejszą zmianę (API 17). Częsta luka: sparametryzowane selectionArgs chroni tylko selection, NIE projection -- niewhitelistowana projection wciąż pozwala na SQL injection między tabelami. Zweryfikowane rzeczywiste CVE-2021-25337 (Samsung, wykorzystane in-the-wild wg Google Project Zero) i SQL injection w Nextcloud Android (CVE-2019-5454/2021-43863).
 
     '
-  desc_en: Activities, services, broadcast receivers, or content providers exported without proper permission checks (android:exported=true) let any installed app invoke privileged functionality or read/write internal data.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: OWASP MASTG MASVS-PLATFORM (testing for exported components); CWE-926 (Improper Export of Android Application Components).'
+  desc_en: 'An exported Activity/Service/BroadcastReceiver/ContentProvider reachable by ANY app on the device with zero privileges, with no caller verification, performing a sensitive action. Key myth: API 31 did not change the default value of exported -- it made declaring it mandatory; ContentProvider had a separate, earlier change (API 17). Common gap: parameterized selectionArgs protects only selection, NOT projection -- an unwhitelisted projection still allows cross-table SQL injection. Verified real CVE-2021-25337 (Samsung, exploited in-the-wild per Google Project Zero) and Nextcloud Android SQL injection (CVE-2019-5454/2021-43863).'
+  lang: xml
+  vuln: "<!-- VULNERABLE: exported, no permission attribute --\n     any app on the device can reach this at zero cost -->\n<provider\n    android:name=\".NotesProvider\"\n    android:authorities=\"com.victim.app.provider\"\n    android:exported=\"true\" />\n"
+  safe: "<!-- SAFE: signature-level permission -- restricts access to callers\n     signed with the same key; also whitelist projection in query() -->\n<provider\n    android:name=\".NotesProvider\"\n    android:authorities=\"com.victim.app.provider\"\n    android:exported=\"true\"\n    android:permission=\"com.victim.app.permission.ACCESS_NOTES\" />\n\n<permission\n    android:name=\"com.victim.app.permission.ACCESS_NOTES\"\n    android:protectionLevel=\"signature\" />\n"
+  note_en: 'Source: OWASP MASVS-PLATFORM-1, MASTG-TEST-0029 (split into MASTG-TEST-0364/0365/0366). CVE-2021-25337 (Samsung clipboard, Google Project Zero in-the-wild RCA), CVE-2021-25397 (Samsung TelephonyUI), CVE-2019-5454/CVE-2021-43863 (Nextcloud ContentProvider SQLi). CWE-926 unanimous across all 3 research passes, distinct from CWE-749 (15.11) and CWE-940 (15.12).'
 - id: '15.14'
   name: Task Hijacking (StrandHogg)
   severity: High
