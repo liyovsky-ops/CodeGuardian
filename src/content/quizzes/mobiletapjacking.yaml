@@ -1,0 +1,116 @@
+threatId: '15.15'
+title:
+  en: Tapjacking (UI Overlay Attack) -- knowledge check
+  pl: Tapjacking (UI Overlay Attack) -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why is CWE-1021 an unusually well-anchored CWE choice for this entry, confirmed identically by all three research passes?
+    pl: Dlaczego CWE-1021 to niezwykle dobrze zakotwiczony wybór CWE dla tego wpisu, potwierdzony identycznie przez wszystkie trzy przejścia badawcze?
+  choices:
+  - id: a
+    label:
+      en: MITRE's own CWE-1021 page uses two real Android tapjacking CVEs (CVE-2016-2496 and CVE-2017-0492) as its demonstrative examples, not an inferred analogy -- the strongest kind of CWE anchor available
+      pl: Własna strona CWE-1021 MITRE używa dwóch prawdziwych CVE tapjacking Android (CVE-2016-2496 i CVE-2017-0492) jako własnych przykładów demonstracyjnych, nie wywnioskowanej analogii -- najsilniejszy dostępny rodzaj zakotwiczenia CWE
+  - id: b
+    label:
+      en: CWE-1021 was created specifically for this catalog and has no independent existence at cwe.mitre.org
+      pl: CWE-1021 zostało stworzone specjalnie dla tego katalogu i nie ma niezależnego istnienia na cwe.mitre.org
+  - id: c
+    label:
+      en: NVD assigns CWE-1021 automatically to every Android CVE regardless of mechanism
+      pl: NVD przypisuje CWE-1021 automatycznie do każdego CVE Android niezależnie od mechanizmu
+  correctChoiceIds:
+  - a
+  explanation:
+    en: MITRE's own worked examples for a CWE are the strongest possible confirmation that a technique maps to it -- this is stronger evidence than a CVE merely being tagged with the CWE after the fact, since MITRE chose these specific cases to define the weakness class itself.
+    pl: Własne przykłady robocze CWE od MITRE to najsilniejsze możliwe potwierdzenie że technika się do niego mapuje -- to silniejszy dowód niż CVE po prostu oznaczone tym CWE post factum, ponieważ MITRE wybrało te konkretne przypadki by zdefiniować samą klasę słabości.
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: A developer confirms their app runs on Android 12+ (API 31) devices and concludes the platform's default untrusted-touch blocking fully protects every sensitive button in the app, so no additional code is needed. All three research passes flagged this exact reasoning as incomplete. Is the developer correct?
+    pl: Deweloper potwierdza że apka działa na urządzeniach Android 12+ (API 31) i wnioskuje że domyślna blokada niezaufanego dotyku platformy w pełni chroni każdy wrażliwy przycisk w apce, więc żaden dodatkowy kod nie jest potrzebny. Wszystkie trzy przejścia badawcze oflagowały dokładnie to rozumowanie jako niekompletne. Czy deweloper ma rację?
+  isVulnerable: true
+  cwe: CWE-1021
+  explanation:
+    en: No. Android 12's default protection only blocks overlays at or above roughly 0.8 combined opacity -- an attacker who keeps the overlay below that threshold, or fully transparent, still gets touches through. It also does nothing against opaque, accessibility-driven overlay phishing (the pattern real banking trojans use), since the user is tapping the attacker's own control directly, not an obscured legitimate one.
+    pl: Nie. Domyślna ochrona Android 12 blokuje tylko overlaye na poziomie lub powyżej około 0.8 łącznej nieprzezroczystości -- atakujący który utrzymuje overlay poniżej tego progu, albo w pełni przezroczysty, wciąż przepuszcza dotyki. Nic też nie robi przeciw nieprzezroczystemu phishingowi overlay opartemu na accessibility (wzorzec którego faktycznie używają trojany bankowe), ponieważ użytkownik dotyka bezpośrednio własnej kontrolki atakującego, nie przesłoniętej legalnej.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: What scoping distinction did all three independent research passes converge on regarding real-world overlay-attack malware (Cerberus, Anubis, EventBot, TeaBot)?
+    pl: Jakie rozróżnienie zakresu potwierdziły wszystkie trzy niezależne przejścia badawcze odnośnie rzeczywistego malware ataku overlay (Cerberus, Anubis, EventBot, TeaBot)?
+  choices:
+  - id: a
+    label:
+      en: These families predominantly use accessibility-driven, opaque fake-login-screen phishing -- a distinct pattern from classic transparent tap-pass-through, commonly conflated with it in secondary reporting
+      pl: Te rodziny przeważnie używają phishingu przez opartą na accessibility, nieprzezroczystą fałszywą stronę logowania -- odrębny wzorzec od klasycznego przezroczystego przejścia tapu, powszechnie z nim mylony w relacjach drugorzędnych
+  - id: b
+    label:
+      en: These families exclusively use the transparent pass-through technique this entry's core mechanism describes, with no accessibility-service involvement
+      pl: Te rodziny wyłącznie używają techniki przezroczystego przejścia którą opisuje podstawowy mechanizm tego wpisu, bez udziału usługi ułatwień dostępu
+  - id: c
+    label:
+      en: None of these families have ever used overlay-based techniques; they rely entirely on SMS phishing
+      pl: Żadna z tych rodzin nigdy nie używała technik opartych na overlay; polegają wyłącznie na phishingu SMS
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This distinction matters for accurate scoping: both the classic technique and the accessibility-driven variant belong under tapjacking, but conflating them overstates how exploitable classic transparent tap-hijacking remains on modern Android while understating how live the broader overlay-attack surface actually is through accessibility abuse.'
+    pl: 'To rozróżnienie ma znaczenie dla dokładnego zakresu: obie klasyczna technika i wariant oparty na accessibility należą do tapjacking, ale mylenie ich przecenia jak eksploatowalne pozostaje klasyczne przezroczyste porwanie tapu na nowoczesnym Android przy jednoczesnym niedocenianiu jak żywa jest faktycznie szersza powierzchnia ataku overlay przez nadużycie accessibility.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A team sets android:filterTouchesWhenObscured="true" on their app's payment-confirmation button and considers the tapjacking risk for that screen fully closed. Is this conclusion complete?
+    pl: Zespół ustawia android:filterTouchesWhenObscured="true" na przycisku potwierdzenia płatności swojej apki i uważa ryzyko tapjacking dla tego ekranu za w pełni zamknięte. Czy ten wniosek jest kompletny?
+  isVulnerable: true
+  cwe: CWE-1021
+  explanation:
+    en: No. filterTouchesWhenObscured only rejects touches when the view is FULLY obscured (FLAG_WINDOW_IS_OBSCURED). It provides no protection against partial occlusion, where the real button stays tappable but surrounding context is obscured to mislead the user -- closing that gap requires a separate, manual FLAG_WINDOW_IS_PARTIALLY_OBSCURED check that Android does not apply by default.
+    pl: Nie. filterTouchesWhenObscured odrzuca dotyki tylko gdy widok jest CAŁKOWICIE przesłonięty (FLAG_WINDOW_IS_OBSCURED). Nie zapewnia żadnej ochrony przed częściowym przesłonięciem, gdzie prawdziwy przycisk pozostaje dotykalny ale otaczający kontekst jest przesłonięty by zmylić użytkownika -- zamknięcie tej luki wymaga osobnego, ręcznego sprawdzenia FLAG_WINDOW_IS_PARTIALLY_OBSCURED którego Android nie stosuje domyślnie.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: During research, one team encountered a claimed "CVE-2026-28577" for a modern Android tapjacking bug on a low-quality aggregator site. What did that team correctly do?
+    pl: Podczas badań, jeden zespół napotkał rzekome "CVE-2026-28577" dla nowoczesnego błędu tapjacking Android na stronie agregatora niskiej jakości. Co ten zespół poprawnie zrobił?
+  choices:
+  - id: a
+    label:
+      en: Flagged it as likely fabricated/AI-generated content -- no NVD link, no vendor patch reference, and an implausible future date -- and excluded it from the report rather than citing it as fact
+      pl: Oflagował to jako prawdopodobnie sfabrykowaną/wygenerowaną przez AI treść -- brak linku NVD, brak odniesienia do łatki dostawcy, i nieprawdopodobna przyszła data -- i wykluczył to z raportu zamiast cytować jako fakt
+  - id: b
+    label:
+      en: Included it as a verified, current CVE since it appeared in a search result
+      pl: Włączył to jako zweryfikowane, aktualne CVE ponieważ pojawiło się w wyniku wyszukiwania
+  - id: c
+    label:
+      en: Assumed it was a typo for CVE-2021-39691 and silently corrected the number
+      pl: Założył że to literówka dla CVE-2021-39691 i po cichu poprawił numer
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This is exactly the discipline this catalog''s whole research pipeline depends on: a claim without a primary source (NVD entry, vendor bulletin, MITRE record) should never be presented as fact, especially when other red flags (future date, no patch reference) suggest fabricated or low-quality aggregator content.'
+    pl: 'To dokładnie dyscyplina od której zależy cały pipeline badawczy tego katalogu: twierdzenie bez pierwotnego źródła (wpis NVD, biuletyn dostawcy, zapis MITRE) nigdy nie powinno być przedstawiane jako fakt, szczególnie gdy inne czerwone flagi (przyszła data, brak odniesienia do łatki) sugerują sfabrykowaną albo niskiej jakości treść agregatora.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A payment-confirmation Activity needs the strongest practical protection against tapjacking. Which combination actually closes the risk this deep-dive centers on?
+    pl: Activity potwierdzenia płatności potrzebuje najsilniejszej praktycznej ochrony przed tapjacking. Która kombinacja faktycznie zamyka ryzyko na którym skupia się ten deep-dive?
+  variants:
+  - id: v1
+    lang: xml
+    code: '<Button android:id="@+id/confirmPayment" android:text="Confirm" />
+
+      <!-- no touch filtering at all -->'
+  - id: v2
+    lang: xml
+    code: "<Button android:id=\"@+id/confirmPayment\"\n    android:text=\"Confirm\"\n    android:filterTouchesWhenObscured=\"true\" />\n<!-- no partial-occlusion handling, relies only on API 31+ default -->"
+  - id: v3
+    lang: kotlin
+    code: "// XML: android:filterTouchesWhenObscured=\"true\" on the Confirm button\n// PLUS in the Activity:\nwindow.setHideOverlayWindows(true)  // API 31+\noverride fun onFilterTouchEventForSecurity(event: MotionEvent): Boolean {\n    val obscured = (event.flags and MotionEvent.FLAG_WINDOW_IS_OBSCURED) != 0\n    val partiallyObscured = (event.flags and MotionEvent.FLAG_WINDOW_IS_PARTIALLY_OBSCURED) != 0\n    return if (obscured || partiallyObscured) false else super.onFilterTouchEventForSecurity(event)\n}"
+  correctVariantId: v3
+  explanation:
+    en: 'v3 layers every control this deep-dive ranks highest: filterTouchesWhenObscured for full occlusion, setHideOverlayWindows to actively hide third-party overlays on this specific sensitive screen, and manual rejection of FLAG_WINDOW_IS_PARTIALLY_OBSCURED to close the partial-occlusion gap Android leaves open by default. v1 has no protection at all. v2 is the common, incomplete middle ground: it stops full occlusion but leaves partial occlusion -- and low-opacity overlays evading the platform''s own 0.8 threshold -- unaddressed.'
+    pl: 'v3 warstwuje każdą kontrolę którą ten deep-dive klasyfikuje najwyżej: filterTouchesWhenObscured dla pełnego przesłonięcia, setHideOverlayWindows by aktywnie ukryć zewnętrzne overlaye na tym konkretnym wrażliwym ekranie, i ręczne odrzucanie FLAG_WINDOW_IS_PARTIALLY_OBSCURED by zamknąć lukę częściowego przesłonięcia którą Android pozostawia otwartą domyślnie. v1 nie ma żadnej ochrony. v2 to powszechny, niekompletny środek: zatrzymuje pełne przesłonięcie ale pozostawia nieadresowane częściowe przesłonięcie -- i overlaye o niskiej nieprzezroczystości omijające własny próg 0.8 platformy.'

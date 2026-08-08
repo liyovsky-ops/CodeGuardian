@@ -291,22 +291,27 @@ threats:
 - id: '15.15'
   name: Tapjacking (UI Overlay Attack)
   severity: Medium
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-1021
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] A malicious app draws a transparent overlay above another app''s UI so that user taps are hijacked to perform unintended, attacker-chosen actions (Android equivalent of clickjacking).
+  - CWE-451
+  desc: 'Złośliwa apka rysuje overlay nad UI innej apki, przechwytując albo przepuszczając dotyki użytkownika by wykonać niezamierzone, wybrane przez atakującego akcje. Pełne przesłonięcie: overlay pokrywa kontrolkę docelową. Częściowe przesłonięcie: kontrolka pozostaje dotykalna, ale otaczający kontekst jest mylący -- Android nie zapewnia domyślnej ochrony przed tym wariantem. Kluczowy niuans: domyślna blokada Android 12 chroni tylko overlaye o nieprzezroczystości >=0.8; prawdziwe trojany bankowe (Cerberus, Anubis) używają przeważnie nieprzezroczystego phishingu przez accessibility, nie klasycznego przezroczystego przejścia. Zweryfikowane CVE-2016-2496 i CVE-2017-0492 (własne przykłady MITRE dla CWE-1021).
 
     '
-  desc_en: A malicious app draws a transparent overlay above another app's UI so that user taps are hijacked to perform unintended, attacker-chosen actions (Android equivalent of clickjacking).
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'A malicious app draws an overlay above another app''s UI, capturing or passing through user taps to perform unintended, attacker-chosen actions. Full occlusion: the overlay covers the target control. Partial occlusion: the control stays tappable, but surrounding context is misleading -- Android provides no default protection against this variant. Key nuance: Android 12''s default blocking only protects against overlays at >=0.8 opacity; real banking trojans (Cerberus, Anubis) predominantly use opaque, accessibility-driven phishing, not the classic transparent pass-through. Verified CVE-2016-2496 and CVE-2017-0492 (MITRE''s own demonstrative examples for CWE-1021).'
+  lang: kotlin
+  vuln: '// VULNERABLE: no touch filtering -- an overlay above this
+
+    // button (opaque or transparent) can capture or pass through
+
+    // the tap with no framework-level rejection
+
+    <Button android:id="@+id/grantPermissionButton" android:text="Allow" />
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: OWASP MASTG (testing for overlay/tapjacking, filterTouchesWhenObscured); CWE-1021 (Improper Restriction of Rendered UI Layers).'
+  safe: "// SAFE: full-occlusion filtering plus manual rejection of\n// partial occlusion, which Android does not cover by default\n<Button android:id=\"@+id/grantPermissionButton\"\n    android:text=\"Allow\"\n    android:filterTouchesWhenObscured=\"true\" />\n\noverride fun onFilterTouchEventForSecurity(event: MotionEvent): Boolean {\n    val obscured = (event.flags and MotionEvent.FLAG_WINDOW_IS_OBSCURED) != 0\n    val partiallyObscured = (event.flags and MotionEvent.FLAG_WINDOW_IS_PARTIALLY_OBSCURED) != 0\n    return if (obscured || partiallyObscured) false else super.onFilterTouchEventForSecurity(event)\n}\n"
+  note_en: 'Source: OWASP MASVS-PLATFORM-3, MASTG-TEST-0035 (Testing for Overlay Attacks). CWE-1021 confirmed unanimously across 3 research passes -- correction cross-referenced from this catalog''s Task Hijacking entry (15.14), which found CWE-1021 mis-assigned there. CVE-2016-2496 and CVE-2017-0492 are MITRE''s own demonstrative examples for CWE-1021; CVE-2021-39691 (2021, CVSS ~7.3) confirms the mapping remains live.'
 - id: '15.16'
   name: Insecure Deep Link / Custom URL Scheme Handling
   severity: High

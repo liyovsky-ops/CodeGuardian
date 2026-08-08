@@ -48,6 +48,7 @@ export const LEARNING_PATH = [
   '15.12', // Intent Redirection
   '15.13', // Insecure IPC via Exported Components
   '15.14', // Task Hijacking (StrandHogg)
+  '15.15', // Tapjacking (UI Overlay Attack)
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

@@ -1,0 +1,368 @@
+meta:
+  id: mobiletapjacking
+  threatId: '15.15'
+  severity: Medium
+  color: '#4d7c0f'
+  colorRgb: 77,124,15
+  cwe: CWE-1021
+  cvss: N/A (technique class; verified platform CVEs include CVE-2016-2496 and CVE-2017-0492, both cited by MITRE itself as CWE-1021's own demonstrative examples, and the modern CVE-2021-39691, CVSS ~7.3 High)
+  standard: OWASP MASVS-PLATFORM-3, MASTG-TEST-0035 (Testing for Overlay Attacks)
+hero:
+  titleMain: 'Tapjacking '
+  titleGrad: (UI Overlay Attack)
+  titleTail: ''
+  topbar: Tapjacking / UI Overlay Attack (Android)
+  lead:
+    en: 'All three research passes independently confirmed the correction flagged by this catalog''s own Task Hijacking entry (15.14): CWE-1021 (Improper Restriction of Rendered UI Layers or Frames) is the correct primary CWE for tapjacking specifically, not for task-stack manipulation. MITRE''s own text lists "Clickjacking, UI Redress Attack, Tapjacking" as CWE-1021''s alternate terms, and -- unusually strong corroboration -- MITRE''s own demonstrative examples on that CWE page are two real Android tapjacking CVEs (CVE-2016-2496 and CVE-2017-0492), with a third, CVE-2021-39691, independently confirmed as classified CWE-1021 in its own GitHub Security Advisory. The core mechanism, per Android''s own documentation, is either full occlusion (an attacker''s overlay covers the touch area, capturing the tap directly or letting it pass through to a hidden real control while displaying deceptive UI) or partial occlusion (the real control stays tappable, but surrounding context is obscured to mislead the user about what the tap means) -- Android provides no default protection against the partial-occlusion variant at all. All three research passes converged on an important, consistent scoping nuance: the overlay attacks seen in real banking trojans (Cerberus, Anubis, EventBot, TeaBot) are predominantly accessibility-driven, opaque fake-login-screen phishing, not the narrower transparent tap-pass-through that "tapjacking" originally described -- both belong under this entry, but conflating them overstates how exploitable classic tapjacking remains on modern, patched Android. A second unanimous finding, with a very specific technical detail all three teams converged on independently: Android 12''s (API 31) default protection against untrusted obscured touches only blocks overlays whose opacity is at or above roughly 0.8 -- an attacker who keeps their overlay''s opacity below that threshold, or fully transparent, can still slip touches through on a fully patched device.'
+    pl: 'Wszystkie trzy przejścia badawcze niezależnie potwierdziły korektę oflagowaną przez własny wpis Task Hijacking tego katalogu (15.14): CWE-1021 (Improper Restriction of Rendered UI Layers or Frames) to poprawne główne CWE konkretnie dla tapjacking, nie dla manipulacji stosem zadań. Własny tekst MITRE wylicza "Clickjacking, UI Redress Attack, Tapjacking" jako alternatywne terminy CWE-1021, a -- niezwykle silne potwierdzenie -- własne przykłady demonstracyjne MITRE na tej stronie CWE to dwa prawdziwe CVE tapjacking Android (CVE-2016-2496 i CVE-2017-0492), z trzecim, CVE-2021-39691, niezależnie potwierdzonym jako sklasyfikowanym CWE-1021 we własnym GitHub Security Advisory. Podstawowy mechanizm, zgodnie z własną dokumentacją Android, to albo pełne przesłonięcie (overlay atakującego pokrywa obszar dotyku, przechwytując tap bezpośrednio albo pozwalając mu przejść do ukrytej prawdziwej kontrolki podczas wyświetlania zwodniczego UI) albo częściowe przesłonięcie (prawdziwa kontrolka pozostaje dotykalna, ale otaczający kontekst jest przesłonięty by zmylić użytkownika co do znaczenia tapu) -- Android nie zapewnia żadnej domyślnej ochrony przed wariantem częściowego przesłonięcia w ogóle. Wszystkie trzy przejścia badawcze zbiegły się na ważnym, spójnym niuansie zakresu: ataki overlay widziane w prawdziwych trojanach bankowych (Cerberus, Anubis, EventBot, TeaBot) to przeważnie phishing przez opartą na accessibility, nieprzezroczystą fałszywą stronę logowania, nie węższe przezroczyste przejście tapu które "tapjacking" pierwotnie opisywał -- oba należą do tego wpisu, ale mylenie ich przecenia jak eksploatowalny pozostaje klasyczny tapjacking na nowoczesnym, załatanym Android. Drugie jednomyślne ustalenie, z bardzo konkretnym szczegółem technicznym na którym wszystkie trzy zespoły zbiegły się niezależnie: domyślna ochrona Android 12 (API 31) przed niezaufanymi przesłoniętymi dotykami blokuje tylko overlaye o nieprzezroczystości na poziomie lub powyżej około 0.8 -- atakujący który utrzymuje nieprzezroczystość swojego overlay poniżej tego progu, albo w pełni przezroczystą, wciąż może przepuścić dotyki na w pełni załatanym urządzeniu.'
+  metrics:
+  - k: CWE-1021
+    v:
+      en: MITRE's own demonstrative examples are two real Android tapjacking CVEs (2016-2496, 2017-0492) -- the strongest possible CWE anchor in this catalog
+      pl: Własne przykłady demonstracyjne MITRE to dwa prawdziwe CVE tapjacking Android (2016-2496, 2017-0492) -- najsilniejsze możliwe zakotwiczenie CWE w tym katalogu
+  - k: 0.8 opacity
+    v:
+      en: Android 12's default untrusted-touch block only stops overlays at or above this opacity threshold -- lower opacity still slips through
+      pl: domyślna blokada niezaufanego dotyku Android 12 zatrzymuje tylko overlaye na poziomie lub powyżej tego progu nieprzezroczystości -- niższa nieprzezroczystość wciąż przechodzi
+  - k: CVE-2021-39691
+    v:
+      en: modern WindowManager tapjacking bug, Android 10/11/12, CVSS ~7.3 High, explicitly classified CWE-1021
+      pl: nowoczesny błąd tapjacking WindowManager, Android 10/11/12, CVSS ~7.3 High, jawnie sklasyfikowany CWE-1021
+  - k: Not the same
+    v:
+      en: banking-trojan overlay phishing (opaque, accessibility-driven) is a distinct pattern from classic transparent tap-pass-through
+      pl: phishing overlay trojanów bankowych (nieprzezroczysty, oparty na accessibility) to odrębny wzorzec od klasycznego przezroczystego przejścia tapu
+  sources:
+  - label: Android -- Tapjacking risk page
+    url: https://developer.android.com/privacy-and-security/risks/tapjacking
+  - label: CWE-1021 -- Improper Restriction of Rendered UI Layers or Frames
+    url: https://cwe.mitre.org/data/definitions/1021.html
+  - label: Android 12 behavior changes -- untrusted touch blocking
+    url: https://developer.android.com/about/versions/12/behavior-changes-all
+  - label: OWASP MASTG-TEST-0035 -- Testing for Overlay Attacks
+    url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0035/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: All three research passes converged on the same taxonomy from Android's own documentation, plus a scoping distinction between the classic technique and how it actually appears in real malware today.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tej samej taksonomii z własnej dokumentacji Android, plus rozróżnieniu zakresu między klasyczną techniką a tym jak faktycznie pojawia się w prawdziwym malware dzisiaj.
+    items:
+    - name: Full occlusion -- opaque fake UI or transparent pass-through
+      sev: medium
+      description:
+        en: An attacker-drawn window (TYPE_APPLICATION_OVERLAY since API 26, historically TYPE_SYSTEM_ALERT) fully covers a target control. Either it shows attacker UI that captures the tap directly (a fake button), or it is set non-touchable so the tap passes through to the hidden real control while the overlay controls what the user sees. Android's own docs state plainly that TYPE_APPLICATION_OVERLAY windows are NOT trusted windows -- a common misconception worth pre-empting.
+        pl: Okno narysowane przez atakującego (TYPE_APPLICATION_OVERLAY od API 26, historycznie TYPE_SYSTEM_ALERT) w pełni pokrywa docelową kontrolkę. Albo pokazuje UI atakującego które przechwytuje tap bezpośrednio (fałszywy przycisk), albo jest ustawione jako niedotykalne więc tap przechodzi do ukrytej prawdziwej kontrolki podczas gdy overlay kontroluje co widzi użytkownik. Własna dokumentacja Android stwierdza wprost że okna TYPE_APPLICATION_OVERLAY NIE są zaufanymi oknami -- powszechne błędne przekonanie warte uprzedzenia.
+      payload: "val overlay = WindowManager.LayoutParams(\n    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,\n    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,\n    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,  // tap passes through to real control beneath\n    PixelFormat.TRANSLUCENT,\n)"
+    - name: Partial occlusion -- real control stays tappable, context is misleading
+      sev: medium
+      description:
+        en: The legitimate control remains visible and functional, but the attacker obscures or replaces surrounding UI (labels, warnings, context) so the user misunderstands what the tap will do. Android explicitly provides no default protection against this variant -- confirmed identically by all three teams -- because rejecting all partially-obscured touches breaks legitimate floating apps and accessibility tools.
+        pl: Legalna kontrolka pozostaje widoczna i funkcjonalna, ale atakujący przesłania albo zastępuje otaczające UI (etykiety, ostrzeżenia, kontekst) więc użytkownik źle rozumie co zrobi tap. Android jawnie nie zapewnia żadnej domyślnej ochrony przed tym wariantem -- potwierdzone identycznie przez wszystkie trzy zespoły -- ponieważ odrzucanie wszystkich częściowo przesłoniętych dotyków psuje legalne apki pływające i narzędzia ułatwień dostępu.
+      payload: '// real "Allow" permission button stays tappable underneath,
+
+        // but attacker-drawn text nearby claims it means something benign
+
+        // (e.g. "Continue to next screen" instead of the true permission grant)'
+    - name: Activity Sandwich -- exported activity launched and overlaid
+      sev: medium
+      description:
+        en: A malicious app launches a victim app's exported Activity, then immediately draws its own overlay window on top -- a partial-occlusion technique specifically enabled by an unnecessarily exported component. Android's own tapjacking guidance names this exact pattern and recommends android:exported="false" as the specific defense.
+        pl: Złośliwa apka uruchamia wyeksportowaną Activity apki ofiary, następnie natychmiast rysuje własne okno overlay na wierzchu -- technika częściowego przesłonięcia specyficznie umożliwiona przez niepotrzebnie wyeksportowany komponent. Własne wskazówki tapjacking Android nazywają dokładnie ten wzorzec i zalecają android:exported="false" jako konkretną obronę.
+      payload: '// attacker: startActivity(Intent().setClassName("victim.pkg", "victim.pkg.SensitiveActivity"))
+
+        // immediately followed by adding an overlay window on top'
+    - name: Banking-trojan overlay phishing -- accessibility-driven, opaque, at scale
+      sev: high
+      description:
+        en: Real malware families (Cerberus, Anubis, EventBot, TeaBot) predominantly abuse accessibility services to self-grant SYSTEM_ALERT_WINDOW and render full-opacity fake login screens pulled from a C2 server, over hundreds of real banking apps -- a distinct pattern from classic transparent tap-hijacking, confirmed unanimously by all three teams as commonly conflated with it in secondary reporting.
+        pl: Prawdziwe rodziny malware (Cerberus, Anubis, EventBot, TeaBot) przeważnie nadużywają usług ułatwień dostępu by samodzielnie przyznać sobie SYSTEM_ALERT_WINDOW i renderować w pełni nieprzezroczyste fałszywe ekrany logowania pobrane z serwera C2, nad setkami prawdziwych apek bankowych -- odrębny wzorzec od klasycznego przezroczystego porwania tapu, potwierdzony jednomyślnie przez wszystkie trzy zespoły jako powszechnie z nim mylony w relacjach drugorzędnych.
+      payload: '// accessibility service self-grants SYSTEM_ALERT_WINDOW,
+
+        // downloads an HTML overlay template matching the foreground
+
+        // banking app''s package name, renders a pixel-perfect fake login'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The correction confirmed by all three research passes: filterTouchesWhenObscured alone is not a complete fix -- it is off by default, per-view, and covers full occlusion only, leaving partial occlusion open unless handled separately.'
+      pl: 'Korekta potwierdzona przez wszystkie trzy przejścia badawcze: samo filterTouchesWhenObscured to nie kompletna naprawa -- jest domyślnie wyłączone, per-widok, i pokrywa tylko pełne przesłonięcie, pozostawiając częściowe przesłonięcie otwarte chyba że obsłużone osobno.'
+    languages:
+    - label: Android XML/Kotlin -- unprotected sensitive button
+      lang: kotlin
+      vulnerable: "<!-- VULNERABLE: no touch filtering -- an overlay above this\n     button (opaque or transparent) can capture or pass through\n     the tap with no framework-level rejection -->\n<Button\n    android:id=\"@+id/grantPermissionButton\"\n    android:text=\"Allow\" />"
+      safe: "<!-- SAFE: rejects touches while a full-occlusion overlay is\n     present; still must be paired with manual FLAG_WINDOW_IS_PARTIALLY_OBSCURED\n     handling below for the partial-occlusion case this alone does not cover -->\n<Button\n    android:id=\"@+id/grantPermissionButton\"\n    android:text=\"Allow\"\n    android:filterTouchesWhenObscured=\"true\" />"
+    - label: Kotlin -- covering the gap filterTouchesWhenObscured leaves open
+      lang: kotlin
+      vulnerable: '// VULNERABLE: filterTouchesWhenObscured=true alone --
+
+        // still accepts touches when only PARTIALLY obscured
+
+        // (e.g. surrounding context hidden, button itself untouched)'
+      safe: "// SAFE: explicit rejection of partially-obscured touches too,\n// closing the gap Android does not protect by default\noverride fun onFilterTouchEventForSecurity(event: MotionEvent): Boolean {\n    val obscured = (event.flags and MotionEvent.FLAG_WINDOW_IS_OBSCURED) != 0\n    val partiallyObscured = (event.flags and MotionEvent.FLAG_WINDOW_IS_PARTIALLY_OBSCURED) != 0\n    if (obscured || partiallyObscured) return false  // drop the touch\n    return super.onFilterTouchEventForSecurity(event)\n}"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: separately assess platform-default coverage, app-side view protection, and the accessibility-driven variant, since no single check covers all three.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: osobno oceń pokrycie domyślne platformy, ochronę widoku po stronie aplikacji, i wariant oparty na accessibility, ponieważ żadne pojedyncze sprawdzenie nie pokrywa wszystkich trzech.'
+    steps:
+    - title:
+        en: Check the target device's API level against the untrusted-touch default
+        pl: Sprawdź poziom API urządzenia docelowego względem domyślnego niezaufanego dotyku
+      description:
+        en: Confirm whether the device is on Android 12+ (API 31), which blocks touches through untrusted overlays with opacity at or above ~0.8 by default -- but remember this default does nothing for opaque banking-trojan-style overlay phishing or for overlays kept below that opacity threshold.
+        pl: Potwierdź czy urządzenie jest na Android 12+ (API 31), które domyślnie blokuje dotyki przez niezaufane overlaye o nieprzezroczystości na poziomie lub powyżej ~0.8 -- ale pamiętaj że ten domyślny mechanizm nic nie robi dla nieprzezroczystego phishingu overlay w stylu trojana bankowego ani dla overlayów utrzymywanych poniżej tego progu nieprzezroczystości.
+    - title:
+        en: Audit sensitive views for filterTouchesWhenObscured coverage
+        pl: Zaudytuj wrażliwe widoki pod kątem pokrycia filterTouchesWhenObscured
+      description:
+        en: Grep source/decompiled code and layout XML for permission-grant, payment-confirmation, and login controls lacking android:filterTouchesWhenObscured or the programmatic equivalent -- mobsfscan's android_detect_tapjacking rule automates exactly this check.
+        pl: Grepuj kod źródłowy/zdekompilowany i XML layoutu pod kątem kontrolek przyznawania uprawnień, potwierdzania płatności, i logowania brakujących android:filterTouchesWhenObscured albo programowego odpowiednika -- reguła android_detect_tapjacking mobsfscan automatyzuje dokładnie to sprawdzenie.
+    - title:
+        en: Check whether partial-occlusion rejection is implemented at all
+        pl: Sprawdź czy odrzucanie częściowego przesłonięcia jest w ogóle zaimplementowane
+      description:
+        en: Since Android provides no default protection here, look specifically for a custom onFilterTouchEventForSecurity() override checking FLAG_WINDOW_IS_PARTIALLY_OBSCURED -- its absence (the common case, per all three research passes) means the Activity Sandwich and similar partial-occlusion variants remain viable regardless of platform version.
+        pl: Ponieważ Android nie zapewnia tutaj żadnej domyślnej ochrony, szukaj konkretnie własnego nadpisania onFilterTouchEventForSecurity() sprawdzającego FLAG_WINDOW_IS_PARTIALLY_OBSCURED -- jego brak (powszechny przypadek, zgodnie ze wszystkimi trzema przejściami badawczymi) oznacza że Activity Sandwich i podobne warianty częściowego przesłonięcia pozostają wykonalne niezależnie od wersji platformy.
+    - title:
+        en: Separately assess the accessibility-driven overlay-phishing vector
+        pl: Osobno oceń wektor phishingu overlay opartego na accessibility
+      description:
+        en: Check whether the app marks sensitive views with accessibilityDataSensitive (API 34+) and whether any bundled or side-loadable component could abuse an accessibility service grant to render opaque fake UI -- this is the vector real banking-trojan families actually use, distinct from the platform's transparent-overlay touch-block entirely.
+        pl: Sprawdź czy apka oznacza wrażliwe widoki jako accessibilityDataSensitive (API 34+) i czy jakikolwiek dołączony albo instalowalny z boku komponent mógłby nadużyć grantu usługi ułatwień dostępu by renderować nieprzezroczyste fałszywe UI -- to wektor którego faktycznie używają prawdziwe rodziny trojanów bankowych, zupełnie odrębny od blokady dotyku przezroczystego overlay platformy.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: All three research passes converged on the identical ranking and, notably, on the exact same technical caveat for the top-ranked control -- the 0.8 opacity threshold that lets a carefully-tuned overlay evade Android's own default protection.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na identycznym rankingu i, co godne uwagi, na dokładnie tym samym zastrzeżeniu technicznym dla najwyżej sklasyfikowanej kontroli -- progu nieprzezroczystości 0.8 który pozwala starannie dostrojonemu overlay ominąć własną domyślną ochronę Android.
+    items:
+    - rank: 1
+      eff: 75
+      kind: primary
+      label:
+        en: Android 12+ default untrusted-touch blocking (platform, free)
+        pl: Domyślna blokada niezaufanego dotyku Android 12+ (platforma, za darmo)
+      note:
+        en: 'The system drops touches passing through an untrusted overlay by default on API 31+, with zero developer action required. Critical caveat confirmed identically by all three teams: this only blocks overlays at or above roughly 0.8 combined opacity (InputManager.getMaximumObscuringOpacityForTouch()) -- an attacker who keeps the overlay below that threshold, or fully transparent, still gets touches through. It also does nothing against opaque fake-UI overlay phishing, since the user is tapping the attacker''s own control directly, not an obscured legitimate one.'
+        pl: 'System domyślnie odrzuca dotyki przechodzące przez niezaufany overlay na API 31+, bez wymaganej akcji dewelopera. Krytyczne zastrzeżenie potwierdzone identycznie przez wszystkie trzy zespoły: to blokuje tylko overlaye na poziomie lub powyżej około 0.8 łącznej nieprzezroczystości (InputManager.getMaximumObscuringOpacityForTouch()) -- atakujący który utrzymuje overlay poniżej tego progu, albo w pełni przezroczysty, wciąż przepuszcza dotyki. Nic też nie robi przeciw nieprzezroczystemu phishingowi overlay UI, ponieważ użytkownik dotyka bezpośrednio własnej kontrolki atakującego, nie przesłoniętej legalnej.'
+    - rank: 2
+      eff: 60
+      kind: primary
+      label:
+        en: setFilterTouchesWhenObscured(true) / android:filterTouchesWhenObscured on sensitive views
+        pl: setFilterTouchesWhenObscured(true) / android:filterTouchesWhenObscured na wrażliwych widokach
+      note:
+        en: 'The portable app-side control, effective below API 31 too, for full occlusion specifically. Caveat, confirmed by all three teams: off by default and applied per-view -- any sensitive control the developer forgets remains unprotected -- and it does not cover partial occlusion at all.'
+        pl: 'Przenośna kontrola po stronie aplikacji, skuteczna też poniżej API 31, konkretnie dla pełnego przesłonięcia. Zastrzeżenie, potwierdzone przez wszystkie trzy zespoły: domyślnie wyłączone i stosowane per-widok -- każda wrażliwa kontrolka o której deweloper zapomni pozostaje niechroniona -- i w ogóle nie pokrywa częściowego przesłonięcia.'
+    - rank: 3
+      eff: 55
+      kind: strong
+      label:
+        en: Window.setHideOverlayWindows(true) for a specific sensitive Activity (API 31+)
+        pl: Window.setHideOverlayWindows(true) dla konkretnej wrażliwej Activity (API 31+)
+      note:
+        en: 'Lets an Activity actively hide all third-party overlay windows while it is shown -- strong for a dedicated payment/permission screen. Caveat: API 31+ only, and must be explicitly called per sensitive screen.'
+        pl: 'Pozwala Activity aktywnie ukryć wszystkie zewnętrzne okna overlay podczas gdy jest pokazywana -- silne dla dedykowanego ekranu płatności/uprawnień. Zastrzeżenie: tylko API 31+, i musi być jawnie wywołane per wrażliwy ekran.'
+    - rank: 4
+      eff: 45
+      kind: strong
+      label:
+        en: Manual FLAG_WINDOW_IS_PARTIALLY_OBSCURED rejection (onFilterTouchEventForSecurity)
+        pl: Ręczne odrzucanie FLAG_WINDOW_IS_PARTIALLY_OBSCURED (onFilterTouchEventForSecurity)
+      note:
+        en: 'The only real defense against partial occlusion and the Activity Sandwich variant. Caveat, confirmed by all three teams directly from Android''s own documentation: blanket rejection of partially-obscured touches can interfere with legitimate floating apps and accessibility tools, which is exactly why Google warns against applying it universally and why it is rarely deployed in practice.'
+        pl: 'Jedyna prawdziwa obrona przed częściowym przesłonięciem i wariantem Activity Sandwich. Zastrzeżenie, potwierdzone przez wszystkie trzy zespoły bezpośrednio z własnej dokumentacji Android: ogólne odrzucanie częściowo przesłoniętych dotyków może kolidować z legalnymi apkami pływającymi i narzędziami ułatwień dostępu, dokładnie dlatego Google ostrzega przed uniwersalnym stosowaniem tego i dlaczego jest rzadko wdrażane w praktyce.'
+    - rank: 5
+      eff: 40
+      kind: weak
+      label:
+        en: accessibilityDataSensitive on sensitive views (API 34+)
+        pl: accessibilityDataSensitive na wrażliwych widokach (API 34+)
+      note:
+        en: 'Blocks non-tool-declared accessibility services from reading or acting on marked views, blunting the accessibility-driven overlay-phishing vector real banking trojans actually use. Caveat: API 34+ only; services that self-declare isAccessibilityTool=true are exempt, and this addresses the accessibility angle specifically, not classic transparent tap-hijacking.'
+        pl: 'Blokuje niezadeklarowanym jako narzędzie usługom ułatwień dostępu czytanie albo działanie na oznaczonych widokach, tępiąc wektor phishingu overlay opartego na accessibility którego faktycznie używają trojany bankowe. Zastrzeżenie: tylko API 34+; usługi które same deklarują isAccessibilityTool=true są zwolnione, i to adresuje konkretnie kąt accessibility, nie klasyczne przezroczyste porwanie tapu.'
+    - rank: 6
+      eff: 30
+      kind: weak
+      label:
+        en: android:exported="false" on activities not meant for external launch
+        pl: android:exported="false" na aktywnościach nieprzeznaczonych do zewnętrznego uruchomienia
+      note:
+        en: 'Directly closes the Activity Sandwich variant, named explicitly in Android''s own tapjacking guidance. Caveat: defense-in-depth only against this one sub-variant; does nothing for overlays targeting an activity that is legitimately exported.'
+        pl: 'Bezpośrednio zamyka wariant Activity Sandwich, nazwany jawnie we własnych wskazówkach tapjacking Android. Zastrzeżenie: tylko obrona w głąb przeciw temu jednemu podwariantowi; nic nie robi dla overlayów celujących w aktywność która jest legalnie wyeksportowana.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: All three research passes converged on the same unusually strong CWE-anchoring incidents -- two real Android tapjacking CVEs that MITRE itself uses as CWE-1021's own worked examples -- plus a consistent finding that the largest real-world exploitation of this technique class runs through accessibility-driven banking-trojan overlays, not classic transparent tap-hijacking.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tych samych niezwykle silnie zakotwiczających CWE incydentach -- dwóch prawdziwych CVE tapjacking Android których samo MITRE używa jako własnych przykładów roboczych CWE-1021 -- plus spójnym ustaleniu że największa rzeczywista eksploatacja tej klasy techniki przebiega przez oparte na accessibility overlaye trojanów bankowych, nie klasyczne przezroczyste porwanie tapu.
+    items:
+    - org: CVE-2016-2496 -- Android permission-dialog tapjacking
+      year: 2016
+      impact: Attackers could conduct tapjacking attacks and access arbitrary private-storage files by creating a partially overlapping window over the permission dialog
+      cost: Fixed in the Android Security Bulletin June 2016; cited by MITRE directly as a CWE-1021 demonstrative example
+      description:
+        en: Confirmed identically by the research pass that fetched MITRE's own CWE-1021 page verbatim -- this is not an inferred fit but a case MITRE itself uses to define the weakness class, making it the single strongest available CWE-anchoring incident in this catalog's Mobile Security section.
+        pl: Potwierdzone identycznie przez przejście badawcze które pobrało własną stronę CWE-1021 MITRE dosłownie -- to nie wywnioskowane dopasowanie ale przypadek którego samo MITRE używa by zdefiniować klasę słabości, czyniąc to pojedynczym najsilniejszym dostępnym incydentem zakotwiczającym CWE w sekcji Mobile Security tego katalogu.
+    - org: CVE-2021-39691 -- WindowManager tapjacking (modern)
+      year: 2021
+      impact: Local privilege escalation via an incorrect window flag when processing user input, CVSS ~7.3 High, affecting Android 10/11/12
+      cost: Fixed in the Android Security Bulletin June 2022; explicitly classified CWE-1021 in its own GitHub Security Advisory
+      description:
+        en: Independently verified via a live GitHub Security Advisory record, confirming CWE-1021's applicability to tapjacking is not just a historical/legacy mapping -- the weakness class remained live enough to produce a fresh, independently-classified platform CVE as recently as the versions this catalog's other Mobile Security entries also cover.
+        pl: Niezależnie zweryfikowane przez żywy zapis GitHub Security Advisory, potwierdzając że stosowalność CWE-1021 do tapjacking to nie tylko historyczne/przestarzałe mapowanie -- klasa słabości pozostała wystarczająco żywa by wyprodukować świeże, niezależnie sklasyfikowane CVE platformy tak niedawno jak wersje które pokrywają też inne wpisy Mobile Security tego katalogu.
+    - org: Banking-trojan overlay phishing -- Cerberus, Anubis, EventBot, TeaBot
+      year: 2019
+      impact: Accessibility-driven self-granting of SYSTEM_ALERT_WINDOW followed by rendering opaque, C2-supplied fake login screens over hundreds of real banking apps
+      cost: Confirmed via primary vendor threat intelligence (ThreatFabric, Lookout, Cybereason, Cleafy) across multiple, independently-tracked malware families
+      description:
+        en: 'All three research passes independently flagged the same scoping distinction: this is the dominant real-world exploitation pattern of the overlay-attack surface, but it is mechanically opaque-overlay phishing enabled by accessibility abuse, not the narrower transparent tap-pass-through classic tapjacking describes -- conflating the two, as much secondary reporting does, overstates how exploitable the classic technique remains while understating how live the broader overlay-attack surface actually is.'
+        pl: 'Wszystkie trzy przejścia badawcze niezależnie oflagowały to samo rozróżnienie zakresu: to dominujący rzeczywisty wzorzec eksploatacji powierzchni ataku overlay, ale jest mechanicznie phishingiem nieprzezroczystego overlay umożliwionym przez nadużycie accessibility, nie węższym przezroczystym przejściem tapu które opisuje klasyczny tapjacking -- mylenie obu, jak robi wiele relacji drugorzędnych, przecenia jak eksploatowalna pozostaje klasyczna technika przy jednoczesnym niedocenianiu jak żywa jest faktycznie szersza powierzchnia ataku overlay.'
+    inlineSources:
+    - label: CWE-1021 (MITRE) -- demonstrative examples CVE-2016-2496, CVE-2017-0492
+      url: https://cwe.mitre.org/data/definitions/1021.html
+    - label: GHSA-4fq5-hp4p-wwmv -- CVE-2021-39691
+      url: https://github.com/advisories/GHSA-4fq5-hp4p-wwmv
+    - label: ThreatFabric -- Cerberus banking trojan
+      url: https://www.threatfabric.com/blogs/cerberus-a-new-banking-trojan-from-the-underworld
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on the same core signals -- overlay-capability declaration on the attacker side, absence of touch filtering on the defender side -- while flagging a real-world CWE-mapping inconsistency worth knowing about.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tych samych podstawowych sygnałach -- deklaracja zdolności overlay po stronie atakującego, brak filtrowania dotyku po stronie obrońcy -- flagując rzeczywistą niespójność mapowania CWE wartą poznania.
+    sast:
+    - - mobsfscan -- android_detect_tapjacking rule
+      - 'Flags absence of setFilterTouchesWhenObscured(true) on sensitive views. Note: this rule maps to CWE-200 in its own metadata, not CWE-1021 -- a real tooling-vs-MITRE mapping inconsistency worth knowing rather than treating tool output as the authoritative CWE'
+    - - Ostorlab -- TAPJACKING_VULNERABILITY check
+      - Dedicated static rule for the technique
+    - - MobSF
+      - Surfaces SYSTEM_ALERT_WINDOW permission declaration and overlay-capable window-type usage during manifest/code analysis
+    dast:
+    - - Android 12+ Logcat signal
+      - The platform itself logs "Untrusted touch due to occlusion by <package>" when it blocks an obscured touch -- a directly observable runtime signal during testing
+    - - Runtime MotionEvent flag inspection
+      - An app or tester can inspect FLAG_WINDOW_IS_OBSCURED / FLAG_WINDOW_IS_PARTIALLY_OBSCURED at touch time to confirm whether a given screen is actually protected
+    note:
+      en: <strong>Key signal:</strong> a clean scan for classic overlay-capability declarations does not rule out the accessibility-driven overlay-phishing pattern real banking trojans use -- that requires separately checking accessibility-service permissions and accessibilityDataSensitive coverage, not just SYSTEM_ALERT_WINDOW/TYPE_APPLICATION_OVERLAY signals.
+      pl: <strong>Kluczowy sygnał:</strong> czysty skan pod kątem klasycznych deklaracji zdolności overlay nie wyklucza wzorca phishingu overlay opartego na accessibility którego używają prawdziwe trojany bankowe -- to wymaga osobnego sprawdzenia uprawnień usługi ułatwień dostępu i pokrycia accessibilityDataSensitive, nie tylko sygnałów SYSTEM_ALERT_WINDOW/TYPE_APPLICATION_OVERLAY.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes independently confirmed CWE-1021 -- unusually well-supported since MITRE's own page uses real Android tapjacking CVEs as its worked examples -- while the exact OWASP MASWE weakness ID for tapjacking specifically was contested between two teams and is presented here honestly rather than asserted with false confidence.
+      pl: Wszystkie trzy przejścia badawcze niezależnie potwierdziły CWE-1021 -- niezwykle dobrze poparte ponieważ własna strona MITRE używa prawdziwych CVE tapjacking Android jako własnych przykładów roboczych -- podczas gdy dokładny ID słabości OWASP MASWE konkretnie dla tapjacking był sporny między dwoma zespołami i jest przedstawiony tutaj uczciwie zamiast asertowany z fałszywą pewnością.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-1021 -- Improper Restriction of Rendered UI Layers or Frames (primary, unanimous across all three research passes and cross-catalog-consistent with the 15.14 Task Hijacking correction). Alternate terms explicitly list "Clickjacking, UI Redress Attack, Tapjacking." MITRE's own demonstrative examples are CVE-2016-2496 and CVE-2017-0492 -- both real Android tapjacking cases, not inferred analogies.
+      - CWE-451 -- User Interface Misrepresentation of Critical Information (secondary, a direct parent of CWE-1021). Captures the deception-of-user-intent angle common to both occlusion variants.
+      - 'Real-tooling caveat: mobsfscan''s own tapjacking detection rule maps to CWE-200 in its metadata, not CWE-1021 -- a genuine mapping inconsistency between MITRE''s authoritative classification and at least one widely-used scanner, worth knowing when interpreting tool output.'
+    - std: OWASP
+      items:
+      - MASVS-PLATFORM-3 -- "The app uses the user interface securely" (control group, confirmed).
+      - MASTG-TEST-0035 -- "Testing for Overlay Attacks" (unanimously confirmed test, MASVS-PLATFORM). Also MASTG-TEST-0340 ("References to Overlay Attack Protections") as a supporting static check.
+      - 'MASWE weakness ID: research passes disagreed between MASWE-0039 and MASWE-0056 as the tapjacking-specific weakness (both direct-fetch attempts returned errors during research) -- cite MASTG-TEST-0035 as the solidly-confirmed anchor and treat the exact MASWE number as needing direct re-verification before quoting.'
+    inlineSources:
+    - label: CWE-1021 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1021.html
+    - label: OWASP MASTG-TEST-0035
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0035/
+    - label: OWASP MASVS-PLATFORM-3
+      url: https://mas.owasp.org/MASVS/controls/MASVS-PLATFORM-3/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If tapjacking exposure is confirmed in a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu ekspozycji tapjacking w wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: Identify which sub-case applies -- full occlusion, partial occlusion/Activity Sandwich, or accessibility-driven overlay phishing -- since each needs a different specific control, not one universal fix
+      pl: Zidentyfikuj który podprzypadek ma zastosowanie -- pełne przesłonięcie, częściowe przesłonięcie/Activity Sandwich, albo phishing overlay oparty na accessibility -- ponieważ każdy potrzebuje innej konkretnej kontroli, nie jednej uniwersalnej naprawy
+    - en: Audit every sensitive view (permission grants, payment confirmation, login, destructive actions) for filterTouchesWhenObscured coverage, and separately confirm whether partial-occlusion rejection (onFilterTouchEventForSecurity) is implemented anywhere at all
+      pl: Zaudytuj każdy wrażliwy widok (przyznania uprawnień, potwierdzenie płatności, logowanie, akcje destrukcyjne) pod kątem pokrycia filterTouchesWhenObscured, i osobno potwierdź czy odrzucanie częściowego przesłonięcia (onFilterTouchEventForSecurity) jest w ogóle gdziekolwiek zaimplementowane
+    - en: 'Ship the fix matching this deep-dive''s top-ranked defenses: filterTouchesWhenObscured on every sensitive view first, setHideOverlayWindows on dedicated sensitive Activities, then manual partial-occlusion rejection where UX permits it'
+      pl: 'Wydaj naprawę pasującą do najwyżej sklasyfikowanych obron tego deep-dive: filterTouchesWhenObscured na każdym wrażliwym widoku najpierw, setHideOverlayWindows na dedykowanych wrażliwych Activity, następnie ręczne odrzucanie częściowego przesłonięcia tam gdzie UX na to pozwala'
+    - en: Do not assume the Android 12+ platform default alone is sufficient -- confirm it is not being bypassed via sub-0.8-opacity overlays, and separately assess accessibility-service permission exposure, since the platform default addresses neither
+      pl: Nie zakładaj że sam domyślny mechanizm platformy Android 12+ jest wystarczający -- potwierdź że nie jest omijany przez overlaye o nieprzezroczystości poniżej 0.8, i osobno oceń ekspozycję uprawnień usługi ułatwień dostępu, ponieważ domyślny mechanizm platformy nie adresuje żadnego z nich
+    - en: Re-verify with runtime MotionEvent flag inspection and the Android 12+ Logcat untrusted-touch signal to confirm the fix actually rejects the touch, not just that the API was called somewhere in the codebase
+      pl: Zweryfikuj ponownie przez inspekcję flag MotionEvent w czasie wykonania i sygnał Logcat niezaufanego dotyku Android 12+ by potwierdzić że naprawa faktycznie odrzuca dotyk, nie tylko że API zostało wywołane gdzieś w kodzie
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: Android -- Tapjacking risk page
+      url: https://developer.android.com/privacy-and-security/risks/tapjacking
+    - label: Android 12 behavior changes -- untrusted touch blocking
+      url: https://developer.android.com/about/versions/12/behavior-changes-all
+    - label: CWE-1021 -- Improper Restriction of Rendered UI Layers or Frames
+      url: https://cwe.mitre.org/data/definitions/1021.html
+    - label: CWE-451 -- User Interface Misrepresentation of Critical Information
+      url: https://cwe.mitre.org/data/definitions/451.html
+    - label: GHSA-4fq5-hp4p-wwmv -- CVE-2021-39691
+      url: https://github.com/advisories/GHSA-4fq5-hp4p-wwmv
+    - label: Android Security Bulletin -- September 2017 (CVE-2017-0752)
+      url: https://source.android.com/docs/security/bulletin/2017-09-01
+    - label: OWASP MASTG-TEST-0035 -- Testing for Overlay Attacks
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0035/
+    - label: OWASP MASVS-PLATFORM-3
+      url: https://mas.owasp.org/MASVS/controls/MASVS-PLATFORM-3/
+    - label: ThreatFabric -- Cerberus banking trojan
+      url: https://www.threatfabric.com/blogs/cerberus-a-new-banking-trojan-from-the-underworld
+    - label: mobsfscan -- android_detect_tapjacking rule
+      url: https://github.com/MobSF/mobsfscan/blob/main/mobsfscan/rules/semgrep/best_practices/tapjacking.yaml
