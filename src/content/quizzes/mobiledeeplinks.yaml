@@ -1,0 +1,122 @@
+threatId: '15.16'
+title:
+  en: Insecure Deep Link / Custom URL Scheme Handling -- knowledge check
+  pl: Insecure Deep Link / Custom URL Scheme Handling -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: vuln-or-not
+  prompt:
+    en: A team migrates their password-reset flow from a custom scheme to a fully domain-verified Android App Link and concludes the flow is now fully secure. All three research passes flagged this exact reasoning as the entry's central myth. Is the team correct?
+    pl: Zespół migruje swój przepływ resetu hasła z niestandardowego schematu na w pełni zweryfikowany domenowo Android App Link i wnioskuje że przepływ jest teraz w pełni bezpieczny. Wszystkie trzy przejścia badawcze oflagowały dokładnie to rozumowanie jako centralny mit tego wpisu. Czy zespół ma rację?
+  isVulnerable: true
+  cwe: CWE-939
+  explanation:
+    en: No. App Links solve the SOURCE problem -- guaranteeing only the domain-verified app receives the link -- but do nothing about the PARAMETER-TRUST problem. If the reset-password handler still trusts the token/email in the URL without a server-side check that the token belongs to the current authenticated user, the flow remains exploitable regardless of how well-verified the link's routing is.
+    pl: Nie. App Links rozwiązują problem ŹRÓDŁA -- gwarantując że tylko zweryfikowana domenowo apka otrzyma link -- ale nic nie robią z problemem ZAUFANIA PARAMETRÓW. Jeśli handler resetu hasła wciąż ufa tokenowi/emailowi w URL bez sprawdzenia po stronie serwera że token należy do bieżącego uwierzytelnionego użytkownika, przepływ pozostaje eksploatowalny niezależnie od tego jak dobrze zweryfikowane jest routowanie linku.
+- id: q2
+  type: multiple-choice
+  prompt:
+    en: What did research confirm is the actual standardized fix for OAuth authorization-code interception via custom-scheme redirects (RFC 8252 Section 8.1)?
+    pl: Co badania potwierdziły jako faktyczną ustandaryzowaną naprawę dla przechwycenia kodu autoryzacji OAuth przez przekierowania niestandardowego schematu (RFC 8252 Sekcja 8.1)?
+  choices:
+  - id: a
+    label:
+      en: PKCE (RFC 7636) -- mandatory for native OAuth clients per RFC 8252, making an intercepted authorization code useless without the code_verifier that never leaves the legitimate app
+      pl: PKCE (RFC 7636) -- obowiązkowe dla natywnych klientów OAuth zgodnie z RFC 8252, czyniące przechwycony kod autoryzacji bezużytecznym bez code_verifier który nigdy nie opuszcza legalnej apki
+  - id: b
+    label:
+      en: Choosing a longer, harder-to-guess custom scheme name for the redirect URI
+      pl: Wybranie dłuższej, trudniejszej do odgadnięcia nazwy niestandardowego schematu dla URI przekierowania
+  - id: c
+    label:
+      en: Disabling OAuth entirely and requiring users to enter credentials directly in the native app
+      pl: Całkowite wyłączenie OAuth i wymaganie od użytkowników wprowadzania danych uwierzytelniających bezpośrednio w natywnej apce
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'A longer scheme name provides zero real security -- obscurity is not ownership, and any app can still register any string. PKCE is the actual, RFC-mandated control: even if a malicious app intercepts the authorization code via scheme squatting, it cannot redeem the code for tokens without the code_verifier, which the legitimate app never transmits.'
+    pl: 'Dłuższa nazwa schematu zapewnia zero prawdziwego bezpieczeństwa -- niejasność to nie własność, a dowolna apka wciąż może zarejestrować dowolny string. PKCE to faktyczna, nakazana przez RFC kontrola: nawet jeśli złośliwa apka przechwyci kod autoryzacji przez podszywanie się pod schemat, nie może wymienić kodu na tokeny bez code_verifier, którego legalna apka nigdy nie transmituje.'
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Why is CWE-939 (this entry's primary CWE) a clean, non-overlapping choice alongside sibling entry 15.12's CWE-940 (Intent Redirection), confirmed by all three research passes?
+    pl: Dlaczego CWE-939 (główne CWE tego wpisu) to czysty, nienakładający się wybór obok CWE-940 siostrzanego wpisu 15.12 (Intent Redirection), potwierdzone przez wszystkie trzy przejścia badawcze?
+  choices:
+  - id: a
+    label:
+      en: CWE-939 is verified as a direct ChildOf CWE-940 -- it is the URL-scheme-handler specialization of the broader source-verification weakness, a coherent inheritance relationship rather than an accidental overlap
+      pl: CWE-939 jest zweryfikowane jako bezpośrednie ChildOf CWE-940 -- to specjalizacja handlera schematu URL szerszej słabości weryfikacji źródła, spójna relacja dziedziczenia zamiast przypadkowego nakładania się
+  - id: b
+    label:
+      en: CWE-939 and CWE-940 describe completely unrelated vulnerability classes with no connection to each other
+      pl: CWE-939 i CWE-940 opisują całkowicie niepowiązane klasy podatności bez żadnego związku ze sobą
+  - id: c
+    label:
+      en: CWE-940 was deprecated in favor of CWE-939 and should no longer be used
+      pl: CWE-940 zostało wycofane na rzecz CWE-939 i nie powinno być już używane
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Verified directly at MITRE: CWE-939 lists CWE-940 as a parent. This means the catalog''s CWE choices across 15.12 and 15.16 form a coherent parent-child split rather than two teams independently guessing at overlapping classifications -- 15.12 covers the general confused-deputy forwarding pattern, 15.16 narrows to the specific case of a custom-URL-scheme handler failing to authorize its caller.'
+    pl: 'Zweryfikowane bezpośrednio w MITRE: CWE-939 wylicza CWE-940 jako rodzica. Oznacza to że wybory CWE katalogu w 15.12 i 15.16 tworzą spójny podział rodzic-dziecko zamiast dwóch zespołów niezależnie zgadujących nakładające się klasyfikacje -- 15.12 pokrywa ogólny wzorzec przekazywania confused-deputy, 15.16 zawęża się do konkretnego przypadku handlera niestandardowego schematu URL nie autoryzującego swojego wywołującego.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: An app generates QR codes encoding a deep link (e.g. ms-msa://signin?code=X) for cross-device sign-in, but the app itself never declares an intent-filter claiming that exact scheme -- it only reads the code when the user manually returns to the app. Two of three research passes independently found this exact pattern behind a real, current CVE. Is this app exposed?
+    pl: Apka generuje kody QR kodujące deep link (np. ms-msa://signin?code=X) dla logowania cross-device, ale sama apka nigdy nie deklaruje intent-filter zgłaszającego dokładnie ten schemat -- czyta kod tylko gdy użytkownik ręcznie wraca do apki. Dwa z trzech przejść badawczych niezależnie znalazły dokładnie ten wzorzec stojący za prawdziwym, aktualnym CVE. Czy ta apka jest narażona?
+  isVulnerable: true
+  cwe: CWE-939
+  explanation:
+    en: Yes -- this is the exact unclaimed-deep-link pattern behind CVE-2026-26123 (Microsoft Authenticator). Because the app never registers an intent-filter for the scheme it emits, any other installed app is free to claim that scheme and intercept the sign-in code before the legitimate app ever sees it.
+    pl: Tak -- to dokładny wzorzec nieodebranego deep linku stojący za CVE-2026-26123 (Microsoft Authenticator). Ponieważ apka nigdy nie rejestruje intent-filter dla schematu który emituje, dowolna inna zainstalowana apka może swobodnie zgłosić ten schemat i przechwycić kod logowania zanim legalna apka go w ogóle zobaczy.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: How does the TikTok CVE-2022-28799 incident illustrate why this entry documents both the source problem and the parameter-trust problem, rather than just scheme squatting?
+    pl: Jak incydent TikTok CVE-2022-28799 ilustruje dlaczego ten wpis dokumentuje zarówno problem źródła jak i problem zaufania parametrów, zamiast tylko podszywania się pod schemat?
+  choices:
+  - id: a
+    label:
+      en: The vulnerability was a parameter-trust bug (a bypassable host-allowlist check on a deep-link URL parameter) that chained into a completely different vulnerability class -- WebView JS-bridge exposure -- showing the two problem halves connect to real, severe outcomes
+      pl: Podatność była błędem zaufania parametrów (omijalne sprawdzenie listy dozwolonych hostów na parametrze URL deep link) które połączyło się w zupełnie inną klasę podatności -- ekspozycję mostka JS WebView -- pokazując że obie połowy problemu łączą się w prawdziwe, poważne skutki
+  - id: b
+    label:
+      en: TikTok was vulnerable because a malicious app registered the same custom scheme as TikTok's own app
+      pl: TikTok był podatny ponieważ złośliwa apka zarejestrowała ten sam niestandardowy schemat co własna apka TikTok
+  - id: c
+    label:
+      en: The incident was unrelated to deep links and involved only a server-side database vulnerability
+      pl: Incydent nie był związany z deep linkami i dotyczył wyłącznie podatności bazy danych po stronie serwera
+  correctChoiceIds:
+  - a
+  explanation:
+    en: TikTok's deep link handler received the link correctly (no scheme squatting involved) but trusted a URL parameter with insufficiently robust host validation, letting an attacker's URL load into a WebView exposing dozens of JavaScript-bridge methods -- a real-world demonstration that the parameter-trust half of this entry is just as exploitable as the source half, and can cascade into other named vulnerability classes.
+    pl: Handler deep link TikTok poprawnie odebrał link (bez udziału podszywania się pod schemat) ale zaufał parametrowi URL z niewystarczająco solidną walidacją hosta, pozwalając URL atakującego załadować się do WebView wystawiającego dziesiątki metod mostka JavaScript -- rzeczywista demonstracja że połowa zaufania parametrów tego wpisu jest tak samo eksploatowalna jak połowa źródła, i może kaskadowo prowadzić do innych nazwanych klas podatności.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A banking app needs to handle a password-reset deep link as securely as possible. Which implementation actually closes both problems this deep-dive documents?
+    pl: Apka bankowa potrzebuje obsłużyć deep link resetu hasła tak bezpiecznie jak to możliwe. Która implementacja faktycznie zamyka oba problemy które dokumentuje ten deep-dive?
+  variants:
+  - id: v1
+    lang: xml
+    code: '<!-- custom scheme, no verification -->
+
+      <data android:scheme="bankapp" android:host="reset-password" />'
+  - id: v2
+    lang: kotlin
+    code: '// verified App Link (autoVerify=true, correct assetlinks.json)
+
+      // but handler code:
+
+      val token = intent.data?.getQueryParameter("token")
+
+      resetPasswordFor(intent.data?.getQueryParameter("email"), token)'
+  - id: v3
+    lang: kotlin
+    code: "// verified App Link (autoVerify=true, correct assetlinks.json) PLUS:\nval token = intent.data?.getQueryParameter(\"token\") ?: return showError()\napi.validateResetToken(token, currentSessionUserId)\n    .onSuccess { requireStepUpAuth { proceedWithReset(it) } }\n    .onFailure { showError() }"
+  correctVariantId: v3
+  explanation:
+    en: 'v3 closes both halves: a verified App Link solves the source problem (only this app receives bank.com links), and server-side token validation bound to the current session plus step-up authentication solves the parameter-trust problem. v1 has neither fix. v2 is the trap this deep-dive''s whole myth-correction centers on: the link is fully verified, but the handler still trusts the token unconditionally -- exactly as exploitable as a custom scheme would be for this specific bug.'
+    pl: 'v3 zamyka obie połowy: zweryfikowany App Link rozwiązuje problem źródła (tylko ta apka otrzymuje linki bank.com), a walidacja tokenu po stronie serwera związana z bieżącą sesją plus uwierzytelnienie step-up rozwiązuje problem zaufania parametrów. v1 nie ma żadnej naprawy. v2 to pułapka na której skupia się cała korekta mitu tego deep-dive: link jest w pełni zweryfikowany, ale handler wciąż ufa tokenowi bezwarunkowo -- dokładnie tak eksploatowalne jak byłby niestandardowy schemat dla tego konkretnego błędu.'

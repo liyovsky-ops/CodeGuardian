@@ -315,22 +315,31 @@ threats:
 - id: '15.16'
   name: Insecure Deep Link / Custom URL Scheme Handling
   severity: High
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-939
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Deep links or custom URL schemes handled without verifying the caller or domain ownership let a malicious app claim the same scheme or pass hostile parameters to trigger unauthorized actions or leak tokens.
+  - CWE-601
+  desc: 'Deep linki albo niestandardowe schematy URL obsługiwane bez weryfikacji wywołującego albo własności domeny pozwalają złośliwej apce zgłosić ten sam schemat albo przekazać wrogie parametry by wyzwolić nieautoryzowane akcje albo wyciekać tokeny. Kluczowy mit: App Links/Universal Links rozwiązują TYLKO problem źródła (kto odbiera link), NIE problem zaufania parametrów (czy dane w linku powinny być wykonane bezwarunkowo). OAuth ''custom URI scheme interception'' (RFC 8252 §8.1) to nazwana instancja -- PKCE (RFC 7636) to obowiązkowa naprawa. Zweryfikowane CVE-2026-26123 (Microsoft Authenticator, nieodebrany deep link) i CVE-2022-28799 (TikTok, łańcuch deep link → WebView bridge).
 
     '
-  desc_en: Deep links or custom URL schemes handled without verifying the caller or domain ownership let a malicious app claim the same scheme or pass hostile parameters to trigger unauthorized actions or leak tokens.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'Deep links or custom URL schemes handled without verifying the caller or domain ownership let a malicious app claim the same scheme or pass hostile parameters to trigger unauthorized actions or leak tokens. Key myth: App Links/Universal Links solve ONLY the source problem (who receives the link), NOT the parameter-trust problem (whether data in the link should be acted on unconditionally). OAuth ''custom URI scheme interception'' (RFC 8252 §8.1) is the named instance -- PKCE (RFC 7636) is the mandatory fix. Verified CVE-2026-26123 (Microsoft Authenticator, unclaimed deep link) and CVE-2022-28799 (TikTok, deep link -> WebView bridge chain).'
+  lang: kotlin
+  vuln: '// VULNERABLE: even on a verified, exclusive App Link --
+
+    // the token is trusted unconditionally, with no server-side
+
+    // check that it belongs to the current authenticated user
+
+    val token = intent.data?.getQueryParameter("token")
+
+    val email = intent.data?.getQueryParameter("email")
+
+    resetPasswordFor(email, token)
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: OWASP MASTG (deep link testing, android:autoVerify / Universal Links); CWE-939 (Improper Authorization in Handler for Custom URL Scheme).'
+  safe: "// SAFE: token validated server-side against the authenticated\n// session before any sensitive action is performed\nval token = intent.data?.getQueryParameter(\"token\") ?: return showError()\napi.validateResetToken(token, currentSessionUserId)\n    .onSuccess { proceedWithReset(it) }\n    .onFailure { showError() }\n"
+  note_en: 'Source: OWASP MASTG-TEST-0028 (Android, Testing Deep Links), MASTG-TEST-0070/0075 (iOS, Universal Links/Custom URL Schemes). RFC 8252 (OAuth for Native Apps) + RFC 7636 (PKCE). CWE-939 confirmed a direct child of CWE-940 (sibling entry 15.12) -- clean specialization, not overlap. Scoped cross-platform and distinct from the later iOS-specific URL Scheme Hijacking entry (15.22).'
 - id: '15.17'
   name: Keychain / Keystore Misuse
   severity: High

@@ -1,0 +1,367 @@
+meta:
+  id: mobiledeeplinks
+  threatId: '15.16'
+  severity: High
+  color: '#b45309'
+  colorRgb: 180,83,9
+  cwe: CWE-939
+  cvss: N/A (technique class spanning Android/iOS; flagship modern case CVE-2026-26123 -- Microsoft Authenticator -- rated Important, CVSS ~5.5; TikTok CVE-2022-28799 deep-link-to-WebView chain rated Critical by Microsoft)
+  standard: OWASP MASTG-TEST-0028 (Android, Testing Deep Links) / MASTG-TEST-0070 + 0075 (iOS, Universal Links + Custom URL Schemes); RFC 8252 + RFC 7636 (OAuth for native apps + PKCE)
+hero:
+  titleMain: 'Insecure Deep Link / '
+  titleGrad: Custom URL Scheme Handling
+  titleTail: ''
+  topbar: Insecure Deep Link / Custom URL Scheme Handling (Android + iOS)
+  lead:
+    en: 'All three research passes independently converged on the same headline correction, stated almost identically: Android App Links and iOS Universal Links solve the SOURCE problem (which app is the domain-verified, exclusive recipient of a link) but do nothing about the PARAMETER-TRUST problem (whether the data carried inside that link -- a token, a redirect URL, a command -- should be acted on unconditionally). A perfectly verified, exclusive App Link handler is still fully exploitable if it trusts `?token=X&email=attacker@evil.com` without checking the token belongs to the authenticated user. Custom schemes (`myapp://` on Android, `CFBundleURLTypes` on iOS) compound this with a second, distinct problem: any app can register the same scheme, since there is no domain-ownership or cryptographic proof behind it -- Apple''s own developer documentation warns plainly that "because URL schemes aren''t unique, other apps can potentially claim the same scheme." The named, standardized instance of the source-interception problem is OAuth "custom URI scheme interception," documented in RFC 8252 Section 8.1: because multiple apps can register the same private-use scheme, it is indeterminate which app receives an authorization code delivered via that redirect -- the mandated fix, per RFC 8252 Section 6, is PKCE (RFC 7636), which makes an intercepted authorization code useless without the code_verifier that never leaves the legitimate app. Two of three research passes independently found and cross-verified the same flagship modern incident, CVE-2026-26123 (Microsoft Authenticator), where a deep link the app itself emitted for QR-based sign-in was never claimed by its own intent-filter, letting any installed app register the scheme and intercept the sign-in code -- a clean, current illustration of the source-problem half of this entry.'
+    pl: 'Wszystkie trzy przejścia badawcze niezależnie zbiegły się na tej samej nagłówkowej korekcie, sformułowanej niemal identycznie: Android App Links i iOS Universal Links rozwiązują problem ŹRÓDŁA (która apka jest zweryfikowanym domenowo, wyłącznym odbiorcą linku) ale nic nie robią z problemem ZAUFANIA PARAMETRÓW (czy dane niesione wewnątrz tego linku -- token, URL przekierowania, komenda -- powinny być wykonane bezwarunkowo). Idealnie zweryfikowany, wyłączny handler App Link jest wciąż w pełni eksploatowalny jeśli zaufa `?token=X&email=attacker@evil.com` bez sprawdzenia że token należy do uwierzytelnionego użytkownika. Schematy niestandardowe (`myapp://` na Android, `CFBundleURLTypes` na iOS) potęgują to drugim, odrębnym problemem: dowolna apka może zarejestrować ten sam schemat, ponieważ nie ma za nim dowodu własności domeny ani kryptograficznego -- własna dokumentacja deweloperska Apple ostrzega wprost że "ponieważ schematy URL nie są unikalne, inne apki mogą potencjalnie zgłosić ten sam schemat". Nazwaną, ustandaryzowaną instancją problemu przechwycenia źródła jest "custom URI scheme interception" OAuth, udokumentowane w RFC 8252 Sekcja 8.1: ponieważ wiele apek może zarejestrować ten sam schemat private-use, jest nieokreślone która apka otrzyma kod autoryzacji dostarczony przez to przekierowanie -- obowiązkową naprawą, zgodnie z RFC 8252 Sekcja 6, jest PKCE (RFC 7636), które czyni przechwycony kod autoryzacji bezużytecznym bez code_verifier który nigdy nie opuszcza legalnej apki. Dwa z trzech przejść badawczych niezależnie znalazły i skrzyżowo zweryfikowały ten sam flagowy nowoczesny incydent, CVE-2026-26123 (Microsoft Authenticator), gdzie deep link który sama apka emitowała dla logowania przez QR nigdy nie został zgłoszony przez jej własny intent-filter, pozwalając dowolnej zainstalowanej apce zarejestrować schemat i przechwycić kod logowania -- czysta, aktualna ilustracja połowy problemu źródła tego wpisu.'
+  metrics:
+  - k: CVE-2026-26123
+    v:
+      en: 'Microsoft Authenticator: unclaimed ms-msa:// deep link let any installed app register the scheme and intercept sign-in codes'
+      pl: 'Microsoft Authenticator: nieodebrany deep link ms-msa:// pozwolił dowolnej zainstalowanej apce zarejestrować schemat i przechwycić kody logowania'
+  - k: RFC 8252 §8.1
+    v:
+      en: 'the IETF''s own name for this attack class: custom URI scheme interception -- multiple apps can register the same scheme'
+      pl: 'własna nazwa IETF dla tej klasy ataku: przechwycenie schematu URI custom -- wiele apek może zarejestrować ten sam schemat'
+  - k: CWE-939
+    v:
+      en: confirmed a direct child of CWE-940 (used by sibling entry 15.12) -- a clean specialization, not an overlap
+      pl: potwierdzone jako bezpośrednie dziecko CWE-940 (używane przez siostrzany wpis 15.12) -- czysta specjalizacja, nie nakładanie się
+  - k: Two problems
+    v:
+      en: source (who receives the link) and parameter trust (what the app does with it) are distinct and both need fixing
+      pl: źródło (kto odbiera link) i zaufanie parametrów (co apka z nim robi) to odrębne i oba wymagają naprawy
+  sources:
+  - label: Android -- Unsafe use of deep links
+    url: https://developer.android.com/privacy-and-security/risks/unsafe-use-of-deeplinks
+  - label: Apple -- Defining a custom URL scheme for your app
+    url: https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app
+  - label: RFC 8252 -- OAuth 2.0 for Native Apps
+    url: https://www.rfc-editor.org/rfc/rfc8252.html
+  - label: CWE-939 -- Improper Authorization in Handler for Custom URL Scheme
+    url: https://cwe.mitre.org/data/definitions/939.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'All three research passes converged on the same two-axis taxonomy: who receives the link (source), and what the app does with the data inside it (parameter trust) -- most real incidents are actually the source problem, since parameter-trust bugs tend to get folded into other named entries (open redirect, WebView bridge exposure).'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej dwuosiowej taksonomii: kto odbiera link (źródło), i co apka robi z danymi wewnątrz niego (zaufanie parametrów) -- większość prawdziwych incydentów to faktycznie problem źródła, ponieważ błędy zaufania parametrów bywają wchłaniane przez inne nazwane wpisy (open redirect, ekspozycja mostka WebView).'
+    items:
+    - name: Custom-scheme squatting -- any app can claim the same scheme
+      sev: high
+      description:
+        en: Android intent-filters and iOS CFBundleURLTypes both allow any app to register any scheme string with no ownership check. A malicious app registering the same scheme as a legitimate one can be offered as the handler (disambiguation dialog on Android, undefined/undocumented resolution on iOS), receiving data meant for the real app.
+        pl: Zarówno filtry intencji Android jak i CFBundleURLTypes iOS pozwalają dowolnej apce zarejestrować dowolny string schematu bez sprawdzenia własności. Złośliwa apka rejestrująca ten sam schemat co legalna może zostać zaproponowana jako handler (dialog dezambiguacji na Android, nieokreślona/nieudokumentowana rezolucja na iOS), otrzymując dane przeznaczone dla prawdziwej apki.
+      payload: "<!-- malicious app's manifest claims the same scheme as the victim -->\n<intent-filter>\n    <action android:name=\"android.intent.action.VIEW\" />\n    <category android:name=\"android.intent.category.BROWSABLE\" />\n    <data android:scheme=\"victimapp\" />\n</intent-filter>"
+    - name: OAuth authorization-code interception via custom-scheme redirect
+      sev: high
+      description:
+        en: 'The named, IETF-documented instance of scheme squatting: RFC 8252 Section 8.1 states plainly that because multiple apps can register the same private-use scheme, it is indeterminate which app receives the OAuth authorization code delivered to that redirect URI -- a malicious app can capture and redeem it for tokens if the authorization server does not enforce PKCE.'
+        pl: 'Nazwana, udokumentowana przez IETF instancja podszywania się pod schemat: RFC 8252 Sekcja 8.1 stwierdza wprost że ponieważ wiele apek może zarejestrować ten sam schemat private-use, jest nieokreślone która apka otrzyma kod autoryzacji OAuth dostarczony do tego URI przekierowania -- złośliwa apka może go przechwycić i wymienić na tokeny jeśli serwer autoryzacji nie egzekwuje PKCE.'
+      payload: "<!-- victim app's OAuth redirect_uri: myapp://oauth/callback?code=AUTH_CODE\n     malicious app registers the identical scheme and receives the code first -->"
+    - name: Unclaimed deep link -- an app emits a scheme it never registers itself
+      sev: high
+      description:
+        en: The app generates or references a deep link (e.g. for QR-code-based cross-device sign-in) but never declares an intent-filter claiming that exact scheme itself, leaving it open for any other installed app to register and intercept -- the precise mechanism confirmed by two of three research passes behind CVE-2026-26123 (Microsoft Authenticator).
+        pl: Apka generuje albo odwołuje się do deep linku (np. dla logowania cross-device opartego na kodzie QR) ale nigdy sama nie deklaruje intent-filter zgłaszającego dokładnie ten schemat, pozostawiając go otwartym dla dowolnej innej zainstalowanej apki by go zarejestrować i przechwycić -- dokładny mechanizm potwierdzony przez dwa z trzech przejść badawczych stojący za CVE-2026-26123 (Microsoft Authenticator).
+      payload: '// app displays a QR code encoding: ms-msa://signin?code=SESSION_CODE
+
+        // but the app itself never registers an intent-filter for ms-msa://
+
+        // -- any other app can claim it and read the code'
+    - name: Trusted parameter used unconditionally -- even on a verified, exclusive link
+      sev: high
+      description:
+        en: 'The core myth-correction all three teams flagged: even a fully domain-verified, exclusive App Link/Universal Link is exploitable if the receiving code trusts a parameter (a reset token, a redirect URL, a WebView target) without independently verifying it belongs to the current authenticated user. This is a distinct bug from scheme squatting and is not fixed by using App Links at all.'
+        pl: 'Kluczowa korekta mitu oflagowana przez wszystkie trzy zespoły: nawet w pełni zweryfikowany domenowo, wyłączny App Link/Universal Link jest eksploatowalny jeśli odbierający kod zaufa parametrowi (token resetu, URL przekierowania, cel WebView) bez niezależnej weryfikacji że należy do bieżącego uwierzytelnionego użytkownika. To odrębny błąd od podszywania się pod schemat i nie jest naprawiany przez samo użycie App Links.'
+      payload: '// even on a verified, exclusive https://realapp.com/reset-password link:
+
+        val token = intent.data?.getQueryParameter("token")
+
+        resetPasswordFor(intent.data?.getQueryParameter("email"), token)  // no server-side binding check'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The correction confirmed by all three research passes: switching from a custom scheme to a verified App Link fixes only the source problem. The parameter-trust fix is a completely separate, additional step.'
+      pl: 'Korekta potwierdzona przez wszystkie trzy przejścia badawcze: przejście z niestandardowego schematu na zweryfikowany App Link naprawia tylko problem źródła. Naprawa zaufania parametrów to zupełnie osobny, dodatkowy krok.'
+    languages:
+    - label: AndroidManifest.xml -- custom scheme vs verified App Link
+      lang: xml
+      vulnerable: "<!-- VULNERABLE: custom scheme, claimable by any app --\n     no ownership proof exists for \"myapp\" -->\n<intent-filter>\n    <action android:name=\"android.intent.action.VIEW\" />\n    <category android:name=\"android.intent.category.BROWSABLE\" />\n    <data android:scheme=\"myapp\" android:host=\"reset-password\" />\n</intent-filter>"
+      safe: "<!-- SAFE (source problem only): android:autoVerify requires a\n     matching https://app.example.com/.well-known/assetlinks.json\n     naming this app's package + SHA-256 signing fingerprint --\n     exclusive, no disambiguation dialog. Parameter trust is a\n     SEPARATE fix -- see the Kotlin example below. -->\n<intent-filter android:autoVerify=\"true\">\n    <action android:name=\"android.intent.action.VIEW\" />\n    <category android:name=\"android.intent.category.BROWSABLE\" />\n    <category android:name=\"android.intent.category.DEFAULT\" />\n    <data android:scheme=\"https\" android:host=\"app.example.com\" android:pathPrefix=\"/reset-password\" />\n</intent-filter>"
+    - label: Kotlin -- the parameter-trust fix App Links alone do not provide
+      lang: kotlin
+      vulnerable: '// VULNERABLE: even on a verified, exclusive App Link --
+
+        // the token is trusted unconditionally, with no server-side
+
+        // check that it belongs to the current authenticated user
+
+        val token = intent.data?.getQueryParameter("token")
+
+        val email = intent.data?.getQueryParameter("email")
+
+        resetPasswordFor(email, token)'
+      safe: "// SAFE: token validated server-side against the authenticated\n// session before any sensitive action is performed\nval token = intent.data?.getQueryParameter(\"token\") ?: return showError()\napi.validateResetToken(token, currentSessionUserId)  // server confirms binding\n    .onSuccess { proceedWithReset(it) }\n    .onFailure { showError() }"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: enumerate every link surface first, separately assess source-verification and parameter-handling, since a clean result on one says nothing about the other.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: wylicz najpierw każdą powierzchnię linku, osobno oceń weryfikację źródła i obsługę parametrów, ponieważ czysty wynik na jednym nic nie mówi o drugim.'
+    steps:
+    - title:
+        en: Enumerate every deep link and custom scheme the app registers
+        pl: Wylicz każdy deep link i niestandardowy schemat który apka rejestruje
+      description:
+        en: Extract every intent-filter (Android manifest) or CFBundleURLTypes entry (iOS Info.plist), noting scheme, host, and path patterns -- and separately check whether any scheme the app REFERENCES (e.g. in QR codes or push notifications) is actually CLAIMED by an intent-filter, per the unclaimed-deep-link pattern behind CVE-2026-26123.
+        pl: Wyodrębnij każdy intent-filter (manifest Android) albo wpis CFBundleURLTypes (Info.plist iOS), zapisując schemat, host, i wzorce ścieżek -- i osobno sprawdź czy jakikolwiek schemat który apka PRZYWOŁUJE (np. w kodach QR albo powiadomieniach push) jest faktycznie ZGŁOSZONY przez intent-filter, zgodnie ze wzorcem nieodebranego deep linku stojącym za CVE-2026-26123.
+    - title:
+        en: Fire each link with adb / manual testing and observe handling
+        pl: Wystrzel każdy link przez adb / testowanie manualne i obserwuj obsługę
+      description:
+        en: adb shell am start -W -a android.intent.action.VIEW -d "scheme://host/path?param=value" <package> fires a deep link directly at a target app; Drozer's intents.fuzzinozzer module automates parameter fuzzing across discovered intent-filters.
+        pl: adb shell am start -W -a android.intent.action.VIEW -d "scheme://host/path?param=value" <package> wystrzeliwuje deep link bezpośrednio w docelową apkę; moduł intents.fuzzinozzer Drozer automatyzuje fuzzing parametrów przez odkryte intent-filtery.
+    - title:
+        en: Verify autoVerify/assetlinks.json (or AASA) actually succeeds
+        pl: Zweryfikuj że autoVerify/assetlinks.json (albo AASA) faktycznie się udaje
+      description:
+        en: A declared android:autoVerify="true" does not guarantee verification succeeded -- confirm with adb shell pm get-app-links <package> (Android 12+) that the domain is actually verified, and separately confirm the assetlinks.json/AASA file is served over HTTPS with no redirect and the correct signing fingerprint/Team ID -- academic research found the large majority of apps claiming App Links fail this check silently.
+        pl: Zadeklarowane android:autoVerify="true" nie gwarantuje że weryfikacja się powiodła -- potwierdź przez adb shell pm get-app-links <package> (Android 12+) że domena jest faktycznie zweryfikowana, i osobno potwierdź że plik assetlinks.json/AASA jest serwowany przez HTTPS bez przekierowania i z poprawnym odciskiem podpisu/Team ID -- badania akademickie znalazły że zdecydowana większość apek deklarujących App Links zawodzi to sprawdzenie po cichu.
+    - title:
+        en: Trace every parameter to its sensitive sink
+        pl: Prześledź każdy parametr do jego wrażliwego ujścia
+      description:
+        en: For each reachable deep-link handler, trace every query parameter to what it ultimately controls -- a token consumed without server-side binding, a redirect/WebView URL loaded without allowlisting, or a command executed directly -- since this is a separate check from source verification and Android's own guidance explicitly requires treating all deep-link input as untrusted regardless of how the link was verified.
+        pl: Dla każdego osiągalnego handlera deep link, prześledź każdy parametr zapytania do tego co ostatecznie kontroluje -- token skonsumowany bez wiązania po stronie serwera, URL przekierowania/WebView załadowany bez listy dozwolonych, albo komenda wykonana bezpośrednio -- ponieważ to osobne sprawdzenie od weryfikacji źródła a własne wskazówki Android jawnie wymagają traktowania całego wejścia deep link jako niezaufanego niezależnie od tego jak link został zweryfikowany.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: All three research passes converged on the same top two controls addressing the two distinct problems this entry documents -- neither substitutes for the other.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tych samych dwóch najwyższych kontrolach adresujących dwa odrębne problemy które ten wpis dokumentuje -- żadna nie zastępuje drugiej.
+    items:
+    - rank: 1
+      eff: 85
+      kind: primary
+      label:
+        en: Prefer App Links / Universal Links over custom schemes for anything sensitive
+        pl: Preferuj App Links / Universal Links zamiast niestandardowych schematów dla wszystkiego wrażliwego
+      note:
+        en: 'Domain-verified and exclusive -- solves the source/ownership problem outright. Critical caveat, confirmed unanimously: this does NOT validate parameters at all -- a verified App Link handler trusting an unbound token is still fully exploitable. Also fails silently if assetlinks.json/AASA is misconfigured, missing, HTTP-hosted, or has the wrong fingerprint -- academic research found this the dominant real-world failure mode.'
+        pl: 'Zweryfikowane domenowo i wyłączne -- rozwiązuje problem źródła/własności wprost. Krytyczne zastrzeżenie, potwierdzone jednomyślnie: to W OGÓLE nie waliduje parametrów -- zweryfikowany handler App Link ufający niezwiązanemu tokenowi jest wciąż w pełni eksploatowalny. Zawodzi też po cichu jeśli assetlinks.json/AASA jest błędnie skonfigurowany, brakujący, serwowany przez HTTP, albo ma zły odcisk -- badania akademickie znalazły to jako dominujący rzeczywisty tryb awarii.'
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: PKCE (RFC 7636) for every native OAuth flow, mandatory per RFC 8252
+        pl: PKCE (RFC 7636) dla każdego natywnego przepływu OAuth, obowiązkowe zgodnie z RFC 8252
+      note:
+        en: 'The actual, standardized mitigation for authorization-code interception: an intercepted code is useless without the code_verifier that never leaves the legitimate app. Confirmed unanimously as mandatory, not optional, for native/mobile OAuth clients. Caveat: protects the code exchange specifically -- it does not protect other secrets shipped in a URL (session tokens, reset links) and is void if the authorization server doesn''t enforce it.'
+        pl: 'Faktyczna, ustandaryzowana mitygacja dla przechwycenia kodu autoryzacji: przechwycony kod jest bezużyteczny bez code_verifier który nigdy nie opuszcza legalnej apki. Potwierdzone jednomyślnie jako obowiązkowe, nie opcjonalne, dla natywnych/mobilnych klientów OAuth. Zastrzeżenie: chroni konkretnie wymianę kodu -- nie chroni innych sekretów wysyłanych w URL (tokeny sesji, linki resetu) i jest bezwartościowe jeśli serwer autoryzacji tego nie egzekwuje.'
+    - rank: 3
+      eff: 70
+      kind: strong
+      label:
+        en: Validate every deep-link parameter server-side; treat the link as untrusted input
+        pl: Waliduj każdy parametr deep link po stronie serwera; traktuj link jako niezaufane wejście
+      note:
+        en: 'Android''s own official guidance states this explicitly, independent of autoVerify status: bind reset/action tokens to the authenticated user server-side, allowlist redirect targets, never assume a link''s parameters are legitimate just because the app was the verified recipient.'
+        pl: 'Własne oficjalne wskazówki Android stwierdzają to jawnie, niezależnie od statusu autoVerify: wiąż tokeny resetu/akcji z uwierzytelnionym użytkownikiem po stronie serwera, whitelistuj cele przekierowania, nigdy nie zakładaj że parametry linku są legalne tylko dlatego że apka była zweryfikowanym odbiorcą.'
+    - rank: 4
+      eff: 55
+      kind: strong
+      label:
+        en: Require re-authentication / step-up for sensitive actions reached via a deep link
+        pl: Wymagaj ponownego uwierzytelnienia / step-up dla wrażliwych akcji osiąganych przez deep link
+      note:
+        en: 'Even a validated token shouldn''t bypass all friction for high-value actions (payments, account changes, credential reset). Caveat: UX cost; must be applied consistently across every sensitive entry point, not just the obvious one.'
+        pl: 'Nawet zwalidowany token nie powinien pomijać całego tarcia dla akcji o wysokiej wartości (płatności, zmiany konta, reset danych uwierzytelniających). Zastrzeżenie: koszt UX; musi być stosowane konsekwentnie na każdym wrażliwym punkcie wejścia, nie tylko oczywistym.'
+    - rank: 5
+      eff: 45
+      kind: weak
+      label:
+        en: Verify autoVerify/assetlinks.json (or AASA) actually succeeded, don't just declare it
+        pl: Zweryfikuj że autoVerify/assetlinks.json (albo AASA) faktycznie się powiódł, nie tylko go zadeklaruj
+      note:
+        en: 'Post-deploy verification (adb shell pm get-app-links on Android 12+, AASA validators) closes the silent-failure gap. Caveat: this is a configuration-hygiene check, not a substitute for parameter validation, and doesn''t help at all against custom schemes, which have no verification mechanism to check in the first place.'
+        pl: 'Weryfikacja po wdrożeniu (adb shell pm get-app-links na Android 12+, walidatory AASA) zamyka lukę cichej awarii. Zastrzeżenie: to sprawdzenie higieny konfiguracji, nie zamiennik walidacji parametrów, i w ogóle nie pomaga przeciw niestandardowym schematom, które nie mają żadnego mechanizmu weryfikacji do sprawdzenia w pierwszej kolejności.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Two of three research passes independently found and cross-verified the same flagship modern incident; a third, Microsoft-blogged case shows the parameter-trust half of this entry chained into a full account-takeover.
+      pl: Dwa z trzech przejść badawczych niezależnie znalazły i skrzyżowo zweryfikowały ten sam flagowy nowoczesny incydent; trzeci, udokumentowany przez Microsoft przypadek pokazuje połowę zaufania parametrów tego wpisu połączoną w pełne przejęcie konta.
+    items:
+    - org: CVE-2026-26123 -- Microsoft Authenticator, unclaimed deep link
+      year: 2026
+      impact: Any installed app could register the ms-msa:// scheme Authenticator itself emitted for QR-based sign-in but never claimed, intercepting sign-in codes for full account access
+      cost: Rated Important, CVSS ~5.5, mapped to CWE-939; fixed in Microsoft's March 2026 update; requires the user to have a malicious app installed and select it as handler
+      description:
+        en: 'Independently found and cross-verified by two of three research passes -- unusually strong corroboration for a very recent case. A clean, current illustration of the unclaimed-deep-link pattern: the vulnerability was not in how the app handled a link it received, but in the app leaving a scheme it referenced completely unclaimed for any other app to grab.'
+        pl: 'Niezależnie znaleziony i skrzyżowo zweryfikowany przez dwa z trzech przejść badawczych -- niezwykle silna korporacja dla bardzo świeżego przypadku. Czysta, aktualna ilustracja wzorca nieodebranego deep linku: podatność nie była w tym jak apka obsługiwała link który otrzymała, ale w tym że apka zostawiła schemat który przywoływała całkowicie niezgłoszonym dla dowolnej innej apki do przejęcia.'
+    - org: CVE-2022-28799 -- TikTok Android, deep link to WebView JS-bridge chain
+      year: 2022
+      impact: An exported deep link handler with bypassable host-allowlist validation loaded an attacker-controlled URL into a WebView exposing 70+ JavaScript-bridge methods, achieving one-click account hijack
+      cost: Disclosed and published by Microsoft Security Response Center; fixed by TikTok
+      description:
+        en: Verified via a Microsoft security blog writeup -- this is the clearest documented illustration of the parameter-trust problem chaining into a completely different vulnerability class (WebView bridge exposure, this catalog's own 15.11 entry) rather than remaining a pure scheme-squatting case, showing why both problem halves this entry documents matter in practice.
+        pl: Zweryfikowane przez wpis na blogu bezpieczeństwa Microsoft -- to najjaśniejsza udokumentowana ilustracja problemu zaufania parametrów łączącego się w zupełnie inną klasę podatności (ekspozycja mostka WebView, własny wpis 15.11 tego katalogu) zamiast pozostać czystym przypadkiem podszywania się pod schemat, pokazująca dlaczego obie połowy problemu które ten wpis dokumentuje mają znaczenie w praktyce.
+    - org: Android App Links autoVerify=false SSO hijack (Holtmann research)
+      year: 2022
+      impact: A malicious app declaring an intent-filter with autoVerify="false" for a victim OAuth provider's redirect domain could surface in the disambiguation dialog and intercept authorization codes, demonstrated against Spotify's OIDC flow
+      cost: No CVE assigned -- Google classified it Not Security Bulletin Class since only pre-Android-12 versions were affected; mitigated by Android 12's stricter web-intent verification
+      description:
+        en: 'Confirmed identically by all three research passes as a real, platform-level research finding rather than a single-app bug: it affected even apps that followed OAuth best practice, since the flaw was in how the OS itself handled unverified intent-filters, not in the victim app''s code.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze jako prawdziwe ustalenie na poziomie platformy zamiast pojedynczego błędu apki: dotknęło nawet apki które przestrzegały najlepszych praktyk OAuth, ponieważ wada była w tym jak sam OS obsługiwał niezweryfikowane intent-filtery, nie w kodzie apki ofiary.'
+    inlineSources:
+    - label: Microsoft Security Blog -- TikTok CVE-2022-28799
+      url: https://www.microsoft.com/en-us/security/blog/2022/08/31/vulnerability-in-tiktok-android-app-could-lead-to-one-click-account-hijacking/
+    - label: Lauritz Holtmann -- Android App Links autoVerify=false SSO hijack
+      url: https://security.lauritz-holtmann.de/post/sso-android-autoverify/
+    - label: RFC 8252 -- OAuth 2.0 for Native Apps, Section 8.1
+      url: https://www.rfc-editor.org/rfc/rfc8252.html
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: 'All three research passes converged on the same core workflow: enumerate statically, fire links dynamically, and separately confirm verification actually succeeded rather than assuming a declared autoVerify flag is sufficient.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym samym podstawowym przepływie pracy: wylicz statycznie, wystrzel linki dynamicznie, i osobno potwierdź że weryfikacja faktycznie się powiodła zamiast zakładać że zadeklarowana flaga autoVerify wystarczy.'
+    sast:
+    - - MobSF
+      - Parses AndroidManifest.xml intent-filters and iOS Info.plist CFBundleURLTypes, flagging schemes/hosts and autoVerify status
+    - - Manual manifest/plist grep
+      - Enumerate every <data android:scheme=.../> and CFBundleURLSchemes entry; check for wildcard host/path patterns and missing autoVerify on http(s) filters
+    dast:
+    - - adb manual invocation
+      - adb shell am start -W -a android.intent.action.VIEW -d "scheme://host/path?param=value" <package> fires a deep link directly and observes handling -- the primary hands-on testing method confirmed by all three teams
+    - - Drozer -- intents.fuzzinozzer module
+      - Automates parameter fuzzing across discovered intent-filters, surfacing which deep-link parameters actually reach sensitive sinks
+    - - adb shell pm get-app-links / AASA validators
+      - Confirm domain verification actually succeeded (Android 12+) rather than trusting a declared autoVerify="true" attribute alone
+    note:
+      en: <strong>Key signal:</strong> a clean scan for missing autoVerify or scheme collisions only rules out the source problem -- separately trace every deep-link parameter to its sink, since App Links/Universal Links verification provides zero protection against a trusted-but-unvalidated token or redirect target.
+      pl: <strong>Kluczowy sygnał:</strong> czysty skan pod kątem brakującego autoVerify albo kolizji schematów wyklucza tylko problem źródła -- osobno prześledź każdy parametr deep link do jego ujścia, ponieważ weryfikacja App Links/Universal Links zapewnia zerową ochronę przed zaufanym-ale-niezwalidowanym tokenem albo celem przekierowania.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes independently confirmed CWE-939 -- notably verified as a direct child of CWE-940 (this catalog's sibling entry 15.12), confirming these two entries are a clean specialization split rather than an accidental overlap.
+      pl: Wszystkie trzy przejścia badawcze niezależnie potwierdziły CWE-939 -- godne uwagi zweryfikowane jako bezpośrednie dziecko CWE-940 (siostrzany wpis 15.12 tego katalogu), potwierdzając że te dwa wpisy to czysty podział specjalizacji zamiast przypadkowego nakładania się.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-939 -- Improper Authorization in Handler for Custom URL Scheme (primary, unanimous). Confirmed ChildOf CWE-862 (Missing Authorization) AND ChildOf CWE-940 (Improper Verification of Source of a Communication Channel, sibling entry 15.12's primary) -- 939 is the URL-scheme-handler specialization of 940's general source-verification weakness, a coherent, non-overlapping split.
+      - CWE-601 -- URL Redirection to Untrusted Site / Open Redirect (secondary). Applies specifically to the parameter-trust sub-case where a deep-link parameter controls a redirect target or WebView navigation URL, distinct from the scheme-squatting mechanism CWE-939 covers.
+      - 'Scoping note vs sibling 15.13 (CWE-926, Insecure IPC): 926 concerns whether a component is exported/reachable at all; 939 concerns whether a reachable custom-URL-scheme handler authorizes its caller -- different axis, no conflict.'
+    - std: OWASP
+      items:
+      - MASTG-TEST-0028 -- "Testing Deep Links" (Android, MASVS-PLATFORM). Confirmed active on the current OWASP MASTG site -- one research pass flagged and resolved a conflicting secondary claim that it had been deprecated.
+      - MASTG-TEST-0070 -- "Testing Universal Links" and MASTG-TEST-0075 -- "Testing Custom URL Schemes" (iOS, MASVS-PLATFORM), covering the platform-specific Associated Domains/AASA verification and custom-scheme input-validation checks respectively.
+      - RFC 8252 (OAuth 2.0 for Native Apps) and RFC 7636 (PKCE) are the directly-relevant IETF standards for the OAuth-interception sub-case, cited by name in RFC 8252 Section 8.1 as addressing exactly this technique.
+    inlineSources:
+    - label: CWE-939 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/939.html
+    - label: CWE-601 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/601.html
+    - label: OWASP MASTG-TEST-0028
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0028/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If a deep-link vulnerability is confirmed in a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu podatności deep link w wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: Identify which of the two distinct problems applies -- source/scheme squatting, or parameter trust on an already-verified link -- since App Links/Universal Links only fix the first, and confusing the two leads to an incomplete patch
+      pl: Zidentyfikuj który z dwóch odrębnych problemów ma zastosowanie -- podszywanie się pod źródło/schemat, albo zaufanie parametrów na już zweryfikowanym linku -- ponieważ App Links/Universal Links naprawiają tylko pierwszy, a pomylenie obu prowadzi do niekompletnej łatki
+    - en: Check whether the app references any scheme (in QR codes, push notifications, emails) that it does not itself claim via an intent-filter, per the unclaimed-deep-link pattern behind CVE-2026-26123
+      pl: Sprawdź czy apka przywołuje jakikolwiek schemat (w kodach QR, powiadomieniach push, emailach) którego sama nie zgłasza przez intent-filter, zgodnie ze wzorcem nieodebranego deep linku stojącym za CVE-2026-26123
+    - en: For any OAuth flow using a custom-scheme redirect, confirm PKCE is both implemented client-side and enforced server-side -- an unenforced PKCE implementation provides no real protection
+      pl: Dla dowolnego przepływu OAuth używającego przekierowania niestandardowego schematu, potwierdź że PKCE jest zarówno zaimplementowane po stronie klienta jak i egzekwowane po stronie serwera -- nieegzekwowana implementacja PKCE nie zapewnia żadnej prawdziwej ochrony
+    - en: 'Ship the fix matching this deep-dive''s top-ranked defenses: migrate sensitive links to verified App Links/Universal Links first, then separately audit and add server-side validation for every deep-link parameter regardless of link-verification status'
+      pl: 'Wydaj naprawę pasującą do najwyżej sklasyfikowanych obron tego deep-dive: migruj wrażliwe linki do zweryfikowanych App Links/Universal Links najpierw, następnie osobno zaudytuj i dodaj walidację po stronie serwera dla każdego parametru deep link niezależnie od statusu weryfikacji linku'
+    - en: Re-verify with adb shell pm get-app-links (Android 12+) or an AASA validator that domain verification actually succeeded post-deploy, and re-fire every parameter with Drozer's fuzzer to confirm the validation gap is actually closed
+      pl: Zweryfikuj ponownie przez adb shell pm get-app-links (Android 12+) albo walidator AASA że weryfikacja domeny faktycznie się powiodła po wdrożeniu, i wystrzel ponownie każdy parametr fuzzerem Drozer by potwierdzić że luka walidacji jest faktycznie zamknięta
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: Android -- Unsafe use of deep links
+      url: https://developer.android.com/privacy-and-security/risks/unsafe-use-of-deeplinks
+    - label: Android -- Verify Android App Links
+      url: https://developer.android.com/training/app-links/verify-android-applinks
+    - label: Apple -- Defining a custom URL scheme for your app
+      url: https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app
+    - label: Apple -- Supporting universal links in your app
+      url: https://developer.apple.com/documentation/xcode/supporting-universal-links-in-your-app
+    - label: RFC 8252 -- OAuth 2.0 for Native Apps
+      url: https://www.rfc-editor.org/rfc/rfc8252.html
+    - label: RFC 7636 -- Proof Key for Code Exchange (PKCE)
+      url: https://www.rfc-editor.org/rfc/rfc7636.html
+    - label: CWE-939 -- Improper Authorization in Handler for Custom URL Scheme
+      url: https://cwe.mitre.org/data/definitions/939.html
+    - label: CWE-601 -- URL Redirection to Untrusted Site
+      url: https://cwe.mitre.org/data/definitions/601.html
+    - label: Microsoft Security Blog -- TikTok CVE-2022-28799
+      url: https://www.microsoft.com/en-us/security/blog/2022/08/31/vulnerability-in-tiktok-android-app-could-lead-to-one-click-account-hijacking/
+    - label: Lauritz Holtmann -- Android App Links autoVerify=false SSO hijack
+      url: https://security.lauritz-holtmann.de/post/sso-android-autoverify/
+    - label: OWASP MASTG-TEST-0028 -- Testing Deep Links
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0028/
+    - label: USENIX Security 2017 -- Measuring the Insecurity of Mobile Deep Links of Android
+      url: https://www.usenix.org/system/files/conference/usenixsecurity17/sec17-liu.pdf
