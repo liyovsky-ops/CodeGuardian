@@ -1,0 +1,114 @@
+threatId: '15.14'
+title:
+  en: Task Hijacking (StrandHogg) -- knowledge check
+  pl: Task Hijacking (StrandHogg) -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: All three independent research passes recommended correcting this entry's own catalog stub away from CWE-1021. Why?
+    pl: Wszystkie trzy niezależne przejścia badawcze zaleciły skorygowanie własnego stuba katalogu tego wpisu z dala od CWE-1021. Dlaczego?
+  choices:
+  - id: a
+    label:
+      en: CWE-1021's own MITRE alternate terms are "Clickjacking, UI Redress Attack, Tapjacking" -- it describes overlay/window-layering, not task-stack manipulation, and fits the sibling tapjacking entry better
+      pl: Własne alternatywne terminy MITRE dla CWE-1021 to "Clickjacking, UI Redress Attack, Tapjacking" -- opisuje warstwowanie overlay/okien, nie manipulację stosem zadań, i lepiej pasuje do siostrzanego wpisu tapjacking
+  - id: b
+    label:
+      en: CWE-1021 was found to be deprecated and no longer a valid CWE identifier
+      pl: Znaleziono że CWE-1021 jest wycofane i nie jest już ważnym identyfikatorem CWE
+  - id: c
+    label:
+      en: NVD explicitly assigned CWE-1021 to a different, unrelated CVE, creating a naming conflict
+      pl: NVD jawnie przypisało CWE-1021 do innego, niepowiązanego CVE, tworząc konflikt nazewnictwa
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Task hijacking needs zero permissions -- including no overlay permission -- and works by inserting a whole hostile Activity into a legitimate task via taskAffinity/reparenting abuse, a fundamentally different mechanism from rendering an overlay window on top of another app's UI. CWE-1021 is correctly reassigned to the tapjacking sibling entry, which does involve exactly the overlay layering CWE-1021 describes.
+    pl: Task hijacking potrzebuje zera uprawnień -- włącznie z brakiem uprawnienia overlay -- i działa wstawiając całą wrogą Activity do legalnego zadania przez nadużycie taskAffinity/reparentingu, fundamentalnie inny mechanizm niż renderowanie okna overlay na wierzchu UI innej apki. CWE-1021 jest poprawnie przypisane ponownie do siostrzanego wpisu tapjacking, który faktycznie dotyczy dokładnie warstwowania overlay które opisuje CWE-1021.
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: A security researcher claims StrandHogg 1.0 is permanently unpatchable and remains equally exploitable on every Android device today, since it's a manifest-declarative technique rather than a platform bug like 2.0. All three research passes flagged this exact claim as an oversimplification of their own research premise. Is the claim accurate?
+    pl: Badacz bezpieczeństwa twierdzi że StrandHogg 1.0 jest trwale nie do załatania i pozostaje jednakowo eksploatowalny na każdym urządzeniu Android dzisiaj, ponieważ jest techniką deklaratywną w manifeście zamiast błędem platformy jak 2.0. Wszystkie trzy przejścia badawcze oflagowały dokładnie to twierdzenie jako uproszczenie własnej przesłanki badawczej. Czy twierdzenie jest dokładne?
+  isVulnerable: true
+  cwe: CWE-441
+  explanation:
+    en: No. Android 11 (API 30) hardened the platform to stop co-locating activities from different-UID packages in the same task by default, meaningfully reducing 1.0's real-world exploitability too -- not just 2.0's. Exposure to 1.0 today is conditional on both the device's OS version and the app's own targetSdkVersion, not a permanent, uniform state across all devices.
+    pl: Nie. Android 11 (API 30) wzmocnił platformę by przestać domyślnie współlokować aktywności z pakietów o różnych UID w tym samym zadaniu, znacząco redukując też rzeczywistą eksploatowalność 1.0 -- nie tylko 2.0. Ekspozycja na 1.0 dzisiaj jest warunkowa zarówno na wersji systemu urządzenia jak i własnym targetSdkVersion apki, nie trwałym, jednolitym stanem na wszystkich urządzeniach.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: What is the single control that Google's own guidance says can ONLY be prevented by a platform-level fix -- no app-side code change substitutes for it?
+    pl: Jaka jest pojedyncza kontrola o której własne wskazówki Google mówią że może być zapobieżona TYLKO przez naprawę na poziomie platformy -- żadna zmiana kodu po stronie aplikacji jej nie zastąpi?
+  choices:
+  - id: a
+    label:
+      en: Protection against StrandHogg 2.0 (CVE-2020-0096), which requires the device to be updated to Android security patch level 2020-05-01 or run Android 11+
+      pl: Ochrona przed StrandHogg 2.0 (CVE-2020-0096), która wymaga aktualizacji urządzenia do poziomu łatki bezpieczeństwa Android 2020-05-01 albo uruchomienia Android 11+
+  - id: b
+    label:
+      en: Protection against StrandHogg 1.0, which can always be fully closed by setting taskAffinity="" alone regardless of device OS version
+      pl: Ochrona przed StrandHogg 1.0, która zawsze może być w pełni zamknięta przez samo ustawienie taskAffinity="" niezależnie od wersji systemu urządzenia
+  - id: c
+    label:
+      en: Protection against both variants equally, since a single manifest change closes both simultaneously
+      pl: Ochrona przed obydwoma wariantami równo, ponieważ pojedyncza zmiana manifestu zamyka obie jednocześnie
+  correctChoiceIds:
+  - a
+  explanation:
+    en: StrandHogg 2.0 is a reflection-based platform bug in ActivityStartController with no manifest fingerprint at all -- there is no app-side code an unpatched device's user can be protected by. StrandHogg 1.0, by contrast, is substantially mitigable app-side via taskAffinity/reparenting/launchMode hardening, though it too benefits from the same platform patch.
+    pl: StrandHogg 2.0 to błąd platformy oparty na refleksji w ActivityStartController bez żadnego odcisku manifestu w ogóle -- nie ma kodu po stronie aplikacji którym mógłby być chroniony użytkownik niezałatanego urządzenia. StrandHogg 1.0, w przeciwieństwie, jest znacząco łagodzalny po stronie aplikacji przez wzmocnienie taskAffinity/reparentingu/launchMode, choć też korzysta z tej samej łatki platformy.
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A pentester runs only a static manifest scan (checking for taskAffinity/allowTaskReparenting/launchMode misconfiguration) against a device and app, finds nothing suspicious, and concludes the device is fully protected against task hijacking. Is this conclusion sound?
+    pl: Pentester uruchamia tylko statyczny skan manifestu (sprawdzający błędną konfigurację taskAffinity/allowTaskReparenting/launchMode) przeciwko urządzeniu i apce, nie znajduje niczego podejrzanego, i wnioskuje że urządzenie jest w pełni chronione przed task hijacking. Czy ten wniosek jest solidny?
+  isVulnerable: true
+  cwe: CWE-441
+  explanation:
+    en: No. A clean manifest scan only rules out StrandHogg 1.0. StrandHogg 2.0 requires no manifest declaration at all -- it's a reflection-based platform bug -- so exposure to it depends entirely on the device's Android security patch level, something no static manifest or APK scan can determine.
+    pl: Nie. Czysty skan manifestu wyklucza tylko StrandHogg 1.0. StrandHogg 2.0 nie wymaga żadnej deklaracji manifestu w ogóle -- to błąd platformy oparty na refleksji -- więc ekspozycja na niego zależy całkowicie od poziomu łatki bezpieczeństwa Android urządzenia, czego żaden statyczny skan manifestu albo APK nie może określić.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: All three research passes confirmed the same foundational academic source for task hijacking as an attack class, correcting an inaccurate title in their own research brief. Which paper is it?
+    pl: Wszystkie trzy przejścia badawcze potwierdziły to samo fundamentalne źródło akademickie dla task hijacking jako klasy ataku, korygując niedokładny tytuł we własnym briefie badawczym. Która to praca?
+  choices:
+  - id: a
+    label:
+      en: Ren, Zhang, Xue, Wei, Liu -- "Towards Discovering and Understanding Task Hijacking in Android," USENIX Security 2015
+      pl: Ren, Zhang, Xue, Wei, Liu -- "Towards Discovering and Understanding Task Hijacking in Android," USENIX Security 2015
+  - id: b
+    label:
+      en: '"Windows of Vulnerability" by Ren, Rue, Jia, Saxena'
+      pl: '"Windows of Vulnerability" autorstwa Ren, Rue, Jia, Saxena'
+  - id: c
+    label:
+      en: Promon's own 2019 disclosure report, which was the first to identify task hijacking academically
+      pl: Własny raport ujawnienia Promon z 2019, który jako pierwszy zidentyfikował task hijacking akademicko
+  correctChoiceIds:
+  - a
+  explanation:
+    en: This USENIX Security 2015 paper first systematically defined task hijacking as an attack class, four years before StrandHogg's public disclosure -- StrandHogg is best understood as the real-world weaponization of an attack surface this paper had already mapped. "Windows of Vulnerability" was an inaccurate title guess in this deep-dive's own research brief, caught and corrected by all three independent teams.
+    pl: Ta praca USENIX Security 2015 jako pierwsza systematycznie zdefiniowała task hijacking jako klasę ataku, cztery lata przed publicznym ujawnieniem StrandHogg -- StrandHogg jest najlepiej rozumiany jako uzbrojenie w praktyce powierzchni ataku którą ta praca już zmapowała. "Windows of Vulnerability" było niedokładnym zgadywaniem tytułu we własnym briefie badawczym tego deep-dive, wychwyconym i skorygowanym przez wszystkie trzy niezależne zespoły.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A banking app has a LoginActivity that must resist task hijacking as thoroughly as possible app-side. Which manifest configuration actually closes the risk this deep-dive centers on?
+    pl: Apka bankowa ma LoginActivity która musi opierać się task hijacking tak dokładnie jak to możliwe po stronie aplikacji. Która konfiguracja manifestu faktycznie zamyka ryzyko na którym skupia się ten deep-dive?
+  variants:
+  - id: v1
+    lang: xml
+    code: "<activity android:name=\".LoginActivity\"\n    android:allowTaskReparenting=\"true\"\n    android:launchMode=\"singleTask\" />"
+  - id: v2
+    lang: xml
+    code: "<activity android:name=\".LoginActivity\"\n    android:taskAffinity=\"\" />\n<!-- targetSdkVersion left at 24 in build.gradle -->"
+  - id: v3
+    lang: xml
+    code: "<activity android:name=\".LoginActivity\"\n    android:taskAffinity=\"\"\n    android:launchMode=\"singleInstance\" />\n<!-- plus: build.gradle targetSdkVersion 34 -->"
+  correctVariantId: v3
+  explanation:
+    en: 'v3 combines every app-side control this deep-dive ranks highest: empty taskAffinity (defeats affinity matching), singleInstance (guarantees no foreign activity shares the task), and a modern targetSdkVersion (30+) to receive Android 11''s platform-level hardening. v1 has the exact vulnerable triad. v2 is the subtle trap: taskAffinity="" is a real and effective fix, but leaving targetSdkVersion at 24 forfeits the platform-level protection that matters most for 2.0 and further hardens 1.0 -- app-side hygiene alone is not the whole story.'
+    pl: 'v3 łączy każdą kontrolę po stronie aplikacji którą ten deep-dive klasyfikuje najwyżej: puste taskAffinity (pokonuje dopasowanie affinity), singleInstance (gwarantuje że żadna obca aktywność nie dzieli zadania), i nowoczesny targetSdkVersion (30+) by otrzymać wzmocnienie platformy Android 11. v1 ma dokładną podatną triadę. v2 to subtelna pułapka: taskAffinity="" to prawdziwa i skuteczna naprawa, ale pozostawienie targetSdkVersion na 24 traci ochronę na poziomie platformy która ma największe znaczenie dla 2.0 i dalej wzmacnia 1.0 -- sama higiena po stronie aplikacji to nie cała historia.'

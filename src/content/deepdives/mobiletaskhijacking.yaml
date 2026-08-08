@@ -1,0 +1,359 @@
+meta:
+  id: mobiletaskhijacking
+  threatId: '15.14'
+  severity: High
+  color: '#ca8a04'
+  colorRgb: 202,138,4
+  cwe: CWE-441
+  cvss: 7.8 High (CVSS v3.1, AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H) for StrandHogg 2.0 / CVE-2020-0096; the original StrandHogg (1.0) has no assigned CVE and thus no CVSS -- a design-flaw technique class, not a single-CVE bug
+  standard: OWASP MASWE-0057 (StrandHogg Attack / Task Affinity Vulnerability), MASVS-PLATFORM
+hero:
+  titleMain: 'Task '
+  titleGrad: Hijacking
+  titleTail: ' (StrandHogg)'
+  topbar: Task Hijacking (StrandHogg 1.0 / 2.0)
+  lead:
+    en: 'All three research passes independently made the same significant correction to this entry''s own catalog stub: CWE-1021 (Improper Restriction of Rendered UI Layers or Frames) is mis-assigned here. MITRE''s own text for CWE-1021 lists its alternate terms as "Clickjacking, UI Redress Attack, and Tapjacking" -- it describes overlay/z-order window layering, not task-stack manipulation, and belongs on this catalog''s sibling tapjacking entry (15.15) instead. Task hijacking needs zero permissions, including no overlay permission, and works by a completely different mechanism: a malicious app declares an Activity whose taskAffinity matches a victim app''s package name, combined with allowTaskReparenting="true" or launchMode="singleTask", so Android''s own task-management logic inserts the hostile Activity into -- or reparents it onto -- the victim''s task. The next time the user opens the trusted app, they see the attacker''s phishing screen under the victim''s identity in the task switcher, because the vulnerability lives in Android''s task scheduler, not in the victim app''s code. All three passes independently proposed CWE-441 (Unintended Proxy or Intermediary / Confused Deputy) as the better-fitting primary, since Google and security researchers describe the platform-level StrandHogg 2.0 (CVE-2020-0096) explicitly as a confused-deputy bug in ActivityStartController -- NVD itself assigns CVE-2020-0096 no specific CWE ("NVD-CWE-noinfo"), confirming there was no authoritative mapping to defer to. A second correction all three teams converged on, directly refuting an assumption in their own research brief: StrandHogg 1.0 is NOT eternally unpatched simply because it is manifest-declarative -- Android 11 (API 30) hardened the platform to stop co-locating activities from different-UID packages in the same task by default, so 1.0''s real exploitability today depends on both the device''s OS version and the app''s own targetSdkVersion, not a simple "patched vs unpatched" binary.'
+    pl: 'Wszystkie trzy przejścia badawcze niezależnie dokonały tej samej znaczącej korekty własnego stuba katalogu tego wpisu: CWE-1021 (Improper Restriction of Rendered UI Layers or Frames) jest tutaj błędnie przypisane. Własny tekst MITRE dla CWE-1021 wylicza alternatywne terminy jako "Clickjacking, UI Redress Attack, i Tapjacking" -- opisuje warstwowanie okien overlay/z-order, nie manipulację stosem zadań, i należy do siostrzanego wpisu tapjacking tego katalogu (15.15) zamiast. Task hijacking potrzebuje zera uprawnień, włącznie z brakiem uprawnienia overlay, i działa zupełnie innym mechanizmem: złośliwa apka deklaruje Activity której taskAffinity pasuje do nazwy pakietu apki ofiary, połączone z allowTaskReparenting="true" albo launchMode="singleTask", więc własna logika zarządzania zadaniami Android wstawia wrogą Activity do -- albo reparentuje ją na -- zadanie ofiary. Następnym razem gdy użytkownik otwiera zaufaną apkę, widzi ekran phishingowy atakującego pod tożsamością ofiary w przełączniku zadań, ponieważ podatność żyje w harmonogramie zadań Android, nie w kodzie apki ofiary. Wszystkie trzy przejścia niezależnie zaproponowały CWE-441 (Unintended Proxy or Intermediary / Confused Deputy) jako lepiej dopasowane główne, ponieważ Google i badacze bezpieczeństwa opisują platformowy StrandHogg 2.0 (CVE-2020-0096) wprost jako błąd confused-deputy w ActivityStartController -- samo NVD nie przypisuje CVE-2020-0096 żadnego konkretnego CWE ("NVD-CWE-noinfo"), potwierdzając że nie było autorytatywnego mapowania na którym można by się oprzeć. Druga korekta na której zbiegły się wszystkie trzy zespoły, bezpośrednio obalająca założenie z własnego briefu badawczego: StrandHogg 1.0 NIE jest wiecznie niezałatany tylko dlatego że jest deklaratywny w manifeście -- Android 11 (API 30) wzmocnił platformę by przestać współlokować aktywności z pakietów o różnych UID w tym samym zadaniu domyślnie, więc rzeczywista eksploatowalność 1.0 dzisiaj zależy zarówno od wersji systemu urządzenia jak i własnego targetSdkVersion apki, nie od prostej binarnej "załatane vs niezałatane".'
+  metrics:
+  - k: CVE-2020-0096
+    v:
+      en: 'StrandHogg 2.0: confused-deputy bug in ActivityStartController, CVSS 7.8 High, patched at Android security level 2020-05-01'
+      pl: 'StrandHogg 2.0: błąd confused-deputy w ActivityStartController, CVSS 7.8 High, załatany na poziomie bezpieczeństwa Android 2020-05-01'
+  - k: No CVE
+    v:
+      en: the original StrandHogg (1.0) is a design-flaw technique class, not a single assigned vulnerability
+      pl: oryginalny StrandHogg (1.0) to klasa techniki wady projektowej, nie pojedyncza przypisana podatność
+  - k: USENIX 2015
+    v:
+      en: Ren, Zhang, Xue, Wei, Liu first defined task hijacking as an attack class four years before StrandHogg's disclosure
+      pl: Ren, Zhang, Xue, Wei, Liu jako pierwsi zdefiniowali task hijacking jako klasę ataku cztery lata przed ujawnieniem StrandHogg
+  - k: API 30
+    v:
+      en: Android 11 is the only fix for StrandHogg 2.0, and also hardens (does not eliminate) 1.0's exploitability by default
+      pl: Android 11 to jedyna naprawa dla StrandHogg 2.0, i też wzmacnia (nie eliminuje) eksploatowalność 1.0 domyślnie
+  sources:
+  - label: Android -- StrandHogg / Task Affinity risk page
+    url: https://developer.android.com/privacy-and-security/risks/strandhogg
+  - label: OWASP MASWE-0057 -- StrandHogg Attack / Task Affinity Vulnerability
+    url: https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0057/
+  - label: Promon -- The StrandHogg vulnerability
+    url: https://promon.io/security-news/the-strandhogg-vulnerability
+  - label: Ren, Zhang, Xue, Wei, Liu -- Towards Discovering and Understanding Task Hijacking in Android (USENIX Security 2015)
+    url: https://www.usenix.org/conference/usenixsecurity15/technical-sessions/presentation/ren-chuangang
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Two mechanically distinct variants share the StrandHogg name but have very different patch realities, confirmed identically by all three research passes -- conflating them is the single most common error in secondary coverage.
+      pl: Dwa mechanicznie odrębne warianty dzielą nazwę StrandHogg ale mają bardzo różne rzeczywistości łatania, potwierdzone identycznie przez wszystkie trzy przejścia badawcze -- mylenie ich to pojedynczy najczęstszy błąd w relacjach drugorzędnych.
+    items:
+    - name: StrandHogg 1.0 -- declarative taskAffinity + reparenting abuse
+      sev: high
+      description:
+        en: A malicious app declares an Activity with taskAffinity set to the victim's package name, combined with allowTaskReparenting="true" or launchMode="singleTask". No CVE was ever assigned -- it is a design-flaw class, disclosed by Promon in December 2019. It needs no permissions and requires nothing to be wrong with the victim app itself; the OS task scheduler does the damage.
+        pl: Złośliwa apka deklaruje Activity z taskAffinity ustawionym na nazwę pakietu ofiary, połączone z allowTaskReparenting="true" albo launchMode="singleTask". Nigdy nie przypisano żadnego CVE -- to klasa wady projektowej, ujawniona przez Promon w grudniu 2019. Nie potrzebuje żadnych uprawnień i nie wymaga niczego złego z samą apką ofiary; harmonogram zadań OS wyrządza szkodę.
+      payload: "<activity android:name=\".FakeLoginActivity\"\n    android:taskAffinity=\"com.targetbank.app\"\n    android:launchMode=\"singleTask\"\n    android:allowTaskReparenting=\"true\" />"
+    - name: StrandHogg 2.0 -- reflection-based confused deputy (CVE-2020-0096)
+      sev: high
+      description:
+        en: A platform-level bug in ActivityStartController.startActivities() -- reachable via Java reflection with no manifest declaration in the malicious app at all -- lets one app dynamically hijack almost any other app's task. Because there is no static manifest fingerprint, this variant is far harder to detect than 1.0. Confirmed by Promon as never observed exploited in the wild, unlike 1.0.
+        pl: Błąd na poziomie platformy w ActivityStartController.startActivities() -- osiągalny przez refleksję Java bez żadnej deklaracji manifestu w złośliwej apce -- pozwala jednej apce dynamicznie przejąć zadanie prawie dowolnej innej apki. Ponieważ nie ma statycznego odcisku manifestu, ten wariant jest dużo trudniejszy do wykrycia niż 1.0. Potwierdzone przez Promon jako nigdy nie zaobserwowane wykorzystane w praktyce, w przeciwieństwie do 1.0.
+      payload: '// no manifest signature at all -- reflection reaches
+
+        // ActivityStartController.startActivities() at runtime,
+
+        // bypassing caller-identity checks on task placement'
+    - name: Post-hijack phishing overlay and credential harvesting
+      sev: high
+      description:
+        en: Once either variant places the hostile Activity at the top of the victim's task, the attacker renders a pixel-perfect fake login or permission-request screen. The victim, seeing the trusted app's name in the task switcher and recents, has no reliable visual signal that the foreground activity is not the real app -- this is what made StrandHogg 1.0 an effective real banking-trojan delivery mechanism (Lookout identified 36 malicious apps, including BankBot variants).
+        pl: Gdy albo wariant umieści wrogą Activity na szczycie zadania ofiary, atakujący renderuje pikselowo-idealny fałszywy ekran logowania albo żądania uprawnień. Ofiara, widząc nazwę zaufanej apki w przełączniku zadań i ostatnich, nie ma wiarygodnego sygnału wizualnego że aktywność na pierwszym planie nie jest prawdziwą apką -- to uczyniło StrandHogg 1.0 skutecznym mechanizmem dostarczania prawdziwego trojana bankowego (Lookout zidentyfikował 36 złośliwych apek, włącznie z wariantami BankBot).
+      payload: '// attacker activity renders a spoofed UI identical to the victim''s
+
+        // login screen, harvesting credentials entered by a deceived user'
+    - name: Conditional exploitability depending on OS and targetSdkVersion
+      sev: medium
+      description:
+        en: 'All three research passes independently corrected an assumption in their own brief: Android 11 (API 30) does not co-locate activities from different-UID packages in the same task by default, meaningfully hardening 1.0. Google''s own guidance states 2.0 can ONLY be prevented by this platform patch. So a device on Android <=10, or an app still targeting SDK <30 on a newer device, remains exposed to 1.0 -- exploitability is a function of both variables, not a single patched/unpatched state.'
+        pl: 'Wszystkie trzy przejścia badawcze niezależnie skorygowały założenie z własnego briefu: Android 11 (API 30) nie współlokuje domyślnie aktywności z pakietów o różnych UID w tym samym zadaniu, znacząco wzmacniając 1.0. Własne wskazówki Google stwierdzają że 2.0 może być zapobieżone TYLKO przez tę łatkę platformy. Więc urządzenie na Android <=10, albo apka wciąż celująca w SDK <30 na nowszym urządzeniu, pozostaje narażona na 1.0 -- eksploatowalność jest funkcją obu zmiennych, nie pojedynczego stanu załatane/niezałatane.'
+      payload: '// exposure matrix:
+
+        // device <= Android 10           -> 1.0 AND 2.0 both exploitable
+
+        // device Android 11+, app targetSdk < 30 -> 1.0 still exploitable
+
+        // device Android 11+, app targetSdk >= 30 -> both substantially mitigated'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The correction confirmed by all three research passes: StrandHogg 2.0 has no app-side code fix at all -- only the manifest hardening below (for 1.0) and targeting a patched platform are real controls a developer can apply.'
+      pl: 'Korekta potwierdzona przez wszystkie trzy przejścia badawcze: StrandHogg 2.0 nie ma żadnej naprawy kodu po stronie aplikacji -- tylko poniższe wzmocnienie manifestu (dla 1.0) i celowanie w załataną platformę to prawdziwe kontrole które deweloper może zastosować.'
+    languages:
+    - label: AndroidManifest.xml -- sensitive activity hijackable via affinity/reparenting
+      lang: xml
+      vulnerable: "<!-- VULNERABLE: default taskAffinity (= package name) plus\n     allowTaskReparenting -- a malicious app can declare a\n     matching taskAffinity and get reparented onto this task -->\n<activity android:name=\".LoginActivity\"\n    android:allowTaskReparenting=\"true\"\n    android:launchMode=\"singleTask\" />"
+      safe: "<!-- SAFE: empty taskAffinity means this activity's task can never\n     be matched by an attacker's declared affinity; reparenting\n     removed; also raise minSdkVersion/targetSdkVersion to 30+\n     for the platform-level hardening (the only fix for 2.0) -->\n<activity android:name=\".LoginActivity\"\n    android:taskAffinity=\"\"\n    android:launchMode=\"singleInstance\" />\n\n<!-- AndroidManifest.xml <uses-sdk> -->\n<uses-sdk android:minSdkVersion=\"21\" android:targetSdkVersion=\"34\" />"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: check the manifest for 1.0''s static fingerprint first, then separately confirm the platform/targetSdk posture, since neither check alone tells the whole exposure story.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: sprawdź najpierw manifest pod kątem statycznego odcisku 1.0, następnie osobno potwierdź postawę platformy/targetSdk, ponieważ żadne sprawdzenie samo nie mówi całej historii ekspozycji.'
+    steps:
+    - title:
+        en: Scan the manifest for the StrandHogg 1.0 triad
+        pl: Skanuj manifest pod kątem triady StrandHogg 1.0
+      description:
+        en: Flag any activity with a non-empty taskAffinity pointing at a different package name combined with allowTaskReparenting="true" and/or launchMode="singleTask" -- Ostorlab's dedicated APK_TASK_HIJACKING rule automates exactly this check.
+        pl: Oflaguj każdą aktywność z niepustym taskAffinity wskazującym na inny pakiet połączoną z allowTaskReparenting="true" i/albo launchMode="singleTask" -- dedykowana reguła APK_TASK_HIJACKING Ostorlab automatyzuje dokładnie to sprawdzenie.
+    - title:
+        en: Check the app's own targetSdkVersion and the test device's OS level
+        pl: Sprawdź własny targetSdkVersion apki i poziom systemu urządzenia testowego
+      description:
+        en: Confirm targetSdkVersion against 30 (Android 11) and separately confirm the device's Android version and security patch level -- neither alone determines exposure to 1.0, and only a device patched to security level 2020-05-01 or later closes 2.0.
+        pl: Potwierdź targetSdkVersion względem 30 (Android 11) i osobno potwierdź wersję Android urządzenia i poziom łatki bezpieczeństwa -- żadne samo w sobie nie determinuje ekspozycji na 1.0, a tylko urządzenie załatane do poziomu bezpieczeństwa 2020-05-01 albo późniejszego zamyka 2.0.
+    - title:
+        en: Attempt reparenting empirically with a test harness
+        pl: Spróbuj reparentingu empirycznie za pomocą uprzęży testowej
+      description:
+        en: Build a minimal test app declaring the suspect activity's real taskAffinity and reparenting flags, launch it, then launch the target app and observe whether the test activity surfaces in the target's task -- confirms real-world exploitability beyond what static manifest analysis alone can show.
+        pl: Zbuduj minimalną apkę testową deklarującą prawdziwe taskAffinity podejrzanej aktywności i flagi reparentingu, uruchom ją, następnie uruchom docelową apkę i obserwuj czy aktywność testowa wypływa w zadaniu celu -- potwierdza rzeczywistą eksploatowalność poza tym co sama analiza statyczna manifestu może pokazać.
+    - title:
+        en: Note that 2.0 leaves no static signature to find
+        pl: Zauważ że 2.0 nie zostawia żadnej statycznej sygnatury do znalezienia
+      description:
+        en: Since StrandHogg 2.0 requires no manifest declaration at all, static analysis of a suspect malicious APK cannot confirm or rule it out -- assessing exposure to 2.0 is purely a question of the target device's patch level, not anything discoverable in an app's manifest.
+        pl: Ponieważ StrandHogg 2.0 nie wymaga żadnej deklaracji manifestu w ogóle, analiza statyczna podejrzanego złośliwego APK nie może tego potwierdzić ani wykluczyć -- ocena ekspozycji na 2.0 to czysto kwestia poziomu łatki urządzenia docelowego, nie czegokolwiek odkrywalnego w manifeście apki.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes converged on the identical top-ranked control and the identical hard limit: targeting a patched platform is the only defense against 2.0, full stop -- no app-side code change can substitute for it.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na identycznej najwyżej sklasyfikowanej kontroli i identycznym twardym ograniczeniu: celowanie w załataną platformę to jedyna obrona przed 2.0, kropka -- żadna zmiana kodu po stronie aplikacji nie może jej zastąpić.'
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: Target Android 11+ / API 30+ (minSdkVersion and targetSdkVersion)
+        pl: Celuj w Android 11+ / API 30+ (minSdkVersion i targetSdkVersion)
+      note:
+        en: 'Google''s own words, quoted identically by all three teams: "version 2 of the attack can only be prevented by this SDK version patch." Android 11 also stops co-locating different-UID packages in the same task by default, substantially hardening 1.0 too. Caveat: protects only users on a patched device running an app that targets 30+ -- older devices remain exposed regardless of the app''s own target level.'
+        pl: 'Własne słowa Google, zacytowane identycznie przez wszystkie trzy zespoły: "wersji 2 ataku można zapobiec TYLKO przez tę łatkę wersji SDK". Android 11 też przestaje domyślnie współlokować pakiety o różnych UID w tym samym zadaniu, znacząco wzmacniając też 1.0. Zastrzeżenie: chroni tylko użytkowników na załatanym urządzeniu uruchamiających apkę która celuje w 30+ -- starsze urządzenia pozostają narażone niezależnie od własnego poziomu docelowego apki.'
+    - rank: 2
+      eff: 75
+      kind: primary
+      label:
+        en: android:taskAffinity="" (empty string) on sensitive activities
+        pl: android:taskAffinity="" (pusty string) na wrażliwych aktywnościach
+      note:
+        en: 'The single most effective app-side control against 1.0: forces a unique, non-matchable affinity so an attacker''s declared affinity string can never align with it. Caveat: must be applied consistently to every sensitive/launcher activity, or app-wide via the <application> element -- a single missed activity remains hijackable, and this does nothing against 2.0.'
+        pl: 'Pojedyncza najskuteczniejsza kontrola po stronie aplikacji przeciw 1.0: wymusza unikalną, niedopasowywalną affinity więc zadeklarowany przez atakującego string affinity nigdy nie może się z nią zrównać. Zastrzeżenie: musi być stosowane konsekwentnie na każdej wrażliwej/startowej aktywności, albo w całej apce przez element <application> -- pojedyncza pominięta aktywność pozostaje przejmowalna, i to nic nie robi przeciw 2.0.'
+    - rank: 3
+      eff: 65
+      kind: strong
+      label:
+        en: Never set android:allowTaskReparenting="true" on sensitive activities
+        pl: Nigdy nie ustawiaj android:allowTaskReparenting="true" na wrażliwych aktywnościach
+      note:
+        en: 'Defaults to false already; removing an explicit true closes one of 1.0''s two triggering mechanisms. Caveat: the FLAG_ACTIVITY_NEW_TASK launch path can still insert an activity into a matching-affinity task even without reparenting enabled, so this control alone is insufficient without also addressing taskAffinity.'
+        pl: 'Domyślnie już false; usunięcie jawnego true zamyka jeden z dwóch mechanizmów wyzwalających 1.0. Zastrzeżenie: ścieżka uruchomienia FLAG_ACTIVITY_NEW_TASK wciąż może wstawić aktywność do pasującego affinity zadania nawet bez włączonego reparentingu, więc ta kontrola sama w sobie jest niewystarczająca bez też adresowania taskAffinity.'
+    - rank: 4
+      eff: 55
+      kind: strong
+      label:
+        en: launchMode="singleInstance" on sensitive/launcher activities
+        pl: launchMode="singleInstance" na wrażliwych/startowych aktywnościach
+      note:
+        en: 'Guarantees the activity is the sole member of its task, so nothing foreign can be reparented alongside it. Caveat, confirmed by all three teams: singleInstance/singleTask meaningfully change navigation/back-stack UX and must be applied deliberately, not blanket-applied without testing.'
+        pl: 'Gwarantuje że aktywność jest jedynym członkiem swojego zadania, więc nic obcego nie może być reparentowane obok niej. Zastrzeżenie, potwierdzone przez wszystkie trzy zespoły: singleInstance/singleTask znacząco zmieniają UX nawigacji/stosu wstecz i muszą być stosowane celowo, nie ogólnie bez testowania.'
+    - rank: 5
+      eff: 40
+      kind: weak
+      label:
+        en: FLAG_ACTIVITY_NEW_TASK discipline
+        pl: Dyscyplina FLAG_ACTIVITY_NEW_TASK
+      note:
+        en: 'Pair NEW_TASK with FLAG_ACTIVITY_CLEAR_TASK when genuinely starting a fresh task, rather than using NEW_TASK bare. Caveat: minor hygiene control, not a standalone fix for either variant.'
+        pl: 'Paruj NEW_TASK z FLAG_ACTIVITY_CLEAR_TASK gdy naprawdę startujesz świeże zadanie, zamiast używać samego NEW_TASK. Zastrzeżenie: drobna kontrola higieniczna, nie samodzielna naprawa dla żadnego wariantu.'
+    - rank: 6
+      eff: 25
+      kind: weak
+      label:
+        en: Runtime task-stack self-inspection (defense-in-depth only)
+        pl: Samo-inspekcja stosu zadań w czasie wykonania (tylko obrona w głąb)
+      note:
+        en: 'An app can inspect its own task via ActivityManager APIs to check whether unexpected foreign activities appear. Caveat, confirmed by all three teams: heuristic, bypassable, and reactive rather than preventive -- useful as an additional signal on unpatched devices, never a substitute for the controls above.'
+        pl: 'Apka może zbadać własne zadanie przez API ActivityManager by sprawdzić czy pojawiają się nieoczekiwane obce aktywności. Zastrzeżenie, potwierdzone przez wszystkie trzy zespoły: heurystyczne, omijalne, i reaktywne zamiast prewencyjne -- użyteczne jako dodatkowy sygnał na niezałatanych urządzeniach, nigdy zamiennik powyższych kontroli.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: The original StrandHogg incident history is already documented in this catalog's Security Misconfiguration entry (15.8); confirmed here without re-deriving it, alongside new detail on StrandHogg 2.0 and the foundational academic research all three passes independently converged on.
+      pl: Historia oryginalnego incydentu StrandHogg jest już udokumentowana we wpisie Security Misconfiguration tego katalogu (15.8); potwierdzone tutaj bez ponownego wyprowadzania, wraz z nowym szczegółem o StrandHogg 2.0 i fundamentalnych badaniach akademickich na których niezależnie zbiegły się wszystkie trzy przejścia.
+    items:
+    - org: StrandHogg 1.0 -- in-the-wild banking-trojan delivery
+      year: 2019
+      impact: Lookout identified 36 malicious apps (BankBot variants) actively exploiting the technique; Promon reported all top-500 most-popular Android apps testable as vulnerable
+      cost: Disclosed by Promon, December 3, 2019; no CVE assigned -- design-flaw technique class, mitigated by app-side manifest hardening and, later, Android 11's platform-level changes
+      description:
+        en: Cross-referenced from this catalog's Security Misconfiguration entry (15.8), where it is documented as a real-world, actively-exploited incident, not a theoretical finding. The banking-trojan targeting pattern is the clearest illustration of why task hijacking is treated as a credential-phishing primitive rather than a mere UI curiosity.
+        pl: Odsyłacz do wpisu Security Misconfiguration tego katalogu (15.8), gdzie jest udokumentowane jako rzeczywisty, aktywnie wykorzystywany incydent, nie teoretyczne ustalenie. Wzorzec celowania w trojana bankowego to najjaśniejsza ilustracja dlaczego task hijacking jest traktowany jako prymityw phishingu danych uwierzytelniających, nie zwykła ciekawostka UI.
+    - org: CVE-2020-0096 -- StrandHogg 2.0
+      year: 2020
+      impact: Local privilege escalation via a confused-deputy condition in ActivityStartController; CVSS v3.1 7.8 High; could hijack almost any app on the device with no manifest fingerprint
+      cost: Fixed at Android security patch level 2020-05-01 (Android Security Bulletin, May 2020); affected Android 8.0/8.1/9 (API 26-28); Android 10+ was never vulnerable to this variant
+      description:
+        en: Unlike 1.0, Promon's own reporting confirms no observed in-the-wild exploitation of 2.0. Verified via the official Android Security Bulletin rather than secondary reporting, since two of three teams found NVD itself intermittently unreachable during research and had to cross-check the CVSS figure against a mirror.
+        pl: W przeciwieństwie do 1.0, własne raportowanie Promon potwierdza brak zaobserwowanej eksploatacji in-the-wild 2.0. Zweryfikowane przez oficjalny Android Security Bulletin zamiast raportowania drugorzędnego, ponieważ dwa z trzech zespołów znalazło samo NVD okresowo nieosiągalne podczas badań i musiało skrzyżować figurę CVSS względem mirrora.
+    - org: Ren, Zhang, Xue, Wei, Liu -- Towards Discovering and Understanding Task Hijacking in Android (USENIX Security 2015)
+      year: 2015
+      impact: First systematic academic identification of task hijacking as an attack class, four years before StrandHogg's public disclosure, surveying 6.8 million apps and demonstrating UI-spoofing, DoS, and user-monitoring proof-of-concepts
+      cost: Foundational research the Android team's own risk page cites directly
+      description:
+        en: Confirmed identically by all three research passes, correcting an inaccurate paper attribution ('Windows of Vulnerability') in this deep-dive's own research brief -- StrandHogg is best understood as the real-world weaponization of a task-hijacking attack surface this paper had already mapped years earlier.
+        pl: Potwierdzone identycznie przez wszystkie trzy przejścia badawcze, korygując niedokładną atrybucję pracy ('Windows of Vulnerability') we własnym briefie badawczym tego deep-dive -- StrandHogg jest najlepiej rozumiany jako uzbrojenie w praktyce powierzchni ataku task hijacking którą ta praca już zmapowała lata wcześniej.
+    inlineSources:
+    - label: Promon -- The StrandHogg vulnerability
+      url: https://promon.io/security-news/the-strandhogg-vulnerability
+    - label: Android Security Bulletin -- May 2020 (CVE-2020-0096)
+      url: https://source.android.com/docs/security/bulletin/2020-05-01
+    - label: USENIX Security 2015 -- Ren et al., Task Hijacking in Android
+      url: https://www.usenix.org/conference/usenixsecurity15/technical-sessions/presentation/ren-chuangang
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: 'All three research passes converged on the same hard limitation: every available detection technique targets StrandHogg 1.0''s manifest fingerprint, and none can detect 2.0, which declares nothing statically.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym samym twardym ograniczeniu: każda dostępna technika wykrywania celuje w statyczny odcisk manifestu StrandHogg 1.0, i żadna nie może wykryć 2.0, który nie deklaruje niczego statycznie.'
+    sast:
+    - - Ostorlab -- APK_TASK_HIJACKING rule
+      - Dedicated static rule checking the exact taskAffinity + allowTaskReparenting + launchMode=singleTask triad against 1.0's known signature
+    - - MobSF
+      - Manifest analysis surfaces taskAffinity, launchMode, and allowTaskReparenting attributes as part of its broader static review; not a dedicated StrandHogg-named signature, but the relevant raw signals are exposed
+    dast:
+    - - Custom reparenting test harness
+      - Build a minimal test app declaring a suspect activity's real taskAffinity/reparenting configuration, launch it against the target app, and empirically observe whether the test activity surfaces in the target's task
+    - - ActivityManager task self-inspection
+      - An app can inspect its own running task at runtime to detect unexpected foreign activities as a defense-in-depth signal, though this is heuristic and reactive rather than a detection tool for auditors
+    note:
+      en: <strong>Key signal:</strong> a clean static manifest scan is not proof of safety against this technique class -- it only rules out StrandHogg 1.0. Exposure to 2.0 is entirely a function of the target device's Android security patch level, which no app-side or APK-side scan can determine.
+      pl: <strong>Kluczowy sygnał:</strong> czysty statyczny skan manifestu nie jest dowodem bezpieczeństwa przed tą klasą techniki -- wyklucza tylko StrandHogg 1.0. Ekspozycja na 2.0 jest całkowicie funkcją poziomu łatki bezpieczeństwa Android urządzenia docelowego, czego żaden skan po stronie apki albo APK nie może określić.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'All three research passes independently reached the same conclusion about this entry''s own catalog stub: CWE-1021 is a tapjacking/UI-overlay weakness misfiled here, and should be reassigned to the sibling entry (15.15) that actually covers clickjacking-style overlay attacks.'
+      pl: 'Wszystkie trzy przejścia badawcze niezależnie doszły do tego samego wniosku o własnym stubie katalogu tego wpisu: CWE-1021 to słabość tapjacking/overlay UI błędnie umieszczona tutaj, i powinna zostać przypisana ponownie do siostrzanego wpisu (15.15) który faktycznie pokrywa ataki overlay w stylu clickjacking.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-441 -- Unintended Proxy or Intermediary / "Confused Deputy" (primary). Matches how Google and security researchers describe StrandHogg 2.0's root cause -- a platform component (ActivityStartController) acting on the attacker's behalf against the victim's task. NVD assigns CVE-2020-0096 no specific CWE ("NVD-CWE-noinfo"), confirming there was no pre-existing authoritative mapping this choice overrides.
+      - CWE-451 -- User Interface Misrepresentation of Critical Information (secondary). Captures the phishing/UI-spoofing outcome of StrandHogg 1.0 specifically -- the victim is shown a screen they reasonably believe is the trusted app.
+      - CWE-1021 -- Improper Restriction of Rendered UI Layers or Frames (rejected for this entry, unanimous across all three research passes). Its own MITRE alternate terms are "Clickjacking, UI Redress Attack, Tapjacking" -- an overlay/window-layering weakness, not task-stack manipulation. Reassigned to sibling entry 15.15 (Tapjacking), which needs the overlay permission this technique explicitly does not.
+    - std: OWASP
+      items:
+      - MASWE-0057 -- "StrandHogg Attack / Task Affinity Vulnerability" (MASVS-PLATFORM). A dedicated, exact-match weakness for this specific technique -- more precise than any generic CWE mapping, confirmed identically by all three research passes.
+      - No dedicated MASTG v1 test is currently linked to MASWE-0057, unlike the sibling exported-component entry (15.13, which has MASTG-TEST-0364). State this honestly rather than inventing a test ID -- the authoritative anchor here is the MASWE weakness itself, not a numbered test.
+    inlineSources:
+    - label: CWE-441 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/441.html
+    - label: CWE-451 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/451.html
+    - label: OWASP MASWE-0057
+      url: https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0057/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If task-hijacking exposure is confirmed in a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu ekspozycji task hijacking w wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: 'Determine exposure precisely: check the app''s own targetSdkVersion against 30, separately confirm which Android versions the user base runs, and remember 2.0 exposure depends entirely on the device''s patch level -- not on anything in the app itself'
+      pl: 'Ustal ekspozycję precyzyjnie: sprawdź własny targetSdkVersion apki względem 30, osobno potwierdź jakie wersje Android uruchamia baza użytkowników, i pamiętaj że ekspozycja na 2.0 zależy całkowicie od poziomu łatki urządzenia -- nie od czegokolwiek w samej apce'
+    - en: Audit every sensitive activity's manifest declaration for the 1.0 triad (non-empty taskAffinity matching risk, allowTaskReparenting, launchMode=singleTask) rather than assuming a single app-wide fix covers every screen
+      pl: Zaudytuj deklarację manifestu każdej wrażliwej aktywności pod kątem triady 1.0 (niepuste taskAffinity z ryzykiem dopasowania, allowTaskReparenting, launchMode=singleTask) zamiast zakładać że pojedyncza naprawa w całej apce pokrywa każdy ekran
+    - en: 'Ship the fix matching this deep-dive''s top-ranked defenses: raise targetSdkVersion to 30+, set taskAffinity="" on sensitive activities, remove allowTaskReparenting, and set launchMode deliberately -- in that order of impact'
+      pl: 'Wydaj naprawę pasującą do najwyżej sklasyfikowanych obron tego deep-dive: podnieś targetSdkVersion do 30+, ustaw taskAffinity="" na wrażliwych aktywnościach, usuń allowTaskReparenting, i ustaw launchMode celowo -- w tej kolejności wpływu'
+    - en: 'Communicate the platform-dependency honestly to stakeholders: no code change fully closes exposure for users on unpatched devices running the app at an old targetSdkVersion, since StrandHogg 2.0 has no app-side mitigation at all'
+      pl: 'Komunikuj zależność platformową uczciwie interesariuszom: żadna zmiana kodu w pełni nie zamyka ekspozycji dla użytkowników na niezałatanych urządzeniach uruchamiających apkę na starym targetSdkVersion, ponieważ StrandHogg 2.0 nie ma żadnej łagodzenia po stronie aplikacji'
+    - en: Re-verify with the reparenting test harness described in this deep-dive's methodology to empirically confirm the manifest changes actually prevent task insertion, not just that the risky attributes were removed from source
+      pl: Zweryfikuj ponownie za pomocą uprzęży testowej reparentingu opisanej w metodyce tego deep-dive by empirycznie potwierdzić że zmiany manifestu faktycznie zapobiegają wstawieniu zadania, nie tylko że ryzykowne atrybuty zostały usunięte ze źródła
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: Android -- StrandHogg / Task Affinity risk page
+      url: https://developer.android.com/privacy-and-security/risks/strandhogg
+    - label: OWASP MASWE-0057 -- StrandHogg Attack / Task Affinity Vulnerability
+      url: https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0057/
+    - label: Promon -- The StrandHogg vulnerability (1.0)
+      url: https://promon.io/security-news/the-strandhogg-vulnerability
+    - label: Promon -- StrandHogg 2.0
+      url: https://promon.io/resources/downloads/strandhogg-2-0-new-serious-android-vulnerability
+    - label: Android Security Bulletin -- May 2020 (CVE-2020-0096)
+      url: https://source.android.com/docs/security/bulletin/2020-05-01
+    - label: Ren, Zhang, Xue, Wei, Liu -- Towards Discovering and Understanding Task Hijacking in Android (USENIX Security 2015)
+      url: https://www.usenix.org/conference/usenixsecurity15/technical-sessions/presentation/ren-chuangang
+    - label: CWE-441 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/441.html
+    - label: CWE-451 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/451.html
+    - label: CWE-1021 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1021.html
+    - label: Ostorlab -- APK_TASK_HIJACKING
+      url: https://docs.ostorlab.co/kb/APK_TASK_HIJACKING/index.html

@@ -275,22 +275,19 @@ threats:
 - id: '15.14'
   name: Task Hijacking (StrandHogg)
   severity: High
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
-  - CWE-1021
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] A malicious app abuses Android taskAffinity/launchMode or runtime Intent arrays to insert its activity into a legitimate app''s task stack, phishing credentials while the victim believes they are in the trusted app.
+  - CWE-441
+  - CWE-451
+  desc: 'Złośliwa apka nadużywa Android taskAffinity/allowTaskReparenting/launchMode by wstawić swoją Activity do stosu zadań legalnej apki, wyłudzając dane uwierzytelniające podczas gdy ofiara wierzy że jest w zaufanej apce. Dwa odrębne warianty: StrandHogg 1.0 (deklaratywny w manifeście, brak CVE, mitygowalny po stronie apki) i StrandHogg 2.0/CVE-2020-0096 (błąd refleksji na poziomie platformy, brak sygnatury manifestu, mitygowalny WYŁĄCZNIE łatką OS). Kluczowa korekta: CWE-1021 (poprzednio przypisane) to słabość tapjacking/overlay, nie manipulacji stosem zadań -- poprawiono na CWE-441 (confused deputy).
 
     '
-  desc_en: A malicious app abuses Android taskAffinity/launchMode or runtime Intent arrays to insert its activity into a legitimate app's task stack, phishing credentials while the victim believes they are in the trusted app.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: StrandHogg (2019) and StrandHogg 2.0 (CVE-2020-0096); documented in OWASP mobile pentesting references.'
+  desc_en: 'A malicious app abuses Android taskAffinity/allowTaskReparenting/launchMode to insert its Activity into a legitimate app''s task stack, phishing credentials while the victim believes they are in the trusted app. Two distinct variants: StrandHogg 1.0 (manifest-declarative, no CVE, app-side mitigable) and StrandHogg 2.0/CVE-2020-0096 (reflection-based platform bug, no manifest fingerprint, mitigable ONLY by an OS patch). Key correction: CWE-1021 (previously assigned) is a tapjacking/overlay weakness, not task-stack manipulation -- corrected to CWE-441 (confused deputy).'
+  lang: xml
+  vuln: "<!-- VULNERABLE: default taskAffinity (= package name) plus\n     allowTaskReparenting -- a malicious app can declare a\n     matching taskAffinity and get reparented onto this task -->\n<activity android:name=\".LoginActivity\"\n    android:allowTaskReparenting=\"true\"\n    android:launchMode=\"singleTask\" />\n"
+  safe: "<!-- SAFE: empty taskAffinity, singleInstance launch mode,\n     plus targetSdkVersion 30+ in build.gradle for the\n     platform-level Android 11 hardening -->\n<activity android:name=\".LoginActivity\"\n    android:taskAffinity=\"\"\n    android:launchMode=\"singleInstance\" />\n"
+  note_en: 'Source: OWASP MASWE-0057 (StrandHogg Attack / Task Affinity Vulnerability), MASVS-PLATFORM. StrandHogg (2019, no CVE) and StrandHogg 2.0 (CVE-2020-0096, CVSS 7.8, patched Android security level 2020-05-01). Foundational research: Ren et al., USENIX Security 2015. CWE corrected from CWE-1021 (unanimous across 3 research passes -- that CWE belongs to the sibling Tapjacking entry, 15.15).'
 - id: '15.15'
   name: Tapjacking (UI Overlay Attack)
   severity: Medium
