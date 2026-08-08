@@ -1,0 +1,114 @@
+threatId: '15.12'
+title:
+  en: Intent Redirection -- knowledge check
+  pl: Intent Redirection -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: The founding academic paper on this attack surface (Chin, Felt, Greenwood, Wagner, MobiSys 2011) is often cited as coining "Intent redirection." What did all three independent research passes confirm instead?
+    pl: Fundamentalna praca akademicka o tej powierzchni ataku (Chin, Felt, Greenwood, Wagner, MobiSys 2011) jest często cytowana jako ukuwająca "Intent redirection". Co potwierdziły zamiast tego wszystkie trzy niezależne przejścia badawcze?
+  choices:
+  - id: a
+    label:
+      en: The paper names "Intent Spoofing" (direct send to an exported component) and "Unauthorized Intent Receipt" (interception) -- it never uses the phrase "Intent redirection", which is a later Google/industry term for the confused-deputy forwarding subcase
+      pl: Praca nazywa "Intent Spoofing" (bezpośrednie wysłanie do wyeksportowanego komponentu) i "Unauthorized Intent Receipt" (przechwycenie) -- nigdy nie używa frazy "Intent redirection", która jest późniejszym terminem Google/przemysłu dla podprzypadku przekazywania confused-deputy
+  - id: b
+    label:
+      en: The paper coined exactly the term "Intent redirection" and defined it identically to how the term is used today
+      pl: Praca ukuła dokładnie termin "Intent redirection" i zdefiniowała go identycznie do tego jak termin jest używany dzisiaj
+  - id: c
+    label:
+      en: The paper focused exclusively on PendingIntent mutability and never discussed direct Intent forwarding
+      pl: Praca skupiała się wyłącznie na mutowalności PendingIntent i nigdy nie omawiała bezpośredniego przekazywania Intent
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three teams independently extracted the paper''s actual terminology and found the same result: "Intent Spoofing" and "Unauthorized Intent Receipt" are the paper''s terms, not "Intent redirection." Understanding this distinction matters for scoping: spoofing is a direct send to an exported component; redirection specifically involves tricking a trusted intermediary into relaying the attack with its own elevated identity.'
+    pl: 'Wszystkie trzy zespoły niezależnie wyodrębniły faktyczną terminologię pracy i znalazły ten sam wynik: "Intent Spoofing" i "Unauthorized Intent Receipt" to terminy pracy, nie "Intent redirection". Zrozumienie tego rozróżnienia ma znaczenie dla zakresu: spoofing to bezpośrednie wysłanie do wyeksportowanego komponentu; redirection konkretnie polega na oszukaniu zaufanego pośrednika by przekazał atak z własną podniesioną tożsamością.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: A proxy Activity checks that intent.getParcelableExtra("next") is not null, then forwards it via startActivity(). The developer reasons this null-check is sufficient caller/target validation. All three research passes flagged this exact reasoning as a documented failure pattern from Android's own risk page. Is the developer correct?
+    pl: Proxy Activity sprawdza że intent.getParcelableExtra("next") nie jest puste, następnie przekazuje dalej przez startActivity(). Deweloper rozumuje że to sprawdzenie niepustości jest wystarczającą walidacją wywołującego/celu. Wszystkie trzy przejścia badawcze oflagowały dokładnie to rozumowanie jako udokumentowany wzorzec awarii z własnej strony ryzyka Android. Czy deweloper ma rację?
+  isVulnerable: true
+  cwe: CWE-940
+  explanation:
+    en: No. A null-check on the extra says nothing about the target ComponentName of the forwarded Intent or the identity of the original caller -- a fully-populated, non-null Intent from an untrusted app forwards just fine. Android's own risk page separately warns that even explicit caller checks like getCallingActivity() can be forced to null by an attacker, making non-null checks doubly unreliable as a defense here.
+    pl: Nie. Sprawdzenie niepustości extra nic nie mówi o docelowym ComponentName przekazanego dalej Intent ani o tożsamości oryginalnego wywołującego -- w pełni wypełniony, niepusty Intent od niezaufanej apki przekazuje się dalej bez problemu. Własna strona ryzyka Android osobno ostrzega że nawet jawne sprawdzenia wywołującego jak getCallingActivity() mogą być wymuszone do pustego przez atakującego, czyniąc sprawdzenia niepustości podwójnie niewiarygodnymi jako obrona tutaj.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: Two of three independent research passes recommended keeping CWE-927 as primary for this entry, citing continuity with the catalog's sibling WebView bridge entry (15.11). The third argued for CWE-940 instead. What real-world evidence tipped the resolution toward CWE-940?
+    pl: Dwa z trzech niezależnych przejść badawczych zalecały zachowanie CWE-927 jako głównego dla tego wpisu, cytując ciągłość z siostrzanym wpisem WebView bridge katalogu (15.11). Trzeci argumentował za CWE-940 zamiast tego. Jaki prawdziwy dowód przechylił rozstrzygnięcie ku CWE-940?
+  choices:
+  - id: a
+    label:
+      en: CodeQL's own "Android Intent redirection" detection query maps to CWE-926+940, and the flagship verified CVE-2024-26131 (Element Android) is GHSA-tagged CWE-923+940 -- neither uses CWE-927
+      pl: Własne zapytanie wykrywające CodeQL "Android Intent redirection" mapuje się na CWE-926+940, a flagowe zweryfikowane CVE-2024-26131 (Element Android) jest oznaczone GHSA jako CWE-923+940 -- żadne nie używa CWE-927
+  - id: b
+    label:
+      en: CWE-927 was found to have been deprecated and removed from the CWE database entirely
+      pl: Znaleziono że CWE-927 zostało wycofane i całkowicie usunięte z bazy danych CWE
+  - id: c
+    label:
+      en: NVD assigns CWE-940 to every Android CVE by default regardless of the actual vulnerability mechanism
+      pl: NVD przypisuje CWE-940 do każdego Android CVE domyślnie niezależnie od faktycznego mechanizmu podatności
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'CWE-927 remains a valid, live CWE -- it just describes a different mechanism (a sender leaking sensitive data via an implicit Intent) than confused-deputy forwarding. The deciding evidence was empirical: real detection tooling and a real, verified CVE both independently converged on CWE-940-family mappings rather than CWE-927, which is stronger grounding than continuity with an earlier catalog entry''s assumption.'
+    pl: 'CWE-927 pozostaje ważnym, żywym CWE -- po prostu opisuje inny mechanizm (nadawca wyciekający wrażliwe dane przez implicit Intent) niż przekazywanie confused-deputy. Rozstrzygającym dowodem był empiryzm: prawdziwe narzędzie wykrywające i prawdziwe, zweryfikowane CVE oba niezależnie zbiegły się na mapowaniach rodziny CWE-940 zamiast CWE-927, co jest silniejszym oparciem niż ciągłość z założeniem wcześniejszego wpisu katalogu.'
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: An app targets API 33 (Android 13) and creates all its PendingIntents with FLAG_MUTABLE, reasoning that Android didn't change PendingIntent mutability defaults until API 33 anyway, so nothing extra was required before that. Is this reasoning accurate?
+    pl: Apka celuje w API 33 (Android 13) i tworzy wszystkie swoje PendingIntent z FLAG_MUTABLE, rozumując że Android nie zmienił domyślnej mutowalności PendingIntent aż do API 33, więc nic dodatkowego nie było wymagane wcześniej. Czy to rozumowanie jest dokładne?
+  isVulnerable: true
+  cwe: CWE-940
+  explanation:
+    en: No -- and this is exactly the timeline confusion all three research passes flagged identically. The real inflection points are API 31 (explicit FLAG_IMMUTABLE/FLAG_MUTABLE declaration became mandatory -- not an automatic default flip) and API 34 (mutable PendingIntents with an implicit base Intent were additionally blocked). None of the three teams found evidence of a distinct API 33 PendingIntent-mutability change -- and using FLAG_MUTABLE on an implicit base Intent remains the classic hijackable pattern regardless of which API level introduced which requirement.
+    pl: Nie -- i to dokładnie pomylenie osi czasu które wszystkie trzy przejścia badawcze oflagowały identycznie. Prawdziwe punkty zwrotne to API 31 (jawna deklaracja FLAG_IMMUTABLE/FLAG_MUTABLE stała się obowiązkowa -- nie automatyczne przejście domyślne) i API 34 (mutowalne PendingIntent z implicit bazowym Intent zostały dodatkowo zablokowane). Żaden z trzech zespołów nie znalazł dowodu na odrębną zmianę mutowalności PendingIntent w API 33 -- a użycie FLAG_MUTABLE na implicit bazowym Intent pozostaje klasycznym przejmowalnym wzorcem niezależnie od tego który poziom API wprowadził który wymóg.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: A developer fixes a redirection bug by setting android:exported="false" on the internal target activity that was being reached through the proxy. Confirmed by all three research passes, does this actually stop the redirection?
+    pl: Deweloper naprawia błąd redirection ustawiając android:exported="false" na wewnętrznej docelowej aktywności która była osiągana przez proxy. Potwierdzone przez wszystkie trzy przejścia badawcze, czy to faktycznie zatrzymuje redirection?
+  choices:
+  - id: a
+    label:
+      en: No -- the proxy itself, running under the app's own identity, is legitimately permitted to launch its own non-exported components, so exported status on the internal target is irrelevant to whether the proxy can still reach it
+      pl: Nie -- samo proxy, działające pod własną tożsamością apki, jest legalnie upoważnione by uruchomić własne niewyeksportowane komponenty, więc status eksportu na wewnętrznym celu jest nieistotny dla tego czy proxy wciąż może go osiągnąć
+  - id: b
+    label:
+      en: Yes -- exported="false" completely closes the vulnerability with no further changes needed
+      pl: Tak -- exported="false" całkowicie zamyka podatność bez potrzeby dalszych zmian
+  - id: c
+    label:
+      en: Yes, but only on API levels below 21
+      pl: Tak, ale tylko na poziomach API poniżej 21
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three teams independently confirmed this exact caveat: the whole mechanism of intent redirection is that a trusted deputy reaches its own components under its own UID and permissions, which is unaffected by that component''s exported status. The actual fix has to be at the proxy -- validating the ComponentName of what it forwards -- not at the internal target''s manifest declaration.'
+    pl: 'Wszystkie trzy zespoły niezależnie potwierdziły dokładnie to zastrzeżenie: cały mechanizm intent redirection polega na tym że zaufany pośrednik osiąga własne komponenty pod własnym UID i uprawnieniami, co jest niezależne od statusu eksportu tego komponentu. Faktyczna naprawa musi być na proxy -- walidacja ComponentName tego co przekazuje dalej -- nie w deklaracji manifestu wewnętrznego celu.'
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A proxy Activity needs to relay an externally-supplied Intent to one of a small set of legitimate internal targets. Which implementation actually closes the redirection risk this deep-dive centers on?
+    pl: Proxy Activity potrzebuje przekazać dalej zewnętrznie dostarczony Intent do jednego z małego zestawu legalnych wewnętrznych celów. Która implementacja faktycznie zamyka ryzyko redirection na którym skupia się ten deep-dive?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: "val forward = intent.getParcelableExtra<Intent>(\"next\")\nif (forward != null) {\n    startActivity(forward)  // null-check only -- no target/caller validation\n}"
+  - id: v2
+    lang: kotlin
+    code: "val forward = intent.getParcelableExtra<Intent>(\"next\")\nval caller = callingActivity  // can be attacker-forced to null\nif (caller != null) {\n    startActivity(forward)  // caller check alone, no ComponentName allowlist\n}"
+  - id: v3
+    lang: kotlin
+    code: "val raw = intent.getParcelableExtra<Intent>(\"next\") ?: return finish()\nval sanitized = IntentSanitizer.Builder()\n    .allowComponent(ComponentName(this, AllowedTarget::class.java))\n    .allowComponent(ComponentName(this, OtherAllowedTarget::class.java))\n    .build()\n    .sanitizeByThrowing(raw)\nsanitized.removeFlags(\n    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION\n)\nstartActivity(sanitized)"
+  correctVariantId: v3
+  explanation:
+    en: 'v3 fixes the actual root cause: an explicit ComponentName allowlist (only the two legitimate internal targets can ever be reached) via IntentSanitizer, plus stripped URI-grant flags so an allowlisted-but-unstripped forward can''t leak ContentProvider access. v1 is the classic unvalidated forward. v2 is the subtle trap this deep-dive''s defense ranking centers on: caller verification is the weakest control precisely because getCallingActivity() can be attacker-forced to null, and even a genuine caller check says nothing about which internal component is actually being reached.'
+    pl: 'v3 naprawia faktyczną pierwotną przyczynę: jawną listę dozwolonych ComponentName (tylko dwa legalne wewnętrzne cele mogą być kiedykolwiek osiągnięte) przez IntentSanitizer, plus usunięte flagi grantu URI by dozwolony-ale-nieoczyszczony forward nie mógł wyciec dostępu do ContentProvider. v1 to klasyczny niewalidowany forward. v2 to subtelna pułapka na której skupia się ranking obrony tego deep-dive: weryfikacja wywołującego jest najsłabszą kontrolą dokładnie dlatego że getCallingActivity() może być wymuszone przez atakującego do pustego, a nawet prawdziwe sprawdzenie wywołującego nic nie mówi o tym który wewnętrzny komponent jest faktycznie osiągany.'

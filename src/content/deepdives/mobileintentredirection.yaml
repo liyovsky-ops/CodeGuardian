@@ -1,0 +1,393 @@
+meta:
+  id: mobileintentredirection
+  threatId: '15.12'
+  severity: High
+  color: '#166534'
+  colorRgb: 22,101,52
+  cwe: CWE-940
+  cvss: N/A (technique class spanning platform PendingIntent CVEs and app-level cases; no single CVSS anchors the whole class)
+  standard: OWASP MASTG-TEST-0026 / MASTG-TEST-0030 (Implicit Intents / PendingIntent)
+hero:
+  titleMain: 'Intent '
+  titleGrad: Redirection
+  titleTail: ''
+  topbar: Intent Redirection / Confused-Deputy Forwarding (Android)
+  lead:
+    en: 'All three research passes independently surfaced the same headline correction: the founding academic paper on this attack surface, Chin, Felt, Greenwood & Wagner''s "Analyzing Inter-Application Communication in Android" (MobiSys 2011), never uses the phrase "Intent redirection" -- it names "Intent Spoofing" (a malicious app sending a crafted Intent directly to an exported component) and "Unauthorized Intent Receipt" (interception/eavesdropping). "Intent redirection" is a later Google/industry coinage for a specific, narrower sub-case: a trusted app receives an Intent, unparcels a nested Intent from its extras, and re-dispatches it via startActivity/sendBroadcast/startService without validating the target or caller -- letting an attacker launder its Intent through a trusted deputy''s own identity and permissions to reach otherwise-unreachable internal components (a textbook confused deputy). This is distinct from spoofing precisely because a trusted intermediary is tricked into relaying the attack, not merely an exported endpoint being hit directly. A closely related token-based variant, mutable PendingIntent hijacking, lets a recipient fill in an incomplete wrapped Intent and fire it under the creator''s identity -- Android made specifying FLAG_IMMUTABLE or FLAG_MUTABLE mandatory at API 31 (a "must declare" requirement, not an automatic default-to-immutable, a distinction all three teams flagged as commonly misstated), and further restricted mutable-plus-implicit PendingIntents at API 34.'
+    pl: 'Wszystkie trzy przejścia badawcze niezależnie ujawniły tę samą nagłówkową korektę: fundamentalna praca akademicka o tej powierzchni ataku, "Analyzing Inter-Application Communication in Android" Chin, Felt, Greenwood i Wagnera (MobiSys 2011), nigdy nie używa frazy "Intent redirection" -- nazywa "Intent Spoofing" (złośliwa apka wysyła spreparowany Intent bezpośrednio do wyeksportowanego komponentu) i "Unauthorized Intent Receipt" (przechwycenie/podsłuch). "Intent redirection" to późniejsze ukucie Google/przemysłu dla konkretnego, węższego podprzypadku: zaufana apka otrzymuje Intent, wypakowuje zagnieżdżony Intent z jego extras, i ponownie wysyła go przez startActivity/sendBroadcast/startService bez walidacji celu albo wywołującego -- pozwalając atakującemu wyprać swój Intent przez własną tożsamość i uprawnienia zaufanego pośrednika by osiągnąć inaczej nieosiągalne komponenty wewnętrzne (podręcznikowy confused deputy). To odrębne od spoofingu dokładnie dlatego że zaufany pośrednik jest oszukany by przekazać atak, nie tylko wyeksportowany endpoint jest bezpośrednio trafiony. Blisko powiązany wariant oparty na tokenie, przejęcie mutowalnego PendingIntent, pozwala odbiorcy wypełnić niekompletny opakowany Intent i wystrzelić go pod tożsamością twórcy -- Android uczynił podanie FLAG_IMMUTABLE albo FLAG_MUTABLE obowiązkowym w API 31 (wymóg "musisz zadeklarować", nie automatyczne domyślne przejście na niemutowalny, rozróżnienie które wszystkie trzy zespoły oflagowały jako powszechnie mylnie przedstawiane), i dalej ograniczył mutowalne-plus-implicit PendingIntent w API 34.'
+  metrics:
+  - k: MobiSys 2011
+    v:
+      en: Chin/Felt/Greenwood/Wagner coin "Intent Spoofing" + "Unauthorized Intent Receipt" -- not "Intent redirection", a later industry term
+      pl: Chin/Felt/Greenwood/Wagner ukuwają "Intent Spoofing" + "Unauthorized Intent Receipt" -- nie "Intent redirection", późniejszy termin przemysłowy
+  - k: CVE-2024-26131
+    v:
+      en: 'Element Android: third-party app starts arbitrary internal activity, bypasses PIN protection'
+      pl: 'Element Android: zewnętrzna apka uruchamia dowolną wewnętrzną aktywność, omija ochronę PIN'
+  - k: 50M+
+    v:
+      en: installs affected by the EngageLab SDK intent-redirection bug (2026), 30M+ in crypto wallets
+      pl: instalacji dotkniętych błędem intent redirection SDK EngageLab (2026), 30M+ w portfelach krypto
+  - k: API 31 / API 34
+    v:
+      en: the two real PendingIntent mutability inflection points -- not API 33, a commonly misattributed version
+      pl: dwa prawdziwe punkty zwrotne mutowalności PendingIntent -- nie API 33, powszechnie błędnie przypisywana wersja
+  sources:
+  - label: Android -- Intent redirection
+    url: https://developer.android.com/privacy-and-security/risks/intent-redirection
+  - label: Android -- Pending intents
+    url: https://developer.android.com/privacy-and-security/risks/pending-intent
+  - label: CWE-940 -- Improper Verification of Source of a Communication Channel
+    url: https://cwe.mitre.org/data/definitions/940.html
+  - label: Chin, Felt, Greenwood, Wagner -- Analyzing Inter-Application Communication in Android (MobiSys 2011)
+    url: https://dl.acm.org/doi/10.1145/1999995.2000018
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: 'Every variant here shares the confused-deputy shape all three research passes converged on: a trusted app is tricked into relaying or wrapping an attacker-controlled Intent with its own identity and permissions.'
+      pl: 'Każdy wariant tutaj dzieli kształt confused-deputy na którym zbiegły się wszystkie trzy przejścia badawcze: zaufana apka jest oszukana by przekazać albo opakować kontrolowany przez atakującego Intent z własną tożsamością i uprawnieniami.'
+    items:
+    - name: Confused-deputy forwarding of an attacker-supplied inner Intent
+      sev: high
+      description:
+        en: 'A publicly reachable proxy component unparcels a nested Intent from its own received Intent''s extras and re-dispatches it via startActivity/startActivityForResult/sendBroadcast/startService with no validation of the target ComponentName or the caller. Because dispatch runs under the deputy''s own UID and permissions, the attacker reaches components it could never reach directly -- Android''s own risk page states the impact plainly: "the attacker might execute internal features in the vulnerable app, or access private components like unexported ContentProvider objects."'
+        pl: 'Publicznie osiągalny komponent proxy wypakowuje zagnieżdżony Intent z extras własnego otrzymanego Intent i ponownie wysyła go przez startActivity/startActivityForResult/sendBroadcast/startService bez walidacji docelowego ComponentName albo wywołującego. Ponieważ wysyłka działa pod własnym UID i uprawnieniami pośrednika, atakujący osiąga komponenty których nigdy nie mógłby osiągnąć bezpośrednio -- własna strona ryzyka Android stwierdza wpływ wprost: "atakujący może wykonać wewnętrzne funkcje podatnej apki, albo uzyskać dostęp do prywatnych komponentów jak niewyeksportowane obiekty ContentProvider".'
+      payload: '// attacker app supplies a nested Intent in an extra
+
+        val forward = intent.getParcelableExtra<Intent>("next_intent")
+
+        startActivity(forward)  // no target/caller validation -- runs as the deputy'
+    - name: PendingIntent hijacking via mutable + implicit base Intent
+      sev: high
+      description:
+        en: A PendingIntent wraps an Intent plus the creator's identity; a mutable PendingIntent whose base Intent is implicit or incomplete lets the receiving app supply the missing action/component/data via Intent.fillIn(), redirecting execution to a target of its choice while still running under the creator's UID. Confirmed as a real platform-level attack class by BlackHat EU 2021 research ("Re-route Your Intent for Privilege Escalation"), which produced concrete AOSP fixes.
+        pl: PendingIntent opakowuje Intent plus tożsamość twórcy; mutowalny PendingIntent którego bazowy Intent jest implicit albo niekompletny pozwala odbierającej apce dostarczyć brakującą akcję/komponent/dane przez Intent.fillIn(), przekierowując wykonanie do celu wybranego przez siebie wciąż działając pod UID twórcy. Potwierdzone jako prawdziwa klasa ataku na poziomie platformy przez badania BlackHat EU 2021 ("Re-route Your Intent for Privilege Escalation"), które wyprodukowały konkretne naprawy AOSP.
+      payload: '// victim creates:
+
+        PendingIntent.getActivity(ctx, 0, Intent(), FLAG_MUTABLE)  // implicit, empty base
+
+        // receiver fills in the missing pieces before firing it:
+
+        receivedPendingIntent.send(context, 0, Intent().setClassName("victim.pkg", "victim.internal.Activity"))'
+    - name: Reaching non-exported internal components and stealing URI-grant flags
+      sev: high
+      description:
+        en: 'The proxy, running as the victim, is permitted to launch the victim''s own android:exported="false" activities, services, or ContentProviders -- reachability that exported-status hardening alone cannot fix, since the deputy is legitimately allowed to reach them. Verified as the exact mechanism behind CVE-2024-26131 (Element Android): a third-party malicious app could start any internal activity by passing extra parameters, bypassing PIN protection. Forwarded intents carrying FLAG_GRANT_READ_URI_PERMISSION/FLAG_GRANT_WRITE_URI_PERMISSION additionally leak access to private ContentProviders even when the launched component itself is otherwise harmless.'
+        pl: 'Proxy, działający jako ofiara, ma pozwolenie uruchomić własne aktywności, usługi albo ContentProvider ofiary oznaczone android:exported="false" -- osiągalność której samo wzmocnienie statusu eksportu nie naprawi, ponieważ pośrednik jest legalnie upoważniony by je osiągnąć. Zweryfikowane jako dokładny mechanizm stojący za CVE-2024-26131 (Element Android): zewnętrzna złośliwa apka mogła uruchomić dowolną wewnętrzną aktywność przekazując dodatkowe parametry, omijając ochronę PIN. Przekazane dalej intenty niosące FLAG_GRANT_READ_URI_PERMISSION/FLAG_GRANT_WRITE_URI_PERMISSION dodatkowo wyciekają dostęp do prywatnych ContentProvider nawet gdy sam uruchomiony komponent jest skądinąd nieszkodliwy.'
+      payload: '// forwarded intent smuggles a URI grant to a private provider
+
+        val forward = intent.getParcelableExtra<Intent>("next")
+
+        forward.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+        startActivity(forward)  // grant rides along even if the target component itself looks safe'
+    - name: Transitive exposure via a bundled third-party SDK's own proxy component
+      sev: medium
+      description:
+        en: 'The same transitive-SDK pattern flagged for the sibling WebView bridge entry (15.11) reappears here: a bundled push/analytics SDK''s own exported component can itself be the unvalidated forwarding proxy, reaching the HOST app''s internal, non-exported components -- not just the SDK''s own. Verified as the real mechanism behind the 2026 EngageLab SDK disclosure (Microsoft): an exported MTCommonActivity called Intent.parseUri() with URI_ALLOW_UNSAFE on attacker-supplied data and launched the result under the host app''s identity, affecting over 50 million installs across apps that never wrote the vulnerable code themselves.'
+        pl: 'Ten sam wzorzec przechodniego SDK oflagowany dla siostrzanego wpisu WebView bridge (15.11) powraca tutaj: własny wyeksportowany komponent dołączonego SDK push/analitycznego może sam być niewalidowanym proxy przekazującym, osiągając wewnętrzne, niewyeksportowane komponenty apki-HOSTA -- nie tylko własne komponenty SDK. Zweryfikowane jako prawdziwy mechanizm stojący za ujawnieniem SDK EngageLab z 2026 (Microsoft): wyeksportowana MTCommonActivity wywoływała Intent.parseUri() z URI_ALLOW_UNSAFE na danych dostarczonych przez atakującego i uruchamiała wynik pod tożsamością apki-hosta, dotykając ponad 50 milionów instalacji w apkach które same nigdy nie napisały podatnego kodu.'
+      payload: '// inside a bundled SDK''s exported activity:
+
+        val uri = intent.getStringExtra("deeplink")
+
+        val forward = Intent.parseUri(uri, Intent.URI_ALLOW_UNSAFE)  // attacker-controlled
+
+        startActivity(forward)  // runs as the HOST app, not the SDK'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The correction confirmed by all three research passes: neither a non-null caller check nor exported="false" on the internal target actually stops redirection -- the fix has to validate the ComponentName of the intent being forwarded, and separately declare PendingIntent mutability explicitly with an explicit base Intent.'
+      pl: 'Korekta potwierdzona przez wszystkie trzy przejścia badawcze: ani niepuste sprawdzenie wywołującego ani exported="false" na wewnętrznym celu faktycznie nie zatrzymuje redirection -- naprawa musi walidować ComponentName przekazywanego dalej intentu, i osobno jawnie zadeklarować mutowalność PendingIntent z jawnym bazowym Intent.'
+    languages:
+    - label: Android Kotlin -- unvalidated forwarding proxy
+      lang: kotlin
+      vulnerable: "// VULNERABLE: exported proxy blindly forwards whatever Intent\n// arrives in the extra, with no target or caller validation\nclass ProxyActivity : Activity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        val forward = intent.getParcelableExtra<Intent>(\"next_intent\")\n        startActivity(forward)  // can reach ANY component, exported or not\n    }\n}"
+      safe: "// SAFE: explicit allowlist via AndroidX IntentSanitizer, dangerous\n// URI-grant flags stripped before dispatch\nclass ProxyActivity : Activity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        val raw = intent.getParcelableExtra<Intent>(\"next_intent\") ?: return finish()\n        val sanitized = IntentSanitizer.Builder()\n            .allowComponent(ComponentName(this, AllowedTarget::class.java))\n            .build()\n            .sanitizeByThrowing(raw)\n        sanitized.removeFlags(\n            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION\n        )\n        startActivity(sanitized)\n    }\n}"
+    - label: Android Kotlin -- PendingIntent handed to another app
+      lang: kotlin
+      vulnerable: "// VULNERABLE (targeting < API 31, or API 31+ with FLAG_MUTABLE misused):\n// mutable, implicit, empty base Intent -- receiver can fill in the target\nval pi = PendingIntent.getActivity(\n    context, 0, Intent(), PendingIntent.FLAG_MUTABLE\n)"
+      safe: "// SAFE: FLAG_IMMUTABLE with a fully explicit base Intent --\n// receiver cannot redirect it to a component of their choosing\nval pi = PendingIntent.getActivity(\n    context, 0,\n    Intent(context, TargetActivity::class.java),\n    PendingIntent.FLAG_IMMUTABLE\n)"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: find every place a received Intent is re-dispatched, then check the two things a target-only or caller-only check each individually miss.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: znajdź każde miejsce gdzie otrzymany Intent jest ponownie wysyłany, następnie sprawdź dwie rzeczy które sprawdzenie tylko celu albo tylko wywołującego każde osobno pomija.'
+    steps:
+    - title:
+        en: Locate every unparcel-then-launch proxy
+        pl: Zlokalizuj każde proxy wypakuj-i-uruchom
+      description:
+        en: Grep for getParcelableExtra/getBundleExtra/Intent.parseUri results flowing into startActivity/startActivityForResult/sendBroadcast/startService/setResult -- across the app AND every bundled SDK, per the transitive-SDK pattern confirmed in the EngageLab incident. CodeQL's java/android-intent-redirection query automates exactly this source-to-sink trace.
+        pl: Grepuj wyniki getParcelableExtra/getBundleExtra/Intent.parseUri płynące do startActivity/startActivityForResult/sendBroadcast/startService/setResult -- w całej apce ORAZ każdym dołączonym SDK, zgodnie ze wzorcem przechodniego SDK potwierdzonym w incydencie EngageLab. Zapytanie CodeQL java/android-intent-redirection automatyzuje dokładnie ten ślad źródło-do-ujścia.
+    - title:
+        en: Audit every PendingIntent creation site for mutability and base-Intent completeness
+        pl: Zaudytuj każde miejsce tworzenia PendingIntent pod kątem mutowalności i kompletności bazowego Intent
+      description:
+        en: Confirm FLAG_IMMUTABLE vs FLAG_MUTABLE is explicit (mandatory since API 31) and that a mutable PendingIntent's base Intent is fully explicit, not implicit/empty -- Android Lint's MutableImplicitPendingIntent and UnspecifiedImmutableFlag checks automate this.
+        pl: Potwierdź że FLAG_IMMUTABLE vs FLAG_MUTABLE jest jawne (obowiązkowe od API 31) i że bazowy Intent mutowalnego PendingIntent jest w pełni jawny, nie implicit/pusty -- sprawdzenia Android Lint MutableImplicitPendingIntent i UnspecifiedImmutableFlag automatyzują to.
+    - title:
+        en: Check what a validated-looking forward still carries
+        pl: Sprawdź co wciąż niesie forward wyglądający na zwalidowany
+      description:
+        en: Even where a ComponentName check exists, trace whether URI-grant flags (FLAG_GRANT_READ/WRITE/PERSISTABLE/PREFIX_URI_PERMISSION) ride along on the forwarded Intent, and whether any caller check relies on getCallingActivity()/getCallingPackage() returning non-null -- both are attacker-forceable to null per Android's own documented caveat, so a non-null check alone gives false assurance.
+        pl: Nawet gdzie istnieje sprawdzenie ComponentName, prześledź czy flagi grantu URI (FLAG_GRANT_READ/WRITE/PERSISTABLE/PREFIX_URI_PERMISSION) jadą wraz z przekazanym dalej Intent, i czy jakiekolwiek sprawdzenie wywołującego polega na getCallingActivity()/getCallingPackage() zwracającym niepuste -- oba są wymuszalne przez atakującego do pustego zgodnie z własnym udokumentowanym zastrzeżeniem Android, więc samo sprawdzenie niepustości daje fałszywe zapewnienie.
+    - title:
+        en: Confirm reachability dynamically with Drozer or StrictMode
+        pl: Potwierdź osiągalność dynamicznie przez Drozer albo StrictMode
+      description:
+        en: Use Drozer to act as a malicious app and attempt to reach a genuinely non-exported component through the proxy; on API 31+ devices, StrictMode.VmPolicy.Builder().detectUnsafeIntentLaunch() is the platform's own runtime detector for exactly the unparcel-then-launch pattern, firing a violation the moment it happens.
+        pl: Użyj Drozer by działać jako złośliwa apka i spróbować osiągnąć naprawdę niewyeksportowany komponent przez proxy; na urządzeniach API 31+, StrictMode.VmPolicy.Builder().detectUnsafeIntentLaunch() to własny detektor czasu wykonania platformy dokładnie dla wzorca wypakuj-i-uruchom, wyzwalający naruszenie w momencie gdy to się dzieje.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes independently converged on the same top two controls and, importantly, on the same weakest one: caller verification via getCallingActivity()/checkCallingPermission() is bypassable and should never be relied on alone.'
+      pl: 'Wszystkie trzy przejścia badawcze niezależnie zbiegły się na tych samych dwóch najwyższych kontrolach i, co ważne, na tej samej najsłabszej: weryfikacja wywołującego przez getCallingActivity()/checkCallingPermission() jest omijalna i nigdy nie powinna być jedynym oparciem.'
+    items:
+    - rank: 1
+      eff: 85
+      kind: primary
+      label:
+        en: Allowlist/validate the exact target ComponentName before forwarding
+        pl: Dozwól/waliduj dokładny docelowy ComponentName przed przekazaniem
+      note:
+        en: 'Android''s own remediation pattern: resolve the nested Intent and check package+class against an explicit allowlist, ideally via AndroidX IntentSanitizer (allowComponent/allowData/allowType + sanitizeByThrowing) rather than hand-rolled checks. Confirmed by all three teams as the strongest structural fix.'
+        pl: 'Własny wzorzec naprawy Android: rozwiąż zagnieżdżony Intent i sprawdź pakiet+klasę względem jawnej listy dozwolonych, idealnie przez AndroidX IntentSanitizer (allowComponent/allowData/allowType + sanitizeByThrowing) zamiast ręcznie pisanych sprawdzeń. Potwierdzone przez wszystkie trzy zespoły jako najsilniejsza strukturalna naprawa.'
+    - rank: 2
+      eff: 80
+      kind: primary
+      label:
+        en: Never forward a caller-supplied Intent at all; redesign away from relaying
+        pl: Nigdy nie przekazuj dalej Intent dostarczonego przez wywołującego w ogóle; przeprojektuj z dala od pośredniczenia
+      note:
+        en: 'If the proxy doesn''t genuinely need to relay an externally-supplied Intent, eliminate the pattern entirely rather than trying to validate it safely. Caveat all three teams noted: not always feasible when relaying is the actual product feature (deep-link routers, share-target proxies).'
+        pl: 'Jeśli proxy naprawdę nie potrzebuje przekazywać dalej zewnętrznie dostarczonego Intent, wyeliminuj wzorzec całkowicie zamiast próbować bezpiecznie go walidować. Zastrzeżenie odnotowane przez wszystkie trzy zespoły: nie zawsze wykonalne gdy przekazywanie jest faktyczną funkcją produktu (routery deep-linków, proxy udostępniania).'
+    - rank: 3
+      eff: 70
+      kind: strong
+      label:
+        en: Strip dangerous URI-grant flags before forwarding
+        pl: Usuń niebezpieczne flagi grantu URI przed przekazaniem dalej
+      note:
+        en: 'Explicitly clear FLAG_GRANT_READ_URI_PERMISSION / FLAG_GRANT_WRITE_URI_PERMISSION / FLAG_GRANT_PERSISTABLE_URI_PERMISSION / FLAG_GRANT_PREFIX_URI_PERMISSION before dispatch. Caveat all three teams flagged as easily missed even after ComponentName validation: an allowlisted, harmless-looking target can still leak private ContentProvider access if the grant flags ride along unstripped.'
+        pl: 'Jawnie wyczyść FLAG_GRANT_READ_URI_PERMISSION / FLAG_GRANT_WRITE_URI_PERMISSION / FLAG_GRANT_PERSISTABLE_URI_PERMISSION / FLAG_GRANT_PREFIX_URI_PERMISSION przed wysyłką. Zastrzeżenie oflagowane przez wszystkie trzy zespoły jako łatwe do pominięcia nawet po walidacji ComponentName: dozwolony, nieszkodliwie wyglądający cel wciąż może wyciec dostęp do prywatnego ContentProvider jeśli flagi grantu jadą nieusunięte.'
+    - rank: 4
+      eff: 65
+      kind: strong
+      label:
+        en: PendingIntent.FLAG_IMMUTABLE with a fully explicit base Intent
+        pl: PendingIntent.FLAG_IMMUTABLE z w pełni jawnym bazowym Intent
+      note:
+        en: 'Closes the token-hijacking variant. Mandatory to declare explicitly since API 31 (not automatically immutable by default -- a distinction all three teams flagged as commonly misstated). Caveat: immutability alone is not enough if the base Intent is still implicit and mutability is genuinely required for the feature -- then the action/component must be made explicit instead.'
+        pl: 'Zamyka wariant przejęcia tokenu. Obowiązkowe do jawnej deklaracji od API 31 (nie automatycznie niemutowalne domyślnie -- rozróżnienie które wszystkie trzy zespoły oflagowały jako powszechnie mylnie przedstawiane). Zastrzeżenie: sama niemutowalność nie wystarcza jeśli bazowy Intent jest wciąż implicit i mutowalność jest naprawdę potrzebna dla funkcji -- wtedy akcja/komponent musi być zamiast tego uczyniony jawnym.'
+    - rank: 5
+      eff: 50
+      kind: weak
+      label:
+        en: Rely on platform-level hardening as a backstop, not a substitute
+        pl: Polegaj na wzmocnieniu poziomu platformy jako zabezpieczeniu, nie zamienniku
+      note:
+        en: 'Android 14 (API 34) blocks creating a mutable PendingIntent with an implicit base Intent unless FLAG_ALLOW_UNSAFE_IMPLICIT_INTENT is explicitly set; Android''s own intent-redirection page describes further by-default launch-security hardening with an explicit Intent.removeLaunchSecurityProtection() opt-out. Caveat: device/target-SDK dependent and, per all three teams, more lightly documented than the API-31 PendingIntent change -- treat as a backstop for apps that already do the validation above, not a reason to skip it.'
+        pl: 'Android 14 (API 34) blokuje tworzenie mutowalnego PendingIntent z implicit bazowym Intent chyba że FLAG_ALLOW_UNSAFE_IMPLICIT_INTENT jest jawnie ustawiona; własna strona intent redirection Android opisuje dalsze domyślne wzmocnienie bezpieczeństwa uruchamiania z jawnym opt-out Intent.removeLaunchSecurityProtection(). Zastrzeżenie: zależne od urządzenia/docelowego SDK i, zgodnie ze wszystkimi trzema zespołami, lżej udokumentowane niż zmiana PendingIntent z API-31 -- traktuj jako zabezpieczenie dla apek które już robią powyższą walidację, nie powód by ją pominąć.'
+    - rank: 6
+      eff: 40
+      kind: weak
+      label:
+        en: android:exported="false" on components that shouldn't be externally reachable
+        pl: android:exported="false" na komponentach które nie powinny być zewnętrznie osiągalne
+      note:
+        en: 'Reduces overall attack surface but, confirmed by all three teams, does NOT fix redirection by itself: the whole point of the technique is that a trusted deputy reaches its own non-exported components under its own UID, so exported status on the internal target is irrelevant to whether the proxy can still reach it.'
+        pl: 'Zmniejsza ogólną powierzchnię ataku ale, potwierdzone przez wszystkie trzy zespoły, NIE naprawia redirection samo w sobie: cały sens techniki polega na tym że zaufany pośrednik osiąga własne niewyeksportowane komponenty pod własnym UID, więc status eksportu na wewnętrznym celu jest nieistotny dla tego czy proxy wciąż może go osiągnąć.'
+    - rank: 7
+      eff: 25
+      kind: weak
+      label:
+        en: Caller verification via getCallingActivity()/getCallingPackage()/checkCallingPermission()
+        pl: Weryfikacja wywołującego przez getCallingActivity()/getCallingPackage()/checkCallingPermission()
+      note:
+        en: 'Ranked weakest by all three teams, sourced directly from Android''s own risk page: getCallingActivity() can be attacker-forced to null (so a non-null check gives false assurance), it is only populated for startActivityForResult-style calls in the first place, and checkCallingPermission() returns an int rather than throwing -- a frequent implementation bug that silently no-ops the check.'
+        pl: 'Sklasyfikowane jako najsłabsze przez wszystkie trzy zespoły, źródłowane bezpośrednio z własnej strony ryzyka Android: getCallingActivity() może być wymuszone przez atakującego do pustego (więc sprawdzenie niepustości daje fałszywe zapewnienie), jest wypełniane w ogóle tylko dla wywołań w stylu startActivityForResult, a checkCallingPermission() zwraca int zamiast rzucać -- częsty błąd implementacji który po cichu unieważnia sprawdzenie.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: All three research passes independently surfaced the same flagship app-level CVE and the same platform-level PendingIntent research, spanning from a widely-used secure messenger to core AOSP system services.
+      pl: Wszystkie trzy przejścia badawcze niezależnie ujawniły ten sam flagowy CVE na poziomie apki i te same badania PendingIntent na poziomie platformy, obejmujące od szeroko używanego bezpiecznego komunikatora po podstawowe usługi systemowe AOSP.
+    items:
+    - org: CVE-2024-26131 -- Element Android (Matrix client)
+      year: 2024
+      impact: Third-party malicious app could start any internal activity by passing extra parameters, bypassing the app's PIN/screen-lock protection
+      cost: Affected versions 1.4.3-1.6.10; patched in 1.6.12; GHSA-tagged CWE-923 (Improper Restriction of Communication Channel to Intended Endpoints) + CWE-940
+      description:
+        en: 'Verified directly on the GitHub Security Advisory by two independent teams: a textbook confused-deputy forward let an unprivileged malicious app reach Element''s own internal, PIN-protected activities. The official CWE tagging (923+940, not 927) is itself corroborating evidence that CWE-940 is the more accurate root-cause mapping for this technique than the implicit-intent-leakage-focused CWE-927.'
+        pl: 'Zweryfikowane bezpośrednio na GitHub Security Advisory przez dwa niezależne zespoły: podręcznikowe przekazanie confused-deputy pozwoliło nieuprzywilejowanej złośliwej apce osiągnąć własne wewnętrzne, chronione PIN-em aktywności Element. Oficjalne oznaczenie CWE (923+940, nie 927) jest samo w sobie dowodem potwierdzającym że CWE-940 jest dokładniejszym mapowaniem pierwotnej przyczyny dla tej techniki niż skupione na wycieku implicit-intent CWE-927.'
+    - org: EngageLab push SDK (Microsoft Threat Intelligence, 2026)
+      year: 2026
+      impact: Attacker-supplied URI parsed with URI_ALLOW_UNSAFE and launched under the host app's identity, reaching private ContentProviders with persistable URI grants
+      cost: Over 50 million installs affected (30M+ in crypto-wallet apps); fixed in EngageLab SDK 5.2.1 (Nov 2025) by de-exporting the vulnerable activity
+      description:
+        en: 'Confirmed identically by all three research passes: an exported MTCommonActivity in a bundled third-party push SDK -- not code the host apps wrote themselves -- was the vulnerable proxy, illustrating the same transitive-SDK exposure pattern this catalog documented for WebView bridges (15.11) now recurring for Intent redirection.'
+        pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze: wyeksportowana MTCommonActivity w dołączonym zewnętrznym SDK push -- nie kod który apki-hosty same napisały -- była podatnym proxy, ilustrując ten sam wzorzec przechodniej ekspozycji SDK który ten katalog udokumentował dla mostków WebView (15.11), teraz powracający dla Intent redirection.'
+    - org: AOSP PendingIntent hijacking (BlackHat EU 2021 research)
+      year: 2021
+      impact: Mutable, implicit system PendingIntents let an unprivileged app redirect execution to a target of its choice under system privileges
+      cost: Google-assigned platform fixes including CVE-2020-0188 (SettingsSliceProvider), CVE-2020-0389 (SystemUI RecordingService), CVE-2020-0294 (system services)
+      description:
+        en: '"Re-route Your Intent for Privilege Escalation" demonstrated the token-based sibling of intent redirection across multiple core AOSP components, driving Google to fix each by making the base Intent explicit and, more broadly, to make FLAG_IMMUTABLE/FLAG_MUTABLE declaration mandatory at API 31.'
+        pl: '"Re-route Your Intent for Privilege Escalation" zademonstrowało oparty na tokenie odpowiednik intent redirection w wielu podstawowych komponentach AOSP, skłaniając Google do naprawy każdego przez uczynienie bazowego Intent jawnym i, szerzej, do uczynienia deklaracji FLAG_IMMUTABLE/FLAG_MUTABLE obowiązkową w API 31.'
+    inlineSources:
+    - label: GHSA-j6pr-fpc8-q9vm -- Element Android intent redirection
+      url: https://github.com/element-hq/element-android/security/advisories/GHSA-j6pr-fpc8-q9vm
+    - label: Microsoft Security Blog -- EngageLab SDK intent redirection
+      url: https://www.microsoft.com/en-us/security/blog/2026/04/09/intent-redirection-vulnerability-third-party-sdk-android/
+    - label: BlackHat EU 2021 -- Re-route Your Intent for Privilege Escalation
+      url: https://i.blackhat.com/EU-21/Wednesday/EU-21-He-Re-route-Your-Intent-for-Privilege-Escalation-A-Universal-Way-to-Exploit-Android-PendingIntents-in-High-profile-and-System-Apps.pdf
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on the same core toolchain, anchored by a platform-native runtime detector purpose-built for exactly this pattern.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tym samym podstawowym łańcuchu narzędzi, zakotwiczonym przez natywny detektor czasu wykonania platformy zbudowany dokładnie dla tego wzorca.
+    sast:
+    - - CodeQL (java/android-intent-redirection)
+      - 'Dedicated query: taint source getIntent().getParcelableExtra(), sink startActivity/sendBroadcast/startService; officially mapped to CWE-926 + CWE-940, corroborating this entry''s CWE lead'
+    - - Android Lint -- MutableImplicitPendingIntent / UnspecifiedImmutableFlag
+      - Flags PendingIntents missing an explicit FLAG_IMMUTABLE/FLAG_MUTABLE declaration, or mutable PendingIntents wrapping an implicit base Intent
+    - - QARK (implicit_intent_to_pending_intent plugin)
+      - Static Java analyzer with a dedicated plugin flagging an implicit Intent wrapped in a PendingIntent
+    - - MobSF
+      - Static+dynamic APK scanner surfacing exported components, unsafe intent-forwarding patterns, and PendingIntent mutability
+    dast:
+    - - StrictMode.detectUnsafeIntentLaunch() (API 31+)
+      - 'Platform-native runtime detector: fires a VmPolicy violation the moment an app unparcels a nested Intent from a delivered Intent''s extras and immediately launches a component with it -- Android''s own built-in signal for this exact pattern'
+    - - Drozer
+      - 'Dynamic: lets a tester act as a malicious app, exercise exported components, and attempt to reach non-exported targets through a proxy to empirically confirm actual reachability'
+    note:
+      en: <strong>Key signal:</strong> treat a ComponentName check alone as incomplete triage -- confirm URI-grant flags are stripped and that any caller check does not rely solely on a non-null getCallingActivity()/getCallingPackage(), since both are documented as attacker-forceable to null.
+      pl: <strong>Kluczowy sygnał:</strong> traktuj samo sprawdzenie ComponentName jako niekompletną triage -- potwierdź że flagi grantu URI są usunięte i że jakiekolwiek sprawdzenie wywołującego nie polega wyłącznie na niepustym getCallingActivity()/getCallingPackage(), ponieważ oba są udokumentowane jako wymuszalne przez atakującego do pustego.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'The three research passes disagreed on the CWE mapping, and that disagreement is itself worth documenting: two teams recommended keeping CWE-927 for continuity with this catalog''s own WebView bridge entry (15.11), while one team argued CWE-927''s actual MITRE text describes outbound sensitive-data leakage via implicit Intent -- a different, sender-side mechanism -- rather than confused-deputy forwarding. This entry resolves the disagreement in favor of CWE-940, on the strength of real corroborating evidence: CodeQL''s own "Android Intent redirection" detection query maps to CWE-926+940, and the flagship verified CVE-2024-26131 (Element Android) is GHSA-tagged CWE-923+940 -- not CWE-927.'
+      pl: 'Trzy przejścia badawcze nie zgodziły się co do mapowania CWE, i ta niezgoda sama w sobie warta jest udokumentowania: dwa zespoły zalecały zachowanie CWE-927 dla ciągłości z własnym wpisem WebView bridge tego katalogu (15.11), podczas gdy jeden zespół argumentował że faktyczny tekst MITRE CWE-927 opisuje wyciek wrażliwych danych na zewnątrz przez implicit Intent -- inny, oparty na nadawcy mechanizm -- zamiast przekazywania confused-deputy. Ten wpis rozwiązuje niezgodę na korzyść CWE-940, na sile prawdziwego potwierdzającego dowodu: własne zapytanie wykrywające CodeQL "Android Intent redirection" mapuje się na CWE-926+940, a flagowe zweryfikowane CVE-2024-26131 (Element Android) jest oznaczone GHSA jako CWE-923+940 -- nie CWE-927.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-940 -- Improper Verification of Source of a Communication Channel (primary). Its own Example 1 is an Android BroadcastReceiver acting on an Intent without verifying its source -- directly on-point for the confused-deputy forwarding root cause, and corroborated by CodeQL's and GHSA's real-world mappings above.
+      - CWE-926 -- Improper Export of Android Application Components (secondary). Captures the "why the proxy was reachable at all" angle; overlaps partially with sibling entry 15.13 (Insecure IPC), which owns the broader exported-component topic -- keep 15.12 scoped to the forwarding mechanism itself.
+      - CWE-927 -- Use of Implicit Intent for Sensitive Communication (considered, not used as primary here). Its verified MITRE definition and demonstrative examples describe a sender leaking sensitive data via an implicit Intent/broadcast -- a real, related but distinct mobile-Intent weakness, better suited to an entry about outbound data leakage than to confused-deputy forwarding specifically.
+    - std: OWASP
+      items:
+      - MASTG-TEST-0026 -- "Testing Implicit Intents" -- covers the implicit-Intent/redirection angle directly; note it was recategorized from MASVS-PLATFORM into MASVS-CODE (mapped to weakness MASWE-0032) in the MASTG v2 refactor, so cite the current control group rather than an older PLATFORM-only reference.
+      - MASTG-TEST-0030 -- "Testing for Vulnerable Implementation of PendingIntent" (MASVS-PLATFORM) -- the token-specific test covering FLAG_IMMUTABLE/explicit-base-Intent hygiene; related best-practice note MASTG-BEST-0063 ("Use Immutable PendingIntents with Explicit Intents").
+      - 'Cross-reference, not duplicate: MASTG-TEST-0029 ("Sensitive Functionality Exposure Through IPC", MASVS-PLATFORM) is the broader exported-component/IPC test and belongs primarily to sibling entry 15.13 (Insecure IPC); 15.12 stays scoped to the redirection/confused-deputy forwarding mechanism itself.'
+    inlineSources:
+    - label: CWE-940 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/940.html
+    - label: CWE-926 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/926.html
+    - label: CWE-927 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/927.html
+    - label: OWASP MASTG-TEST-0030 -- PendingIntent
+      url: https://mas.owasp.org/MASTG-TEST-0030/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If an intent-redirection or PendingIntent-hijacking path is confirmed in a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu ścieżki intent redirection albo przejęcia PendingIntent w wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: 'Identify which sub-case applies: direct Intent forwarding (unparcel-then-launch), a mutable/implicit PendingIntent handed to another app, or a transitive proxy inside a bundled SDK -- each needs a different fix, not the same patch'
+      pl: 'Zidentyfikuj który podprzypadek ma zastosowanie: bezpośrednie przekazywanie Intent (wypakuj-i-uruchom), mutowalny/implicit PendingIntent oddany innej apce, albo przechodnie proxy wewnątrz dołączonego SDK -- każdy potrzebuje innej naprawy, nie tej samej łatki'
+    - en: Enumerate exactly what the reachable target(s) can do once launched, and whether any URI-grant flags rode along on the forwarded Intent -- a target that looks harmless can still leak private ContentProvider data via an unstripped grant flag
+      pl: Wylicz dokładnie co osiągalny cel(e) może zrobić po uruchomieniu, i czy jakiekolwiek flagi grantu URI jechały wraz z przekazanym dalej Intent -- cel który wygląda nieszkodliwie wciąż może wyciec dane prywatnego ContentProvider przez nieusuniętą flagę grantu
+    - en: Check whether any bundled SDK exposes its own forwarding proxy reaching the HOST app's internal components, not just the SDK's own -- the EngageLab case shows this is a very common miss that a host app's own code review alone will not catch
+      pl: Sprawdź czy jakikolwiek dołączony SDK wystawia własne proxy przekazujące osiągające wewnętrzne komponenty apki-HOSTA, nie tylko własne komponenty SDK -- przypadek EngageLab pokazuje że to bardzo powszechne przeoczenie którego sam przegląd kodu apki-hosta nie wychwyci
+    - en: 'Ship the fix matching this deep-dive''s top-ranked defenses: add explicit ComponentName allowlisting (IntentSanitizer) first, strip URI-grant flags, then set FLAG_IMMUTABLE with an explicit base Intent on every affected PendingIntent -- in that order, since caller-check patches alone were confirmed insufficient'
+      pl: 'Wydaj naprawę pasującą do najwyżej sklasyfikowanych obron tego deep-dive: najpierw dodaj jawną listę dozwolonych ComponentName (IntentSanitizer), usuń flagi grantu URI, następnie ustaw FLAG_IMMUTABLE z jawnym bazowym Intent na każdym dotkniętym PendingIntent -- w tej kolejności, ponieważ same łatki sprawdzenia wywołującego zostały potwierdzone jako niewystarczające'
+    - en: Re-scan with CodeQL's android-intent-redirection query and re-test dynamically with Drozer (plus StrictMode.detectUnsafeIntentLaunch() on API 31+ test devices) to confirm the fix actually removed reachability of the previously-exposed internal component
+      pl: Przeskanuj ponownie zapytaniem CodeQL android-intent-redirection i przetestuj ponownie dynamicznie przez Drozer (plus StrictMode.detectUnsafeIntentLaunch() na urządzeniach testowych API 31+) by potwierdzić że naprawa faktycznie usunęła osiągalność wcześniej wystawionego wewnętrznego komponentu
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: Android -- Intent redirection
+      url: https://developer.android.com/privacy-and-security/risks/intent-redirection
+    - label: Android -- Pending intents
+      url: https://developer.android.com/privacy-and-security/risks/pending-intent
+    - label: Android 12 behavior changes (PendingIntent mutability)
+      url: https://developer.android.com/about/versions/12/behavior-changes-12
+    - label: Android 14 behavior changes (mutable + implicit PendingIntent)
+      url: https://developer.android.com/about/versions/14/behavior-changes-14
+    - label: CWE-940 -- Improper Verification of Source of a Communication Channel
+      url: https://cwe.mitre.org/data/definitions/940.html
+    - label: CWE-926 -- Improper Export of Android Application Components
+      url: https://cwe.mitre.org/data/definitions/926.html
+    - label: CWE-927 -- Use of Implicit Intent for Sensitive Communication
+      url: https://cwe.mitre.org/data/definitions/927.html
+    - label: Chin, Felt, Greenwood, Wagner -- Analyzing Inter-Application Communication in Android (MobiSys 2011)
+      url: https://dl.acm.org/doi/10.1145/1999995.2000018
+    - label: GHSA-j6pr-fpc8-q9vm -- Element Android intent redirection (CVE-2024-26131)
+      url: https://github.com/element-hq/element-android/security/advisories/GHSA-j6pr-fpc8-q9vm
+    - label: Microsoft Security Blog -- EngageLab SDK intent redirection
+      url: https://www.microsoft.com/en-us/security/blog/2026/04/09/intent-redirection-vulnerability-third-party-sdk-android/
+    - label: CodeQL -- Android Intent redirection query
+      url: https://codeql.github.com/codeql-query-help/java/java-android-intent-redirection/
+    - label: OWASP MASTG-TEST-0030 -- PendingIntent
+      url: https://mas.owasp.org/MASTG-TEST-0030/

@@ -234,22 +234,27 @@ threats:
 - id: '15.12'
   name: Android Intent Redirection / Hijacking
   severity: High
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
-  - CWE-927
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] An app forwards or launches an implicit/attacker-controlled Intent without validation, letting a malicious app redirect it to access protected components or leak sensitive data carried in the Intent.
+  - CWE-940
+  - CWE-926
+  desc: 'Zaufana apka odbiera Intent, wypakowuje z niego zagnieżdżony Intent (z extras albo z PendingIntent), i ponownie wysyła go przez startActivity/sendBroadcast/startService BEZ walidacji docelowego ComponentName ani wywołującego -- pozwalając atakującej apce wyprać swój Intent przez tożsamość i uprawnienia zaufanego pośrednika ("confused deputy"), osiągając niewyeksportowane wewnętrzne komponenty. Odrębne od prostego spoofingu (bezpośrednie wysłanie do wyeksportowanego komponentu). Blisko powiązany wariant: mutowalny PendingIntent z implicit bazowym Intent pozwala odbiorcy dopełnić brakujący cel. Zweryfikowane rzeczywiste CVE-2024-26131 (Element Android, ominięcie ochrony PIN) i błąd SDK EngageLab (2026, 50M+ instalacji).
 
     '
-  desc_en: An app forwards or launches an implicit/attacker-controlled Intent without validation, letting a malicious app redirect it to access protected components or leak sensitive data carried in the Intent.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'A trusted app receives an Intent, unparcels a nested Intent from it (from extras or a PendingIntent), and re-dispatches it via startActivity/sendBroadcast/startService WITHOUT validating the target ComponentName or the caller -- letting a malicious app launder its Intent through a trusted deputy''s identity and permissions ("confused deputy"), reaching non-exported internal components. Distinct from simple spoofing (direct send to an exported component). Closely related variant: a mutable PendingIntent with an implicit base Intent lets the receiver fill in the missing target. Verified real CVE-2024-26131 (Element Android, PIN-protection bypass) and the EngageLab SDK bug (2026, 50M+ installs).'
+  lang: kotlin
+  vuln: '// VULNERABLE: exported proxy blindly forwards whatever Intent
+
+    // arrives in the extra, with no target or caller validation
+
+    val forward = intent.getParcelableExtra<Intent>("next_intent")
+
+    startActivity(forward)  // can reach ANY component, exported or not
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: OWASP MASTG Android Platform APIs; CWE-927 (Use of Implicit Intent for Sensitive Communication).'
+  safe: "// SAFE: explicit allowlist via AndroidX IntentSanitizer, dangerous\n// URI-grant flags stripped before dispatch\nval sanitized = IntentSanitizer.Builder()\n    .allowComponent(ComponentName(this, AllowedTarget::class.java))\n    .build()\n    .sanitizeByThrowing(forward)\nsanitized.removeFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)\nstartActivity(sanitized)\n"
+  note_en: 'Source: OWASP MASTG-TEST-0026 (Testing Implicit Intents), MASTG-TEST-0030 (PendingIntent). CVE-2024-26131 (Element Android), BlackHat EU 2021 PendingIntent research (CVE-2020-0188/0389/0294). CWE-940 chosen over CWE-927 based on real tooling/CVE mappings (CodeQL, GHSA) -- see deep-dive compliance section for the full rationale.'
 - id: '15.13'
   name: Insecure IPC via Exported Components
   severity: High
