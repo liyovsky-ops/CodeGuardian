@@ -60,6 +60,7 @@ import mobileinsecureipcData from '../content/deepdives/mobileinsecureipc.yaml';
 import mobiletaskhijackingData from '../content/deepdives/mobiletaskhijacking.yaml';
 import mobiletapjackingData from '../content/deepdives/mobiletapjacking.yaml';
 import mobiledeeplinksData from '../content/deepdives/mobiledeeplinks.yaml';
+import mobilekeychainkeystoreData from '../content/deepdives/mobilekeychainkeystore.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -117,6 +118,7 @@ import mobileinsecureipcQuiz from '../content/quizzes/mobileinsecureipc.yaml';
 import mobiletaskhijackingQuiz from '../content/quizzes/mobiletaskhijacking.yaml';
 import mobiletapjackingQuiz from '../content/quizzes/mobiletapjacking.yaml';
 import mobiledeeplinksQuiz from '../content/quizzes/mobiledeeplinks.yaml';
+import mobilekeychainkeystoreQuiz from '../content/quizzes/mobilekeychainkeystore.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -176,6 +178,7 @@ export const DEEPDIVES = {
   '15.14': mobiletaskhijackingData, // Task Hijacking (StrandHogg)
   '15.15': mobiletapjackingData, // Tapjacking (UI Overlay Attack)
   '15.16': mobiledeeplinksData, // Insecure Deep Link / Custom URL Scheme Handling
+  '15.17': mobilekeychainkeystoreData, // Keychain / Keystore Misuse
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -238,4 +241,5 @@ export const QUIZZES = {
   '15.14': mobiletaskhijackingQuiz,
   '15.15': mobiletapjackingQuiz,
   '15.16': mobiledeeplinksQuiz,
+  '15.17': mobilekeychainkeystoreQuiz,
 };

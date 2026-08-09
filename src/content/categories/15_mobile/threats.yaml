@@ -343,22 +343,18 @@ threats:
 - id: '15.17'
   name: Keychain / Keystore Misuse
   severity: High
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-522
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Secrets stored in the iOS Keychain / Android Keystore with weak protection classes or accessibility settings (e.g. kSecAttrAccessibleAlways, no user-auth binding, keys not hardware-backed), leaving them extractable on unlocked or compromised devices.
+  desc: 'Sekrety przechowywane w iOS Keychain / Android Keystore z użyciem poprawnego API ale słabą klasą dostępności/ochrony (np. kSecAttrAccessibleAlways, brak wiązania uwierzytelnienia, klucze nie wsparte sprzętowo), pozostawiające je wyodrębnialnymi na odblokowanych albo skompromitowanych urządzeniach. Kluczowy mit: wsparcie sprzętowe (Secure Enclave/TEE/StrongBox) zapobiega wyodrębnieniu klucza, NIE jego użyciu -- niezwiązany klucz sprzętowy to wciąż darmowa wyrocznia. Zweryfikowane CVE-2021-3145 (Ionic Identity Vault, brak setUserAuthenticationRequired) i akademickie badanie KeyDroid (490K+ apek: 56.3% apek z wrażliwymi danymi nie używa żadnego zaufanego sprzętu).
 
     '
-  desc_en: Secrets stored in the iOS Keychain / Android Keystore with weak protection classes or accessibility settings (e.g. kSecAttrAccessibleAlways, no user-auth binding, keys not hardware-backed), leaving them extractable on unlocked or compromised devices.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: OWASP MASTG MASVS-STORAGE / MASVS-CRYPTO (Keychain and Keystore testing).'
+  desc_en: 'Secrets stored in the iOS Keychain / Android Keystore using the correct API but with a weak accessibility/protection class (e.g. kSecAttrAccessibleAlways, no auth binding, keys not hardware-backed), leaving them extractable on unlocked or compromised devices. Key myth: hardware backing (Secure Enclave/TEE/StrongBox) prevents key EXTRACTION, NOT key USE -- an unbound hardware key is still a free oracle. Verified CVE-2021-3145 (Ionic Identity Vault, missing setUserAuthenticationRequired) and the academic KeyDroid study (490K+ apps: 56.3% of sensitive-data apps use no trusted hardware at all).'
+  lang: kotlin
+  vuln: "// VULNERABLE: no authentication binding at all --\n// the key is usable any time the app runs, by any code path\nval spec = KeyGenParameterSpec.Builder(\"authKey\", KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)\n    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)\n    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)\n    .build()\n"
+  safe: "// SAFE: hardware-backed, per-operation biometric auth genuinely\n// bound to the key -- used only via a CryptoObject, never a\n// plain app-code check\nval spec = KeyGenParameterSpec.Builder(\"authKey\", KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)\n    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)\n    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)\n    .setUserAuthenticationRequired(true)\n    .setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)\n    .setInvalidatedByBiometricEnrollment(true)\n    .setIsStrongBoxBacked(true)\n    .build()\n"
+  note_en: 'Source: OWASP MASVS-STORAGE (MASTG-TEST-0052), MASVS-CRYPTO (MASTG-KNOW-0043), MASVS-AUTH (MASTG-TEST-0018). CWE-522 unanimous across 3 research passes; CWE-320 explicitly confirmed prohibited for CWE mapping (MITRE category, not a weakness). Scoped distinct from M9 (Insecure Data Storage) and M10 (Insufficient Cryptography) -- this entry covers correct-API-wrong-configuration specifically.'
 - id: '15.18'
   name: Root / Jailbreak Detection Bypass
   severity: Medium
