@@ -1,0 +1,114 @@
+threatId: '15.18'
+title:
+  en: Root / Jailbreak Detection Bypass -- knowledge check
+  pl: Root / Jailbreak Detection Bypass -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: All three research passes independently corrected this entry's catalog stub away from citing CWE-693 as a direct mapping target. Why?
+    pl: Wszystkie trzy przejścia badawcze niezależnie skorygowały stub katalogu tego wpisu z dala od cytowania CWE-693 jako bezpośredniego celu mapowania. Dlaczego?
+  choices:
+  - id: a
+    label:
+      en: CWE-693 is a Pillar -- MITRE's most abstract weakness tier -- and MITRE's own mapping guidance explicitly discourages using Pillars as a direct mapping target; the sharper, correct child weakness is CWE-602 (Client-Side Enforcement of Server-Side Security)
+      pl: CWE-693 to Pillar -- najbardziej abstrakcyjny poziom słabości MITRE -- a własne wskazówki mapowania MITRE jawnie odradzają używanie Pillar jako bezpośredniego celu mapowania; ostrzejszą, poprawną słabością dziecka jest CWE-602 (Client-Side Enforcement of Server-Side Security)
+  - id: b
+    label:
+      en: CWE-693 has been completely removed from the CWE database
+      pl: CWE-693 zostało całkowicie usunięte z bazy danych CWE
+  - id: c
+    label:
+      en: CWE-693 only applies to hardware/silicon debug interfaces, not software
+      pl: CWE-693 dotyczy tylko sprzętowych/krzemowych interfejsów debugowania, nie oprogramowania
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'CWE-602 names exactly why root/jailbreak detection fails as a security control: the trust decision is computed and evaluated on a device the attacker fully controls, rather than enforced somewhere they cannot reach. All three research passes independently verified both the Pillar-mapping discouragement and CWE-602 as the correct specialization.'
+    pl: 'CWE-602 nazywa dokładnie dlaczego wykrywanie root/jailbreak zawodzi jako kontrola bezpieczeństwa: decyzja zaufania jest obliczana i ewaluowana na urządzeniu które atakujący w pełni kontroluje, zamiast być egzekwowana gdzieś czego nie może osiągnąć. Wszystkie trzy przejścia badawcze niezależnie zweryfikowały zarówno odradzanie mapowania Pillar jak i CWE-602 jako poprawną specjalizację.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: An iOS app implements App Attest and concludes this means it now has jailbreak detection covered -- a jailbroken device attempting to use the app will be blocked. One research pass surfaced a sharp, well-sourced correction to this exact assumption. Is the conclusion correct?
+    pl: Apka iOS implementuje App Attest i wnioskuje że oznacza to iż wykrywanie jailbreak jest teraz pokryte -- jailbreakowane urządzenie próbujące użyć apki zostanie zablokowane. Jedno przejście badawcze ujawniło ostrą, dobrze źródłowaną korektę dokładnie tego założenia. Czy wniosek jest poprawny?
+  isVulnerable: true
+  cwe: CWE-602
+  explanation:
+    en: No. App Attest attests the integrity of the app binary running in the Secure Enclave -- it says nothing about whether the device itself is jailbroken. A jailbroken device can still pass App Attest successfully. Apple's own developer guidance goes further and explicitly recommends against implementing jailbreak detection at all, since it does not consider it a meaningful or maintainable security control.
+    pl: Nie. App Attest atestuje integralność binarium apki działającego w Secure Enclave -- nic nie mówi o tym czy samo urządzenie jest jailbreakowane. Jailbreakowane urządzenie wciąż może pomyślnie przejść App Attest. Własne wskazówki deweloperskie Apple idą dalej i jawnie zalecają przeciwko implementowaniu wykrywania jailbreak w ogóle, ponieważ nie uważają tego za znaczącą albo utrzymywalną kontrolę bezpieczeństwa.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: All three research passes independently verified the identical detail from Magisk's own changelog. What is it?
+    pl: Wszystkie trzy przejścia badawcze niezależnie zweryfikowały identyczny szczegół z własnego changeloga Magisk. Jaki to szczegół?
+  choices:
+  - id: a
+    label:
+      en: '"MagiskHide" was removed in Magisk v24.0 (2022-01-26), replaced by Zygisk (injects into the zygote process) plus DenyList (per-app unmounting), with the community module Shamiko existing because DenyList''s own approach became independently detectable'
+      pl: '"MagiskHide" zostało usunięte w Magisk v24.0 (2022-01-26), zastąpione przez Zygisk (wstrzykuje do procesu zygote) plus DenyList (per-apkowe odmontowywanie), z modułem społecznościowym Shamiko istniejącym ponieważ własne podejście DenyList stało się niezależnie wykrywalne'
+  - id: b
+    label:
+      en: MagiskHide remains the current, actively-maintained hiding mechanism in Magisk today
+      pl: MagiskHide pozostaje obecnym, aktywnie utrzymywanym mechanizmem ukrywania w Magisk dzisiaj
+  - id: c
+    label:
+      en: Magisk was discontinued entirely in 2022 and replaced by an unrelated rooting framework
+      pl: Magisk został całkowicie zaniechany w 2022 i zastąpiony niepowiązanym frameworkiem rootowania
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Many tutorials and even some security guidance still reference 'MagiskHide' as if it were current -- it has not existed since early 2022. Understanding the Zygisk/DenyList/Shamiko chain matters because each layer exists specifically because the previous one became detectable, illustrating the ongoing arms race this entry documents.
+    pl: Wiele tutoriali a nawet część wskazówek bezpieczeństwa wciąż odwołuje się do 'MagiskHide' jakby było aktualne -- nie istnieje od początku 2022. Zrozumienie łańcucha Zygisk/DenyList/Shamiko ma znaczenie ponieważ każda warstwa istnieje konkretnie ponieważ poprzednia stała się wykrywalna, ilustrując trwający wyścig zbrojeń który dokumentuje ten wpis.
+- id: q4
+  type: vuln-or-not
+  prompt:
+    en: A security team implements Play Integrity API's MEETS_STRONG_INTEGRITY verdict check and concludes their app's root-detection problem is now permanently solved, since it is the strongest hardware-backed signal Android offers. Is this conclusion accurate?
+    pl: Zespół bezpieczeństwa implementuje sprawdzenie werdyktu MEETS_STRONG_INTEGRITY Play Integrity API i wnioskuje że problem wykrywania root ich apki jest teraz trwale rozwiązany, ponieważ to najsilniejszy sygnał wsparty sprzętowo jaki oferuje Android. Czy ten wniosek jest dokładny?
+  isVulnerable: true
+  cwe: CWE-602
+  explanation:
+    en: 'No, though it is genuinely the strongest available signal. A current, documented arms race exists: community modules (TrickyStore + Play Integrity Fix) have forged even this strong verdict on rooted devices using leaked OEM hardware keyboxes, until Google detects and revokes the specific leaked keybox. It is the top-ranked defense for real reasons, but it is an active, ongoing arms race rather than a permanently solved problem.'
+    pl: 'Nie, choć to naprawdę najsilniejszy dostępny sygnał. Istnieje aktualny, udokumentowany wyścig zbrojeń: moduły społecznościowe (TrickyStore + Play Integrity Fix) sfałszowały nawet ten silny werdykt na zrootowanych urządzeniach używając wyciekłych sprzętowych keybox OEM, dopóki Google nie wykryje i nie odwoła konkretnej wyciekłej keybox. To najwyżej sklasyfikowana obrona z prawdziwych powodów, ale to aktywny, trwający wyścig zbrojeń zamiast trwale rozwiązanego problemu.'
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: What is the correct pass/fail criterion for root/jailbreak detection testing, per the OWASP MASTG methodology all three research passes converged on?
+    pl: Jakie jest poprawne kryterium zaliczenia/niezaliczenia dla testowania wykrywania root/jailbreak, zgodnie z metodyką OWASP MASTG na której zbiegły się wszystkie trzy przejścia badawcze?
+  choices:
+  - id: a
+    label:
+      en: Whether the app runs its normal flow with root/jailbreak AND active instrumentation (Frida) both present simultaneously -- not merely whether detection code exists in the source, or whether one isolated function can be hooked
+      pl: Czy apka uruchamia swój normalny przepływ z jednocześnie obecnym root/jailbreak I aktywną instrumentacją (Frida) -- nie tylko czy kod wykrywania istnieje w źródle, albo czy jedna izolowana funkcja może być zaczepiona
+  - id: b
+    label:
+      en: Whether the app's manifest declares a root-detection permission
+      pl: Czy manifest apki deklaruje uprawnienie wykrywania root
+  - id: c
+    label:
+      en: Whether the app compiles successfully with root-detection code included
+      pl: Czy apka kompiluje się pomyślnie z dołączonym kodem wykrywania root
+  correctChoiceIds:
+  - a
+  explanation:
+    en: This distinction -- confirmed by the MASTG-TEST-0045 split into a static test (does detection code reference root/jailbreak signals) and a runtime test (does detection actually hold under active bypass attempt) -- is exactly why 'we have root-detection code' and 'our root detection actually works' are different claims that require different verification.
+    pl: To rozróżnienie -- potwierdzone przez podział MASTG-TEST-0045 na test statyczny (czy kod wykrywania odwołuje się do sygnałów root/jailbreak) i test w czasie wykonania (czy wykrywanie faktycznie trzyma pod aktywną próbą obejścia) -- to dokładnie dlaczego 'mamy kod wykrywania root' i 'nasze wykrywanie root faktycznie działa' to różne twierdzenia wymagające różnej weryfikacji.
+- id: q6
+  type: pick-the-fix
+  prompt:
+    en: A banking app needs to gate a sensitive money-transfer feature behind a root/jailbreak check. Which implementation actually reflects this deep-dive's core lesson about where the trust decision should live?
+    pl: Apka bankowa potrzebuje bramkować wrażliwą funkcję przelewu pieniędzy sprawdzeniem root/jailbreak. Która implementacja faktycznie odzwierciedla podstawową lekcję tego deep-dive o tym gdzie powinna żyć decyzja zaufania?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: "fun isDeviceRooted(): Boolean {\n    return File(\"/system/bin/su\").exists()\n}\nif (!isDeviceRooted()) { allowMoneyTransfer() }"
+  - id: v2
+    lang: kotlin
+    code: "fun isDeviceRooted(): Boolean {\n    val suExists = File(\"/system/bin/su\").exists()\n    val testKeys = Build.TAGS?.contains(\"test-keys\") == true\n    val debuggable = 0 != (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE)\n    return suExists || testKeys || debuggable  // more signals, still all client-side\n}\nif (!isDeviceRooted()) { allowMoneyTransfer() }"
+  - id: v3
+    lang: kotlin
+    code: "suspend fun canAllowMoneyTransfer(): Boolean {\n    val integrityToken = integrityManager.requestIntegrityToken(request)\n    val verdict = backendApi.verifyIntegrityToken(integrityToken)  // verified server-side\n    return verdict.deviceIntegrity == \"MEETS_STRONG_INTEGRITY\"\n}"
+  correctVariantId: v3
+  explanation:
+    en: 'v3 is the only variant that moves the actual trust decision off the device -- the verdict is a hardware-backed token verified on the server, which is what CWE-602 identifies as the fix for this entire technique class. v1 is a single trivially-hooked check. v2 is the common trap: more signals feel more secure, but every one of them is still evaluated and trusted on the attacker''s own device, so it remains fundamentally the same class of bypassable control -- just with more functions to hook.'
+    pl: 'v3 to jedyny wariant który przenosi faktyczną decyzję zaufania poza urządzenie -- werdykt to token wsparty sprzętowo zweryfikowany na serwerze, co CWE-602 identyfikuje jako naprawę dla całej tej klasy techniki. v1 to pojedyncze trywialnie zaczepiane sprawdzenie. v2 to powszechna pułapka: więcej sygnałów wydaje się bezpieczniejsze, ale każdy z nich jest wciąż ewaluowany i ufany na własnym urządzeniu atakującego, więc pozostaje fundamentalnie tą samą klasą omijalnej kontroli -- tylko z większą liczbą funkcji do zaczepienia.'

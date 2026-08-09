@@ -358,22 +358,18 @@ threats:
 - id: '15.18'
   name: Root / Jailbreak Detection Bypass
   severity: Medium
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
-  - CWE-693
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Weak or client-side-only root/jailbreak detection is trivially bypassed with Frida, Magisk, or hooking frameworks, allowing the app to run in a fully attacker-controlled environment where all local protections fail.
+  - CWE-602
+  desc: 'Słaba albo wyłącznie klienckastrona wykrywania root/jailbreak jest trywialnie omijana przez Frida, Magisk (Zygisk + DenyList + Shamiko), albo frameworki zaczepiania, pozwalając apce działać w środowisku w pełni kontrolowanym przez atakującego. Kluczowa korekta: CWE-693 (poprzednio przypisane) to Pillar -- MITRE jawnie odradza mapowanie na ten poziom -- poprawiono na CWE-602 (Client-Side Enforcement of Server-Side Security). Mit: App Attest Apple atestuje binarium apki, NIE status jailbreak -- Apple zaleca przeciwko wykrywaniu jailbreak w ogóle. MagiskHide usunięte w Magisk v24.0 (2022-01-26), zastąpione Zygisk+DenyList.
 
     '
-  desc_en: Weak or client-side-only root/jailbreak detection is trivially bypassed with Frida, Magisk, or hooking frameworks, allowing the app to run in a fully attacker-controlled environment where all local protections fail.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: OWASP MASTG MASVS-RESILIENCE (testing root/jailbreak detection); facet of M7 Insufficient Binary Protections.'
+  desc_en: 'Weak or client-side-only root/jailbreak detection is trivially bypassed with Frida, Magisk (Zygisk + DenyList + Shamiko), or hooking frameworks, allowing the app to run in a fully attacker-controlled environment. Key correction: CWE-693 (previously assigned) is a Pillar -- MITRE explicitly discourages mapping to this level -- corrected to CWE-602 (Client-Side Enforcement of Server-Side Security). Myth: Apple''s App Attest attests the app binary, NOT jailbreak status -- Apple recommends against jailbreak detection entirely. MagiskHide was removed in Magisk v24.0 (2022-01-26), replaced by Zygisk+DenyList.'
+  lang: kotlin
+  vuln: "// VULNERABLE: purely client-side verdict -- the app itself decides\n// whether to trust the device, and Frida/Zygisk/DenyList/Shamiko\n// can hook or hide every one of these signals\nfun isDeviceRooted(): Boolean {\n    val suExists = File(\"/system/bin/su\").exists()\n    val testKeys = Build.TAGS?.contains(\"test-keys\") == true\n    return suExists || testKeys\n}\nif (!isDeviceRooted()) { unlockSensitiveFeature() }\n"
+  safe: "// SAFE: the client-side check is only a fast local signal;\n// the actual trust decision is a server-verified, hardware-backed\n// attestation token the app cannot forge or hook around\nsuspend fun canUnlockSensitiveFeature(): Boolean {\n    val integrityToken = integrityManager.requestIntegrityToken(request)\n    val verdict = backendApi.verifyIntegrityToken(integrityToken)\n    return verdict.deviceIntegrity == \"MEETS_STRONG_INTEGRITY\"\n}\n"
+  note_en: 'Source: OWASP MASVS-RESILIENCE, MASTG-TEST-0045 (split into MASTG-TEST-0324/0325 in MASTG v2). Facet of M7 Insufficient Binary Protections, scoped narrowly to the bypass mechanics. CWE-602 unanimous across 3 research passes; CWE-693 retained only as honest umbrella (MITRE''s own guidance discourages Pillar-level mapping).'
 - id: '15.19'
   name: Insecure Biometric Authentication Implementation
   severity: High

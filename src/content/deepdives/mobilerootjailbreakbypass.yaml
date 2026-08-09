@@ -1,0 +1,363 @@
+meta:
+  id: mobilerootjailbreakbypass
+  threatId: '15.18'
+  severity: Medium
+  color: '#7c3aed'
+  colorRgb: 124,58,237
+  cwe: CWE-602
+  cvss: N/A (technique class; academic anchors EuroS&P 2019 and a 2025 follow-up study found the large majority of tested banking apps' jailbreak detection failed outright or was trivially bypassable)
+  standard: OWASP MASVS-RESILIENCE (MASTG-TEST-0045, split into MASTG-TEST-0324/0325 in the MASTG v2 refactor)
+hero:
+  titleMain: 'Root / Jailbreak Detection '
+  titleGrad: Bypass
+  titleTail: ''
+  topbar: Root / Jailbreak Detection Bypass (Android + iOS)
+  lead:
+    en: 'All three research passes converged on the same, unusually precise CWE correction: the catalog stub''s CWE-693 (Protection Mechanism Failure) is a Pillar -- MITRE''s own most abstract weakness tier -- and MITRE explicitly discourages mapping real findings directly to Pillars. All three teams independently arrived at the same, sharper child weakness: CWE-602 (Client-Side Enforcement of Server-Side Security), which names exactly why root/jailbreak detection fails -- the trust decision is computed and evaluated on a device the attacker fully controls. On the bypass mechanics, all three teams independently pulled the identical primary-source detail from Magisk''s own changelog: "MagiskHide" -- still cited as current in many tutorials -- was removed in Magisk v24.0 (released 2022-01-26) and replaced by Zygisk (code injected into the zygote process, the parent every app forks from) plus DenyList (per-app unmounting of Magisk''s traces), with the community module Shamiko existing specifically because DenyList''s approach became detectable in turn. The sharpest myth-correction, surfaced independently and well-sourced by one research pass and worth foregrounding because it directly corrects an assumption baked into how this technique is usually framed: Apple''s App Attest attests the integrity of the app binary, not the jailbreak status of the device -- a jailbroken device can still pass App Attest, and Apple''s own developer guidance explicitly recommends against implementing jailbreak detection at all. This reframes the entire entry: even the strongest available server-side attestation primitive on iOS was never designed to answer the question this technique class is built around.'
+    pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej, niezwykle precyzyjnej korekcie CWE: CWE-693 (Protection Mechanism Failure) stuba katalogu to Pillar -- własny najbardziej abstrakcyjny poziom słabości MITRE -- a MITRE jawnie odradza mapowanie prawdziwych ustaleń bezpośrednio na Pillar. Wszystkie trzy zespoły niezależnie doszły do tej samej, ostrzejszej słabości dziecka: CWE-602 (Client-Side Enforcement of Server-Side Security), która nazywa dokładnie dlaczego wykrywanie root/jailbreak zawodzi -- decyzja zaufania jest obliczana i ewaluowana na urządzeniu które atakujący w pełni kontroluje. Na mechanice obejścia, wszystkie trzy zespoły niezależnie wyciągnęły identyczny szczegół z pierwotnego źródła changeloga Magisk: "MagiskHide" -- wciąż cytowane jako aktualne w wielu tutorialach -- zostało usunięte w Magisk v24.0 (wydanym 2022-01-26) i zastąpione przez Zygisk (kod wstrzykiwany do procesu zygote, rodzica z którego forkuje się każda apka) plus DenyList (per-apkowe odmontowywanie śladów Magisk), z modułem społecznościowym Shamiko istniejącym konkretnie dlatego że podejście DenyList stało się z kolei wykrywalne. Najostrzejsza korekta mitu, ujawniona niezależnie i dobrze źródłowana przez jedno przejście badawcze i warta wyeksponowania ponieważ bezpośrednio koryguje założenie wbudowane w to jak zwykle jest ramowana ta technika: App Attest Apple atestuje integralność binarium apki, nie status jailbreak urządzenia -- jailbreakowane urządzenie wciąż może przejść App Attest, a własne wskazówki deweloperskie Apple jawnie zalecają przeciwko implementowaniu wykrywania jailbreak w ogóle. To przeramowuje cały wpis: nawet najsilniejszy dostępny prymityw atestacji po stronie serwera na iOS nigdy nie został zaprojektowany by odpowiedzieć na pytanie wokół którego zbudowana jest ta klasa techniki.'
+  metrics:
+  - k: CWE-693 -> CWE-602
+    v:
+      en: MITRE's own guidance discourages mapping to CWE-693 (a Pillar) directly -- the correct specialization is CWE-602, confirmed by all 3 teams
+      pl: własne wskazówki MITRE odradzają mapowanie bezpośrednio do CWE-693 (Pillar) -- poprawną specjalizacją jest CWE-602, potwierdzone przez wszystkie 3 zespoły
+  - k: Magisk v24.0
+    v:
+      en: '2022-01-26: MagiskHide removed, replaced by Zygisk + DenyList -- verified identically against the primary changelog by all 3 teams'
+      pl: '2022-01-26: MagiskHide usunięte, zastąpione Zygisk + DenyList -- zweryfikowane identycznie względem pierwotnego changeloga przez wszystkie 3 zespoły'
+  - k: App Attest != JB detection
+    v:
+      en: Apple's App Attest attests the app binary, not jailbreak status -- a jailbroken device can still pass it; Apple recommends against jailbreak detection entirely
+      pl: App Attest Apple atestuje binarium apki, nie status jailbreak -- jailbreakowane urządzenie wciąż może je przejść; Apple zaleca przeciwko wykrywaniu jailbreak w ogóle
+  - k: 72% / 92%
+    v:
+      en: reported failure rates for rootful/rootless jailbreak detection across 489 apps incl. 52 banking apps (2025 academic follow-up study, figures need primary-PDF reconfirmation)
+      pl: raportowane wskaźniki awarii wykrywania jailbreak rootful/rootless w 489 apkach wliczając 52 bankowe (badanie akademickie z 2025, liczby wymagają ponownego potwierdzenia z pierwotnego PDF)
+  sources:
+  - label: Magisk changelog -- MagiskHide removal / Zygisk / DenyList (v24.0)
+    url: https://topjohnwu.github.io/Magisk/changes.html
+  - label: CWE-602 -- Client-Side Enforcement of Server-Side Security
+    url: https://cwe.mitre.org/data/definitions/602.html
+  - label: Apple -- DeviceCheck / App Attest
+    url: https://developer.apple.com/documentation/devicecheck
+  - label: OWASP MASTG-TEST-0045 -- Testing Root Detection
+    url: https://mas.owasp.org/MASTG/tests/android/MASVS-RESILIENCE/MASTG-TEST-0045/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: This entry cross-references, rather than duplicates, this catalog's own M7 (Insufficient Binary Protections) entry -- M7 already establishes that client-side controls are inherently Frida-bypassable; the variants below are the specific mechanics of that bypass on each platform.
+      pl: Ten wpis odsyła do, zamiast duplikować, własny wpis M7 (Insufficient Binary Protections) tego katalogu -- M7 już ustala że kontrole po stronie klienta są z natury omijalne przez Frida; poniższe warianty to konkretna mechanika tego obejścia na każdej platformie.
+    items:
+    - name: Android -- Zygisk + DenyList + Shamiko hiding chain
+      sev: medium
+      description:
+        en: 'Zygisk injects into the zygote process, the parent every app forks from, giving Magisk code running inside each app''s own process. DenyList then unmounts Magisk''s traces per-app. Shamiko exists specifically because DenyList''s unmount pattern became independently detectable -- it hides Magisk, Zygisk itself, and other Zygisk modules more thoroughly. Verified identically by all three research passes against Magisk''s own changelog: this entire chain replaced the deprecated MagiskHide in v24.0 (2022-01-26).'
+        pl: 'Zygisk wstrzykuje się do procesu zygote, rodzica z którego forkuje się każda apka, dając kodowi Magisk działanie wewnątrz własnego procesu każdej apki. DenyList następnie odmontowuje ślady Magisk per-apka. Shamiko istnieje konkretnie dlatego że wzorzec odmontowania DenyList stał się z kolei niezależnie wykrywalny -- ukrywa Magisk, sam Zygisk, i inne moduły Zygisk dokładniej. Zweryfikowane identycznie przez wszystkie trzy przejścia badawcze względem własnego changeloga Magisk: cały ten łańcuch zastąpił wycofane MagiskHide w v24.0 (2022-01-26).'
+      payload: '// detection checks Zygisk/DenyList/Shamiko defeat, one at a time:
+
+        // su binary presence -> unmounted from the app''s own mount namespace
+
+        // build tags/props (test-keys) -> reset via MagiskHidePropsConf
+
+        // PackageManager query for Magisk app -> filtered from getPackageInfo()
+
+        // /proc/mounts Magisk entries -> unmounted before the app can inspect them'
+    - name: iOS -- rootless jailbreak + hooking tweaks (Shadow, A-Bypass)
+      sev: medium
+      description:
+        en: Modern rootless jailbreaks (Dopamine, palera1n) leave the Signed System Volume untouched, defeating file-existence checks that assumed a writable root filesystem. Hooking tweaks like Shadow then intercept stat()/fopen()/fork()/dlopen() calls the app's own detection code relies on, returning answers consistent with a non-jailbroken device.
+        pl: Nowoczesne jailbreaki rootless (Dopamine, palera1n) pozostawiają Signed System Volume nietknięty, pokonując sprawdzenia istnienia plików które zakładały zapisywalny system plików root. Narzędzia zaczepiające jak Shadow następnie przechwytują wywołania stat()/fopen()/fork()/dlopen() na których polega własny kod wykrywania apki, zwracając odpowiedzi spójne z niejailbreakowanym urządzeniem.
+      payload: '// Shadow/A-Bypass hooked responses:
+
+        // stat("/Applications/Cydia.app") -> ENOENT (hooked to appear absent)
+
+        // fork() -> hooked to fail, as it would in an App Store sandbox
+
+        // canOpenURL("cydia://") -> hooked to return false'
+    - name: Frida-server signature evasion
+      sev: medium
+      description:
+        en: 'Attackers rename frida-server and change its default port (27042) to defeat naive port-scan and process-name checks, or switch to frida-gadget (embedded directly in the target app, no separate daemon or port at all). A specific limit confirmed by one research pass: three names remain hard-coded and detectable regardless of renaming attempts -- frida-server, frida, and re.frida.server -- so naive renaming alone is incomplete evasion.'
+        pl: 'Atakujący zmieniają nazwę frida-server i zmieniają jego domyślny port (27042) by pokonać naiwne sprawdzenia skanowania portów i nazwy procesu, albo przechodzą na frida-gadget (osadzony bezpośrednio w docelowej apce, bez osobnego demona ani portu w ogóle). Konkretne ograniczenie potwierdzone przez jedno przejście badawcze: trzy nazwy pozostają zakodowane na sztywno i wykrywalne niezależnie od prób zmiany nazwy -- frida-server, frida, i re.frida.server -- więc samo naiwne zmienianie nazwy to niekompletne omijanie.'
+      payload: 'frida-server -l 0.0.0.0:9999  // custom port defeats a naive scan of 27042 alone
+
+        // but /proc/self/maps signature scanning for "LIBFRIDA" and similar
+
+        // strings still catches even a renamed, custom-port frida-agent'
+    - name: Play Integrity strong-verdict forgery via leaked hardware keyboxes
+      sev: high
+      description:
+        en: 'A current (2024-2025), ongoing arms race independently confirmed by two research passes: the community modules TrickyStore and Play Integrity Fix hook the KeyMint/Keymaster HAL and feed a leaked OEM hardware keybox, forging a hardware-backed attestation chain sufficient to reach Android''s strongest MEETS_STRONG_INTEGRITY verdict on a rooted device -- until Google detects and revokes the specific leaked keybox, making the bypass transient and per-device rather than permanent.'
+        pl: 'Aktualny (2024-2025), trwający wyścig zbrojeń niezależnie potwierdzony przez dwa przejścia badawcze: moduły społecznościowe TrickyStore i Play Integrity Fix zaczepiają HAL KeyMint/Keymaster i podają wyciekłą sprzętową keybox OEM, fałszując łańcuch atestacji wspartej sprzętowo wystarczający by osiągnąć najsilniejszy werdykt Android MEETS_STRONG_INTEGRITY na zrootowanym urządzeniu -- dopóki Google nie wykryje i nie odwoła konkretnej wyciekłej keybox, czyniąc obejście przejściowym i per-urządzenie zamiast trwałym.'
+      payload: '// /data/adb/tricky_store/keybox.xml -- a leaked OEM hardware keybox
+
+        // forges the certificate chain KeyMint returns during attestation,
+
+        // until Google''s revocation list catches this specific leaked keybox'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The correction confirmed by all three research passes: client-side detection code, however layered, is fundamentally the wrong place to make the trust decision -- CWE-602 names this precisely. The fix is not a better local check, but moving the verdict off the device entirely.'
+      pl: 'Korekta potwierdzona przez wszystkie trzy przejścia badawcze: kod wykrywania po stronie klienta, choćby najbardziej warstwowy, jest fundamentalnie złym miejscem by podjąć decyzję zaufania -- CWE-602 nazywa to precyzyjnie. Naprawa to nie lepsze lokalne sprawdzenie, ale przeniesienie werdyktu całkowicie poza urządzenie.'
+    languages:
+    - label: Kotlin -- client-side-only root check
+      lang: kotlin
+      vulnerable: "// VULNERABLE: purely client-side verdict -- the app itself decides\n// whether to trust the device, and Frida/Zygisk/DenyList/Shamiko\n// can hook or hide every one of these signals\nfun isDeviceRooted(): Boolean {\n    val suExists = File(\"/system/bin/su\").exists()\n    val testKeys = Build.TAGS?.contains(\"test-keys\") == true\n    return suExists || testKeys\n}\nif (!isDeviceRooted()) { unlockSensitiveFeature() }  // trivially hookable"
+      safe: "// SAFE: the client-side check is only a fast local signal;\n// the actual trust decision is a server-verified, hardware-backed\n// attestation token the app cannot forge or hook around\nsuspend fun canUnlockSensitiveFeature(): Boolean {\n    val integrityToken = integrityManager.requestIntegrityToken(request)\n    val verdict = backendApi.verifyIntegrityToken(integrityToken)  // decrypted/verified server-side\n    return verdict.deviceIntegrity == \"MEETS_STRONG_INTEGRITY\"\n}"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same test sequence: attempt the generic bypass first, escalate to targeted hooks only if it fails, and treat a clean run under active instrumentation -- not the mere presence of detection code -- as the actual pass/fail criterion.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji testowej: spróbuj najpierw ogólnego obejścia, eskaluj do celowanych zaczepień tylko jeśli zawiedzie, i traktuj czyste działanie pod aktywną instrumentacją -- nie samą obecność kodu wykrywania -- jako faktyczne kryterium zaliczenia/niezaliczenia.'
+    steps:
+    - title:
+        en: Static triage to locate detection routines
+        pl: Statyczna triage by zlokalizować rutyny wykrywania
+      description:
+        en: Decompile with jadx (Android) or class-dump/Ghidra (iOS) to find detection classes -- widely-deployed open-source libraries like RootBeer are common enough to recognize by signature, letting a tester jump straight to known public bypasses.
+        pl: Zdekompiluj przez jadx (Android) albo class-dump/Ghidra (iOS) by znaleźć klasy wykrywania -- szeroko wdrożone biblioteki open-source jak RootBeer są wystarczająco powszechne by rozpoznać po sygnaturze, pozwalając testerowi przejść od razu do znanych publicznych obejść.
+    - title:
+        en: Attempt the generic bypass first
+        pl: Spróbuj najpierw ogólnego obejścia
+      description:
+        en: objection's android root disable / ios jailbreak disable, or a public Frida CodeShare script (fridantiroot, the RootBeer-specific bypass), hooks the common signals (File.exists(), Runtime.exec(), PackageManager queries) automatically -- this alone defeats a large share of real-world implementations that rely on unmodified open-source detection libraries.
+        pl: android root disable / ios jailbreak disable objection, albo publiczny skrypt Frida CodeShare (fridantiroot, obejście specyficzne dla RootBeer), automatycznie zaczepia powszechne sygnały (File.exists(), Runtime.exec(), zapytania PackageManager) -- to samo pokonuje dużą część rzeczywistych implementacji które polegają na niezmodyfikowanych bibliotekach wykrywania open-source.
+    - title:
+        en: Escalate to targeted hooks or native patching if it holds
+        pl: Eskaluj do celowanych zaczepień albo łatania natywnego jeśli trzyma
+      description:
+        en: For custom or native-code (.so) detection that resists the generic bypass, write targeted Frida hooks against the specific functions identified in static triage, or binary-patch the native library directly -- native implementation raises the bar above trivial Smali patching but does not stop Frida from hooking native functions too.
+        pl: Dla niestandardowego albo natywnego (.so) wykrywania które opiera się ogólnemu obejściu, napisz celowane zaczepienia Frida przeciwko konkretnym funkcjom zidentyfikowanym w statycznej triage, albo załataj bibliotekę natywną bezpośrednio binarnie -- implementacja natywna podnosi poprzeczkę powyżej trywialnego łatania Smali ale nie zatrzymuje Frida przed zaczepieniem też funkcji natywnych.
+    - title:
+        en: Confirm the app runs normally under active instrumentation, not just that a hook succeeded
+        pl: Potwierdź że apka działa normalnie pod aktywną instrumentacją, nie tylko że zaczepienie się powiodło
+      description:
+        en: 'The actual test criterion, per OWASP''s own bypass-testing methodology (MASTG-TEST-0325, runtime validation distinct from the static MASTG-TEST-0324): confirm the app proceeds through its normal flow with root/jailbreak and active Frida instrumentation both present, not merely that an individual detection function returned a different value.'
+        pl: 'Faktyczne kryterium testu, zgodnie z własną metodyką testowania obejścia OWASP (MASTG-TEST-0325, walidacja w czasie wykonania odrębna od statycznego MASTG-TEST-0324): potwierdź że apka przechodzi przez normalny przepływ z obecnym root/jailbreak i aktywną instrumentacją Frida jednocześnie, nie tylko że pojedyncza funkcja wykrywania zwróciła inną wartość.'
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes converged on server-side attestation as the top control, but one research pass surfaced a sharp, well-sourced correction that reframes the iOS side entirely: the platform''s strongest attestation primitive was never designed to answer this question at all.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na atestacji po stronie serwera jako najwyższej kontroli, ale jedno przejście badawcze ujawniło ostrą, dobrze źródłowaną korektę która całkowicie przeramowuje stronę iOS: najsilniejszy prymityw atestacji platformy nigdy nie został zaprojektowany by odpowiedzieć na to pytanie w ogóle.'
+    items:
+    - rank: 1
+      eff: 75
+      kind: primary
+      label:
+        en: Server-side hardware-backed attestation (Play Integrity STRONG verdict)
+        pl: Atestacja wsparta sprzętowo po stronie serwera (werdykt STRONG Play Integrity)
+      note:
+        en: 'The only Android verdict rooted in hardware and validated where the attacker has no access -- your server. Caveat, confirmed by two of three teams with a current, real example: leaked OEM hardware keyboxes combined with TrickyStore have forged even this strong verdict on rooted devices, until Google detects and revokes the specific leaked keybox -- an active, ongoing arms race, not a permanent wall. Weaker verdict tiers (MEETS_BASIC_INTEGRITY) are routinely spoofed.'
+        pl: 'Jedyny werdykt Android zakorzeniony sprzętowo i walidowany tam gdzie atakujący nie ma dostępu -- na twoim serwerze. Zastrzeżenie, potwierdzone przez dwa z trzech zespołów z aktualnym, prawdziwym przykładem: wyciekłe sprzętowe keybox OEM połączone z TrickyStore sfałszowały nawet ten silny werdykt na zrootowanych urządzeniach, dopóki Google nie wykryje i nie odwoła konkretnej wyciekłej keybox -- aktywny, trwający wyścig zbrojeń, nie trwały mur. Słabsze poziomy werdyktu (MEETS_BASIC_INTEGRITY) są rutynowo fałszowane.'
+    - rank: 2
+      eff: 35
+      kind: weak
+      label:
+        en: iOS App Attest / DeviceCheck -- app-integrity signal, NOT a jailbreak detector
+        pl: iOS App Attest / DeviceCheck -- sygnał integralności apki, NIE detektor jailbreak
+      note:
+        en: 'Ranked deliberately low, with a sharp correction one research pass surfaced and sourced directly: App Attest attests the app binary''s integrity in the Secure Enclave, not the device''s jailbreak status -- a jailbroken device can still pass App Attest. Apple''s own developer guidance explicitly recommends AGAINST implementing jailbreak detection at all. Treating App Attest as this entry''s iOS equivalent of Play Integrity''s strong verdict is a category error worth correcting explicitly.'
+        pl: 'Sklasyfikowane celowo nisko, z ostrą korektą którą ujawniło i źródłowało bezpośrednio jedno przejście badawcze: App Attest atestuje integralność binarium apki w Secure Enclave, nie status jailbreak urządzenia -- jailbreakowane urządzenie wciąż może przejść App Attest. Własne wskazówki deweloperskie Apple jawnie zalecają PRZECIWKO implementowaniu wykrywania jailbreak w ogóle. Traktowanie App Attest jako odpowiednika silnego werdyktu Play Integrity dla iOS w tym wpisie to błąd kategorii wart jawnej korekty.'
+    - rank: 3
+      eff: 55
+      kind: strong
+      label:
+        en: Detect the detection-evasion tooling itself, not just root/jailbreak artifacts
+        pl: Wykrywaj samo narzędzie omijające wykrywanie, nie tylko artefakty root/jailbreak
+      note:
+        en: 'Fingerprinting Frida/Zygisk/Shamiko/LSPosed signatures directly (memory-map scanning, Frida''s own residual signature strings) raises attacker cost, since they must now hide the hiding tool too. Caveat: this is precisely why Shamiko and renamed/gadget-mode Frida exist -- it is an active arms race a determined attacker with time budget will eventually win, not a durable barrier.'
+        pl: 'Odciskiwanie palców bezpośrednio sygnatur Frida/Zygisk/Shamiko/LSPosed (skanowanie map pamięci, resztkowe stringi sygnatur Frida) podnosi koszt atakującego, ponieważ musi teraz ukryć też narzędzie ukrywające. Zastrzeżenie: to dokładnie dlaczego istnieje Shamiko i tryb zmienionej nazwy/gadget Frida -- to aktywny wyścig zbrojeń który zdeterminowany atakujący z budżetem czasu ostatecznie wygra, nie trwała bariera.'
+    - rank: 4
+      eff: 40
+      kind: weak
+      label:
+        en: Multi-signal detection combining many weak checks (cross-reference M7)
+        pl: Wykrywanie wielosygnałowe łączące wiele słabych sprawdzeń (odsyłacz do M7)
+      note:
+        en: Already established in this catalog's M7 entry as a delay/detection layer, not a hard barrier -- individually weak checks, each with a documented public bypass, still raise the time and cost of a successful attack when combined and cross-checking each other.
+        pl: Już ustalone we własnym wpisie M7 tego katalogu jako warstwa opóźnienia/wykrycia, nie twarda bariera -- indywidualnie słabe sprawdzenia, każde z udokumentowanym publicznym obejściem, wciąż podnoszą czas i koszt udanego ataku gdy połączone i wzajemnie się sprawdzające.
+    - rank: 5
+      eff: 30
+      kind: weak
+      label:
+        en: Native-code (JNI/C) implementation of detection checks
+        pl: Natywna (JNI/C) implementacja sprawdzeń wykrywania
+      note:
+        en: 'Raises the reverse-engineering bar above trivial Smali/Java patching -- an attacker now needs native RE skill or memory-hooking rather than a decompile-and-edit workflow. Caveat: Frida hooks native functions via Interceptor.attach just as readily as Java methods; this is a cost multiplier for the attacker, not a defeat.'
+        pl: 'Podnosi poprzeczkę inżynierii wstecznej powyżej trywialnego łatania Smali/Java -- atakujący teraz potrzebuje umiejętności RE natywnego albo zaczepiania pamięci zamiast przepływu pracy dekompiluj-i-edytuj. Zastrzeżenie: Frida zaczepia funkcje natywne przez Interceptor.attach tak samo łatwo jak metody Java; to mnożnik kosztu dla atakującego, nie pokonanie.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'All three research passes were explicit and consistent about a real gap: there is no publicly disclosed CVE of the form "named bank breached via root-detection bypass." The strongest available evidence is peer-reviewed academic measurement and a live, ongoing platform-level arms race.'
+      pl: 'Wszystkie trzy przejścia badawcze były jawne i spójne co do rzeczywistej luki: nie ma publicznie ujawnionego CVE w formie "nazwany bank naruszony przez obejście wykrywania root". Najsilniejszy dostępny dowód to recenzowany akademicko pomiar i żywy, trwający wyścig zbrojeń na poziomie platformy.'
+    items:
+    - org: '"False Sense of Security" -- academic study of jailbreak detection in banking apps'
+      year: 2019
+      impact: Tested real, named banking apps and found the majority failed to detect jailbreak at all; those that did were trivially bypassable
+      cost: IEEE EuroS&P 2019
+      description:
+        en: 'The clean, primary-sourced academic anchor for this entry, independently located and cited: rather than a single incident, this is systematic, peer-reviewed evidence that the technique this entry documents was already widespread and largely ineffective in production banking apps years before the current Zygisk/Shamiko/rootless-jailbreak generation of bypass tooling existed.'
+        pl: 'Czyste, źródłowane pierwotnie akademickie zakotwiczenie tego wpisu, niezależnie zlokalizowane i zacytowane: zamiast pojedynczego incydentu, to systematyczny, recenzowany akademicko dowód że technika którą dokumentuje ten wpis była już powszechna i w dużej mierze nieskuteczna w produkcyjnych apkach bankowych lata przed obecną generacją narzędzi obejścia Zygisk/Shamiko/jailbreak rootless.'
+    - org: Follow-up study across 489 apps including 52 banking apps
+      year: 2025
+      impact: Reported 72% of tested apps failed to detect a rootful jailbreak; 92% failed against a rootless jailbreak -- reported figures the research pass itself flagged as needing reconfirmation against the full primary PDF before being quoted as exact statistics
+      cost: Academic follow-up publication
+      description:
+        en: Directly measures the specific technical claim this entry makes about rootless jailbreaks (Dopamine, palera1n) materially defeating file-existence-based detection -- the sharp gap between rootful and rootless failure rates is concrete evidence that the platform-level shift toward leaving the Signed System Volume untouched is a genuine detection-evasion advance, not merely a minor variant.
+        pl: Bezpośrednio mierzy konkretne twierdzenie techniczne które ten wpis czyni o jailbreakach rootless (Dopamine, palera1n) materialnie pokonujących wykrywanie oparte na istnieniu plików -- ostra różnica między wskaźnikami awarii rootful i rootless to konkretny dowód że przesunięcie na poziomie platformy w kierunku pozostawienia nietkniętego Signed System Volume to prawdziwy postęp w omijaniu wykrywania, nie tylko drobny wariant.
+    - org: Play Integrity leaked-keybox / TrickyStore arms race
+      year: 2025
+      impact: Community modules forged Android's strongest hardware-backed attestation verdict (MEETS_STRONG_INTEGRITY) on rooted devices using leaked OEM keyboxes, until Google's revocation response caught up
+      cost: Ongoing, documented technical arms race -- independently confirmed by two of three research passes
+      description:
+        en: 'The clearest evidence this technique class is a live, current arms race rather than a solved problem: even the top-ranked defense in this deep-dive was compromised for a real, if transient, window -- and Google''s response (revoking specific leaked keyboxes rather than redesigning the mechanism) illustrates that the fix for this class of bypass happens off the device entirely, exactly as CWE-602 predicts.'
+        pl: 'Najjaśniejszy dowód że ta klasa techniki to żywy, aktualny wyścig zbrojeń zamiast rozwiązanego problemu: nawet najwyżej sklasyfikowana obrona w tym deep-dive była skompromitowana przez prawdziwe, choć przejściowe, okno -- a odpowiedź Google (odwoływanie konkretnych wyciekłych keybox zamiast przeprojektowania mechanizmu) ilustruje że naprawa dla tej klasy obejścia dzieje się całkowicie poza urządzeniem, dokładnie jak przewiduje CWE-602.'
+    inlineSources:
+    - label: '"False Sense of Security" -- IEEE EuroS&P 2019 (primary PDF)'
+      url: https://intellisec.org/research/ios/2019-eurosp.pdf
+    - label: Play Integrity attestation bypass -- technical autopsy
+      url: https://hacktricks.wiki/en/mobile-pentesting/android-app-pentesting/play-integrity-attestation-bypass.html
+    - label: Magisk changelog -- MagiskHide removal / Zygisk / DenyList
+      url: https://topjohnwu.github.io/Magisk/changes.html
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: 'All three research passes converged on the same standard methodology: attempt a generic public bypass first, since it defeats a large share of real-world apps that rely on unmodified open-source detection libraries.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej standardowej metodyce: spróbuj najpierw ogólnego publicznego obejścia, ponieważ pokonuje ono dużą część rzeczywistych apek które polegają na niezmodyfikowanych bibliotekach wykrywania open-source.'
+    sast:
+    - - jadx / class-dump / Ghidra
+      - Static decompilation to locate detection routines and recognize widely-deployed open-source libraries (e.g. RootBeer) by signature, jumping straight to known public bypasses
+    dast:
+    - - objection -- android root disable / ios jailbreak disable
+      - Automates hooking the common signals (File.exists(), Runtime.exec(), PackageManager queries) with no manual scripting required
+    - - Frida CodeShare -- public bypass scripts (fridantiroot, RootBeer-specific bypass)
+      - De-facto universal bypass scripts researchers reach for first before writing targeted hooks
+    - - MobSF (dynamic analysis)
+      - Runs the app on a Frida-instrumented device/VM and reports root/jailbreak detection and anti-instrumentation behavior
+    note:
+      en: <strong>Key signal:</strong> the correct pass/fail criterion, per OWASP's own methodology, is whether the app runs its normal flow with root/jailbreak AND active instrumentation both present simultaneously -- not whether an individual detection function can be made to return a different value in isolation.
+      pl: <strong>Kluczowy sygnał:</strong> poprawnym kryterium zaliczenia/niezaliczenia, zgodnie z własną metodyką OWASP, jest czy apka uruchamia swój normalny przepływ z jednocześnie obecnym root/jailbreak I aktywną instrumentacją -- nie czy pojedyncza funkcja wykrywania może zostać zmuszona do zwrócenia innej wartości w izolacji.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes independently verified the same CWE correction and the same MASTG test-numbering update -- both refinements to what this catalog's own M7 entry had already established.
+      pl: Wszystkie trzy przejścia badawcze niezależnie zweryfikowały tę samą korektę CWE i tę samą aktualizację numeracji testów MASTG -- oba udoskonalenia tego co własny wpis M7 tego katalogu już ustalił.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - 'CWE-602 -- Client-Side Enforcement of Server-Side Security (primary, unanimous across all three research passes). A confirmed direct child of CWE-693, and the precise root cause of this technique: the trust decision is computed on a device the attacker fully controls, rather than enforced somewhere they cannot reach.'
+      - CWE-693 -- Protection Mechanism Failure (retained as honest umbrella only, matching this catalog's own M7 entry). Verified as a Pillar-level weakness that MITRE's own mapping guidance explicitly discourages using as a direct mapping target -- confirmed identically by all three research passes.
+      - 'CWE-1244 (Internal Asset Exposed to Unsafe Debug Access Level or State) explicitly evaluated and rejected by all three teams: it concerns hardware/silicon JTAG debug-access weaknesses, unrelated to this software-level bypass technique. CWE-489 (Active Debug Code) remains narrowly applicable only to the shipped-debuggable-build sub-case, matching M7''s existing narrow use.'
+    - std: OWASP
+      items:
+      - MASVS-RESILIENCE (control group, matching M7).
+      - 'MASTG-TEST-0045 -- "Testing Root Detection" was split in the MASTG v2 refactor into MASTG-TEST-0324 (static: does detection code reference root/jailbreak signals at all) and MASTG-TEST-0325 (runtime: does detection actually hold under active bypass attempt) -- confirmed identically by all three research passes as an update to M7''s own already-flagged renumbering caveat.'
+      - MASTG-TEST-0048 ("Testing Reverse Engineering Tools Detection") is the distinct test validating whether Frida/objection/Xposed detection itself holds -- relevant to this entry's Frida-arms-race content specifically, separate from the root/jailbreak signal tests.
+    inlineSources:
+    - label: CWE-602 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/602.html
+    - label: CWE-693 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/693.html
+    - label: OWASP MASTG v2.0.0 release notes
+      url: https://github.com/OWASP/owasp-mastg/releases/tag/v2.0.0
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If root/jailbreak detection is confirmed bypassable in a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu że wykrywanie root/jailbreak jest omijalne w wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: Identify what the client-side detection was actually protecting -- if it was the sole gate on a sensitive feature (payment, DRM-protected content, credential storage), treat that feature as unprotected on any device an attacker controls, not just theoretically weakened
+      pl: Zidentyfikuj co faktycznie chroniło wykrywanie po stronie klienta -- jeśli było jedyną bramką dla wrażliwej funkcji (płatność, treść chroniona DRM, przechowywanie danych uwierzytelniających), traktuj tę funkcję jako niechronioną na dowolnym urządzeniu które atakujący kontroluje, nie tylko teoretycznie osłabioną
+    - en: Confirm whether server-side attestation (Play Integrity, App Attest) is already integrated -- if not, this is the highest-priority structural fix, since it's the only verdict this deep-dive's own research confirmed cannot be locally patched
+      pl: Potwierdź czy atestacja po stronie serwera (Play Integrity, App Attest) jest już zintegrowana -- jeśli nie, to najwyższy priorytet naprawy strukturalnej, ponieważ to jedyny werdykt który własne badania tego deep-dive potwierdziły że nie może być łatany lokalnie
+    - en: On iOS specifically, do not treat App Attest as a jailbreak-detection substitute -- confirm what security property is actually needed (app-binary integrity vs. device-compromise state) and choose the control that actually answers that question
+      pl: Konkretnie na iOS, nie traktuj App Attest jako substytutu wykrywania jailbreak -- potwierdź jaka właściwość bezpieczeństwa jest faktycznie potrzebna (integralność binarium apki vs. stan skompromitowania urządzenia) i wybierz kontrolę która faktycznie odpowiada na to pytanie
+    - en: 'Layer remaining defenses in the order this deep-dive ranks them: detection-evasion-tool fingerprinting, multi-signal cross-checking, native-code implementation -- understanding each raises attacker cost/time rather than closing the gap permanently'
+      pl: 'Warstwuj pozostałe obrony w kolejności którą klasyfikuje ten deep-dive: odciskiwanie palców narzędzi omijających wykrywanie, wielosygnałowe wzajemne sprawdzanie, implementacja natywna -- rozumiejąc że każda podnosi koszt/czas atakującego zamiast trwale zamknąć lukę'
+    - en: Re-verify with objection/Frida CodeShare public bypass scripts specifically, since these are what a real attacker tries first -- if the app survives the generic public bypass, the remaining risk is a targeted attacker willing to write custom hooks, a meaningfully smaller population
+      pl: Zweryfikuj ponownie konkretnie publicznymi skryptami obejścia objection/Frida CodeShare, ponieważ to jest to czego prawdziwy atakujący próbuje najpierw -- jeśli apka przetrwa ogólne publiczne obejście, pozostałe ryzyko to celowany atakujący gotowy napisać własne zaczepienia, znacząco mniejsza populacja
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: Magisk changelog -- MagiskHide removal / Zygisk / DenyList (v24.0)
+      url: https://topjohnwu.github.io/Magisk/changes.html
+    - label: CWE-602 -- Client-Side Enforcement of Server-Side Security
+      url: https://cwe.mitre.org/data/definitions/602.html
+    - label: CWE-693 -- Protection Mechanism Failure
+      url: https://cwe.mitre.org/data/definitions/693.html
+    - label: Apple -- DeviceCheck / App Attest
+      url: https://developer.apple.com/documentation/devicecheck
+    - label: OWASP MASTG-TEST-0045 -- Testing Root Detection
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-RESILIENCE/MASTG-TEST-0045/
+    - label: OWASP MASTG v2.0.0 release notes (test renumbering)
+      url: https://github.com/OWASP/owasp-mastg/releases/tag/v2.0.0
+    - label: '"False Sense of Security" -- IEEE EuroS&P 2019'
+      url: https://intellisec.org/research/ios/2019-eurosp.pdf
+    - label: Play Integrity attestation bypass -- technical autopsy
+      url: https://hacktricks.wiki/en/mobile-pentesting/android-app-pentesting/play-integrity-attestation-bypass.html
+    - label: Android -- Play Integrity API overview
+      url: https://developer.android.com/google/play/integrity/overview
+    - label: shadow (iOS jailbreak-hiding tweak)
+      url: https://github.com/jjolano/shadow
+    - label: RootBeer -- Android root-detection library
+      url: https://github.com/scottyab/rootbeer
