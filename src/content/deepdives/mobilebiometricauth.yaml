@@ -1,0 +1,358 @@
+meta:
+  id: mobilebiometricauth
+  threatId: '15.19'
+  severity: High
+  color: '#db2777'
+  colorRgb: 219,39,119
+  cwe: CWE-287
+  cvss: N/A (technique class; flagship modern case CVE-2024-26322 -- ownCloud Android -- CVSS 4.0; presentation-attack research (Cisco Talos) reports ~80% average spoofing success across tested devices)
+  standard: OWASP MASVS-AUTH (MASTG-TEST-0018 Android / MASTG-TEST-0064 iOS; newer MASTG-TEST-0266 "References to APIs for Event-Bound Biometric Authentication")
+hero:
+  titleMain: 'Insecure Biometric '
+  titleGrad: Authentication
+  titleTail: ''
+  topbar: Insecure Biometric Authentication Implementation (Android + iOS)
+  lead:
+    en: 'All three research passes converged on the same core distinction this catalog''s 15.17 entry already established for Keystore keys generally, now applied specifically to the biometric-prompt APIs: event-bound authentication (the app checks a boolean/callback result -- Android''s onAuthenticationSucceeded() with no CryptoObject, iOS''s evaluatePolicy() success closure) versus crypto-bound authentication (the prompt is tied to releasing a hardware-backed key, so the TEE/Secure Enclave itself enforces the gate, not app code). All three teams independently found and described the identical bypass tooling by name: the WithSecure Labs Frida scripts fingerprint-bypass.js (fabricates a success callback with a null CryptoObject) and fingerprint-bypass-via-exception-handling.js (for apps that pass a CryptoObject but never actually use its cipher), plus objection''s ios ui biometrics_bypass (hooks LAContext''s evaluatePolicy reply block to force success) -- and all three confirmed these fail outright against a genuinely crypto-bound implementation. A sharp nuance one research pass surfaced, worth stating precisely: Google and Apple''s own primary documentation does NOT contain a blunt "event-bound is insecure" warning -- CryptoObject is presented as an optional enhancement, not a mandate. The strong, explicit warnings about this exact failure mode come from OWASP MASTG and independent researchers (WithSecure, SecuRing), not from the platform vendors themselves, which likely explains why the pattern remains common. A second, equally important finding unanimous across all three teams: presentation attacks against the sensor itself -- fake fingerprints, photos or masks for face unlock -- are a genuinely distinct attack class from software hooking, confirmed by Cisco Talos research achieving roughly 80% average spoofing success across eight tested device classes using 3D-printed fingerprint molds. Crypto-binding, the fix for hooking, does nothing against this: if the real sensor is fooled, the hardware legitimately releases the key.'
+    pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tym samym podstawowym rozróżnieniu które własny wpis 15.17 tego katalogu już ustalił dla kluczy Keystore ogólnie, teraz zastosowanym konkretnie do API monitów biometrycznych: uwierzytelnienie oparte na zdarzeniu (apka sprawdza wynik boolean/callback -- onAuthenticationSucceeded() Android bez CryptoObject, closure sukcesu evaluatePolicy() iOS) w porównaniu do uwierzytelnienia związanego kryptograficznie (monit jest związany ze zwolnieniem klucza wspartego sprzętowo, więc sam TEE/Secure Enclave egzekwuje bramkę, nie kod apki). Wszystkie trzy zespoły niezależnie znalazły i opisały identyczne narzędzie obejścia po nazwie: skrypty Frida WithSecure Labs fingerprint-bypass.js (fabrykuje callback sukcesu z pustym CryptoObject) i fingerprint-bypass-via-exception-handling.js (dla apek które przekazują CryptoObject ale nigdy faktycznie nie używają jego szyfru), plus ios ui biometrics_bypass objection (zaczepia blok reply evaluatePolicy LAContext by wymusić sukces) -- i wszystkie trzy potwierdziły że one całkowicie zawodzą przeciw naprawdę związanej kryptograficznie implementacji. Ostry niuans który ujawniło jedno przejście badawcze, warty precyzyjnego stwierdzenia: własna pierwotna dokumentacja Google i Apple NIE zawiera bezpośredniego ostrzeżenia "oparte na zdarzeniu jest niebezpieczne" -- CryptoObject jest przedstawiane jako opcjonalne ulepszenie, nie nakaz. Silne, jawne ostrzeżenia o dokładnie tym trybie awarii pochodzą od OWASP MASTG i niezależnych badaczy (WithSecure, SecuRing), nie od samych dostawców platform, co prawdopodobnie wyjaśnia dlaczego wzorzec pozostaje powszechny. Drugie, równie ważne ustalenie jednomyślne we wszystkich trzech zespołach: ataki prezentacji przeciwko samemu czujnikowi -- fałszywe odciski palców, zdjęcia albo maski dla odblokowania twarzą -- to naprawdę odrębna klasa ataku od zaczepiania oprogramowania, potwierdzona badaniami Cisco Talos osiągającymi około 80% średniego sukcesu spoofingu w ośmiu testowanych klasach urządzeń używając form odcisków palców drukowanych 3D. Wiązanie kryptograficzne, naprawa dla zaczepiania, nic nie robi przeciw temu: jeśli prawdziwy czujnik zostanie oszukany, sprzęt legalnie zwalnia klucz.'
+  metrics:
+  - k: CVE-2024-26322
+    v:
+      en: 'ownCloud Android: biometric authentication bypass with physical access, fixed in 4.2.0'
+      pl: 'ownCloud Android: obejście uwierzytelnienia biometrycznego z fizycznym dostępem, naprawione w 4.2.0'
+  - k: ~80%
+    v:
+      en: average fake-fingerprint spoofing success across 8 tested device classes (Cisco Talos, 2020), confirmed by all 3 research passes
+      pl: średni sukces spoofingu fałszywym odciskiem palca w 8 testowanych klasach urządzeń (Cisco Talos, 2020), potwierdzone przez wszystkie 3 przejścia badawcze
+  - k: Bitwarden, Dashlane, Signal
+    v:
+      en: named password-manager/messenger apps demonstrated bypassable at specific versions (SEC Consult, 2023) via the event-bound pattern
+      pl: nazwane apki menedżera haseł/komunikatora zademonstrowane jako omijalne w konkretnych wersjach (SEC Consult, 2023) przez wzorzec oparty na zdarzeniu
+  - k: Two distinct attacks
+    v:
+      en: hooking (defeated by crypto-binding) and sensor presentation attacks (not defeated by crypto-binding) require different defenses entirely
+      pl: zaczepianie (pokonane przez wiązanie kryptograficzne) i ataki prezentacji czujnika (niepokonane przez wiązanie kryptograficzne) wymagają zupełnie różnych obron
+  sources:
+  - label: Android -- Show a biometric authentication dialog
+    url: https://developer.android.com/identity/sign-in/biometric-auth
+  - label: OWASP MASTG-TEST-0018 -- Testing Biometric Authentication (Android)
+    url: https://mas.owasp.org/MASTG/tests/android/MASVS-AUTH/MASTG-TEST-0018/
+  - label: WithSecure Labs -- android-keystore-audit Frida scripts
+    url: https://github.com/WithSecureLABS/android-keystore-audit
+  - label: Cisco Talos -- Fingerprint spoofing research
+    url: https://blog.talosintelligence.com/2020/04/fingerprint-research.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: All three research passes converged on two genuinely distinct attack classes -- software hooking of the event-bound pattern, and physical presentation attacks against the sensor itself -- that require entirely different defenses and must not be conflated.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na dwóch naprawdę odrębnych klasach ataku -- zaczepianiu oprogramowania wzorca opartego na zdarzeniu, i fizycznych atakach prezentacji przeciwko samemu czujnikowi -- które wymagają zupełnie różnych obron i nie mogą być mylone.
+    items:
+    - name: Android -- forging the AuthenticationCallback with a null CryptoObject
+      sev: high
+      description:
+        en: When authenticate() is called without a CryptoObject, onAuthenticationSucceeded() is just a Java callback. WithSecure's fingerprint-bypass.js, confirmed identically by all three teams, hooks every overload of authenticate() and directly invokes the app's own callback with a fabricated AuthenticationResult carrying a null CryptoObject -- defeating any app that trusts the callback alone.
+        pl: Gdy authenticate() jest wywoływane bez CryptoObject, onAuthenticationSucceeded() to po prostu callback Java. fingerprint-bypass.js WithSecure, potwierdzone identycznie przez wszystkie trzy zespoły, zaczepia każde przeciążenie authenticate() i bezpośrednio wywołuje własny callback apki z sfabrykowanym AuthenticationResult niosącym pusty CryptoObject -- pokonując dowolną apkę która ufa samemu callbackowi.
+      payload: 'frida -U -f com.target.app --no-pause -l fingerprint-bypass.js
+
+        // hooks BiometricPrompt.authenticate(), calls onAuthenticationSucceeded()
+
+        // directly with a fabricated result -- no real biometric ever presented'
+    - name: Android -- exception-swallowing bypass for a misused CryptoObject
+      sev: high
+      description:
+        en: 'An app that passes a CryptoObject but never actually uses the returned cipher to decrypt real data is still bypassable: fingerprint-bypass-via-exception-handling.js invokes onAuthenticationSucceeded() with an unauthorized CryptoObject and catches the resulting IllegalBlockSizeException, letting a flawed app proceed regardless. Confirmed identically by all three teams as the exact target for the common trap where crypto-binding is present but decorative.'
+        pl: 'Apka która przekazuje CryptoObject ale nigdy faktycznie nie używa zwróconego szyfru by odszyfrować prawdziwe dane wciąż jest omijalna: fingerprint-bypass-via-exception-handling.js wywołuje onAuthenticationSucceeded() z nieautoryzowanym CryptoObject i przechwytuje wynikający IllegalBlockSizeException, pozwalając wadliwej apce kontynuować niezależnie. Potwierdzone identycznie przez wszystkie trzy zespoły jako dokładny cel dla powszechnej pułapki gdzie wiązanie kryptograficzne jest obecne ale dekoracyjne.'
+      payload: 'frida -U -f com.target.app --no-pause -l fingerprint-bypass-via-exception-handling.js
+
+        // forces onAuthenticationSucceeded() with an unauthorized CryptoObject,
+
+        // swallows the resulting Cipher exception -- works only if the app doesn''t
+
+        // genuinely need the decrypted output'
+    - name: iOS -- forcing evaluatePolicy's reply block to succeed
+      sev: high
+      description:
+        en: objection's ios ui biometrics_bypass hooks -[LAContext evaluatePolicy:localizedReason:reply:] and rewrites the reply block's boolean argument to true regardless of the actual result. Confirmed unanimously to fail against secrets gated by SecAccessControl (kSecAccessControlBiometryAny/CurrentSet) since there the Secure Enclave, not app code, decides whether to release the item.
+        pl: ios ui biometrics_bypass objection zaczepia -[LAContext evaluatePolicy:localizedReason:reply:] i przepisuje argument boolean bloku reply na true niezależnie od faktycznego wyniku. Potwierdzone jednomyślnie jako zawodzące przeciw sekretom bramkowanym przez SecAccessControl (kSecAccessControlBiometryAny/CurrentSet) ponieważ tam Secure Enclave, nie kod apki, decyduje czy zwolnić element.
+      payload: 'objection -g com.target.app explore
+
+        > ios ui biometrics_bypass
+
+        // hooks evaluatePolicy''s reply closure, forces success=true --
+
+        // gains nothing if the secret is read via a SecAccessControl-gated Keychain item'
+    - name: Presentation attacks -- spoofing the sensor itself, not the software
+      sev: high
+      description:
+        en: 'A genuinely distinct attack class confirmed unanimously by all three research passes: Cisco Talos achieved roughly 80% average success unlocking real devices with 3D-printed fingerprint molds filled with textile glue, and Bkav defeated iPhone X Face ID with a purpose-built mask. Crypto-binding does not help here -- the real hardware sensor is fooled, so the hardware legitimately and correctly releases the key.'
+        pl: 'Naprawdę odrębna klasa ataku potwierdzona jednomyślnie przez wszystkie trzy przejścia badawcze: Cisco Talos osiągnęło około 80% średniego sukcesu odblokowywania prawdziwych urządzeń formami odcisków palców drukowanymi 3D wypełnionymi klejem tekstylnym, a Bkav pokonało Face ID iPhone X specjalnie zbudowaną maską. Wiązanie kryptograficzne tutaj nie pomaga -- prawdziwy czujnik sprzętowy jest oszukany, więc sprzęt legalnie i poprawnie zwalnia klucz.'
+      payload: '// no code exploit -- a physical mold/mask presented directly to the sensor;
+
+        // defended by sensor-level anti-spoofing (PAD/liveness), not app-code changes'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The correction confirmed by all three research passes: crypto-binding only counts if the app actually uses the released cipher on real data -- creating a CryptoObject purely to trigger the prompt, then checking a boolean anyway, collapses back to the event-bound pattern.'
+      pl: 'Korekta potwierdzona przez wszystkie trzy przejścia badawcze: wiązanie kryptograficzne liczy się tylko jeśli apka faktycznie używa zwolnionego szyfru na prawdziwych danych -- utworzenie CryptoObject wyłącznie by wywołać monit, następnie sprawdzenie boolean mimo to, zapada się z powrotem do wzorca opartego na zdarzeniu.'
+    languages:
+    - label: Kotlin -- Android BiometricPrompt
+      lang: kotlin
+      vulnerable: "// VULNERABLE: event-bound -- no CryptoObject, the app trusts\n// the callback alone; fingerprint-bypass.js defeats this trivially\nval promptInfo = BiometricPrompt.PromptInfo.Builder()\n    .setTitle(\"Unlock vault\")\n    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)\n    .build()\nbiometricPrompt.authenticate(promptInfo)  // no CryptoObject\n// callback:\noverride fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {\n    unlockVault()  // trusts the callback alone, nothing hardware-enforced\n}"
+      safe: "// SAFE: crypto-bound -- the prompt is tied to a Keystore key that\n// requires authentication, and the app genuinely uses the released cipher\nval cipher = Cipher.getInstance(\"AES/GCM/NoPadding\")\ncipher.init(Cipher.DECRYPT_MODE, keystoreKey, GCMParameterSpec(128, iv))\nbiometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))\n// callback:\noverride fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {\n    val decryptedVault = result.cryptoObject?.cipher?.doFinal(encryptedVaultBytes)\n    unlockVaultWith(decryptedVault)  // hardware refuses doFinal() without real auth\n}"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: distinguish event-bound from crypto-bound first, then separately confirm the crypto-binding is load-bearing rather than decorative -- and treat presentation-attack resistance as a completely separate assessment.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: rozróżnij najpierw oparte-na-zdarzeniu od związanego-kryptograficznie, następnie osobno potwierdź że wiązanie kryptograficzne jest nośne zamiast dekoracyjne -- i traktuj odporność na atak prezentacji jako całkowicie osobną ocenę.'
+    steps:
+    - title:
+        en: Locate every authenticate()/evaluatePolicy() call and check for a CryptoObject
+        pl: Zlokalizuj każde wywołanie authenticate()/evaluatePolicy() i sprawdź obecność CryptoObject
+      description:
+        en: 'Android: grep for BiometricPrompt.authenticate() call sites and check whether a CryptoObject is passed. iOS: grep for evaluatePolicy() and check whether the app reads a secret via a SecAccessControl-gated Keychain item versus trusting the boolean reply directly.'
+        pl: 'Android: grepuj miejsca wywołania BiometricPrompt.authenticate() i sprawdź czy CryptoObject jest przekazywany. iOS: grepuj evaluatePolicy() i sprawdź czy apka czyta sekret przez element Keychain bramkowany SecAccessControl zamiast ufać bezpośrednio odpowiedzi boolean.'
+    - title:
+        en: Attempt the generic public bypass first
+        pl: Spróbuj najpierw ogólnego publicznego obejścia
+      description:
+        en: Run fingerprint-bypass.js (Android) or objection's ios ui biometrics_bypass (iOS) -- these defeat the large share of real-world apps using the event-bound pattern with no custom scripting required.
+        pl: Uruchom fingerprint-bypass.js (Android) albo ios ui biometrics_bypass objection (iOS) -- pokonują dużą część rzeczywistych apek używających wzorca opartego na zdarzeniu bez potrzeby własnego skryptowania.
+    - title:
+        en: If it fails, confirm the CryptoObject is actually load-bearing
+        pl: Jeśli zawiedzie, potwierdź że CryptoObject jest faktycznie nośny
+      description:
+        en: Try fingerprint-bypass-via-exception-handling.js -- if this succeeds, the app created a CryptoObject but never used its output on real data, the exact decorative-binding trap all three teams flagged. If both scripts fail, the app genuinely enforces the gate in hardware.
+        pl: Spróbuj fingerprint-bypass-via-exception-handling.js -- jeśli to się powiedzie, apka utworzyła CryptoObject ale nigdy nie użyła jego wyniku na prawdziwych danych, dokładna pułapka dekoracyjnego wiązania oflagowana przez wszystkie trzy zespoły. Jeśli oba skrypty zawiodą, apka naprawdę egzekwuje bramkę w sprzęcie.
+    - title:
+        en: Separately assess presentation-attack resistance
+        pl: Osobno oceń odporność na atak prezentacji
+      description:
+        en: 'This is not a software test: confirm the app requires BIOMETRIC_STRONG/Class 3 (blocking spoofable 2D camera-only face unlock), and note that even Class 3 sensors have documented real-world spoof rates -- this is a sensor-hardware property the app cannot fix, only avoid weakening further by accepting WEAK authenticators.'
+        pl: 'To nie jest test oprogramowania: potwierdź że apka wymaga BIOMETRIC_STRONG/Class 3 (blokując spoofowalne odblokowanie twarzą wyłącznie kamerą 2D), i zauważ że nawet czujniki Class 3 mają udokumentowane rzeczywiste wskaźniki spoofingu -- to właściwość sprzętu czujnika której apka nie może naprawić, tylko unikać dalszego osłabiania przez akceptowanie autentykatorów WEAK.'
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes converged on the same top control and, critically, on the same trap: crypto-binding only works if it is load-bearing, and none of these layers do anything against a genuinely spoofed sensor.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej najwyższej kontroli i, kluczowo, na tej samej pułapce: wiązanie kryptograficzne działa tylko jeśli jest nośne, i żadna z tych warstw nic nie robi przeciw naprawdę oszukanemu czujnikowi.'
+    items:
+    - rank: 1
+      eff: 80
+      kind: primary
+      label:
+        en: Load-bearing crypto-object / Keychain-SecAccessControl binding
+        pl: Nośne wiązanie crypto-object / Keychain-SecAccessControl
+      note:
+        en: 'Android: authenticate() with a real CryptoObject over a setUserAuthenticationRequired key, and the app genuinely decrypts real data with the returned cipher. iOS: the secret is read via a Keychain item gated by SecAccessControl(.biometryCurrentSet), not via a boolean check. Critical caveat, confirmed unanimously: a CryptoObject that is passed but never actually used on real data is still defeated by fingerprint-bypass-via-exception-handling.js -- the binding must be load-bearing, not decorative.'
+        pl: 'Android: authenticate() z prawdziwym CryptoObject nad kluczem setUserAuthenticationRequired, i apka naprawdę odszyfrowuje prawdziwe dane zwróconym szyfrem. iOS: sekret jest czytany przez element Keychain bramkowany SecAccessControl(.biometryCurrentSet), nie przez sprawdzenie boolean. Krytyczne zastrzeżenie, potwierdzone jednomyślnie: CryptoObject który jest przekazywany ale nigdy faktycznie nie użyty na prawdziwych danych wciąż jest pokonywany przez fingerprint-bypass-via-exception-handling.js -- wiązanie musi być nośne, nie dekoracyjne.'
+    - rank: 2
+      eff: 65
+      kind: primary
+      label:
+        en: Require BIOMETRIC_STRONG / Class 3, never WEAK
+        pl: Wymagaj BIOMETRIC_STRONG / Class 3, nigdy WEAK
+      note:
+        en: 'The structural prerequisite for crypto-binding to even be possible -- only Class 3 sensors may release Keystore-backed keys, and this blocks the most spoofable 2D-camera-only face unlock outright. Caveat, confirmed unanimously: STRONG is a spoof-acceptance threshold, not a spoof-proof guarantee -- Cisco Talos beat Class-3-grade sensors at roughly 80% success (see incidents).'
+        pl: 'Strukturalny warunek wstępny by wiązanie kryptograficzne było w ogóle możliwe -- tylko czujniki Class 3 mogą zwalniać klucze wsparte Keystore, i to blokuje wprost najbardziej spoofowalne odblokowanie twarzą wyłącznie kamerą 2D. Zastrzeżenie, potwierdzone jednomyślnie: STRONG to próg akceptacji spoofingu, nie gwarancja odporności na spoofing -- Cisco Talos pokonało czujniki poziomu Class 3 przy około 80% sukcesu (patrz incydenty).'
+    - rank: 3
+      eff: 55
+      kind: strong
+      label:
+        en: Invalidate keys on new biometric enrollment
+        pl: Unieważniaj klucze przy nowej rejestracji biometrycznej
+      note:
+        en: 'Android setInvalidatedByBiometricEnrollment(true); iOS .biometryCurrentSet rather than .biometryAny. Stops an attacker who enrolls their own fingerprint/face on a stolen unlocked device from reusing the existing key. Caveat, confirmed unanimously: .biometryAny (iOS) deliberately does not invalidate on enrollment change -- a common, easy-to-miss weakening choice.'
+        pl: 'Android setInvalidatedByBiometricEnrollment(true); iOS .biometryCurrentSet zamiast .biometryAny. Zatrzymuje atakującego który rejestruje własny odcisk palca/twarz na skradzionym odblokowanym urządzeniu przed ponownym użyciem istniejącego klucza. Zastrzeżenie, potwierdzone jednomyślnie: .biometryAny (iOS) celowo nie unieważnia przy zmianie rejestracji -- powszechny, łatwy do przeoczenia wybór osłabiający.'
+    - rank: 4
+      eff: 40
+      kind: weak
+      label:
+        en: Deliberate device-credential fallback design
+        pl: Celowy projekt zapasowego uwierzytelnienia poświadczeniami urządzenia
+      note:
+        en: 'Two teams independently pulled the identical Android documentation constraint: a key allowing device-credential fallback cannot be paired with per-operation CryptoObject binding at all -- so combining biometric with PIN/pattern fallback structurally forces a weaker, time-bound key model. Design this deliberately rather than accidentally falling back into an event-bound pattern.'
+        pl: 'Dwa zespoły niezależnie wyciągnęły identyczne ograniczenie dokumentacji Android: klucz pozwalający na zapasowe uwierzytelnienie poświadczeniami urządzenia w ogóle nie może być sparowany z wiązaniem CryptoObject per-operacja -- więc łączenie biometrii z zapasowym PIN/wzorem strukturalnie wymusza słabszy, ograniczony czasowo model klucza. Zaprojektuj to celowo zamiast przypadkowo wpaść z powrotem we wzorzec oparty na zdarzeniu.'
+    - rank: 5
+      eff: 45
+      kind: strong
+      label:
+        en: Server-side re-verification for high-value actions
+        pl: Ponowna weryfikacja po stronie serwera dla akcji o wysokiej wartości
+      note:
+        en: 'Never let a single device-local biometric result alone authorize a money transfer or credential export -- require a fresh server-verified factor. Caveat, confirmed unanimously: this is the only control that survives BOTH attack classes (a fully compromised device and a spoofed sensor), but it does nothing for purely local secrets like an offline password vault, where load-bearing crypto-binding remains the actual control.'
+        pl: 'Nigdy nie pozwól by pojedynczy lokalny wynik biometryczny urządzenia sam autoryzował przelew pieniędzy albo eksport danych uwierzytelniających -- wymagaj świeżego czynnika zweryfikowanego przez serwer. Zastrzeżenie, potwierdzone jednomyślnie: to jedyna kontrola która przetrwa OBIE klasy ataku (w pełni skompromitowane urządzenie i oszukany czujnik), ale nic nie robi dla czysto lokalnych sekretów jak offline''owy magazyn haseł, gdzie nośne wiązanie kryptograficzne pozostaje faktyczną kontrolą.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Two named-app findings extend this catalog's flagship 15.17 case (CVE-2021-3145) to biometric-specific implementations, while presentation-attack research -- confirmed unanimously across all three teams with a consistent figure -- demonstrates the entirely separate sensor-level attack surface.
+      pl: Dwa nazwane ustalenia apek rozszerzają flagowy przypadek 15.17 tego katalogu (CVE-2021-3145) na implementacje specyficzne dla biometrii, podczas gdy badania ataku prezentacji -- potwierdzone jednomyślnie we wszystkich trzech zespołach ze spójną liczbą -- demonstrują całkowicie osobną powierzchnię ataku na poziomie czujnika.
+    items:
+    - org: CVE-2024-26322 -- ownCloud for Android
+      year: 2024
+      impact: Improper validation in the biometric authentication process allowed an attacker with physical access to bypass the gate entirely
+      cost: CVSS 3.x base 4.0; affects versions before 4.2.0; fixed in 4.2.0
+      description:
+        en: Independently found and cross-verified by two of three research passes against ownCloud's own vendor security advisory -- a clean, current, named-app CVE specific to biometric authentication, distinct from and extending 15.17's flagship Keystore-key case.
+        pl: Niezależnie znalezione i skrzyżowo zweryfikowane przez dwa z trzech przejść badawczych względem własnego doradztwa bezpieczeństwa dostawcy ownCloud -- czyste, aktualne, nazwane CVE apki specyficzne dla uwierzytelnienia biometrycznego, odrębne od i rozszerzające flagowy przypadek klucza Keystore z 15.17.
+    - org: SEC Consult research -- Bitwarden, Dashlane, Signal (named, version-pinned)
+      year: 2023
+      impact: Demonstrated the event-bound Frida bypass against specific versions of a leading password manager, a second password manager, and a widely-used secure messenger
+      cost: 'Pentest research findings, not formally assigned CVEs; versions cited: Bitwarden 2023.3.2, Dashlane 6.2313.0, Signal 6.17.3'
+      description:
+        en: Independently found and cross-verified by two of three research passes -- these are among the highest-value possible targets for this technique, since password managers and encrypted messengers are exactly the app category where biometric-gated secrets matter most, illustrating the pattern is not confined to obscure or low-security apps.
+        pl: Niezależnie znalezione i skrzyżowo zweryfikowane przez dwa z trzech przejść badawczych -- to jedne z najwyższej wartości możliwych celów dla tej techniki, ponieważ menedżery haseł i szyfrowane komunikatory to dokładnie kategoria apek gdzie sekrety bramkowane biometrią mają największe znaczenie, ilustrując że wzorzec nie ogranicza się do niejasnych albo niskiej jakości apek bezpieczeństwa.
+    - org: Cisco Talos -- fingerprint presentation-attack study
+      year: 2020
+      impact: Approximately 80% average success unlocking real, current devices (including an iPhone 8 and Samsung S10) using 3D-printed fingerprint molds filled with low-cost textile glue, across 8 device classes
+      cost: Research published by Cisco Talos; highest success against ultrasonic in-display sensors
+      description:
+        en: 'Confirmed identically and independently by all three research passes with a consistent success figure -- unusually strong triple corroboration for this specific study. This is the clearest available evidence that crypto-binding, the correct fix for the software-hooking attack class, does not address the physical presentation-attack class at all: the hardware sensor genuinely accepts the spoof.'
+        pl: 'Potwierdzone identycznie i niezależnie przez wszystkie trzy przejścia badawcze ze spójną liczbą sukcesu -- niezwykle silna potrójna korporacja dla tego konkretnego badania. To najjaśniejszy dostępny dowód że wiązanie kryptograficzne, poprawna naprawa dla klasy ataku zaczepiania oprogramowania, w ogóle nie adresuje fizycznej klasy ataku prezentacji: sprzętowy czujnik naprawdę akceptuje spoof.'
+    inlineSources:
+    - label: ownCloud -- Biometric authentication bypass advisory (CVE-2024-26322)
+      url: https://owncloud.com/security-advisories/biometric-authentication-bypass/
+    - label: SEC Consult -- Bypassing Android Biometric Authentication
+      url: https://sec-consult.com/blog/detail/bypassing-android-biometric-authentication/
+    - label: Cisco Talos -- Fingerprint spoofing research
+      url: https://blog.talosintelligence.com/2020/04/fingerprint-research.html
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on the same tool names for the same exact scripts -- an unusual degree of independent agreement on tool-level detail.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tych samych nazwach narzędzi dla dokładnie tych samych skryptów -- niezwykły stopień niezależnej zgody na poziomie szczegółu narzędzia.
+    sast:
+    - - Static grep for authenticate()/evaluatePolicy() call sites
+      - Flags whether a CryptoObject is passed on Android, or whether the iOS secret is read via a SecAccessControl-gated Keychain item versus a bare boolean check
+    dast:
+    - - WithSecure Labs -- fingerprint-bypass.js
+      - Hooks every BiometricPrompt.authenticate() overload, fabricates a success callback with a null CryptoObject -- defeats the pure event-bound pattern
+    - - WithSecure Labs -- fingerprint-bypass-via-exception-handling.js
+      - Forces the success callback with an unauthorized CryptoObject and swallows the resulting Cipher exception -- defeats a CryptoObject that is present but not actually load-bearing
+    - - objection -- ios ui biometrics_bypass
+      - Hooks LAContext's evaluatePolicy reply block to force success=true on iOS -- fails against SecAccessControl-gated Keychain secrets
+    note:
+      en: <strong>Key signal:</strong> a clean result against fingerprint-bypass.js alone is incomplete -- also run fingerprint-bypass-via-exception-handling.js, since an app can pass a CryptoObject purely to look secure while remaining just as bypassable as a pure event-bound implementation.
+      pl: <strong>Kluczowy sygnał:</strong> czysty wynik przeciw samemu fingerprint-bypass.js jest niekompletny -- uruchom też fingerprint-bypass-via-exception-handling.js, ponieważ apka może przekazać CryptoObject wyłącznie by wyglądać na bezpieczną, pozostając równie omijalna jak czysta implementacja oparta na zdarzeniu.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes agreed on CWE-287 as a reasonable primary matching the catalog stub, though two independently proposed CWE-603 (Use of Client-Side Authentication) as a possibly tighter fit -- flagged here transparently since neither team could fully verify it against a direct fetch.
+      pl: Wszystkie trzy przejścia badawcze zgodziły się na CWE-287 jako rozsądnym głównym pasującym do stuba katalogu, choć dwa niezależnie zaproponowały CWE-603 (Use of Client-Side Authentication) jako potencjalnie ciaśniejsze dopasowanie -- oflagowane tutaj przejrzyście ponieważ żaden zespół nie mógł tego w pełni zweryfikować względem bezpośredniego pobrania.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-287 -- Improper Authentication (primary, matches the catalog stub and endorsed by all three research passes). The product does not sufficiently prove a claimed identity -- fits the core failure of trusting an unforced client-side signal as proof of biometric verification.
+      - 'CWE-305 -- Authentication Bypass by Primary Weakness (secondary, confirmed by all three teams as a defensible child of CWE-287): the biometric mechanism itself is sound, but a separate implementation weakness -- missing crypto binding -- lets it be bypassed.'
+      - 'CWE-603 -- Use of Client-Side Authentication (flagged, not adopted as primary): two of three research passes independently proposed this as possibly the tightest conceptual fit for the event-bound pattern specifically, but both explicitly noted they could not fully verify its exact wording against a direct fetch this pass -- recorded here for future re-verification rather than asserted with confidence.'
+      - CWE-1275 (Sensitive Cookie with Improper SameSite Attribute) explicitly evaluated and rejected by all three teams as irrelevant -- a web-cookie weakness with no connection to mobile biometric authentication.
+    - std: OWASP
+      items:
+      - MASVS-AUTH (control group, distinct from 15.17's MASVS-STORAGE/MASVS-CRYPTO).
+      - MASTG-TEST-0018 -- "Testing Biometric Authentication" (Android). Confirmed identically by all three teams to explicitly ship and reference the fingerprint-bypass.js / fingerprint-bypass-via-exception-handling.js scripts as its own pass/fail criteria, stating a properly crypto-bound implementation "cannot be bypassed even on rooted devices."
+      - 'MASTG-TEST-0064 -- "Testing Biometric Authentication" (iOS), the direct counterpart. Newer atomic test MASTG-TEST-0266 -- "References to APIs for Event-Bound Biometric Authentication" -- codifies the exact vulnerable pattern this entry documents as its own dedicated check. Historical MASVS 1.x wording (MSTG-AUTH-8) stated the distinction most plainly: biometric authentication "is not event-bound... instead, it is based on unlocking the keychain/keystore."'
+    inlineSources:
+    - label: CWE-287 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/287.html
+    - label: OWASP MASTG-TEST-0018
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-AUTH/MASTG-TEST-0018/
+    - label: OWASP MASTG-TEST-0064 (iOS)
+      url: https://mas.owasp.org/MASTG/tests/ios/MASVS-AUTH/MASTG-TEST-0064/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If insecure biometric authentication is confirmed in a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu niebezpiecznego uwierzytelnienia biometrycznego w wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: Identify which of the two distinct attack classes applies -- event-bound/decorative-binding software hooking, or physical sensor presentation attack -- since load-bearing crypto-binding fixes only the first
+      pl: Zidentyfikuj która z dwóch odrębnych klas ataku ma zastosowanie -- zaczepianie oprogramowania oparte na zdarzeniu/dekoracyjnym wiązaniu, albo fizyczny atak prezentacji czujnika -- ponieważ nośne wiązanie kryptograficzne naprawia tylko pierwsze
+    - en: Confirm whether an existing CryptoObject/SecAccessControl binding is actually load-bearing by testing both fingerprint-bypass.js AND fingerprint-bypass-via-exception-handling.js (Android) -- a clean result against only the first script does not confirm safety
+      pl: Potwierdź czy istniejące wiązanie CryptoObject/SecAccessControl jest faktycznie nośne testując zarówno fingerprint-bypass.js JAK I fingerprint-bypass-via-exception-handling.js (Android) -- czysty wynik przeciw tylko pierwszemu skryptowi nie potwierdza bezpieczeństwa
+    - en: For any secret protected only by an event-bound check, treat it as unprotected on any device with root/jailbreak and Frida present -- not merely theoretically weakened
+      pl: Dla dowolnego sekretu chronionego tylko sprawdzeniem opartym na zdarzeniu, traktuj go jako niechroniony na dowolnym urządzeniu z obecnym root/jailbreak i Frida -- nie tylko teoretycznie osłabiony
+    - en: 'Ship the fix matching this deep-dive''s top-ranked defenses: migrate to load-bearing crypto-object/SecAccessControl binding first, require BIOMETRIC_STRONG/Class 3, then invalidate on new enrollment -- in that order of impact'
+      pl: 'Wydaj naprawę pasującą do najwyżej sklasyfikowanych obron tego deep-dive: migruj do nośnego wiązania crypto-object/SecAccessControl najpierw, wymagaj BIOMETRIC_STRONG/Class 3, następnie unieważniaj przy nowej rejestracji -- w tej kolejności wpływu'
+    - en: For high-value actions specifically (transfers, credential export), add server-side re-verification regardless of how strong the local biometric implementation is, since this is the only control surviving both a compromised device and a spoofed sensor
+      pl: Dla akcji o wysokiej wartości konkretnie (przelewy, eksport danych uwierzytelniających), dodaj ponowną weryfikację po stronie serwera niezależnie od tego jak silna jest lokalna implementacja biometryczna, ponieważ to jedyna kontrola przetrwująca zarówno skompromitowane urządzenie jak i oszukany czujnik
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: Android -- Show a biometric authentication dialog
+      url: https://developer.android.com/identity/sign-in/biometric-auth
+    - label: Apple -- SecAccessControlCreateWithFlags
+      url: https://developer.apple.com/documentation/security/secaccesscontrolcreatewithflags(_:_:_:_:)
+    - label: CWE-287 -- Improper Authentication
+      url: https://cwe.mitre.org/data/definitions/287.html
+    - label: CWE-305 -- Authentication Bypass by Primary Weakness
+      url: https://cwe.mitre.org/data/definitions/305.html
+    - label: OWASP MASTG-TEST-0018 -- Testing Biometric Authentication (Android)
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-AUTH/MASTG-TEST-0018/
+    - label: WithSecure Labs -- android-keystore-audit Frida scripts
+      url: https://github.com/WithSecureLABS/android-keystore-audit
+    - label: objection wiki -- Understanding the iOS Biometrics Bypass
+      url: https://github.com/sensepost/objection/wiki/Understanding-the-iOS-Biometrics-Bypass
+    - label: ownCloud -- Biometric authentication bypass advisory (CVE-2024-26322)
+      url: https://owncloud.com/security-advisories/biometric-authentication-bypass/
+    - label: SEC Consult -- Bypassing Android Biometric Authentication
+      url: https://sec-consult.com/blog/detail/bypassing-android-biometric-authentication/
+    - label: Cisco Talos -- Fingerprint spoofing research
+      url: https://blog.talosintelligence.com/2020/04/fingerprint-research.html

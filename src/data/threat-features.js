@@ -62,6 +62,7 @@ import mobiletapjackingData from '../content/deepdives/mobiletapjacking.yaml';
 import mobiledeeplinksData from '../content/deepdives/mobiledeeplinks.yaml';
 import mobilekeychainkeystoreData from '../content/deepdives/mobilekeychainkeystore.yaml';
 import mobilerootjailbreakbypassData from '../content/deepdives/mobilerootjailbreakbypass.yaml';
+import mobilebiometricauthData from '../content/deepdives/mobilebiometricauth.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -121,6 +122,7 @@ import mobiletapjackingQuiz from '../content/quizzes/mobiletapjacking.yaml';
 import mobiledeeplinksQuiz from '../content/quizzes/mobiledeeplinks.yaml';
 import mobilekeychainkeystoreQuiz from '../content/quizzes/mobilekeychainkeystore.yaml';
 import mobilerootjailbreakbypassQuiz from '../content/quizzes/mobilerootjailbreakbypass.yaml';
+import mobilebiometricauthQuiz from '../content/quizzes/mobilebiometricauth.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -182,6 +184,7 @@ export const DEEPDIVES = {
   '15.16': mobiledeeplinksData, // Insecure Deep Link / Custom URL Scheme Handling
   '15.17': mobilekeychainkeystoreData, // Keychain / Keystore Misuse
   '15.18': mobilerootjailbreakbypassData, // Root / Jailbreak Detection Bypass
+  '15.19': mobilebiometricauthData, // Insecure Biometric Authentication Implementation
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -246,4 +249,5 @@ export const QUIZZES = {
   '15.16': mobiledeeplinksQuiz,
   '15.17': mobilekeychainkeystoreQuiz,
   '15.18': mobilerootjailbreakbypassQuiz,
+  '15.19': mobilebiometricauthQuiz,
 };

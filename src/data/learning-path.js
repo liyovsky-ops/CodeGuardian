@@ -52,6 +52,7 @@ export const LEARNING_PATH = [
   '15.16', // Insecure Deep Link / Custom URL Scheme Handling
   '15.17', // Keychain / Keystore Misuse
   '15.18', // Root / Jailbreak Detection Bypass
+  '15.19', // Insecure Biometric Authentication Implementation
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

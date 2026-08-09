@@ -373,22 +373,18 @@ threats:
 - id: '15.19'
   name: Insecure Biometric Authentication Implementation
   severity: High
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-287
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Biometric checks used only as a client-side gate (event-bound BiometricPrompt / LocalAuthentication returning a boolean) rather than releasing a Keystore/Keychain-protected key, allowing bypass via hooking or logic manipulation.
+  desc: 'Kontrole biometryczne używane wyłącznie jako lokalna bramka po stronie apki (BiometricPrompt/LocalAuthentication zwracające boolean przez callback, bez CryptoObject/SecAccessControl) zamiast zwalniać klucz wsparty sprzętowo Keystore/Keychain, pozwalając na obejście przez zaczepianie (Frida/objection) na zrootowanych/jailbreakowanych urządzeniach. Odrębna od tego jest fizyczna klasa ataku prezentacji (fałszywe odciski palców, maski twarzy) przeciwko samemu czujnikowi, której wiązanie kryptograficzne nie adresuje.
 
     '
-  desc_en: Biometric checks used only as a client-side gate (event-bound BiometricPrompt / LocalAuthentication returning a boolean) rather than releasing a Keystore/Keychain-protected key, allowing bypass via hooking or logic manipulation.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: OWASP MASTG MASVS-AUTH (testing biometric authentication; crypto-bound vs event-bound).'
+  desc_en: Biometric checks used purely as a client-side gate (BiometricPrompt/LocalAuthentication returning a boolean via callback, with no CryptoObject/SecAccessControl) rather than releasing a Keystore/Keychain-backed hardware key, allowing bypass via hooking (Frida/objection) on rooted/jailbroken devices. Distinct from this is the physical presentation-attack class (fake fingerprints, face masks) against the sensor itself, which crypto-binding does not address.
+  lang: kotlin
+  vuln: "val promptInfo = BiometricPrompt.PromptInfo.Builder()\n    .setTitle(\"Unlock vault\")\n    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)\n    .build()\nbiometricPrompt.authenticate(promptInfo)  // no CryptoObject\noverride fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {\n    unlockVault()  // trusts the callback alone -- forgeable with fingerprint-bypass.js\n}\n"
+  safe: "val cipher = Cipher.getInstance(\"AES/GCM/NoPadding\")\ncipher.init(Cipher.DECRYPT_MODE, keystoreKey, GCMParameterSpec(128, iv))\nbiometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))\noverride fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {\n    val decrypted = result.cryptoObject?.cipher?.doFinal(encryptedVaultBytes)\n    unlockVaultWith(decrypted)  // hardware refuses doFinal() without real auth\n}\n"
+  note_en: 'Source: OWASP MASTG-TEST-0018 (Testing Biometric Authentication, Android) and MASTG-TEST-0064 (iOS); WithSecure Labs android-keystore-audit Frida scripts; CVE-2024-26322 (ownCloud Android).'
 - id: '15.20'
   name: Sensitive Data Leakage via Clipboard / Screenshots / Logs
   severity: Medium

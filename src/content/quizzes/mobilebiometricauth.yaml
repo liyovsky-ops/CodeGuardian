@@ -1,0 +1,126 @@
+threatId: '15.19'
+title:
+  en: Insecure Biometric Authentication Implementation -- knowledge check
+  pl: Niebezpieczna Implementacja Uwierzytelniania Biometrycznego -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: An Android app calls biometricPrompt.authenticate(promptInfo) with NO CryptoObject, and in onAuthenticationSucceeded() simply sets isUnlocked = true. What is the core weakness?
+    pl: Apka Android wywołuje biometricPrompt.authenticate(promptInfo) BEZ CryptoObject, i w onAuthenticationSucceeded() po prostu ustawia isUnlocked = true. Jaka jest podstawowa słabość?
+  choices:
+  - id: a
+    label:
+      en: The authentication is event-bound, not crypto-bound -- the callback is a Java signal an attacker can forge with Frida, since no hardware-enforced key release backs it
+      pl: Uwierzytelnienie jest oparte na zdarzeniu, nie związane kryptograficznie -- callback to sygnał Java który atakujący może sfałszować przez Frida, ponieważ żadne wsparte sprzętowo zwolnienie klucza tego nie wspiera
+  - id: b
+    label:
+      en: BIOMETRIC_STRONG was not specified in the PromptInfo builder
+      pl: BIOMETRIC_STRONG nie zostało określone w builderze PromptInfo
+  - id: c
+    label:
+      en: The app should use FingerprintManager instead of BiometricPrompt
+      pl: Apka powinna używać FingerprintManager zamiast BiometricPrompt
+  - id: d
+    label:
+      en: onAuthenticationSucceeded() should be renamed to a less predictable method name
+      pl: onAuthenticationSucceeded() powinno zostać przemianowane na mniej przewidywalną nazwę metody
+  correctChoiceIds:
+  - a
+  explanation:
+    en: All three research passes confirmed this exact pattern is defeated by WithSecure's fingerprint-bypass.js, which hooks authenticate() and directly invokes the app's own callback with a fabricated result -- no real biometric ever presented. Renaming a method or picking a different legacy API changes nothing; the fix is tying the prompt to a CryptoObject.
+    pl: Wszystkie trzy przejścia badawcze potwierdziły że ten dokładny wzorzec jest pokonywany przez fingerprint-bypass.js WithSecure, który zaczepia authenticate() i bezpośrednio wywołuje własny callback apki ze sfabrykowanym wynikiem -- żadna prawdziwa biometria nigdy nie jest prezentowana. Przemianowanie metody albo wybranie innego przestarzałego API niczego nie zmienia; naprawą jest związanie monitu z CryptoObject.
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: An app passes a real CryptoObject wrapping an initialized Cipher into authenticate(promptInfo, cryptoObject) -- but in onAuthenticationSucceeded(), it ignores result.cryptoObject entirely and just calls unlockVault() directly, the same as if no CryptoObject had been passed. Is this implementation still vulnerable?
+    pl: Apka przekazuje prawdziwy CryptoObject opakowujący zainicjalizowany Cipher do authenticate(promptInfo, cryptoObject) -- ale w onAuthenticationSucceeded() całkowicie ignoruje result.cryptoObject i po prostu wywołuje unlockVault() bezpośrednio, tak samo jakby żaden CryptoObject nie został przekazany. Czy ta implementacja wciąż jest podatna?
+  isVulnerable: true
+  cwe: CWE-287
+  explanation:
+    en: 'Yes -- unanimous across all three research passes. Passing a CryptoObject is necessary but not sufficient: the app must actually use the returned cipher on real data. Here the binding is purely decorative, so fingerprint-bypass-via-exception-handling.js (which forces the callback with an unauthorized CryptoObject and swallows the resulting Cipher exception) defeats it exactly as if no CryptoObject existed at all.'
+    pl: 'Tak -- jednomyślnie we wszystkich trzech przejściach badawczych. Przekazanie CryptoObject jest konieczne ale niewystarczające: apka musi faktycznie użyć zwróconego szyfru na prawdziwych danych. Tutaj wiązanie jest czysto dekoracyjne, więc fingerprint-bypass-via-exception-handling.js (który wymusza callback z nieautoryzowanym CryptoObject i przechwytuje wynikający wyjątek Cipher) pokonuje ją dokładnie tak jakby żaden CryptoObject w ogóle nie istniał.'
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: On iOS, which pattern correctly enforces biometric-gated access to a Keychain secret at the hardware level, per all three research passes?
+    pl: Na iOS, który wzorzec poprawnie egzekwuje dostęp bramkowany biometrycznie do sekretu Keychain na poziomie sprzętowym, według wszystkich trzech przejść badawczych?
+  choices:
+  - id: a
+    label:
+      en: Checking the boolean success argument returned by LAContext.evaluatePolicy's reply closure before reading the secret from a plain Keychain item
+      pl: Sprawdzenie argumentu boolean sukcesu zwróconego przez closure reply LAContext.evaluatePolicy przed odczytaniem sekretu ze zwykłego elementu Keychain
+  - id: b
+    label:
+      en: Gating the Keychain item itself with a SecAccessControl flag such as .biometryCurrentSet, so the Secure Enclave -- not app code -- decides whether to release it
+      pl: Bramkowanie samego elementu Keychain flagą SecAccessControl taką jak .biometryCurrentSet, tak by Secure Enclave -- nie kod apki -- decydował czy go zwolnić
+  - id: c
+    label:
+      en: Calling evaluatePolicy() twice in a row to reduce the false-accept rate
+      pl: Dwukrotne wywołanie evaluatePolicy() pod rząd by zmniejszyć wskaźnik fałszywej akceptacji
+  - id: d
+    label:
+      en: Storing the secret in UserDefaults instead of the Keychain, since UserDefaults is sandboxed per-app
+      pl: Przechowywanie sekretu w UserDefaults zamiast w Keychain, ponieważ UserDefaults jest sandboxowany per-apka
+  correctChoiceIds:
+  - b
+  explanation:
+    en: 'Confirmed unanimously: the boolean-reply pattern is exactly what objection''s ios ui biometrics_bypass defeats by forcing the closure''s success argument to true. A SecAccessControl-gated Keychain item is enforced by the Secure Enclave itself and is confirmed by all three teams to resist this bypass. UserDefaults offers no encryption-at-rest or biometric gating at all.'
+    pl: 'Potwierdzone jednomyślnie: wzorzec boolean-reply to dokładnie to co pokonuje ios ui biometrics_bypass objection wymuszając argument sukcesu closure na true. Element Keychain bramkowany SecAccessControl jest egzekwowany przez sam Secure Enclave i potwierdzony przez wszystkie trzy zespoły jako odporny na to obejście. UserDefaults nie oferuje żadnego szyfrowania w spoczynku ani bramkowania biometrycznego.'
+- id: q4
+  type: pick-the-fix
+  prompt:
+    en: A banking app currently gates a 'wire transfer' action purely on a local BIOMETRIC_STRONG event-bound check (no CryptoObject). Which implementation most fully addresses the risk per this deep-dive's ranked defenses?
+    pl: Apka bankowa obecnie bramkuje akcję 'przelewu' czysto lokalnym sprawdzeniem BIOMETRIC_STRONG opartym na zdarzeniu (bez CryptoObject). Która implementacja najpełniej adresuje ryzyko według sklasyfikowanych obron tego deep-dive?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: "val promptInfo = BiometricPrompt.PromptInfo.Builder()\n    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)\n    .build()\nbiometricPrompt.authenticate(promptInfo)\n// onAuthenticationSucceeded: allowWireTransfer()"
+  - id: v2
+    lang: kotlin
+    code: "val promptInfo = BiometricPrompt.PromptInfo.Builder()\n    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)\n    .build()\nbiometricPrompt.authenticate(promptInfo)\n// onAuthenticationSucceeded: showConfirmDialog { allowWireTransfer() }"
+  - id: v3
+    lang: kotlin
+    code: "val cipher = Cipher.getInstance(\"AES/GCM/NoPadding\").apply {\n    init(Cipher.ENCRYPT_MODE, keystoreKey)  // setUserAuthenticationRequired(true)\n}\nbiometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))\n// onAuthenticationSucceeded: val signedRequest = result.cryptoObject!!.cipher!!.doFinal(transferPayload)\n// server independently re-verifies the transfer before executing it, regardless of the local result"
+  correctVariantId: v3
+  explanation:
+    en: v3 is the only variant combining this deep-dive's top-ranked defense (load-bearing CryptoObject binding, actually used to sign/encrypt the real transfer payload) with server-side re-verification -- the only control confirmed by all three research passes to survive both a fully compromised device and a spoofed sensor. v1 uses BIOMETRIC_WEAK, which cannot even back a CryptoObject. v2 uses BIOMETRIC_STRONG but remains purely event-bound -- a same-device confirmation dialog is still defeated by the same class of on-device hooking.
+    pl: v3 to jedyny wariant łączący najwyżej sklasyfikowaną obronę tego deep-dive (nośne wiązanie CryptoObject, faktycznie użyte do podpisania/zaszyfrowania prawdziwego ładunku przelewu) z ponowną weryfikacją po stronie serwera -- jedyną kontrolą potwierdzoną przez wszystkie trzy przejścia badawcze jako przetrwającą zarówno w pełni skompromitowane urządzenie jak i oszukany czujnik. v1 używa BIOMETRIC_WEAK, które nie może nawet wesprzeć CryptoObject. v2 używa BIOMETRIC_STRONG ale pozostaje czysto oparte na zdarzeniu -- dialog potwierdzenia na tym samym urządzeniu wciąż jest pokonywany przez tę samą klasę zaczepiania na urządzeniu.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: Cisco Talos demonstrated roughly 80% average success unlocking real devices with 3D-printed fingerprint molds. Which defense from this deep-dive's ranked list stops this specific attack?
+    pl: Cisco Talos zademonstrowało około 80% średniego sukcesu odblokowywania prawdziwych urządzeń formami odcisków palców drukowanymi 3D. Która obrona z sklasyfikowanej listy tego deep-dive zatrzymuje ten konkretny atak?
+  choices:
+  - id: a
+    label:
+      en: Load-bearing CryptoObject/SecAccessControl binding, since it's the top-ranked defense
+      pl: Nośne wiązanie CryptoObject/SecAccessControl, ponieważ to najwyżej sklasyfikowana obrona
+  - id: b
+    label:
+      en: Requiring BIOMETRIC_STRONG/Class 3, since it excludes weaker sensors
+      pl: Wymaganie BIOMETRIC_STRONG/Class 3, ponieważ wyklucza słabsze czujniki
+  - id: c
+    label:
+      en: None of the software-level defenses in this deep-dive -- this is a sensor presentation attack, a physically distinct problem from the software-hooking attacks these defenses target; the real hardware sensor is genuinely fooled and legitimately releases the key
+      pl: Żadna z obron na poziomie oprogramowania w tym deep-dive -- to atak prezentacji czujnika, fizycznie odrębny problem od ataków zaczepiania oprogramowania które te obrony celują; prawdziwy czujnik sprzętowy jest naprawdę oszukany i legalnie zwalnia klucz
+  - id: d
+    label:
+      en: Invalidating keys on new biometric enrollment
+      pl: Unieważnianie kluczy przy nowej rejestracji biometrycznej
+  correctChoiceIds:
+  - c
+  explanation:
+    en: 'This is the central myth this deep-dive corrects, confirmed unanimously across all three research passes: crypto-binding, Class 3 requirements, and enrollment invalidation all defend against software hooking of an app that trusts an unforced signal -- none of them address a sensor being physically fooled, since in that case the hardware genuinely and correctly authenticates and releases the key. Presentation-attack resistance is a sensor-hardware property the app cannot fix through these controls.'
+    pl: 'To centralny mit który koryguje ten deep-dive, potwierdzony jednomyślnie we wszystkich trzech przejściach badawczych: wiązanie kryptograficzne, wymagania Class 3, i unieważnianie przy rejestracji wszystkie bronią przed zaczepianiem oprogramowania apki która ufa niewymuszonemu sygnałowi -- żadne z nich nie adresuje czujnika który jest fizycznie oszukany, ponieważ w tym przypadku sprzęt naprawdę i poprawnie uwierzytelnia i zwalnia klucz. Odporność na atak prezentacji to właściwość sprzętu czujnika której apka nie może naprawić przez te kontrole.'
+- id: q6
+  type: vuln-or-not
+  prompt:
+    en: A security reviewer flags CVE-2024-26322 (ownCloud Android) as proof that even Keystore-hardware-backed biometric implementations from major, well-funded vendors can still ship an improperly validated biometric authentication process -- and concludes this justifies a full re-review of the app's biometric code path, not just a version bump. Is this a reasonable read of the incident?
+    pl: Recenzent bezpieczeństwa oflagowuje CVE-2024-26322 (ownCloud Android) jako dowód że nawet implementacje biometryczne wsparte sprzętowo przez Keystore od dużych, dobrze finansowanych dostawców wciąż mogą wysłać niepoprawnie zwalidowany proces uwierzytelniania biometrycznego -- i wnioskuje że to uzasadnia pełny ponowny przegląd ścieżki kodu biometrycznego apki, nie tylko podniesienie wersji. Czy to rozsądna interpretacja incydentu?
+  isVulnerable: true
+  cwe: CWE-287
+  explanation:
+    en: Yes -- this is the correct takeaway. CVE-2024-26322, independently found and cross-verified by two of the three research passes against ownCloud's own vendor advisory, is a clean, current, named-app CVE confirming this exact implementation-level failure -- 'improper validation in the biometric authentication process' allowing physical-access bypass, fixed only in 4.2.0 -- extending this catalog's earlier 15.17 finding (CVE-2021-3145) to biometric-specific implementations. A version bump alone doesn't confirm the underlying pattern (event-bound vs. decorative crypto-binding) was actually fixed elsewhere in the same codebase.
+    pl: Tak -- to poprawny wniosek. CVE-2024-26322, niezależnie znalezione i skrzyżowo zweryfikowane przez dwa z trzech przejść badawczych względem własnego doradztwa dostawcy ownCloud, to czyste, aktualne, nazwane CVE apki potwierdzające dokładnie tę awarię na poziomie implementacji -- 'niepoprawna walidacja w procesie uwierzytelniania biometrycznego' pozwalająca na obejście z fizycznym dostępem, naprawione dopiero w 4.2.0 -- rozszerzając wcześniejsze ustalenie 15.17 tego katalogu (CVE-2021-3145) na implementacje specyficzne dla biometrii. Samo podniesienie wersji nie potwierdza że podstawowy wzorzec (oparty na zdarzeniu vs dekoracyjne wiązanie kryptograficzne) został faktycznie naprawiony gdzie indziej w tym samym kodzie.
