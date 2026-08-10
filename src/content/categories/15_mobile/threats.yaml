@@ -388,22 +388,47 @@ threats:
 - id: '15.20'
   name: Sensitive Data Leakage via Clipboard / Screenshots / Logs
   severity: Medium
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
-  - CWE-200
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] PII, tokens, or credentials leak through the shared clipboard/pasteboard, backgrounded-app screenshots (task snapshots), keyboard caches, or verbose logging accessible to other apps or forensic extraction.
+  - CWE-532
+  - CWE-359
+  desc: 'Dane wrażliwe wyciekają przez trzy odrębne powierzchnie systemowe: współdzielony schowek (Android ClipboardManager, iOS UIPasteboard, w tym cichą synchronizację Universal Clipboard między urządzeniami), automatyczny zrzut ekranu apki w tle cache''owany dla przełącznika aplikacji (gdzie natywne widgety jak Toast mogą wyciec mimo poprawnie ustawionego FLAG_SECURE na głównym oknie), oraz jawne logowanie danych uwierzytelniających/PII do Logcat/os_log.
 
     '
-  desc_en: PII, tokens, or credentials leak through the shared clipboard/pasteboard, backgrounded-app screenshots (task snapshots), keyboard caches, or verbose logging accessible to other apps or forensic extraction.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'Sensitive data leaks through three distinct OS-level surfaces: the shared clipboard (Android ClipboardManager, iOS UIPasteboard, including silent cross-device Universal Clipboard sync), the automatic backgrounded-app snapshot cached for the app switcher (where native widgets like a Toast can leak despite a correctly-set FLAG_SECURE on the main window), and plaintext logging of credentials/PII to Logcat/os_log.'
+  lang: kotlin
+  vuln: 'val clip = ClipData.newPlainText("token", authToken)
+
+    clipboardManager.setPrimaryClip(clip)  // readable by any focused app
+
+    Log.d("AuthFlow", "login response: token=$authToken")  // plaintext in Logcat
+
+    Toast.makeText(context, "Password: $cleartextPassword", Toast.LENGTH_LONG).show()
+
+    // Toast renders outside the FLAG_SECURE window -- leaks into the recents snapshot
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  safe: '// never place auth secrets on the shared clipboard or in logs;
+
+    // strip debug logging from release builds:
+
+    // proguard-rules.pro:
+
+    // -assumenosideeffects class android.util.Log {
+
+    //     public static *** d(...);
+
+    // }
+
+    // and apply FLAG_SECURE to every sensitive window at creation time,
+
+    // including any transient overlay (dialogs, toasts) showing revealed secrets
+
+    window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
 
     '
-  note_en: 'Source: OWASP MASTG MASVS-STORAGE (testing for sensitive data in logs, clipboard, backups, and app backgrounding).'
+  note_en: 'Source: OWASP MASVS-STORAGE-2, MASTG-TEST-0003/0010/0053/0059/0073; Doyensec FLAG_SECURE misuse disclosure (1Password/Keeper/Dashlane); CVE-2023-21387 (Android backup token log leak); ESET Android/Clipper.C.'
 - id: '15.21'
   name: Cloak & Dagger (Android overlay + accessibility attack)
   severity: High

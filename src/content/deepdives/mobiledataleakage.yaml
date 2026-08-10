@@ -1,0 +1,353 @@
+meta:
+  id: mobiledataleakage
+  threatId: '15.20'
+  severity: Medium
+  color: '#334155'
+  colorRgb: 51,65,85
+  cwe: CWE-532
+  cvss: N/A (technique class; flagship CVE-2023-21387 -- Android User Backup Manager log leak -- CVSS 4.4)
+  standard: OWASP MASVS-STORAGE-2 ("the app prevents leakage of sensitive data" -- explicitly enumerates logs, clipboard, backups, screenshots/task-switcher snapshots) + MASVS-PLATFORM test coverage
+hero:
+  titleMain: 'Sensitive Data Leakage via '
+  titleGrad: Clipboard / Screenshots / Logs
+  titleTail: ''
+  topbar: Sensitive Data Leakage via Clipboard / Screenshots / Logs (Android + iOS)
+  lead:
+    en: 'All three research passes converged on treating this as three genuinely distinct OS-level leak surfaces, not one bug: the shared system clipboard (Android ClipboardManager, iOS UIPasteboard), the automatic backgrounded-app snapshot the OS caches for the app switcher, and system logging (Logcat, os_log). One research pass fetched MITRE''s own CWE-200 definition directly and found its mapping guidance explicitly "DISCOURAGED" -- confirmality loss is a technical impact, not a root cause, and MITRE tells mappers to cite the specific error instead. That correction is adopted here: this entry leads with CWE-532 (Insertion of Sensitive Information into Log File) for the logging vector -- a verified, mapping-ALLOWED descendant of CWE-200 -- and treats CWE-359 (Exposure of Private Personal Information) as the tighter fit when clipboard or screenshot leakage exposes PII, keeping bare CWE-200 only as an umbrella label rather than the operative mapping. A second correction, verified identically across all three passes against Android''s own documentation: the Android 13 ClipDescription.EXTRA_IS_SENSITIVE flag is a rendering hint, not a security control -- it suppresses the on-screen clipboard preview, nothing more; the data remains fully readable on the shared clipboard by any focused app. A third finding, uncovered by one research pass via a 2019 Doyensec disclosure with exact fix versions, fills a gap all three passes independently noted (no clean CVE exists for screenshot leakage): three major password managers -- 1Password, Keeper, and Dashlane -- each shipped native UI elements (a "reveal password" toast, an autocomplete fragment) that rendered outside their own FLAG_SECURE window and leaked the cleartext secret anyway, a sharp illustration that FLAG_SECURE protects only the window it is set on, not every pixel the app draws.'
+    pl: 'Wszystkie trzy przejścia badawcze zbiegły się na traktowaniu tego jako trzech naprawdę odrębnych powierzchni wycieku na poziomie systemu, nie jednego błędu: współdzielonego schowka systemowego (Android ClipboardManager, iOS UIPasteboard), automatycznego zrzutu ekranu apki w tle który system cache''uje dla przełącznika aplikacji, oraz logowania systemowego (Logcat, os_log). Jedno przejście badawcze pobrało bezpośrednio własną definicję CWE-200 MITRE i znalazło jej wskazówkę mapowania jawnie "ODRADZANĄ" -- utrata poufności to skutek techniczny, nie przyczyna źródłowa, a MITRE mówi mapującym by cytowali konkretny błąd zamiast tego. Ta korekta jest tutaj przyjęta: ten wpis prowadzi CWE-532 (Insertion of Sensitive Information into Log File) dla wektora logowania -- zweryfikowanym, dozwolonym-do-mapowania potomkiem CWE-200 -- i traktuje CWE-359 (Exposure of Private Personal Information) jako ciaśniejsze dopasowanie gdy wyciek schowka albo zrzutu ekranu ujawnia PII, zachowując gołe CWE-200 tylko jako etykietę parasolową zamiast operacyjnego mapowania. Druga korekta, zweryfikowana identycznie we wszystkich trzech przejściach względem własnej dokumentacji Android: flaga ClipDescription.EXTRA_IS_SENSITIVE Android 13 to wskazówka renderowania, nie kontrola bezpieczeństwa -- tłumi podgląd schowka na ekranie, nic więcej; dane pozostają w pełni czytelne na współdzielonym schowku przez dowolną skupioną apkę. Trzecie ustalenie, odkryte przez jedno przejście badawcze przez ujawnienie Doyensec z 2019 z dokładnymi wersjami naprawy, wypełnia lukę którą wszystkie trzy przejścia niezależnie zauważyły (nie istnieje czyste CVE dla wycieku przez zrzut ekranu): trzy główne menedżery haseł -- 1Password, Keeper, i Dashlane -- każdy wysłał natywne elementy UI (toast "pokaż hasło", fragment autouzupełniania) które renderowały się poza własnym oknem FLAG_SECURE i mimo to wyciekły jawny sekret, ostra ilustracja że FLAG_SECURE chroni tylko okno na którym jest ustawiony, nie każdy piksel który apka rysuje.'
+  metrics:
+  - k: 1Password, Keeper, Dashlane
+    v:
+      en: major password managers found leaking secrets via FLAG_SECURE-bypassing UI elements (Doyensec, 2019); all three shipped fixes within weeks
+      pl: główne menedżery haseł znalezione wyciekające sekrety przez elementy UI omijające FLAG_SECURE (Doyensec, 2019); wszystkie trzy wysłały naprawy w ciągu tygodni
+  - k: CVE-2023-21387
+    v:
+      en: 'Android User Backup Manager: backup confirmation token leaked via plaintext system log, verified directly against NVD'
+      pl: 'Android User Backup Manager: token potwierdzenia kopii zapasowej wyciekł przez jawny log systemowy, zweryfikowane bezpośrednio względem NVD'
+  - k: CWE-200 = DISCOURAGED
+    v:
+      en: MITRE's own mapping guidance, verified by direct fetch, discourages bare CWE-200 -- this entry leads with CWE-532/CWE-359 instead
+      pl: własna wskazówka mapowania MITRE, zweryfikowana bezpośrednim pobraniem, odradza gołe CWE-200 -- ten wpis prowadzi zamiast tego CWE-532/CWE-359
+  - k: Android/Clipper.C
+    v:
+      en: first crypto-clipper malware to reach official Google Play (Feb 2019), swapped copied wallet addresses while impersonating MetaMask
+      pl: pierwsze złośliwe oprogramowanie crypto-clipper które trafiło na oficjalny Google Play (luty 2019), zamieniało skopiowane adresy portfela podszywając się pod MetaMask
+  sources:
+  - label: Android -- Secure clipboard handling
+    url: https://developer.android.com/privacy-and-security/risks/secure-clipboard-handling
+  - label: Android -- Log info disclosure
+    url: https://developer.android.com/privacy-and-security/risks/log-info-disclosure
+  - label: OWASP MASVS-STORAGE-2
+    url: https://mas.owasp.org/MASVS/controls/MASVS-STORAGE-2/
+  - label: Doyensec -- Modern Android Password Managers and FLAG_SECURE Misuse
+    url: https://blog.doyensec.com/2019/08/22/modern-password-managers-flag-secure.html
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: Three distinct OS-level surfaces, each with its own exploitation path and each unanimously confirmed by all three research passes.
+      pl: Trzy odrębne powierzchnie na poziomie systemu, każda z własną ścieżką eksploatacji i każda potwierdzona jednomyślnie przez wszystkie trzy przejścia badawcze.
+    items:
+    - name: Clipboard sniffing / crypto-clipper substitution
+      sev: high
+      description:
+        en: A malicious app polls ClipboardManager.getPrimaryClip() / UIPasteboard.general for high-value patterns -- passwords, OTP codes, and especially cryptocurrency wallet addresses -- and either reads them or silently substitutes the attacker's own address so funds route to the attacker. Confirmed unanimously via Android/Clipper.C, the first crypto-clipper to reach official Google Play (ESET, Feb 2019), which impersonated MetaMask.
+        pl: Złośliwa apka odpytuje ClipboardManager.getPrimaryClip() / UIPasteboard.general szukając wzorców wysokiej wartości -- haseł, kodów OTP, a zwłaszcza adresów portfeli kryptowalut -- i albo je odczytuje albo po cichu podmienia na własny adres atakującego tak by środki trafiły do atakującego. Potwierdzone jednomyślnie przez Android/Clipper.C, pierwszy crypto-clipper który trafił na oficjalny Google Play (ESET, luty 2019), podszywający się pod MetaMask.
+      payload: "// malicious app, foreground, polling loop:\nval clip = clipboardManager.primaryClip?.getItemAt(0)?.text\nif (clip?.matches(Regex(\"^(0x[a-fA-F0-9]{40}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$\")) == true) {\n    clipboardManager.setPrimaryClip(ClipData.newPlainText(\"\", attackerWalletAddress))\n}"
+    - name: Backgrounded-app snapshot leakage (FLAG_SECURE gap in native widgets)
+      sev: high
+      description:
+        en: The OS caches a screenshot of the app's last screen for the app switcher / recents UI. Setting FLAG_SECURE on the window blocks this, but Doyensec's 2019 disclosure (verified with exact fix versions) found that native framework widgets rendered outside the flagged window -- a Toast, an AutoCompleteTextView dropdown, a Spinner overlay -- do NOT inherit FLAG_SECURE and can still leak a cleartext secret into the snapshot. Affected 1Password (fixed v7.1.5), Keeper (fixed v14.3.0), and Dashlane (fixed v6.1929.2).
+        pl: 'System cache''uje zrzut ekranu ostatniego widoku apki dla przełącznika aplikacji / UI recents. Ustawienie FLAG_SECURE na oknie to blokuje, ale ujawnienie Doyensec z 2019 (zweryfikowane z dokładnymi wersjami naprawy) znalazło że natywne widgety frameworku renderowane poza oflagowanym oknem -- Toast, rozwijana lista AutoCompleteTextView, nakładka Spinner -- NIE dziedziczą FLAG_SECURE i wciąż mogą wyciec jawny sekret do zrzutu. Dotknięte: 1Password (naprawione w v7.1.5), Keeper (naprawione w v14.3.0), i Dashlane (naprawione w v6.1929.2).'
+      payload: '// vulnerable: reveal-password Toast renders outside the FLAG_SECURE window
+
+        Toast.makeText(context, "Password: $cleartextPassword", Toast.LENGTH_LONG).show()
+
+        // backgrounding the app immediately after captures this Toast in the recents snapshot'
+    - name: Plaintext credential/token logging
+      sev: medium
+      description:
+        en: Login or backup flows write credentials, tokens, or PII directly to Logcat / os_log. Readable via adb logcat (USB/debugger access), preloaded OEM apps that still hold READ_LOGS, or forensic extraction tools. Confirmed via CVE-2023-21387 (Android User Backup Manager leaking a backup confirmation token to system logs, CVSS 4.4, verified directly against NVD).
+        pl: Przepływy logowania albo kopii zapasowej zapisują dane uwierzytelniające, tokeny, albo PII bezpośrednio do Logcat / os_log. Czytelne przez adb logcat (dostęp USB/debugger), preinstalowane apki OEM które wciąż posiadają READ_LOGS, albo narzędzia ekstrakcji forensycznej. Potwierdzone przez CVE-2023-21387 (Android User Backup Manager wyciekający token potwierdzenia kopii zapasowej do logów systemowych, CVSS 4.4, zweryfikowane bezpośrednio względem NVD).
+      payload: 'Log.d("AuthFlow", "login response: token=$authToken user=$username")
+
+        // adb logcat | grep AuthFlow  -- readable by anyone with USB/adb access'
+    - name: Universal Clipboard cross-device exposure (iOS)
+      sev: medium
+      description:
+        en: UIPasteboard.general is, by default since iOS 10, eligible to sync via Handoff/iCloud to nearby Apple devices signed into the same account -- a silent cross-device exposure most users don't realize is on by default. One research pass found documented bugs where expirationDate was honored on the local device but copied data remained pasteable on nearby synced devices past the timeout, and had no effect at all on Apple Silicon Macs.
+        pl: UIPasteboard.general jest, domyślnie od iOS 10, kwalifikowany do synchronizacji przez Handoff/iCloud na pobliskie urządzenia Apple zalogowane na to samo konto -- cichy wyciek między urządzeniami którego większość użytkowników nie zdaje sobie sprawy że jest domyślnie włączony. Jedno przejście badawcze znalazło udokumentowane błędy gdzie expirationDate było respektowane na lokalnym urządzeniu ale skopiowane dane pozostawały wklejalne na pobliskich zsynchronizowanych urządzeniach po upływie limitu czasu, i nie miało żadnego efektu na Makach z Apple Silicon.
+      payload: '// UIPasteboard.general.string = sensitiveToken
+
+        // silently syncs to nearby Macs/iPads on the same iCloud account via Universal Clipboard,
+
+        // unless localOnly is explicitly set'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'The correction confirmed by all three research passes: EXTRA_IS_SENSITIVE only hides the visual clipboard preview -- it does not stop a focused malicious app from programmatically reading the clip. The only real fix is not putting secrets on the shared clipboard at all.'
+      pl: 'Korekta potwierdzona przez wszystkie trzy przejścia badawcze: EXTRA_IS_SENSITIVE tylko ukrywa wizualny podgląd schowka -- nie zatrzymuje skupionej złośliwej apki przed programowym odczytaniem schowka. Jedyną prawdziwą naprawą jest niekładzenie sekretów na współdzielony schowek w ogóle.'
+    languages:
+    - label: Kotlin -- Android clipboard
+      lang: kotlin
+      vulnerable: '// VULNERABLE: auth token copied to the shared system clipboard
+
+        // -- readable by any foreground app, EXTRA_IS_SENSITIVE would
+
+        // only hide the visual preview, not the actual data
+
+        val clip = ClipData.newPlainText("token", authToken)
+
+        clipboardManager.setPrimaryClip(clip)'
+      safe: "// SAFE: never put the raw secret on the shared clipboard.\n// If a copy action is unavoidable (e.g. a one-time backup code\n// the user must paste elsewhere), scope its lifetime and clear it\nval clip = ClipData.newPlainText(\"code\", oneTimeBackupCode)\nclipboardManager.setPrimaryClip(clip)\nHandler(Looper.getMainLooper()).postDelayed({\n    if (clipboardManager.primaryClip?.getItemAt(0)?.text == oneTimeBackupCode) {\n        clipboardManager.setPrimaryClip(ClipData.newPlainText(\"\", \"\"))\n    }\n}, 30_000)  // best-effort clear; the real fix is avoiding the clipboard for secrets"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: check each of the three surfaces independently, since a fix on one (e.g. FLAG_SECURE on the main window) doesn''t guarantee the others (a Toast rendered outside that window) are covered.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: sprawdź każdą z trzech powierzchni niezależnie, ponieważ naprawa na jednej (np. FLAG_SECURE na głównym oknie) nie gwarantuje że inne (Toast renderowany poza tym oknem) są pokryte.'
+    steps:
+    - title:
+        en: Reproduce a sensitive flow and pull logs
+        pl: Odtwórz wrażliwy przepływ i pobierz logi
+      description:
+        en: Run adb logcat (Android) or idevicesyslog / Console.app (iOS) while performing login, password reveal, and backup flows; grep for credentials, tokens, or PII appearing in plaintext -- per MASTG-TEST-0003 (Android) / MASTG-TEST-0053 (iOS).
+        pl: Uruchom adb logcat (Android) albo idevicesyslog / Console.app (iOS) podczas wykonywania przepływów logowania, pokazywania hasła, i kopii zapasowej; grepuj pod kątem danych uwierzytelniających, tokenów, albo PII pojawiających się jawnie -- zgodnie z MASTG-TEST-0003 (Android) / MASTG-TEST-0053 (iOS).
+    - title:
+        en: Background the app mid-flow and inspect the recents snapshot
+        pl: Uśpij apkę w trakcie przepływu i zbadaj zrzut recents
+      description:
+        en: Trigger backgrounding while a sensitive screen -- and critically, any transient overlay like a reveal-password toast or autocomplete dropdown -- is visible, then inspect the app-switcher thumbnail. Per MASTG-TEST-0010 (Android) / MASTG-TEST-0059 (iOS). Don't stop at checking the main screen's FLAG_SECURE -- test every transient UI element too, per the Doyensec finding.
+        pl: Wywołaj uśpienie gdy wrażliwy ekran -- i kluczowo, dowolna przejściowa nakładka jak toast pokazania hasła albo rozwijana lista autouzupełniania -- jest widoczna, następnie zbadaj miniaturę przełącznika aplikacji. Zgodnie z MASTG-TEST-0010 (Android) / MASTG-TEST-0059 (iOS). Nie zatrzymuj się na sprawdzeniu FLAG_SECURE głównego ekranu -- przetestuj też każdy przejściowy element UI, zgodnie z ustaleniem Doyensec.
+    - title:
+        en: Monitor the clipboard during copy actions
+        pl: Monitoruj schowek podczas akcji kopiowania
+      description:
+        en: 'iOS: objection''s ios pasteboard monitor hooks UIPasteboard and polls it every ~5 seconds. Android: objection''s android clipboard monitor is confirmed broken since ~2021 (sensepost/objection issue #486) -- write a manual Frida hook on ClipboardManager.setPrimaryClip/getPrimaryClip instead. Per MASTG-TEST-0073 (iOS UIPasteboard).'
+        pl: 'iOS: ios pasteboard monitor objection zaczepia UIPasteboard i odpytuje go co ~5 sekund. Android: android clipboard monitor objection jest potwierdzone jako zepsute od ~2021 (sensepost/objection issue #486) -- napisz zamiast tego ręczny hook Frida na ClipboardManager.setPrimaryClip/getPrimaryClip. Zgodnie z MASTG-TEST-0073 (iOS UIPasteboard).'
+    - title:
+        en: Check the release build actually strips debug logging
+        pl: Sprawdź czy build wydania faktycznie usuwa logowanie debug
+      description:
+        en: 'Verify the ProGuard/R8 config actually contains -assumenosideeffects rules for android.util.Log (or the iOS build actually gates NSLog/print behind #if DEBUG) -- confirmed unanimously that this stripping is NOT default behavior and its absence is a common finding on its own.'
+        pl: 'Zweryfikuj czy konfiguracja ProGuard/R8 faktycznie zawiera reguły -assumenosideeffects dla android.util.Log (albo czy build iOS faktycznie bramkuje NSLog/print za #if DEBUG) -- potwierdzone jednomyślnie że to usuwanie NIE jest domyślnym zachowaniem i jego brak jest samo w sobie powszechnym ustaleniem.'
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes converged on the same top control and, critically, on the same trap the Doyensec disclosure demonstrated concretely: FLAG_SECURE only protects the window it''s set on, not every element the app draws.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej najwyższej kontroli i, kluczowo, na tej samej pułapce którą konkretnie zademonstrowało ujawnienie Doyensec: FLAG_SECURE chroni tylko okno na którym jest ustawiony, nie każdy element który apka rysuje.'
+    items:
+    - rank: 1
+      eff: 75
+      kind: primary
+      label:
+        en: FLAG_SECURE (Android) / blank-overlay-on-background (iOS), applied to every sensitive surface
+        pl: FLAG_SECURE (Android) / pusta nakładka przy uśpieniu (iOS), zastosowane na każdej wrażliwej powierzchni
+      note:
+        en: 'Must be set at window creation, not in onPause() -- the OS captures the Recents snapshot too early for a late-set flag to help. Critical caveat, confirmed by the Doyensec disclosure with three named password managers: native framework widgets (Toast, AutoCompleteTextView, Spinner) rendered outside the flagged window do NOT inherit FLAG_SECURE and can still leak. It also does not stop a physical camera, root/Xposed bypass modules, or accessibility-service screen reading.'
+        pl: 'Musi być ustawiony przy tworzeniu okna, nie w onPause() -- system przechwytuje zrzut Recents zbyt wcześnie by późno ustawiona flaga pomogła. Krytyczne zastrzeżenie, potwierdzone przez ujawnienie Doyensec z trzema nazwanymi menedżerami haseł: natywne widgety frameworku (Toast, AutoCompleteTextView, Spinner) renderowane poza oflagowanym oknem NIE dziedziczą FLAG_SECURE i wciąż mogą wyciec. Nie zatrzymuje też fizycznej kamery, modułów obejścia root/Xposed, ani odczytu ekranu przez usługi dostępności.'
+    - rank: 2
+      eff: 70
+      kind: primary
+      label:
+        en: Never log sensitive data; strip debug logging from release builds
+        pl: Nigdy nie loguj danych wrażliwych; usuń logowanie debug z buildów wydania
+      note:
+        en: 'Android: -assumenosideeffects R8/ProGuard rules on android.util.Log, or a logging wrapper that no-ops in release. iOS: gate NSLog/print behind #if DEBUG, rely on os_log''s default %{private} redaction for dynamic values. Caveat, confirmed unanimously: this stripping is NOT default -- it requires explicit build configuration, and its absence (verbose logging shipping to production) is one of the single most common mobile pentest findings.'
+        pl: 'Android: reguły -assumenosideeffects R8/ProGuard na android.util.Log, albo wrapper logowania który jest no-opem w release. iOS: bramkuj NSLog/print za #if DEBUG, polegaj na domyślnej redakcji %{private} os_log dla wartości dynamicznych. Zastrzeżenie, potwierdzone jednomyślnie: to usuwanie NIE jest domyślne -- wymaga jawnej konfiguracji builda, a jego brak (wysyłanie szczegółowego logowania do produkcji) to jedno z pojedynczo najczęstszych ustaleń mobilnego pentestu.'
+    - rank: 3
+      eff: 55
+      kind: strong
+      label:
+        en: Never auto-copy secrets to the shared clipboard
+        pl: Nigdy nie kopiuj automatycznie sekretów na współdzielony schowek
+      note:
+        en: 'The only robust clipboard defense -- avoid putting auth tokens, passwords, or OTPs on the clipboard entirely. If unavoidable (e.g. a one-time backup code), clear it after a short delay. EXTRA_IS_SENSITIVE (Android 13) and iOS''s expirationDate/localOnly are secondary, weaker controls: confirmed unanimously that EXTRA_IS_SENSITIVE only hides the visual preview, and one research pass found documented bugs where expirationDate is not reliably honored across Universal Clipboard-synced devices.'
+        pl: 'Jedyna solidna obrona schowka -- unikaj kładzenia tokenów uwierzytelniania, haseł, albo OTP na schowku w ogóle. Jeśli nieuniknione (np. jednorazowy kod kopii zapasowej), wyczyść go po krótkim opóźnieniu. EXTRA_IS_SENSITIVE (Android 13) i expirationDate/localOnly iOS to wtórne, słabsze kontrole: potwierdzone jednomyślnie że EXTRA_IS_SENSITIVE ukrywa tylko wizualny podgląd, a jedno przejście badawcze znalazło udokumentowane błędy gdzie expirationDate nie jest niezawodnie respektowane na urządzeniach zsynchronizowanych przez Universal Clipboard.'
+    - rank: 4
+      eff: 40
+      kind: weak
+      label:
+        en: iOS localOnly to disable Universal Clipboard sync
+        pl: iOS localOnly by wyłączyć synchronizację Universal Clipboard
+      note:
+        en: Confirmed unanimously as necessary to prevent an on-device copy from silently syncing to nearby Apple devices via Handoff. Weak alone -- it stops the cross-device leak but does nothing about a malicious app reading the clipboard on the same device.
+        pl: Potwierdzone jednomyślnie jako konieczne by zapobiec cichej synchronizacji kopii na urządzeniu do pobliskich urządzeń Apple przez Handoff. Słabe samo w sobie -- zatrzymuje wyciek między urządzeniami ale nic nie robi z złośliwą apką czytającą schowek na tym samym urządzeniu.
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: 'One flagship per surface, each independently confirmed or fully verified against a primary source: crypto-clipper malware for the clipboard, named password-manager UI leaks for screenshots, and a fully NVD-verified CVE for logging.'
+      pl: 'Jeden flagowy przypadek na powierzchnię, każdy niezależnie potwierdzony albo w pełni zweryfikowany względem pierwotnego źródła: złośliwe oprogramowanie crypto-clipper dla schowka, nazwane wycieki UI menedżera haseł dla zrzutów ekranu, i w pełni zweryfikowane względem NVD CVE dla logowania.'
+    items:
+    - org: Android/Clipper.C -- first crypto-clipper on official Google Play
+      year: 2019
+      impact: Impersonated MetaMask; monitored the clipboard and silently substituted the attacker's Bitcoin/Ethereum wallet address whenever a victim copied one, redirecting funds; also harvested Ethereum private keys
+      cost: Confirmed unanimously by all three research passes; published by ESET (WeLiveSecurity), first clipper malware to reach the official Google Play Store (earlier examples were confined to third-party stores or Windows)
+      description:
+        en: 'Confirmed identically and independently by all three research passes -- unusually strong triple corroboration. The clearest available real-world illustration that clipboard content is not private the moment it''s written: any focused app, benign or malicious, can read and rewrite it.'
+        pl: 'Potwierdzone identycznie i niezależnie przez wszystkie trzy przejścia badawcze -- niezwykle silna potrójna korporacja. Najjaśniejsza dostępna rzeczywista ilustracja że zawartość schowka nie jest prywatna od momentu zapisania: dowolna skupiona apka, łagodna albo złośliwa, może ją odczytać i przepisać.'
+    - org: Doyensec disclosure -- 1Password, Keeper, Dashlane FLAG_SECURE misuse
+      year: 2019
+      impact: Each app's own "reveal password" or autocomplete UI element rendered outside its FLAG_SECURE-protected window and leaked the cleartext secret into the backgrounded-app snapshot anyway
+      cost: 1Password fixed in v7.1.5 (2019-05-29); Keeper fixed in v14.3.0 (2019-06-21); Dashlane fixed in v6.1929.2 -- exact versions verified directly against the primary Doyensec blog post
+      description:
+        en: 'Independently found and verified with named apps and exact fix versions -- exactly the highest-value possible targets for this technique, since password managers are precisely the app category where a screenshot leak of the revealed secret matters most. This fills the gap all three research passes independently noted: no clean, formally-assigned CVE exists for screenshot leakage, but this pentest-research disclosure is the strongest available evidence, with primary-source fix versions confirming the vendors treated it as a real vulnerability.'
+        pl: 'Niezależnie znalezione i zweryfikowane z nazwanymi apkami i dokładnymi wersjami naprawy -- dokładnie najwyższej wartości możliwe cele dla tej techniki, ponieważ menedżery haseł to dokładnie kategoria apek gdzie wyciek ujawnionego sekretu przez zrzut ekranu ma największe znaczenie. To wypełnia lukę którą wszystkie trzy przejścia badawcze niezależnie zauważyły: nie istnieje czyste, formalnie przypisane CVE dla wycieku przez zrzut ekranu, ale to ujawnienie z badań pentestowych to najsilniejszy dostępny dowód, z wersjami naprawy z pierwotnego źródła potwierdzającymi że dostawcy potraktowali to jako prawdziwą podatność.'
+    - org: CVE-2023-21387 -- Android User Backup Manager
+      year: 2023
+      impact: A backup-confirmation token intended to bypass user confirmation for backup leaked via plaintext system log information disclosure, enabling local information disclosure with System execution privileges
+      cost: CVSS 3.1 4.4 (Medium); no user interaction needed for exploitation; addressed in Android's March 2023 security bulletin
+      description:
+        en: Fully verified by direct fetch against the NVD JSON API by one research pass (CVSS score and description confirmed verbatim; no CWE mapped in NVD for this entry). A genuine, current, platform-level example of the exact CWE-532 failure mode this entry leads with -- sensitive data written to system logs -- occurring inside Android itself, not just third-party apps.
+        pl: W pełni zweryfikowane bezpośrednim pobraniem względem NVD JSON API przez jedno przejście badawcze (wynik CVSS i opis potwierdzone dosłownie; brak zmapowanego CWE w NVD dla tego wpisu). Prawdziwy, aktualny, przykład na poziomie platformy dokładnie tego trybu awarii CWE-532 który prowadzi ten wpis -- dane wrażliwe zapisane do logów systemowych -- występujący wewnątrz samego Androida, nie tylko w apkach firm trzecich.
+    inlineSources:
+    - label: ESET WeLiveSecurity -- First clipper malware on Google Play
+      url: https://www.welivesecurity.com/2019/02/08/first-clipper-malware-google-play/
+    - label: Doyensec -- Modern Android Password Managers and FLAG_SECURE Misuse
+      url: https://blog.doyensec.com/2019/08/22/modern-password-managers-flag-secure.html
+    - label: Android -- Log info disclosure
+      url: https://developer.android.com/privacy-and-security/risks/log-info-disclosure
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: 'All three research passes converged on identical MASTG test IDs for four of the five sub-vectors -- an unusual degree of independent agreement -- while also converging on a real gap: no dedicated Android clipboard MASTG test exists yet (tracked as open issue OWASP/mastg#732).'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na identycznych ID testów MASTG dla czterech z pięciu podwektorów -- niezwykły stopień niezależnej zgody -- zbiegając się jednocześnie na prawdziwej luce: nie istnieje jeszcze dedykowany test MASTG dla schowka Android (śledzony jako otwarty issue OWASP/mastg#732).'
+    sast:
+    - - Grep for Log.d/Log.v/NSLog/print call sites containing credential-like variable names
+      - Flags likely plaintext logging before it reaches Logcat/os_log at runtime; confirm release-build stripping config exists separately
+    - - Check ProGuard/R8 config for -assumenosideeffects on android.util.Log
+      - Confirms whether debug logging is actually stripped from release builds -- absence is itself a finding, since this is not default behavior
+    dast:
+    - - adb logcat (+ idevicesyslog / Console.app on iOS)
+      - Reproduce sensitive flows and grep the live log stream for plaintext credentials, tokens, or PII -- MASTG-TEST-0003 (Android) / MASTG-TEST-0053 (iOS)
+    - - Background the app during a sensitive screen or transient overlay (Toast, autocomplete dropdown) and inspect the recents/app-switcher thumbnail
+      - MASTG-TEST-0010 (Android) / MASTG-TEST-0059 (iOS) -- test every transient UI element separately, not just the main screen, per the Doyensec finding
+    - - objection -- ios pasteboard monitor
+      - 'Hooks UIPasteboard and polls generalPasteboard every ~5 seconds, dumping changed content -- MASTG-TEST-0073. Note: the Android counterpart (android clipboard monitor) is confirmed broken since ~2021 (sensepost/objection issue #486); use a manual Frida hook on ClipboardManager instead'
+    note:
+      en: <strong>Key signal:</strong> passing the main screen's FLAG_SECURE check is not sufficient -- the Doyensec disclosure shows transient native widgets (toasts, autocomplete dropdowns, spinners) rendered outside that window can still leak into the same snapshot. Test each sensitive UI element individually.
+      pl: <strong>Kluczowy sygnał:</strong> przejście sprawdzenia FLAG_SECURE głównego ekranu nie wystarcza -- ujawnienie Doyensec pokazuje że przejściowe natywne widgety (toasty, rozwijane listy autouzupełniania, nakładki spinner) renderowane poza tym oknem wciąż mogą wyciec do tego samego zrzutu. Testuj każdy wrażliwy element UI indywidualnie.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: One research pass fetched MITRE's own CWE-200 page directly and found its mapping guidance explicitly "DISCOURAGED" -- this entry leads with the specific, mapping-ALLOWED descendant CWE-532 (logging) instead, documented here transparently per this catalog's established correction pattern.
+      pl: Jedno przejście badawcze pobrało bezpośrednio własną stronę CWE-200 MITRE i znalazło jej wskazówkę mapowania jawnie "ODRADZANĄ" -- ten wpis prowadzi zamiast tego dozwolonym-do-mapowania potomkiem CWE-532 (logowanie), udokumentowane tutaj przejrzyście zgodnie z ustalonym wzorcem korekty tego katalogu.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - 'CWE-532 -- Insertion of Sensitive Information into Log File (primary, verified by direct fetch: Base-level, ChildOf CWE-538 and CWE-200, mapping status ALLOWED). The tightest, correct fit for the logging sub-vector specifically.'
+      - 'CWE-359 -- Exposure of Private Personal Information to an Unauthorized Actor (secondary, verified by direct fetch: Base-level child of CWE-200, mapping ALLOWED). Recommended fit when clipboard or screenshot leakage specifically exposes PII rather than an opaque token.'
+      - 'CWE-200 -- Exposure of Sensitive Information to an Unauthorized Actor: verified by direct fetch of MITRE''s own definitions page that its mapping guidance is explicitly DISCOURAGED ("confidentiality loss is a technical impact -- not a root cause error"). Kept here only as the umbrella label connecting all three sub-vectors, not as the operative mapping.'
+      - CWE-201 (Insertion of Sensitive Information Into Sent Data) evaluated as a real CWE-200 child but a looser fit than CWE-532/CWE-359 for these specific OS-surface vectors; not adopted.
+    - std: OWASP
+      items:
+      - MASVS-STORAGE-2 ("the app prevents leakage of sensitive data") -- verified by direct fetch to explicitly enumerate logs, clipboard, backups, and screenshots/task-switcher snapshots as the leakage surfaces this control covers, the single tightest MASVS mapping for this entry.
+      - MASVS-PLATFORM -- secondary control group; the concrete test IDs for screenshots (Android MASTG-TEST-0010 / iOS MASTG-TEST-0059) and iOS clipboard (MASTG-TEST-0073) live here.
+      - 'MASTG-TEST-0003 (Android logs) / MASTG-TEST-0053 (iOS logs) -- both confirmed identically by all three research passes. Legacy MASVS 1.x wording: MSTG-STORAGE-3 (logs, confirmed) / MSTG-STORAGE-9, MSTG-STORAGE-10 (screenshots, clipboard -- exact legacy numbers flagged by research as needing re-verification).'
+    inlineSources:
+    - label: CWE-532 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/532.html
+    - label: CWE-359 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/359.html
+    - label: CWE-200 (MITRE, mapping DISCOURAGED)
+      url: https://cwe.mitre.org/data/definitions/200.html
+    - label: OWASP MASVS-STORAGE-2
+      url: https://mas.owasp.org/MASVS/controls/MASVS-STORAGE-2/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If leakage via any of these three surfaces is confirmed in a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu wycieku przez dowolną z tych trzech powierzchni w wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: Identify exactly which surface leaked -- clipboard, backgrounded-app snapshot, or system log -- since the fix and urgency differ per surface, and a fix on one surface doesn't cover the others
+      pl: Zidentyfikuj dokładnie która powierzchnia wyciekła -- schowek, zrzut apki w tle, albo log systemowy -- ponieważ naprawa i pilność różnią się per powierzchnia, a naprawa na jednej nie pokrywa innych
+    - en: For a screenshot leak, check every transient UI element (toasts, autocomplete dropdowns, spinners), not just the main screen's FLAG_SECURE state, per the Doyensec finding that these can bypass a correctly-set window flag
+      pl: Dla wycieku przez zrzut ekranu, sprawdź każdy przejściowy element UI (toasty, rozwijane listy autouzupełniania, nakładki spinner), nie tylko stan FLAG_SECURE głównego ekranu, zgodnie z ustaleniem Doyensec że mogą one ominąć poprawnie ustawioną flagę okna
+    - en: For a logging leak, audit whether the release build's ProGuard/R8 config actually strips debug logging -- its absence is itself a separate, common finding to flag and fix
+      pl: Dla wycieku przez logowanie, zaudytuj czy konfiguracja ProGuard/R8 builda wydania faktycznie usuwa logowanie debug -- jej brak to samo w sobie osobne, częste ustalenie do oflagowania i naprawienia
+    - en: For a clipboard leak, confirm no auth secret is ever placed on the shared clipboard; if unavoidable, add a short auto-clear and set localOnly on iOS to prevent Universal Clipboard cross-device sync
+      pl: Dla wycieku przez schowek, potwierdź że żaden sekret uwierzytelniania nigdy nie jest umieszczany na współdzielonym schowku; jeśli nieuniknione, dodaj krótkie automatyczne czyszczenie i ustaw localOnly na iOS by zapobiec synchronizacji Universal Clipboard między urządzeniami
+    - en: Rotate any credential/token confirmed to have appeared in a log file or clipboard, since both surfaces may already be captured by forensic tooling, crash-reporting SDKs, or backup extraction regardless of the in-app fix
+      pl: Rotuj każde dane uwierzytelniające/token potwierdzone jako widoczne w pliku logu albo schowku, ponieważ obie powierzchnie mogą już być przechwycone przez narzędzia forensyczne, SDK raportowania awarii, albo ekstrakcję kopii zapasowej niezależnie od naprawy w apce
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: Android -- Secure clipboard handling
+      url: https://developer.android.com/privacy-and-security/risks/secure-clipboard-handling
+    - label: Android -- Log info disclosure
+      url: https://developer.android.com/privacy-and-security/risks/log-info-disclosure
+    - label: Apple -- UIPasteboard
+      url: https://developer.apple.com/documentation/uikit/uipasteboard
+    - label: CWE-532 -- Insertion of Sensitive Information into Log File
+      url: https://cwe.mitre.org/data/definitions/532.html
+    - label: CWE-359 -- Exposure of Private Personal Information to an Unauthorized Actor
+      url: https://cwe.mitre.org/data/definitions/359.html
+    - label: OWASP MASVS-STORAGE-2
+      url: https://mas.owasp.org/MASVS/controls/MASVS-STORAGE-2/
+    - label: OWASP MASTG-TEST-0010 -- Auto-Generated Screenshots (Android)
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0010/
+    - label: ESET WeLiveSecurity -- First clipper malware on Google Play
+      url: https://www.welivesecurity.com/2019/02/08/first-clipper-malware-google-play/
+    - label: Doyensec -- Modern Android Password Managers and FLAG_SECURE Misuse
+      url: https://blog.doyensec.com/2019/08/22/modern-password-managers-flag-secure.html
+    - label: objection -- pasteboard monitor helpfile
+      url: https://github.com/sensepost/objection

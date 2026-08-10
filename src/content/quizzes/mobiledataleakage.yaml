@@ -1,0 +1,144 @@
+threatId: '15.20'
+title:
+  en: Sensitive Data Leakage via Clipboard / Screenshots / Logs -- knowledge check
+  pl: Wyciek Danych Wrażliwych przez Schowek / Zrzuty Ekranu / Logi -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: An Android app sets ClipDescription.EXTRA_IS_SENSITIVE before copying a password to the clipboard and concludes the password is now protected from other apps reading it. Per Android's own documentation, is this correct?
+    pl: Apka Android ustawia ClipDescription.EXTRA_IS_SENSITIVE przed skopiowaniem hasła do schowka i wnioskuje że hasło jest teraz chronione przed odczytaniem przez inne apki. Według własnej dokumentacji Android, czy to poprawne?
+  choices:
+  - id: a
+    label:
+      en: Yes -- EXTRA_IS_SENSITIVE encrypts the clip and blocks all other apps from reading it
+      pl: Tak -- EXTRA_IS_SENSITIVE szyfruje schowek i blokuje wszystkim innym apkom jego odczyt
+  - id: b
+    label:
+      en: No -- the flag only suppresses the visual clipboard preview shown to the user; the data remains fully readable on the shared clipboard by any focused app
+      pl: Nie -- flaga tylko tłumi wizualny podgląd schowka pokazywany użytkownikowi; dane pozostają w pełni czytelne na współdzielonym schowku przez dowolną skupioną apkę
+  - id: c
+    label:
+      en: Yes, but only on Android 12 and below
+      pl: Tak, ale tylko na Android 12 i poniżej
+  - id: d
+    label:
+      en: No -- the flag does nothing at all and was deprecated before release
+      pl: Nie -- flaga nic nie robi i została wycofana przed wydaniem
+  correctChoiceIds:
+  - b
+  explanation:
+    en: 'Confirmed identically by all three research passes against Android''s own secure-clipboard documentation: EXTRA_IS_SENSITIVE is a rendering hint that hides the preview in the system UI/keyboard, not a security control. A malicious focused app can still programmatically read the clip''s actual contents. The only robust defense is not putting secrets on the shared clipboard at all.'
+    pl: 'Potwierdzone identycznie przez wszystkie trzy przejścia badawcze względem własnej dokumentacji Android o bezpiecznym schowku: EXTRA_IS_SENSITIVE to wskazówka renderowania która ukrywa podgląd w UI systemowym/klawiaturze, nie kontrola bezpieczeństwa. Złośliwa skupiona apka wciąż może programowo odczytać faktyczną zawartość schowka. Jedyną solidną obroną jest niekładzenie sekretów na współdzielony schowek w ogóle.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: A password manager app correctly sets FLAG_SECURE on its main window. It also has a 'reveal password' feature that shows the cleartext password in a Toast message. Is backgrounding the app right after revealing the password still a leak risk, given FLAG_SECURE is set on the main window?
+    pl: Apka menedżera haseł poprawnie ustawia FLAG_SECURE na swoim głównym oknie. Ma też funkcję 'pokaż hasło' która wyświetla jawne hasło w wiadomości Toast. Czy uśpienie apki zaraz po ujawnieniu hasła wciąż jest ryzykiem wycieku, biorąc pod uwagę że FLAG_SECURE jest ustawiony na głównym oknie?
+  isVulnerable: true
+  cwe: CWE-359
+  explanation:
+    en: Yes -- confirmed by the Doyensec 2019 disclosure (verified with exact fix versions) against 1Password, Keeper, and Dashlane. Native framework widgets like a Toast render outside the flagged window and do NOT inherit FLAG_SECURE, so the cleartext password revealed in the Toast could still be captured in the backgrounded-app snapshot even though the main window is correctly protected. All fixed within weeks once disclosed.
+    pl: Tak -- potwierdzone przez ujawnienie Doyensec z 2019 (zweryfikowane z dokładnymi wersjami naprawy) przeciwko 1Password, Keeper, i Dashlane. Natywne widgety frameworku jak Toast renderują się poza oflagowanym oknem i NIE dziedziczą FLAG_SECURE, więc jawne hasło ujawnione w Toast wciąż mogło zostać przechwycone w zrzucie apki w tle mimo że główne okno jest poprawnie chronione. Wszystkie naprawione w ciągu tygodni po ujawnieniu.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: All three research passes were asked to verify the correct CWE mapping for this entry. One research pass fetched MITRE's own CWE-200 definitions page directly. What did it find?
+    pl: Wszystkie trzy przejścia badawcze zostały poproszone o zweryfikowanie poprawnego mapowania CWE dla tego wpisu. Jedno przejście badawcze pobrało bezpośrednio własną stronę definicji CWE-200 MITRE. Co znalazło?
+  choices:
+  - id: a
+    label:
+      en: CWE-200's own mapping guidance is explicitly DISCOURAGED, since confidentiality loss is a technical impact rather than a root cause -- the specific descendant weakness (e.g. CWE-532 for logging) should be cited instead
+      pl: Własna wskazówka mapowania CWE-200 jest jawnie ODRADZANA, ponieważ utrata poufności to skutek techniczny a nie przyczyna źródłowa -- zamiast tego powinna być cytowana konkretna słabość potomna (np. CWE-532 dla logowania)
+  - id: b
+    label:
+      en: CWE-200 has been completely removed from the CWE database
+      pl: CWE-200 zostało całkowicie usunięte z bazy danych CWE
+  - id: c
+    label:
+      en: CWE-200 only applies to web applications, not mobile apps
+      pl: CWE-200 dotyczy tylko aplikacji webowych, nie mobilnych
+  - id: d
+    label:
+      en: CWE-200 is the single correct mapping and no descendant weaknesses exist
+      pl: CWE-200 to jedyne poprawne mapowanie i nie istnieją żadne słabości potomne
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'This entry adopts that correction directly: it leads with CWE-532 (Insertion of Sensitive Information into Log File, verified as a mapping-ALLOWED descendant of CWE-200) for the logging vector, and CWE-359 for PII exposed via clipboard or screenshots, keeping bare CWE-200 only as an umbrella label -- the same correction pattern this catalog has applied before to other MITRE-discouraged mappings.'
+    pl: 'Ten wpis przyjmuje tę korektę bezpośrednio: prowadzi CWE-532 (Insertion of Sensitive Information into Log File, zweryfikowany jako dozwolony-do-mapowania potomek CWE-200) dla wektora logowania, i CWE-359 dla PII ujawnionego przez schowek albo zrzuty ekranu, zachowując gołe CWE-200 tylko jako etykietę parasolową -- ten sam wzorzec korekty który ten katalog stosował wcześniej dla innych odradzanych przez MITRE mapowań.'
+- id: q4
+  type: pick-the-fix
+  prompt:
+    en: Which release-build logging configuration actually prevents sensitive data from shipping to production Logcat, per this deep-dive's findings on what is and isn't default behavior?
+    pl: Która konfiguracja logowania builda wydania faktycznie zapobiega wysyłce danych wrażliwych do produkcyjnego Logcat, zgodnie z ustaleniami tego deep-dive o tym co jest a co nie jest domyślnym zachowaniem?
+  variants:
+  - id: v1
+    lang: kotlin
+    code: '// relying on Android to automatically strip Log calls in release builds
+
+      Log.d("AuthFlow", "token=$authToken")
+
+      // no ProGuard/R8 rules added -- assumed ''release build = no debug logs'''
+  - id: v2
+    lang: kotlin
+    code: 'Log.d("AuthFlow", "token=$authToken")
+
+      // build.gradle: minifyEnabled true, but proguard-rules.pro has no
+
+      // -assumenosideeffects rule for android.util.Log'
+  - id: v3
+    lang: kotlin
+    code: 'Log.d("AuthFlow", "token=$authToken")
+
+      // proguard-rules.pro:
+
+      // -assumenosideeffects class android.util.Log {
+
+      //     public static *** d(...);
+
+      //     public static *** v(...);
+
+      // }'
+  correctVariantId: v3
+  explanation:
+    en: v3 is the only variant that actually strips the debug Log calls from the release build, via an explicit -assumenosideeffects ProGuard/R8 rule. v1 and v2 both rely on the false assumption that release builds automatically omit debug logging -- confirmed unanimously across all three research passes that this is NOT default behavior in either Gradle or Xcode, and its absence is one of the most common mobile pentest findings for this technique class.
+    pl: v3 to jedyny wariant który faktycznie usuwa wywołania Log debug z builda wydania, przez jawną regułę -assumenosideeffects ProGuard/R8. v1 i v2 oba polegają na fałszywym założeniu że buildy wydania automatycznie pomijają logowanie debug -- potwierdzone jednomyślnie we wszystkich trzech przejściach badawczych że to NIE jest domyślne zachowanie ani w Gradle ani w Xcode, a jego brak to jedno z najczęstszych ustaleń mobilnego pentestu dla tej klasy techniki.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: Which incident, confirmed identically by all three independent research passes, is the flagship real-world example for the clipboard-leakage vector?
+    pl: Który incydent, potwierdzony identycznie przez wszystkie trzy niezależne przejścia badawcze, to flagowy rzeczywisty przykład dla wektora wycieku przez schowek?
+  choices:
+  - id: a
+    label:
+      en: Android/Clipper.C -- the first crypto-clipper malware to reach official Google Play (Feb 2019), impersonating MetaMask and silently substituting copied wallet addresses with the attacker's own
+      pl: Android/Clipper.C -- pierwsze złośliwe oprogramowanie crypto-clipper które trafiło na oficjalny Google Play (luty 2019), podszywające się pod MetaMask i po cichu podmieniające skopiowane adresy portfela na własny adres atakującego
+  - id: b
+    label:
+      en: CVE-2023-21387 -- an Android backup-token log leak
+      pl: CVE-2023-21387 -- wyciek tokena kopii zapasowej Android przez log
+  - id: c
+    label:
+      en: The Doyensec 1Password/Keeper/Dashlane FLAG_SECURE disclosure
+      pl: Ujawnienie Doyensec FLAG_SECURE 1Password/Keeper/Dashlane
+  - id: d
+    label:
+      en: The Cisco Talos fingerprint spoofing study
+      pl: Badanie spoofingu odcisków palców Cisco Talos
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Android/Clipper.C was found and described identically and independently by all three research passes -- unusually strong triple corroboration. CVE-2023-21387 is the logging flagship, the Doyensec disclosure is the screenshot flagship, and the Cisco Talos study belongs to the separate 15.19 biometric-authentication entry, not this one.
+    pl: Android/Clipper.C zostało znalezione i opisane identycznie i niezależnie przez wszystkie trzy przejścia badawcze -- niezwykle silna potrójna korporacja. CVE-2023-21387 to flagowiec logowania, ujawnienie Doyensec to flagowiec zrzutu ekranu, a badanie Cisco Talos należy do osobnego wpisu 15.19 o uwierzytelnianiu biometrycznym, nie do tego.
+- id: q6
+  type: vuln-or-not
+  prompt:
+    en: An iOS developer copies a one-time backup code to UIPasteboard.general without setting localOnly, assuming the copy only affects the current device since the user never explicitly enabled any cross-device clipboard feature. Is this assumption safe?
+    pl: Deweloper iOS kopiuje jednorazowy kod kopii zapasowej do UIPasteboard.general bez ustawienia localOnly, zakładając że kopiowanie dotyczy tylko obecnego urządzenia ponieważ użytkownik nigdy jawnie nie włączył żadnej funkcji schowka między urządzeniami. Czy to założenie jest bezpieczne?
+  isVulnerable: true
+  cwe: CWE-359
+  explanation:
+    en: 'No. Confirmed by one research pass: Universal Clipboard (Handoff) has synced the general pasteboard to nearby Apple devices on the same iCloud account by default since iOS 10 -- it is not an opt-in feature the user consciously enables. Without localOnly = true, the one-time backup code could silently appear as pasteable on a nearby Mac or iPad the user (or someone with physical access to those devices) controls.'
+    pl: 'Nie. Potwierdzone przez jedno przejście badawcze: Universal Clipboard (Handoff) synchronizuje ogólny schowek do pobliskich urządzeń Apple na tym samym koncie iCloud domyślnie od iOS 10 -- to nie jest funkcja opt-in którą użytkownik świadomie włącza. Bez localOnly = true, jednorazowy kod kopii zapasowej mógł po cichu pojawić się jako wklejalny na pobliskim Macu albo iPadzie który użytkownik (albo ktoś z fizycznym dostępem do tych urządzeń) kontroluje.'
