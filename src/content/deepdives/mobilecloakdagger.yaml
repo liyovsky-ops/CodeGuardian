@@ -1,0 +1,348 @@
+meta:
+  id: mobilecloakdagger
+  threatId: '15.21'
+  severity: High
+  color: '#78350f'
+  colorRgb: 120,53,15
+  cwe: CWE-1021
+  cvss: N/A (technique class; no single CVE covers the original two-permission combination -- see incidents)
+  standard: OWASP MASVS-PLATFORM (MASTG-TEST-0035 Testing for Overlay Attacks; MASTG-KNOW-0022 Overlay Attacks, which explicitly names Cloak & Dagger)
+hero:
+  titleMain: 'Cloak & Dagger '
+  titleGrad: (Overlay + Accessibility)
+  titleTail: ''
+  topbar: Cloak & Dagger -- Android Overlay + Accessibility Service Attack
+  lead:
+    en: 'All three research passes independently fetched the original source -- Fratantonio, Qian, Chung & Lee''s "Cloak and Dagger: From Two Permissions to Complete Control of the UI Feedback Loop," IEEE S&P 2017 (Distinguished Practical Paper Award), demonstrated against Android 5.1.1 through 7.1.2 -- and converged on the same core distinction from this catalog''s 15.15 (Tapjacking) entry: 15.15 covers passive tap interception via a deceptive overlay alone; this entry is specifically the SYSTEM_ALERT_WINDOW + BIND_ACCESSIBILITY_SERVICE combination, which grants "complete control of the UI feedback loop" -- the overlay hides what''s really happening (the cloak) while the accessibility service reads the screen and injects synthetic taps and keystrokes (the dagger). The overlay''s own first job is bootstrapping: clickjacking the user into enabling the accessibility service in the first place. Once both are live, the attacker can silently walk through permission dialogs to reach "god-mode" (all permissions granted, no conscious user approval), log keystrokes and PINs via accessibility events, and unlock the device with the screen kept off. In the authors'' own user study of 20 subjects, none detected they were under attack. A finding unanimous across all three research passes and directly relevant to defenses documented elsewhere in this catalog: FLAG_SECURE, which blocks screenshot and screen-recording capture, does NOT block accessibility-tree reading -- a malicious accessibility service reads the structured text/labels of every on-screen field directly, without ever capturing a pixel. Google''s response to the original research was primarily a platform behavior change (removing the silent SYSTEM_ALERT_WINDOW auto-grant, tightened in Android 8.0) rather than a single patched CVE for the combination itself -- and, all three passes confirm, that closed only the frictionless bootstrapping bug. The underlying overlay+accessibility combination remains a live, actively weaponized pattern in 2019-2025 Android banking trojans (Cerberus, TeaBot, Xenomorph, Crocodilus, Herodotus) that simply social-engineer the user into manually granting accessibility instead.'
+    pl: 'Wszystkie trzy przejścia badawcze niezależnie pobrały pierwotne źródło -- "Cloak and Dagger: From Two Permissions to Complete Control of the UI Feedback Loop" Fratantonio, Qian, Chung i Lee, IEEE S&P 2017 (Distinguished Practical Paper Award), zademonstrowane przeciwko Android 5.1.1 do 7.1.2 -- i zbiegły się na tym samym podstawowym rozróżnieniu od wpisu 15.15 (Tapjacking) tego katalogu: 15.15 obejmuje pasywne przechwytywanie dotknięć przez samą zwodniczą nakładkę; ten wpis to konkretnie kombinacja SYSTEM_ALERT_WINDOW + BIND_ACCESSIBILITY_SERVICE, która daje "pełną kontrolę nad pętlą sprzężenia zwrotnego UI" -- nakładka ukrywa co się naprawdę dzieje (płaszcz) podczas gdy usługa dostępności odczytuje ekran i wstrzykuje syntetyczne dotknięcia i naciśnięcia klawiszy (sztylet). Pierwszym zadaniem samej nakładki jest bootstrapping: clickjacking użytkownika by włączył usługę dostępności w pierwszej kolejności. Gdy obie są aktywne, atakujący może po cichu przejść przez dialogi uprawnień by osiągnąć "god-mode" (wszystkie uprawnienia przyznane, bez świadomej zgody użytkownika), logować naciśnięcia klawiszy i PIN przez zdarzenia dostępności, i odblokować urządzenie przy wyłączonym ekranie. We własnym badaniu autorów z 20 uczestnikami, żaden nie wykrył że jest atakowany. Ustalenie jednomyślne we wszystkich trzech przejściach badawczych i bezpośrednio istotne dla obron udokumentowanych gdzie indziej w tym katalogu: FLAG_SECURE, który blokuje przechwytywanie zrzutu ekranu i nagrywania ekranu, NIE blokuje odczytu drzewa dostępności -- złośliwa usługa dostępności odczytuje strukturalny tekst/etykiety każdego pola na ekranie bezpośrednio, nigdy nie przechwytując piksela. Odpowiedź Google na pierwotne badania była głównie zmianą zachowania platformy (usunięcie cichego auto-przyznawania SYSTEM_ALERT_WINDOW, zaostrzone w Android 8.0) zamiast pojedynczego załatanego CVE dla samej kombinacji -- i, wszystkie trzy przejścia potwierdzają, to zamknęło tylko bezpodstawny błąd bootstrappingu. Podstawowa kombinacja nakładka+dostępność pozostaje żywym, aktywnie uzbrojonym wzorcem w trojanach bankowych Android 2019-2025 (Cerberus, TeaBot, Xenomorph, Crocodilus, Herodotus) które po prostu socjotechnicznie skłaniają użytkownika do ręcznego przyznania dostępności zamiast tego.'
+  metrics:
+  - k: 20 / 20
+    v:
+      en: subjects in the original user study, none of whom detected they were under attack
+      pl: uczestników oryginalnego badania, żaden nie wykrył że jest atakowany
+  - k: TeaBot / Anatsa
+    v:
+      en: banking trojan confirmed (Cleafy) to combine overlay phishing with accessibility auto-acceptance of permission dialogs
+      pl: trojan bankowy potwierdzony (Cleafy) łączący phishing przez nakładkę z automatycznym akceptowaniem dialogów uprawnień przez dostępność
+  - k: SecuriDropper (2023)
+    v:
+      en: documented dropper bypassing Android 13's Restricted Settings via a session-based install API that mimics a legitimate marketplace install
+      pl: udokumentowany dropper omijający Restricted Settings Android 13 przez sesyjne API instalacji które naśladuje legalną instalację ze sklepu
+  - k: No single CVE
+    v:
+      en: the original two-permission combination itself was never assigned one CVE -- Google treated it largely as a platform design change
+      pl: sama pierwotna kombinacja dwóch uprawnień nigdy nie otrzymała jednego CVE -- Google potraktowało to głównie jako zmianę projektu platformy
+  sources:
+  - label: cloak-and-dagger.org -- original research site
+    url: https://cloak-and-dagger.org/
+  - label: OWASP MASTG-KNOW-0022 -- Overlay Attacks
+    url: https://mas.owasp.org/MASTG/knowledge/android/MASVS-PLATFORM/MASTG-KNOW-0022/
+  - label: OWASP MASTG-TEST-0035 -- Testing for Overlay Attacks
+    url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0035/
+  - label: Cleafy Labs -- TeaBot
+    url: https://www.cleafy.com/cleafy-labs/teabot
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: The five named sub-attacks from the original paper, confirmed identically by all three research passes directly against the authors' own site, plus the modern real-world successor pattern.
+      pl: Pięć nazwanych podataków z oryginalnej pracy, potwierdzonych identycznie przez wszystkie trzy przejścia badawcze bezpośrednio na własnej stronie autorów, plus współczesny rzeczywisty wzorzec następcy.
+    items:
+    - name: Bootstrapping -- clickjacking the user into enabling accessibility
+      sev: high
+      description:
+        en: An invisible or deceptive SYSTEM_ALERT_WINDOW overlay hides the real accessibility-settings screen behind an innocuous-looking UI, tricking the user into toggling on the malicious app's accessibility service without realizing what they actually enabled. This is the entry point every other sub-attack depends on.
+        pl: Niewidoczna albo zwodnicza nakładka SYSTEM_ALERT_WINDOW ukrywa prawdziwy ekran ustawień dostępności za niewinnie wyglądającym UI, skłaniając użytkownika do przełączenia usługi dostępności złośliwej apki bez zdania sobie sprawy co faktycznie włączył. To punkt wejścia od którego zależy każdy inny podatak.
+      payload: '// invisible overlay positioned exactly over the real ''Enable'' toggle
+
+        // in Settings > Accessibility, while a decoy game/UI is shown underneath'
+    - name: Context-hiding attack -- silent "god-mode" permission escalation
+      sev: high
+      description:
+        en: Once accessibility is live, the app uses invisible overlays to hide the true context (a real permission dialog) while accessibility-driven synthetic taps click through it -- resulting in, per the authors' own site, "Silent God-mode app installation (all permissions enabled)" with no conscious user approval.
+        pl: Gdy dostępność jest aktywna, apka używa niewidocznych nakładek by ukryć prawdziwy kontekst (prawdziwy dialog uprawnień) podczas gdy syntetyczne dotknięcia napędzane dostępnością klikają przez niego -- skutkując, według własnej strony autorów, "Cichą instalacją god-mode apki (wszystkie uprawnienia włączone)" bez świadomej zgody użytkownika.
+      payload: '// accessibility service injects synthetic clicks on the real,
+
+        // hidden-behind-an-overlay permission grant dialog buttons'
+    - name: Keystroke logging -- "Invisible Grid Attack"
+      sev: high
+      description:
+        en: Accessibility events give the app unconstrained keystroke recording capability -- capturing passwords and private messages as they're typed, confirmed by name on the authors' own site.
+        pl: Zdarzenia dostępności dają apce zdolność nieograniczonego rejestrowania naciśnięć klawiszy -- przechwytując hasła i prywatne wiadomości podczas pisania, potwierdzone po nazwie na własnej stronie autorów.
+      payload: '// AccessibilityService.onAccessibilityEvent() fires on every
+
+        // keyboard input event across any app, not just the attacker''s own UI'
+    - name: PIN stealing + silent unlock with the screen off
+      sev: high
+      description:
+        en: Accessibility reads the lock-screen PIN entry directly, and the paper additionally demonstrated injecting the PIN to unlock the device and perform arbitrary actions while the screen remains off, unconfirmed by any visible activity.
+        pl: Dostępność odczytuje bezpośrednio wpisywanie PIN ekranu blokady, a praca dodatkowo zademonstrowała wstrzykiwanie PIN by odblokować urządzenie i wykonać dowolne akcje przy wyłączonym ekranie, niepotwierdzone żadną widoczną aktywnością.
+      payload: '// accessibility events observe PIN digit taps; synthetic events
+
+        // re-inject the captured PIN to unlock, all with the display off'
+    - name: Modern successor -- consent-phished accessibility in banking trojans
+      sev: high
+      description:
+        en: Rather than relying on the original auto-grant bug (long since closed), current malware families (TeaBot/Anatsa per Cleafy, Cerberus per ThreatFabric, and newer ones like Xenomorph, Crocodilus, Herodotus) social-engineer the user into manually granting accessibility, then combine it with overlay banking-login phishing and self-granted further permissions -- the same combination, a different entry path.
+        pl: Zamiast polegać na oryginalnym błędzie auto-przyznawania (dawno zamkniętym), obecne rodziny złośliwego oprogramowania (TeaBot/Anatsa według Cleafy, Cerberus według ThreatFabric, i nowsze jak Xenomorph, Crocodilus, Herodotus) socjotechnicznie skłaniają użytkownika do ręcznego przyznania dostępności, następnie łączą to z phishingiem logowania bankowego przez nakładkę i samodzielnie przyznanymi dalszymi uprawnieniami -- ta sama kombinacja, inna ścieżka wejścia.
+      payload: '// fake ''update'' or ''verification'' screen walks the victim through
+
+        // Settings > Accessibility > Enable, framed as required for the app to work'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'Confirmed unanimously: FLAG_SECURE does not stop accessibility-based screen reading -- it only blocks screenshot/screen-recording capture. The real defenses are hiding overlays over sensitive screens and marking sensitive views unreadable to non-trusted accessibility services.'
+      pl: 'Potwierdzone jednomyślnie: FLAG_SECURE nie zatrzymuje odczytu ekranu opartego na dostępności -- blokuje tylko przechwytywanie zrzutu/nagrywania ekranu. Prawdziwe obrony to ukrywanie nakładek nad wrażliwymi ekranami i oznaczanie wrażliwych widoków jako nieczytelnych dla niezaufanych usług dostępności.'
+    languages:
+    - label: Kotlin -- Android sensitive-screen protection
+      lang: kotlin
+      vulnerable: "// VULNERABLE: relies only on FLAG_SECURE, which blocks\n// screenshots/recording but NOT accessibility-tree reading\n// or overlay-based tap interception on this screen\nclass TransferActivity : AppCompatActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)\n        super.onCreate(savedInstanceState)\n        // amountField, confirmButton -- readable by any bound accessibility\n        // service, and tappable through an overlay unless also hidden\n    }\n}"
+      safe: "// SAFER: layer FLAG_SECURE with overlay-hiding (API 31+) and mark\n// the sensitive views unreadable to non-trusted accessibility services\nclass TransferActivity : AppCompatActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)\n        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {\n            setHideOverlayWindows(true)  // API 31+: suppress non-system overlays while foregrounded\n        }\n        super.onCreate(savedInstanceState)\n        amountField.filterTouchesWhenObscured = true\n        confirmButton.filterTouchesWhenObscured = true\n        // Android 14+: mark the view so only genuine accessibility\n        // TOOLS (not arbitrary bound services) can read it\n        // amountField.setAccessibilityDataSensitive(ACCESSIBILITY_DATA_SENSITIVE_YES)\n    }\n}"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: check overlay permission and behavior first, then accessibility-service scope, then whether the two are actually combined to escalate privilege -- since that combination, not either alone, is what this entry is about.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: sprawdź uprawnienie i zachowanie nakładki najpierw, następnie zakres usługi dostępności, następnie czy te dwa są faktycznie połączone by eskalować uprawnienia -- ponieważ ta kombinacja, nie żadna z osobna, jest tematem tego wpisu.'
+    steps:
+    - title:
+        en: Enumerate apps holding SYSTEM_ALERT_WINDOW and bound accessibility services
+        pl: Wylicz apki posiadające SYSTEM_ALERT_WINDOW i powiązane usługi dostępności
+      description:
+        en: Cross-reference the two lists -- an app holding both, especially one sideloaded rather than installed via a legitimate store session, is the specific combination this entry targets. Per MASTG-TEST-0035.
+        pl: Skrzyżuj obie listy -- apka posiadająca oba, zwłaszcza taka zainstalowana ręcznie zamiast przez legalną sesję sklepu, to konkretna kombinacja którą celuje ten wpis. Zgodnie z MASTG-TEST-0035.
+    - title:
+        en: Test whether overlays can pass through touches undetected
+        pl: Przetestuj czy nakładki mogą przepuszczać dotknięcia niewykryte
+      description:
+        en: Verify filterTouchesWhenObscured and setHideOverlayWindows() (API 31+) are actually applied on sensitive screens, and that Android's default touch-occlusion blocking (12+, opacity >= 0.8 only) isn't being relied on alone -- translucent overlays below that threshold still pass through.
+        pl: Zweryfikuj czy filterTouchesWhenObscured i setHideOverlayWindows() (API 31+) są faktycznie zastosowane na wrażliwych ekranach, i że domyślne blokowanie okluzji dotyku Android (12+, tylko nieprzezroczystość >= 0.8) nie jest jedyną podstawą -- półprzezroczyste nakładki poniżej tego progu wciąż przechodzą.
+    - title:
+        en: Check whether accessibility can read the sensitive view regardless of FLAG_SECURE
+        pl: Sprawdź czy dostępność może odczytać wrażliwy widok niezależnie od FLAG_SECURE
+      description:
+        en: Confirm the app does not rely on FLAG_SECURE alone -- test with a benign accessibility service enabled whether it can read field contents on the sensitive screen; a compliant app marks those views unreadable to non-tool accessibility services.
+        pl: Potwierdź że apka nie polega wyłącznie na FLAG_SECURE -- przetestuj z włączoną łagodną usługą dostępności czy może odczytać zawartość pól na wrażliwym ekranie; zgodna apka oznacza te widoki jako nieczytelne dla usług dostępności niebędących narzędziami.
+    - title:
+        en: Test the Restricted Settings bypass path
+        pl: Przetestuj ścieżkę obejścia Restricted Settings
+      description:
+        en: On Android 13+, confirm the app-under-test cannot have its accessibility service enabled via a session-based install API that mimics a marketplace install (the documented SecuriDropper technique) -- this determines whether Restricted Settings' sideload friction is actually load-bearing for this specific distribution channel.
+        pl: Na Android 13+, potwierdź że testowana apka nie może mieć włączonej usługi dostępności przez sesyjne API instalacji które naśladuje instalację ze sklepu (udokumentowana technika SecuriDropper) -- to określa czy tarcie sideload Restricted Settings jest faktycznie nośne dla tego konkretnego kanału dystrybucji.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: All three research passes converged on the same top platform-side controls and, critically, on the same real, named bypass for the strongest one.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tych samych najwyższych kontrolach po stronie platformy i, kluczowo, na tym samym prawdziwym, nazwanym obejściu dla najsilniejszej z nich.
+    items:
+    - rank: 1
+      eff: 65
+      kind: primary
+      label:
+        en: Android 13 Restricted Settings -- blocks sideloaded apps from enabling accessibility
+        pl: Restricted Settings Android 13 -- blokuje sideloadowanym apkom włączanie dostępności
+      note:
+        en: 'The strongest current bootstrapping-stage defense: an APK installed outside a legitimate store session cannot have its accessibility service enabled without the user explicitly overriding the block in App Info. Android 12 added only a precursor: a reminder notification roughly 24 hours after a non-tool accessibility service from an untrusted source is enabled, not a hard block. Critical documented bypass, confirmed independently: ThreatFabric''s SecuriDropper/BugDrop (Nov 2023) uses a session-based package-install API to make the payload indistinguishable from a legitimate marketplace install, so the OS never applies the sideload restriction at all.'
+        pl: 'Najsilniejsza obecna obrona na etapie bootstrappingu: APK zainstalowany poza legalną sesją sklepu nie może mieć włączonej usługi dostępności bez jawnego obejścia blokady przez użytkownika w Informacjach o apce. Android 12 dodał tylko prekursor: powiadomienie przypominające około 24 godziny po włączeniu usługi dostępności niebędącej narzędziem z niezaufanego źródła, nie twardą blokadę. Krytyczne udokumentowane obejście, potwierdzone niezależnie: SecuriDropper/BugDrop ThreatFabric (listopad 2023) używa sesyjnego API instalacji pakietu by ładunek był nieodróżnialny od legalnej instalacji ze sklepu, więc system nigdy w ogóle nie stosuje ograniczenia sideload.'
+    - rank: 2
+      eff: 55
+      kind: primary
+      label:
+        en: setHideOverlayWindows() (API 31+) + filterTouchesWhenObscured on every sensitive view
+        pl: setHideOverlayWindows() (API 31+) + filterTouchesWhenObscured na każdym wrażliwym widoku
+      note:
+        en: 'Suppresses non-system overlays entirely while the sensitive screen is foregrounded, and drops touches that pass through an obscuring window. Caveat, confirmed unanimously: Android 12+''s default touch-occlusion blocking only applies at overlay opacity >= 0.8 -- a translucent overlay below that threshold still passes taps through undetected.'
+        pl: 'Całkowicie tłumi nakładki niesystemowe gdy wrażliwy ekran jest na pierwszym planie, i odrzuca dotknięcia które przechodzą przez zasłaniające okno. Zastrzeżenie, potwierdzone jednomyślnie: domyślne blokowanie okluzji dotyku Android 12+ stosuje się tylko przy nieprzezroczystości nakładki >= 0.8 -- półprzezroczysta nakładka poniżej tego progu wciąż przepuszcza dotknięcia niewykryte.'
+    - rank: 3
+      eff: 50
+      kind: strong
+      label:
+        en: Android 14 accessibility-data-sensitive view marking
+        pl: Oznaczanie widoku jako wrażliwego na dostępność w Android 14
+      note:
+        en: 'Lets a developer mark specific views (e.g. a one-time code, a PIN field) so only genuine accessibility TOOLS (screen readers, not arbitrary bound services) can read them -- directly closes the accessibility-tree-reading gap. Caveat: only available API 34+, so it does not protect users on older OS versions, which remain a large share of the Android install base.'
+        pl: 'Pozwala deweloperowi oznaczyć konkretne widoki (np. jednorazowy kod, pole PIN) tak by tylko prawdziwe NARZĘDZIA dostępności (czytniki ekranu, nie dowolne powiązane usługi) mogły je odczytać -- bezpośrednio zamyka lukę odczytu drzewa dostępności. Zastrzeżenie: dostępne tylko od API 34+, więc nie chroni użytkowników na starszych wersjach systemu, które wciąż stanowią dużą część bazy instalacji Android.'
+    - rank: 4
+      eff: 30
+      kind: weak
+      label:
+        en: FLAG_SECURE
+        pl: FLAG_SECURE
+      note:
+        en: 'Still worth setting -- blocks screenshot capture, screen recording, and casting to non-secure displays. Critical, unanimously confirmed limitation: it does NOT block accessibility-tree reading. A malicious accessibility service reads structured text/labels directly, without ever needing a pixel-level screen capture, so FLAG_SECURE alone is not a defense against this entry''s technique.'
+        pl: 'Wciąż warty ustawienia -- blokuje przechwytywanie zrzutu ekranu, nagrywanie ekranu, i rzutowanie na niezabezpieczone wyświetlacze. Krytyczne, jednomyślnie potwierdzone ograniczenie: NIE blokuje odczytu drzewa dostępności. Złośliwa usługa dostępności odczytuje strukturalny tekst/etykiety bezpośrednio, nigdy nie potrzebując przechwytywania ekranu na poziomie pikseli, więc samo FLAG_SECURE nie jest obroną przeciw technice tego wpisu.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: Unlike some entries in this catalog, the original two-permission combination itself was never assigned a single CVE -- strongly indicated by all three research passes, who instead found Google's response was primarily a platform behavior change. The strongest real-world evidence is documented in-the-wild malware and one distinct, separately-CVE'd follow-on bug.
+      pl: W przeciwieństwie do niektórych wpisów w tym katalogu, sama pierwotna kombinacja dwóch uprawnień nigdy nie otrzymała pojedynczego CVE -- silnie wskazane przez wszystkie trzy przejścia badawcze, które zamiast tego znalazły że odpowiedź Google była głównie zmianą zachowania platformy. Najsilniejszym rzeczywistym dowodem jest udokumentowane złośliwe oprogramowanie w warunkach rzeczywistych i jeden odrębny, osobno-CVE'owany błąd następczy.
+    items:
+    - org: CVE-2017-0752 -- "Toast Overlay" attack (Palo Alto Unit 42)
+      year: 2017
+      impact: A distinct, separately-discovered variant ("Cloak and Dagger with No Permissions") that achieved a full-screen overlay via Toast windows without needing SYSTEM_ALERT_WINDOW at all
+      cost: Fixed in the September 2017 Android Security Bulletin; affected versions before Android 8.0
+      description:
+        en: Confirmed by two of three research passes as a related but genuinely distinct discovery from the original Fratantonio et al. combination -- not the same CVE, and this entry should not conflate the two. It demonstrates the overlay half of this attack class was serious enough to warrant its own dedicated patch, even though the core two-permission combination was not.
+        pl: Potwierdzone przez dwa z trzech przejść badawczych jako powiązane ale naprawdę odrębne odkrycie od pierwotnej kombinacji Fratantonio i współautorów -- nie to samo CVE, i ten wpis nie powinien tego mylić. Demonstruje że połowa nakładki tej klasy ataku była wystarczająco poważna by uzasadnić własną dedykowaną łatkę, mimo że sama podstawowa kombinacja dwóch uprawnień nie otrzymała jej.
+    - org: TeaBot / Anatsa banking trojan (Cleafy Labs)
+      year: 2021
+      impact: 'Confirmed to combine BOTH capabilities this entry documents: accessibility services for keylogging, screen reading, and auto-accepting permission dialogs via synthetic gestures, plus WebView overlays rendered on top of legitimate banking apps for credential phishing'
+      cost: Ongoing family, actively tracked; primary-sourced writeup from Cleafy Labs
+      description:
+        en: 'Independently confirmed by two of three research passes against Cleafy''s own primary writeup -- the cleanest documented in-the-wild instance of the exact overlay+accessibility combination this entry is about, not just one half of it. Directly illustrates the modern successor pattern: no auto-grant bug needed, just a socially-engineered accessibility grant followed by the same escalation chain the original paper demonstrated.'
+        pl: 'Niezależnie potwierdzone przez dwa z trzech przejść badawczych na podstawie własnego pierwotnego opracowania Cleafy -- najczystszy udokumentowany przykład w warunkach rzeczywistych dokładnie tej kombinacji nakładka+dostępność którą opisuje ten wpis, nie tylko jednej jej połowy. Bezpośrednio ilustruje współczesny wzorzec następcy: żaden błąd auto-przyznawania nie jest potrzebny, wystarczy socjotechnicznie wymuszone przyznanie dostępności po którym następuje ten sam łańcuch eskalacji który zademonstrowała oryginalna praca.'
+    - org: SecuriDropper / BugDrop -- Android 13 Restricted Settings bypass (ThreatFabric)
+      year: 2023
+      impact: A dropper-as-a-service that installs its payload via a session-based package-install API, making the OS treat it as a legitimate marketplace install and never apply the Restricted Settings sideload block -- after which accessibility can be enabled normally to run the overlay/keylogging chain
+      cost: Used to distribute SpyNote and banking trojan payloads; documented by ThreatFabric, November 2023
+      description:
+        en: Confirmed independently by two of three research passes with matching mechanism and vendor source. The single most concrete, current piece of evidence that this attack class's strongest platform defense (Restricted Settings) has an actively-exploited gap, directly relevant to how a defender should scope their expectations of that control.
+        pl: Potwierdzone niezależnie przez dwa z trzech przejść badawczych z pasującym mechanizmem i źródłem od dostawcy. Pojedynczy najbardziej konkretny, aktualny dowód że najsilniejsza obrona platformowa tej klasy ataku (Restricted Settings) ma aktywnie eksploatowaną lukę, bezpośrednio istotny dla tego jak obrońca powinien skalować swoje oczekiwania wobec tej kontroli.
+    inlineSources:
+    - label: Unit 42 -- Android Toast Overlay Attack (CVE-2017-0752)
+      url: https://unit42.paloaltonetworks.com/unit42-android-toast-overlay-attack-cloak-and-dagger-with-no-permissions/
+    - label: Cleafy Labs -- TeaBot
+      url: https://www.cleafy.com/cleafy-labs/teabot
+    - label: ThreatFabric -- Droppers bypassing Android 13 restrictions
+      url: https://www.threatfabric.com/blogs/droppers-bypassing-android-13-restrictions
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on identical MASTG test/knowledge IDs -- OWASP's own overlay-attack documentation explicitly names Cloak & Dagger, unusual for a MASTG page to cite a specific named academic attack.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na identycznych ID testów/wiedzy MASTG -- własna dokumentacja ataków nakładkowych OWASP jawnie nazywa Cloak & Dagger, niezwykłe by strona MASTG cytowała konkretny nazwany atak akademicki.
+    sast:
+    - - Cross-reference apps holding SYSTEM_ALERT_WINDOW against apps with a bound accessibility service
+      - Flags the specific combination this entry targets, not either capability alone; also check whether the app was installed via a legitimate store session or sideloaded
+    dast:
+    - - MASTG-TEST-0035 -- Testing for Overlay Attacks
+      - Checks for unnecessary SYSTEM_ALERT_WINDOW use, FLAG_SECURE, setHideOverlayWindows(), and filterTouchesWhenObscured (MASVS-PLATFORM, MASWE-0039)
+    - - Enable a benign accessibility service and attempt to read sensitive-screen field contents
+      - Confirms whether the app relies on FLAG_SECURE alone (insufficient) versus also marking views accessibility-data-sensitive (Android 14+)
+    - - Attempt to enable the test app's accessibility service via a session-based install versus a raw APK sideload
+      - Confirms whether Restricted Settings' sideload friction is actually load-bearing for the app's real distribution channel, per the documented SecuriDropper bypass technique
+    note:
+      en: <strong>Key signal:</strong> confirming FLAG_SECURE is set is not sufficient evidence the app is protected against this technique -- it says nothing about accessibility-tree reading, which is the "dagger" half of this attack and requires its own separate check.
+      pl: <strong>Kluczowy sygnał:</strong> potwierdzenie że FLAG_SECURE jest ustawiony to niewystarczający dowód że apka jest chroniona przed tą techniką -- nic nie mówi o odczycie drzewa dostępności, który jest połową "sztylet" tego ataku i wymaga własnego osobnego sprawdzenia.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes independently verified CWE-1021 remains correctly mapping-ALLOWED (confirmed non-discouraged, matching this catalog's 15.15 finding) for the overlay half, but proposed three different secondary CWEs for the accessibility-driven escalation half without converging -- documented transparently below.
+      pl: Wszystkie trzy przejścia badawcze niezależnie zweryfikowały że CWE-1021 pozostaje poprawnie dozwolone-do-mapowania (potwierdzone jako nieodradzane, zgodnie z ustaleniem 15.15 tego katalogu) dla połowy nakładki, ale zaproponowały trzy różne drugorzędne CWE dla połowy eskalacji napędzanej dostępnością bez zbieżności -- udokumentowane przejrzyście poniżej.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-1021 -- Improper Restriction of Rendered UI Layers or Frames (primary, unanimous across all three research passes, verified by direct fetch as mapping-ALLOWED, not a discouraged Pillar). MITRE's own demonstrative CVEs -- CVE-2016-2496 and CVE-2017-0492 -- are the identical citations this catalog's 15.15 entry already established for the overlay/clickjacking mechanism.
+      - 'Secondary candidate for the accessibility-driven escalation, proposed independently and without cross-team consensus: CWE-863 (Incorrect Authorization) -- a 2025 CWE Top 25 entry, fits the "authorization check for a permission grant is effectively subverted by synthetic accessibility events" mechanism. Also independently proposed: CWE-250 (Execution with Unnecessary Privileges) and CWE-441 (Unintended Proxy or Intermediary / confused deputy, already used elsewhere in this catalog for 15.14 StrandHogg). All three are defensible from different angles; this entry adopts CWE-863 as the more specific, currently-prominent fit, while flagging the disagreement rather than presenting false consensus.'
+      - CWE-269 (Improper Privilege Management) was independently evaluated and ruled out by two research passes as a MITRE-DISCOURAGED mapping (confirmed by direct fetch) -- the same discouraged-Pillar problem this catalog already corrected for 15.18's CWE-693.
+    - std: OWASP
+      items:
+      - MASVS-PLATFORM (confirmed unanimously, consistent with sibling entries 15.14/15.15).
+      - MASTG-TEST-0035 -- "Testing for Overlay Attacks" (confirmed identically by all three research passes as the concrete test ID, checking SYSTEM_ALERT_WINDOW necessity, FLAG_SECURE, setHideOverlayWindows(), filterTouchesWhenObscured).
+      - 'MASTG-KNOW-0022 -- "Overlay Attacks" (confirmed by all three research passes to explicitly name Cloak & Dagger and cite the affected API 21-25 range). Supporting: MASWE-0039 ("App Vulnerable to Overlay Attacks"), MASTG-BEST-0040. All three research passes independently noted a genuine gap: no single dedicated MASTG-TEST ID exists purely for accessibility-service abuse detection -- it is currently folded into the platform-interaction/permission-review guidance rather than a standalone numbered test.'
+    inlineSources:
+    - label: CWE-1021 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/1021.html
+    - label: CWE-863 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/863.html
+    - label: OWASP MASTG-TEST-0035
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0035/
+    - label: OWASP MASTG-KNOW-0022
+      url: https://mas.owasp.org/MASTG/knowledge/android/MASVS-PLATFORM/MASTG-KNOW-0022/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If overlay + accessibility-service abuse is confirmed against a shipped app, or a user reports unexplained permission grants or transactions, work this list top to bottom.
+      pl: Po potwierdzeniu nadużycia nakładki + usługi dostępności przeciwko wysłanej apce, albo zgłoszeniu przez użytkownika niewyjaśnionych przyznań uprawnień albo transakcji, przejdź tę listę od góry.
+    steps:
+    - en: Identify which stage was compromised -- bootstrapping (accessibility was enabled without genuine informed consent), escalation (further permissions were self-granted), or ongoing abuse (keylogging/overlay phishing actively running) -- since remediation differs by stage
+      pl: Zidentyfikuj który etap został skompromitowany -- bootstrapping (dostępność została włączona bez prawdziwej świadomej zgody), eskalacja (dalsze uprawnienia zostały samodzielnie przyznane), albo trwające nadużycie (aktywnie działające keylogowanie/phishing nakładkowy) -- ponieważ naprawa różni się per etap
+    - en: Audit every app on the affected device holding both SYSTEM_ALERT_WINDOW and a bound accessibility service; treat any unrecognized or sideloaded app holding both as the primary suspect
+      pl: Zaudytuj każdą apkę na dotkniętym urządzeniu posiadającą zarówno SYSTEM_ALERT_WINDOW jak i powiązaną usługę dostępności; traktuj każdą nierozpoznaną albo sideloadowaną apkę posiadającą oba jako głównego podejrzanego
+    - en: Revoke the malicious accessibility service and SYSTEM_ALERT_WINDOW grant, then check for and revoke any further permissions the malicious app may have self-granted via the escalation chain before it was caught
+      pl: Odwołaj złośliwą usługę dostępności i przyznanie SYSTEM_ALERT_WINDOW, następnie sprawdź i odwołaj wszelkie dalsze uprawnienia które złośliwa apka mogła sobie samodzielnie przyznać przez łańcuch eskalacji zanim została wykryta
+    - en: Rotate any credential, PIN, or 2FA-adjacent secret that may have been read via accessibility-tree access or captured by overlay phishing during the compromise window, since FLAG_SECURE would not have blocked accessibility-based reading
+      pl: Rotuj każde dane uwierzytelniające, PIN, albo sekret powiązany z 2FA które mogły zostać odczytane przez dostęp do drzewa dostępności albo przechwycone przez phishing nakładkowy podczas okna kompromitacji, ponieważ FLAG_SECURE nie zablokowałby odczytu opartego na dostępności
+    - en: 'For app developers: verify sensitive screens use setHideOverlayWindows() (API 31+), filterTouchesWhenObscured, and (Android 14+) accessibility-data-sensitive view marking -- not FLAG_SECURE alone, which this entry''s research confirmed does not cover the accessibility-reading half of the attack'
+      pl: 'Dla deweloperów apek: zweryfikuj czy wrażliwe ekrany używają setHideOverlayWindows() (API 31+), filterTouchesWhenObscured, i (Android 14+) oznaczania widoku jako wrażliwego na dostępność -- nie samego FLAG_SECURE, które badania tego wpisu potwierdziły że nie pokrywa połowy ataku opartej na odczycie dostępności'
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: cloak-and-dagger.org -- original research site (Fratantonio, Qian, Chung, Lee, IEEE S&P 2017)
+      url: https://cloak-and-dagger.org/
+    - label: CWE-1021 -- Improper Restriction of Rendered UI Layers or Frames
+      url: https://cwe.mitre.org/data/definitions/1021.html
+    - label: CWE-863 -- Incorrect Authorization
+      url: https://cwe.mitre.org/data/definitions/863.html
+    - label: OWASP MASTG-TEST-0035 -- Testing for Overlay Attacks
+      url: https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0035/
+    - label: OWASP MASTG-KNOW-0022 -- Overlay Attacks
+      url: https://mas.owasp.org/MASTG/knowledge/android/MASVS-PLATFORM/MASTG-KNOW-0022/
+    - label: Unit 42 -- Android Toast Overlay Attack (CVE-2017-0752)
+      url: https://unit42.paloaltonetworks.com/unit42-android-toast-overlay-attack-cloak-and-dagger-with-no-permissions/
+    - label: Cleafy Labs -- TeaBot
+      url: https://www.cleafy.com/cleafy-labs/teabot
+    - label: ThreatFabric -- Droppers bypassing Android 13 restrictions (SecuriDropper)
+      url: https://www.threatfabric.com/blogs/droppers-bypassing-android-13-restrictions
+    - label: ThreatFabric -- Cerberus banking trojan
+      url: https://www.threatfabric.com/blogs/cerberus-a-new-banking-trojan-from-the-underworld
+    - label: Android -- Tapjacking / overlay-attack mitigations
+      url: https://developer.android.com/privacy-and-security/risks/tapjacking

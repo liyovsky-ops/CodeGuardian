@@ -432,22 +432,29 @@ threats:
 - id: '15.21'
   name: Cloak & Dagger (Android overlay + accessibility attack)
   severity: High
-  difficulty: Unknown
+  difficulty: Hard
   confidence: POSSIBLE
   cwe:
   - CWE-1021
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Combines two Android permissions — SYSTEM_ALERT_WINDOW (draw overlays) and BIND_ACCESSIBILITY_SERVICE — to seize control of the UI feedback loop: invisible/clickjacking overlays plus programmatic UI interaction enable stealthy keystroke logging, phishing, silent ''god-mode'' app installation, and PIN theft, with victims noticing nothing. Broader than plain tapjacking (which is overlay-only).
+  - CWE-863
+  desc: 'Kombinacja dwóch uprawnień Android -- SYSTEM_ALERT_WINDOW (rysowanie nakładek) i BIND_ACCESSIBILITY_SERVICE -- przejmuje pełną kontrolę nad pętlą sprzężenia zwrotnego UI: niewidoczne/clickjackingowe nakładki plus programowa interakcja z UI umożliwiają ukryte logowanie klawiszy, phishing, ciche ''god-mode'' instalowanie apek, i kradzież PIN, przy czym ofiara niczego nie zauważa. Szersze niż zwykły tapjacking (który jest tylko nakładką).
 
     '
-  desc_en: 'Combines two Android permissions — SYSTEM_ALERT_WINDOW (draw overlays) and BIND_ACCESSIBILITY_SERVICE — to seize control of the UI feedback loop: invisible/clickjacking overlays plus programmatic UI interaction enable stealthy keystroke logging, phishing, silent ''god-mode'' app installation, and PIN theft, with victims noticing nothing. Broader than plain tapjacking (which is overlay-only).'
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: 'Combines two Android permissions -- SYSTEM_ALERT_WINDOW (draw overlays) and BIND_ACCESSIBILITY_SERVICE -- to seize control of the UI feedback loop: invisible/clickjacking overlays plus programmatic UI interaction enable stealthy keystroke logging, phishing, silent ''god-mode'' app installation, and PIN theft, with victims noticing nothing. Broader than plain tapjacking (which is overlay-only).'
+  lang: kotlin
+  vuln: "// invisible overlay bootstraps the accessibility service, then\n// accessibility events read the screen and inject synthetic taps\noverride fun onAccessibilityEvent(event: AccessibilityEvent) {\n    val node = event.source ?: return\n    logCapturedText(node.text)  // unconstrained keystroke/PIN capture\n    performGlobalAction(GLOBAL_ACTION_BACK)  // synthetic UI interaction\n}\n"
+  safe: '// sensitive screens: layer FLAG_SECURE with overlay-hiding and
+
+    // accessibility-data-sensitive view marking (Android 14+)
+
+    window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setHideOverlayWindows(true)
+
+    amountField.filterTouchesWhenObscured = true
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: Fratantonio, Qian, Chung & Lee, ''Cloak and Dagger: From Two Permissions to Complete Control of the UI Feedback Loop'', IEEE S&P 2017 / Black Hat USA 2017; cloak-and-dagger.org.'
+  note_en: 'Source: cloak-and-dagger.org (Fratantonio et al., IEEE S&P 2017); OWASP MASTG-TEST-0035 / MASTG-KNOW-0022 (explicitly names Cloak & Dagger); ThreatFabric SecuriDropper (Android 13 Restricted Settings bypass); Cleafy TeaBot (real-world overlay+accessibility combination).'
 - id: '15.22'
   name: iOS URL Scheme Hijacking
   severity: Medium

@@ -1,0 +1,134 @@
+threatId: '15.21'
+title:
+  en: Cloak & Dagger -- knowledge check
+  pl: Cloak & Dagger -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: This catalog already has entry 15.15 for plain Tapjacking (overlay-only clickjacking). What is the specific, additional capability that makes Cloak & Dagger distinct enough to warrant its own entry?
+    pl: Ten katalog ma już wpis 15.15 dla samego Tapjacking (clickjacking tylko przez nakładkę). Jaka jest konkretna, dodatkowa zdolność która czyni Cloak & Dagger na tyle odrębnym by uzasadnić własny wpis?
+  choices:
+  - id: a
+    label:
+      en: Combining the overlay with BIND_ACCESSIBILITY_SERVICE, which adds screen reading, synthetic event injection, and silent permission-escalation -- capabilities a passive overlay alone cannot provide
+      pl: Połączenie nakładki z BIND_ACCESSIBILITY_SERVICE, co dodaje odczyt ekranu, wstrzykiwanie syntetycznych zdarzeń, i cichą eskalację uprawnień -- zdolności których sama pasywna nakładka nie może zapewnić
+  - id: b
+    label:
+      en: Cloak & Dagger only affects iOS, while 15.15 only affects Android
+      pl: Cloak & Dagger dotyczy tylko iOS, podczas gdy 15.15 dotyczy tylko Android
+  - id: c
+    label:
+      en: Cloak & Dagger uses a larger overlay window than plain tapjacking
+      pl: Cloak & Dagger używa większego okna nakładki niż zwykły tapjacking
+  - id: d
+    label:
+      en: Cloak & Dagger requires root access while tapjacking does not
+      pl: Cloak & Dagger wymaga dostępu root podczas gdy tapjacking nie
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three research passes converged on this exact distinction: the accessibility service is what elevates this from passive tap interception to "complete control of the UI feedback loop" -- reading on-screen content, injecting synthetic taps/keystrokes, and silently walking through permission dialogs to reach god-mode. Neither attack is platform-exclusive, and root is not required for either.'
+    pl: 'Wszystkie trzy przejścia badawcze zbiegły się na dokładnie tym rozróżnieniu: usługa dostępności to co podnosi to z pasywnego przechwytywania dotknięć do "pełnej kontroli nad pętlą sprzężenia zwrotnego UI" -- odczytując zawartość ekranu, wstrzykując syntetyczne dotknięcia/naciśnięcia klawiszy, i po cichu przechodząc przez dialogi uprawnień by osiągnąć god-mode. Żaden atak nie jest wyłączny dla platformy, i root nie jest wymagany dla żadnego z nich.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: A banking app sets FLAG_SECURE on its transaction-confirmation screen and concludes a malicious accessibility service running on the device cannot read the account number and amount displayed there. Is this conclusion correct?
+    pl: Apka bankowa ustawia FLAG_SECURE na swoim ekranie potwierdzenia transakcji i wnioskuje że złośliwa usługa dostępności działająca na urządzeniu nie może odczytać wyświetlonego tam numeru konta i kwoty. Czy ten wniosek jest poprawny?
+  isVulnerable: true
+  cwe: CWE-1021
+  explanation:
+    en: 'No. Confirmed unanimously across all three research passes: FLAG_SECURE blocks screenshot capture, screen recording, and casting to non-secure displays -- it does NOT block accessibility-tree reading. A malicious accessibility service reads the structured text and labels of on-screen fields directly, without ever needing a pixel-level screen capture. The correct additional control is marking sensitive views accessibility-data-sensitive (Android 14+) or ensuring only trusted accessibility tools can read them.'
+    pl: 'Nie. Potwierdzone jednomyślnie we wszystkich trzech przejściach badawczych: FLAG_SECURE blokuje przechwytywanie zrzutu ekranu, nagrywanie ekranu, i rzutowanie na niezabezpieczone wyświetlacze -- NIE blokuje odczytu drzewa dostępności. Złośliwa usługa dostępności odczytuje strukturalny tekst i etykiety pól na ekranie bezpośrednio, nigdy nie potrzebując przechwytywania ekranu na poziomie pikseli. Poprawną dodatkową kontrolą jest oznaczenie wrażliwych widoków jako wrażliwych na dostępność (Android 14+) albo zapewnienie że tylko zaufane narzędzia dostępności mogą je odczytać.'
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: All three research passes were asked whether the original Cloak & Dagger two-permission combination was ever assigned a single CVE. What did they find?
+    pl: Wszystkie trzy przejścia badawcze zostały poproszone czy oryginalna kombinacja dwóch uprawnień Cloak & Dagger kiedykolwiek otrzymała pojedyncze CVE. Co znalazły?
+  choices:
+  - id: a
+    label:
+      en: 'Strongly indicated: no, Google''s response was primarily a platform behavior change (removing the silent SYSTEM_ALERT_WINDOW auto-grant, tightened further in Android 8.0), not a single patched CVE for the combination itself'
+      pl: 'Silnie wskazane: nie, odpowiedź Google była głównie zmianą zachowania platformy (usunięcie cichego auto-przyznawania SYSTEM_ALERT_WINDOW, zaostrzone dalej w Android 8.0), nie pojedynczym załatanym CVE dla samej kombinacji'
+  - id: b
+    label:
+      en: Yes, it was assigned CVE-2017-0752
+      pl: Tak, otrzymała CVE-2017-0752
+  - id: c
+    label:
+      en: Yes, it was assigned CVE-2016-2496
+      pl: Tak, otrzymała CVE-2016-2496
+  - id: d
+    label:
+      en: Yes, but the CVE number was never publicly disclosed
+      pl: Tak, ale numer CVE nigdy nie został publicznie ujawniony
+  correctChoiceIds:
+  - a
+  explanation:
+    en: CVE-2017-0752 is a distinct, separately-discovered "Toast Overlay" variant found later by Palo Alto Unit 42 that achieved overlay without SYSTEM_ALERT_WINDOW at all -- not the same combination, and should not be conflated with the original paper. CVE-2016-2496 is one of MITRE's demonstrative CVEs for CWE-1021 generally, also a separate issue. The original Fratantonio et al. combination itself was treated largely as a design/behavior issue rather than a single discrete vulnerability patch.
+    pl: CVE-2017-0752 to odrębny, osobno odkryty wariant "Toast Overlay" znaleziony później przez Palo Alto Unit 42 który osiągnął nakładkę bez SYSTEM_ALERT_WINDOW w ogóle -- nie ta sama kombinacja, i nie powinien być mylony z oryginalną pracą. CVE-2016-2496 to jedno z demonstracyjnych CVE MITRE dla CWE-1021 ogólnie, też osobna kwestia. Sama oryginalna kombinacja Fratantonio i współautorów została potraktowana głównie jako kwestia projektu/zachowania zamiast pojedynczej dyskretnej łatki podatności.
+- id: q4
+  type: pick-the-fix
+  prompt:
+    en: Android 13's Restricted Settings is meant to block sideloaded apps from enabling accessibility services without extra user friction. Which malware distribution technique, documented by ThreatFabric in 2023, actually defeats this control?
+    pl: Restricted Settings Android 13 ma blokować sideloadowanym apkom włączanie usług dostępności bez dodatkowego tarcia użytkownika. Która technika dystrybucji złośliwego oprogramowania, udokumentowana przez ThreatFabric w 2023, faktycznie pokonuje tę kontrolę?
+  variants:
+  - id: v1
+    lang: text
+    code: 'Direct APK sideload via a browser download link
+
+      (triggers Restricted Settings as intended -- accessibility toggle is greyed out)'
+  - id: v2
+    lang: text
+    code: 'SecuriDropper / BugDrop: installs the payload via a session-based
+
+      package-install API that mimics a legitimate marketplace install,
+
+      so the OS never tags it as sideloaded and Restricted Settings never applies'
+  - id: v3
+    lang: text
+    code: 'Asking the user nicely in a permission dialog to disable Restricted Settings
+
+      (no documented evidence this alone works without the session-based API trick)'
+  correctVariantId: v2
+  explanation:
+    en: 'Confirmed independently by two of three research passes with matching mechanism and the same named vendor source: SecuriDropper/BugDrop (ThreatFabric, November 2023) uses Android''s own session-based package-installer API to make the payload indistinguishable from a legitimate marketplace install. Since the OS never classifies the install as a sideload, Restricted Settings'' accessibility block never triggers at all -- the payload can then have accessibility enabled through the normal flow.'
+    pl: 'Potwierdzone niezależnie przez dwa z trzech przejść badawczych z pasującym mechanizmem i tym samym nazwanym źródłem od dostawcy: SecuriDropper/BugDrop (ThreatFabric, listopad 2023) używa własnego sesyjnego API instalatora pakietów Android by ładunek był nieodróżnialny od legalnej instalacji ze sklepu. Ponieważ system nigdy nie klasyfikuje instalacji jako sideload, blokada dostępności Restricted Settings nigdy się nie uruchamia -- ładunek może następnie mieć włączoną dostępność przez normalny przepływ.'
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: A security engineer argues that since Google fixed the silent SYSTEM_ALERT_WINDOW auto-grant in Android 8.0, the Cloak & Dagger technique class is now purely historical and no longer relevant to current threat modeling. Is this a defensible conclusion?
+    pl: Inżynier bezpieczeństwa argumentuje że skoro Google naprawiło ciche auto-przyznawanie SYSTEM_ALERT_WINDOW w Android 8.0, klasa techniki Cloak & Dagger jest teraz czysto historyczna i nie ma już znaczenia dla obecnego modelowania zagrożeń. Czy to obronny wniosek?
+  choices:
+  - id: a
+    label:
+      en: No -- what was fixed was only the frictionless auto-grant bootstrapping bug; the overlay+accessibility combination itself remains a live, actively weaponized pattern in modern banking trojans that simply social-engineer the user into manually granting accessibility instead
+      pl: Nie -- co zostało naprawione to tylko bezpodstawny błąd bootstrappingu auto-przyznawania; sama kombinacja nakładka+dostępność pozostaje żywym, aktywnie uzbrojonym wzorcem we współczesnych trojanach bankowych które po prostu socjotechnicznie skłaniają użytkownika do ręcznego przyznania dostępności zamiast tego
+  - id: b
+    label:
+      en: Yes -- Android 8.0 eliminated all forms of overlay+accessibility abuse permanently
+      pl: Tak -- Android 8.0 wyeliminował wszystkie formy nadużycia nakładka+dostępność na stałe
+  - id: c
+    label:
+      en: Yes -- accessibility services were removed from Android entirely after 2017
+      pl: Tak -- usługi dostępności zostały całkowicie usunięte z Android po 2017
+  - id: d
+    label:
+      en: No -- but only because rooted devices can still be attacked; unrooted devices remain fully protected
+      pl: Nie -- ale tylko dlatego że urządzenia zrootowane wciąż mogą być atakowane; niezrootowane urządzenia pozostają w pełni chronione
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Confirmed unanimously across all three research passes: TeaBot/Anatsa, Cerberus, Xenomorph, Crocodilus, and Herodotus are all documented (by Cleafy and ThreatFabric respectively) using the same overlay+accessibility combination years after the original auto-grant bug was closed -- they simply consent-phish the user into manually enabling accessibility instead of relying on the old bug. No root is required for any of this; it works against ordinary unrooted devices.'
+    pl: 'Potwierdzone jednomyślnie we wszystkich trzech przejściach badawczych: TeaBot/Anatsa, Cerberus, Xenomorph, Crocodilus, i Herodotus są wszystkie udokumentowane (odpowiednio przez Cleafy i ThreatFabric) jako używające tej samej kombinacji nakładka+dostępność lata po zamknięciu oryginalnego błędu auto-przyznawania -- po prostu socjotechnicznie skłaniają użytkownika do ręcznego włączenia dostępności zamiast polegać na starym błędzie. Żaden root nie jest wymagany do niczego z tego; działa przeciwko zwykłym niezrootowanym urządzeniom.'
+- id: q6
+  type: vuln-or-not
+  prompt:
+    en: A reviewer notes the app under test holds both the SYSTEM_ALERT_WINDOW permission and a bound, user-enabled accessibility service, and flags this combination itself as worth investigating further -- even before observing any concrete malicious behavior. Is flagging the combination alone a reasonable action?
+    pl: Recenzent zauważa że testowana apka posiada zarówno uprawnienie SYSTEM_ALERT_WINDOW jak i powiązaną, włączoną przez użytkownika usługę dostępności, i oflagowuje samą tę kombinację jako wartą dalszego zbadania -- nawet przed zaobserwowaniem jakiegokolwiek konkretnego złośliwego zachowania. Czy oflagowanie samej kombinacji jest rozsądnym działaniem?
+  isVulnerable: true
+  cwe: CWE-1021
+  explanation:
+    en: 'Yes. This is exactly the review methodology all three research passes converged on: cross-referencing apps holding SYSTEM_ALERT_WINDOW against apps with a bound accessibility service to identify the specific combination this entry targets, since that combination -- not either capability alone -- is what enables the full attack chain (overlay-based bootstrapping/clickjacking plus accessibility-based reading, injection, and silent escalation). It is a legitimate starting point for deeper investigation, not a false positive to dismiss.'
+    pl: 'Tak. To dokładnie metodyka przeglądu na której zbiegły się wszystkie trzy przejścia badawcze: skrzyżowanie apek posiadających SYSTEM_ALERT_WINDOW z apkami posiadającymi powiązaną usługę dostępności by zidentyfikować konkretną kombinację którą celuje ten wpis, ponieważ ta kombinacja -- nie żadna zdolność z osobna -- umożliwia pełny łańcuch ataku (bootstrapping/clickjacking oparty na nakładce plus odczyt, wstrzykiwanie, i cicha eskalacja oparte na dostępności). To uzasadniony punkt startowy dla głębszego dochodzenia, nie fałszywy pozytyw do odrzucenia.'

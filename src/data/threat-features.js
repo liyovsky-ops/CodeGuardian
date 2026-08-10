@@ -64,6 +64,7 @@ import mobilekeychainkeystoreData from '../content/deepdives/mobilekeychainkeyst
 import mobilerootjailbreakbypassData from '../content/deepdives/mobilerootjailbreakbypass.yaml';
 import mobilebiometricauthData from '../content/deepdives/mobilebiometricauth.yaml';
 import mobiledataleakageData from '../content/deepdives/mobiledataleakage.yaml';
+import mobilecloakdaggerData from '../content/deepdives/mobilecloakdagger.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -125,6 +126,7 @@ import mobilekeychainkeystoreQuiz from '../content/quizzes/mobilekeychainkeystor
 import mobilerootjailbreakbypassQuiz from '../content/quizzes/mobilerootjailbreakbypass.yaml';
 import mobilebiometricauthQuiz from '../content/quizzes/mobilebiometricauth.yaml';
 import mobiledataleakageQuiz from '../content/quizzes/mobiledataleakage.yaml';
+import mobilecloakdaggerQuiz from '../content/quizzes/mobilecloakdagger.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -188,6 +190,7 @@ export const DEEPDIVES = {
   '15.18': mobilerootjailbreakbypassData, // Root / Jailbreak Detection Bypass
   '15.19': mobilebiometricauthData, // Insecure Biometric Authentication Implementation
   '15.20': mobiledataleakageData, // Sensitive Data Leakage via Clipboard / Screenshots / Logs
+  '15.21': mobilecloakdaggerData, // Cloak & Dagger (Android overlay + accessibility attack)
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -254,4 +257,5 @@ export const QUIZZES = {
   '15.18': mobilerootjailbreakbypassQuiz,
   '15.19': mobilebiometricauthQuiz,
   '15.20': mobiledataleakageQuiz,
+  '15.21': mobilecloakdaggerQuiz,
 };
