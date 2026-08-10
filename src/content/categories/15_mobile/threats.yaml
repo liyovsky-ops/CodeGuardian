@@ -488,19 +488,16 @@ threats:
 - id: '15.23'
   name: Janus (Android APK signature bypass)
   severity: High
-  difficulty: Unknown
+  difficulty: Hard
   confidence: POSSIBLE
   cwe:
   - CWE-347
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] Because a single file can be simultaneously a valid APK (ZIP, signed with the v1/JAR scheme that ignores prepended bytes) and a valid DEX (which tolerates trailing bytes), an attacker prepends a malicious DEX to a legitimate APK; it installs as an update preserving the original signature and data, then the injected code runs. Affects Android 5.1.1-8.0 with v1-only signing; fixed by APK Signature Scheme v2.
+  - CWE-354
+  desc: 'Ponieważ jeden plik może być jednocześnie ważnym APK (ZIP, podpisanym schematem v1/JAR który ignoruje poprzedzające bajty) i ważnym DEX (który toleruje bajty końcowe), atakujący poprzedza legalny APK złośliwym DEX; instaluje się jako aktualizacja zachowując oryginalny podpis i dane, następnie wstrzyknięty kod się wykonuje. Dotyczy Android 5.1.1-8.0 z podpisywaniem tylko-v1; naprawione przez Schemat Podpisu APK v2 (CVE-2017-13156, GuardSquare 2017).
 
     '
-  desc_en: Because a single file can be simultaneously a valid APK (ZIP, signed with the v1/JAR scheme that ignores prepended bytes) and a valid DEX (which tolerates trailing bytes), an attacker prepends a malicious DEX to a legitimate APK; it installs as an update preserving the original signature and data, then the injected code runs. Affects Android 5.1.1-8.0 with v1-only signing; fixed by APK Signature Scheme v2.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
-
-    '
-  note_en: 'Source: CVE-2017-13156; GuardSquare disclosure (2017); Android Dec 2017 security bulletin.'
+  desc_en: Because a single file can be simultaneously a valid APK (ZIP, signed with the v1/JAR scheme that ignores prepended bytes) and a valid DEX (which tolerates trailing bytes), an attacker prepends a malicious DEX to a legitimate APK; it installs as an update preserving the original signature and data, then the injected code runs. Affects Android 5.1.1-8.0 with v1-only signing; fixed by APK Signature Scheme v2 (CVE-2017-13156, GuardSquare 2017).
+  lang: bash
+  vuln: "apksigner sign --v1-signing-enabled true --v2-signing-enabled false \\\n  --ks release.keystore app-unsigned.apk\n# v1's signature ignores any bytes prepended before the ZIP entries --\n# a malicious DEX prepended to this file still passes verification\n"
+  safe: "apksigner sign --v1-signing-enabled true --v2-signing-enabled true \\\n  --v3-signing-enabled true --ks release.keystore app-unsigned.apk\n# v2+ hashes the entire file from offset 0 -- any prepended byte\n# invalidates the whole signature\napksigner verify --verbose --print-certs app.apk\n"
+  note_en: 'Source: GuardSquare (original Janus disclosure, Dec 2017); CVE-2017-13156 / Android Security Bulletin December 2017; OWASP MASTG-TEST-0224 (explicitly names CVE-2017-13156); Android APK Signature Scheme v2 docs.'

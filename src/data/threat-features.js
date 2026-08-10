@@ -66,6 +66,7 @@ import mobilebiometricauthData from '../content/deepdives/mobilebiometricauth.ya
 import mobiledataleakageData from '../content/deepdives/mobiledataleakage.yaml';
 import mobilecloakdaggerData from '../content/deepdives/mobilecloakdagger.yaml';
 import mobileiosurlschemehijackData from '../content/deepdives/mobileiosurlschemehijack.yaml';
+import mobilejanussignaturebypassData from '../content/deepdives/mobilejanussignaturebypass.yaml';
 
 import sqliQuiz from '../content/quizzes/sqli.yaml';
 import nosqliQuiz from '../content/quizzes/nosqli.yaml';
@@ -129,6 +130,7 @@ import mobilebiometricauthQuiz from '../content/quizzes/mobilebiometricauth.yaml
 import mobiledataleakageQuiz from '../content/quizzes/mobiledataleakage.yaml';
 import mobilecloakdaggerQuiz from '../content/quizzes/mobilecloakdagger.yaml';
 import mobileiosurlschemehijackQuiz from '../content/quizzes/mobileiosurlschemehijack.yaml';
+import mobilejanussignaturebypassQuiz from '../content/quizzes/mobilejanussignaturebypass.yaml';
 
 // threatId -> deep-dive YAML data (or undefined if none exists)
 export const DEEPDIVES = {
@@ -194,6 +196,7 @@ export const DEEPDIVES = {
   '15.20': mobiledataleakageData, // Sensitive Data Leakage via Clipboard / Screenshots / Logs
   '15.21': mobilecloakdaggerData, // Cloak & Dagger (Android overlay + accessibility attack)
   '15.22': mobileiosurlschemehijackData, // iOS URL Scheme Hijacking
+  '15.23': mobilejanussignaturebypassData, // Janus (Android APK signature bypass)
 };
 
 // threatId -> quiz YAML data. Quizzes may exist for threats that have no
@@ -262,4 +265,5 @@ export const QUIZZES = {
   '15.20': mobiledataleakageQuiz,
   '15.21': mobilecloakdaggerQuiz,
   '15.22': mobileiosurlschemehijackQuiz,
+  '15.23': mobilejanussignaturebypassQuiz,
 };

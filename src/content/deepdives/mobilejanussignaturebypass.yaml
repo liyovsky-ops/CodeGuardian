@@ -1,0 +1,317 @@
+meta:
+  id: mobilejanussignaturebypass
+  threatId: '15.23'
+  severity: High
+  color: '#4c0519'
+  colorRgb: 76,5,25
+  cwe: CWE-347
+  cvss: 7.8 (CVSS 3.0, AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H) -- CVE-2017-13156
+  standard: OWASP MASVS-CODE / MASVS-RESILIENCE (MASTG-TEST-0224 "Usage of Insecure Signature Version" explicitly names CVE-2017-13156)
+hero:
+  titleMain: 'Janus -- Android APK '
+  titleGrad: Signature Bypass
+  titleTail: ''
+  topbar: Janus (CVE-2017-13156) -- Android APK Signature Bypass
+  lead:
+    en: 'All three research passes fetched GuardSquare''s original December 2017 disclosure directly and converged on identical wording for the core mechanism: an APK is a ZIP archive, and ZIP parsers locate the archive by scanning backward from the End-of-Central-Directory record at the file''s tail -- so arbitrary bytes prepended before the first ZIP entry never disrupt ZIP parsing. The legacy v1/JAR signature scheme "only takes into account the zip entries. It ignores any extra bytes when computing or verifying the application''s signature." A DEX file, meanwhile, is identified and parsed by its magic bytes at the very start. An attacker exploits this asymmetry by prepending a malicious DEX to the front of a legitimately, validly v1-signed APK: read from the tail, it''s still the original signed ZIP/APK; read from the head, it''s a valid DEX the Dalvik/ART runtime will load as the app''s code. GuardSquare named it Janus, after the two-faced Roman god of duality, for exactly this reason -- one file, two valid identities. The result is not a fresh-install attack but an update-hijack: because the file still carries the original developer''s valid signature, Android''s package manager accepts it as a legitimate same-certificate update to the already-installed app, so the malicious code silently inherits that app''s existing UID, granted permissions (no new prompts), and private data access. All three research passes independently and identically flagged a genuine discrepancy worth documenting transparently: NVD''s own machine-readable record for CVE-2017-13156 assigns CWE-434 (Unrestricted Upload of File with Dangerous Type) -- a poor conceptual fit, since Janus has nothing to do with a file-upload endpoint. This entry follows all three research passes in keeping CWE-347 as the primary mapping while adding CWE-354 as a documented, more-precise secondary, per the nuance two of three passes raised independently: the v1 signature is cryptographically valid and correctly verified against the bytes it enumerates -- the failure is that its coverage scope doesn''t extend to what actually executes, which is arguably closer to an integrity-check-value scope gap than to a broken signature check.'
+    pl: 'Wszystkie trzy przejścia badawcze pobrały bezpośrednio oryginalne ujawnienie GuardSquare z grudnia 2017 i zbiegły się na identycznym sformułowaniu podstawowego mechanizmu: APK to archiwum ZIP, a parsery ZIP lokalizują archiwum skanując wstecz od rekordu End-of-Central-Directory na końcu pliku -- więc dowolne bajty poprzedzające pierwszy wpis ZIP nigdy nie zakłócają parsowania ZIP. Przestarzały schemat podpisu v1/JAR "bierze pod uwagę tylko wpisy zip. Ignoruje wszelkie dodatkowe bajty przy obliczaniu albo weryfikacji podpisu aplikacji". Plik DEX z kolei jest identyfikowany i parsowany po swoich bajtach magicznych na samym początku. Atakujący wykorzystuje tę asymetrię poprzedzając legalnie, poprawnie podpisanego v1 APK złośliwym DEX: czytany od końca, to wciąż oryginalny podpisany ZIP/APK; czytany od początku, to poprawny DEX który środowisko wykonawcze Dalvik/ART załaduje jako kod apki. GuardSquare nazwało to Janus, po dwutwarzowym rzymskim bogu dualności, dokładnie z tego powodu -- jeden plik, dwie ważne tożsamości. Wynikiem nie jest atak świeżej instalacji ale przejęcie aktualizacji: ponieważ plik wciąż niesie ważny podpis oryginalnego dewelopera, menedżer pakietów Android akceptuje go jako legalną aktualizację z tym samym certyfikatem dla już zainstalowanej apki, więc złośliwy kod po cichu dziedziczy istniejące UID tej apki, przyznane uprawnienia (bez nowych monitów), i dostęp do prywatnych danych. Wszystkie trzy przejścia badawcze niezależnie i identycznie oflagowały prawdziwą rozbieżność wartą przejrzystego udokumentowania: własny odczytywalny maszynowo rekord NVD dla CVE-2017-13156 przypisuje CWE-434 (Unrestricted Upload of File with Dangerous Type) -- słabe dopasowanie koncepcyjne, ponieważ Janus nie ma nic wspólnego z punktem końcowym przesyłania plików. Ten wpis podąża za wszystkimi trzema przejściami badawczymi zachowując CWE-347 jako główne mapowanie dodając CWE-354 jako udokumentowany, precyzyjniejszy drugorzędny, zgodnie z niuansem który dwa z trzech przejść podniosły niezależnie: podpis v1 jest kryptograficznie ważny i poprawnie zweryfikowany względem bajtów które wylicza -- awaria polega na tym że jego zakres pokrycia nie rozciąga się na to co faktycznie się wykonuje, co jest bliższe luce zakresu wartości sprawdzania integralności niż złamanemu sprawdzeniu podpisu.'
+  metrics:
+  - k: CVE-2017-13156
+    v:
+      en: CVSS 7.8 High, elevation of privilege, affecting Android 5.1.1 through 8.0 -- confirmed identically by all three research passes against the Android Security Bulletin
+      pl: CVSS 7.8 High, eskalacja uprawnień, dotyczy Android 5.1.1 do 8.0 -- potwierdzone identycznie przez wszystkie trzy przejścia badawcze względem Android Security Bulletin
+  - k: Two-faced by design
+    v:
+      en: one file is simultaneously a valid, correctly-signed APK (read from the tail) and a valid DEX (read from the head)
+      pl: jeden plik jest jednocześnie ważnym, poprawnie podpisanym APK (czytanym od końca) i ważnym DEX (czytanym od początku)
+  - k: NVD's own CWE-434
+    v:
+      en: flagged by all three research passes as a poor mapping fit -- this entry documents the discrepancy and keeps CWE-347/354 instead
+      pl: oflagowane przez wszystkie trzy przejścia badawcze jako słabe dopasowanie mapowania -- ten wpis dokumentuje rozbieżność i zachowuje zamiast tego CWE-347/354
+  - k: Signature Scheme v2
+    v:
+      en: introduced in Android 7.0 (Nougat) -- hashes the entire file from offset 0, structurally closing the Janus gap
+      pl: wprowadzone w Android 7.0 (Nougat) -- haszuje cały plik od offsetu 0, strukturalnie zamykając lukę Janus
+  sources:
+  - label: GuardSquare -- New Android vulnerability (Janus)
+    url: https://www.guardsquare.com/blog/new-android-vulnerability-allows-attackers-to-modify-apps-without-affecting-their-signatures-guardsquare
+  - label: Android Security Bulletin -- December 2017
+    url: https://source.android.com/docs/security/bulletin/2017-12-01
+  - label: Android -- APK Signature Scheme v2
+    url: https://source.android.com/docs/security/features/apksigning/v2
+  - label: OWASP MASTG-TEST-0224 -- Usage of Insecure Signature Version
+    url: https://mas.owasp.org/MASTG/tests-beta/android/MASVS-RESILIENCE/MASTG-TEST-0224/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: The single core technique, its update-hijack delivery path, and the one documented in-the-wild sighting -- confirmed with varying degrees of corroboration across the three research passes.
+      pl: Pojedyncza podstawowa technika, jej ścieżka dostawy przez przejęcie aktualizacji, i jedno udokumentowane spostrzeżenie w warunkach rzeczywistych -- potwierdzone z różnym stopniem korporacji we wszystkich trzech przejściach badawczych.
+    items:
+    - name: DEX-prepend dual-valid-file construction
+      sev: high
+      description:
+        en: The attacker takes a legitimately, v1-signed APK and prepends a malicious DEX file to its very start, adjusting the ZIP End-of-Central-Directory offset field so ZIP parsing (from the tail) still resolves correctly. The v1/JAR signature -- which ignores bytes outside the ZIP entries it enumerates -- still verifies, while the Dalvik/ART loader, keying off the DEX magic bytes now at offset 0, loads the prepended malicious code.
+        pl: Atakujący bierze legalnie, podpisanego v1 APK i poprzedza go złośliwym plikiem DEX na samym początku, dostosowując pole offsetu End-of-Central-Directory ZIP tak by parsowanie ZIP (od końca) wciąż poprawnie się rozwiązywało. Podpis v1/JAR -- który ignoruje bajty poza wpisami ZIP które wylicza -- wciąż się weryfikuje, podczas gdy loader Dalvik/ART, kierując się bajtami magicznymi DEX teraz na offsecie 0, ładuje poprzedzający złośliwy kod.
+      payload: 'cat malicious.dex legitimate_signed.apk > janus_crafted.apk
+
+        // adjust the EOCD central-directory-offset field in janus_crafted.apk
+
+        // by the byte-length of malicious.dex so ZIP-from-the-tail parsing
+
+        // (and the v1 signature check) still resolves correctly'
+    - name: Update-channel delivery as a trusted app update
+      sev: high
+      description:
+        en: Because the crafted file still carries the original developer's valid v1 signature, Android's package manager accepts it as a same-certificate update to the already-installed app -- confirmed unanimously as requiring delivery via sideloading, a third-party app store, or a compromised/spoofed update channel, since it does not work as a remote zero-click attack.
+        pl: Ponieważ spreparowany plik wciąż niesie ważny podpis v1 oryginalnego dewelopera, menedżer pakietów Android akceptuje go jako aktualizację z tym samym certyfikatem dla już zainstalowanej apki -- potwierdzone jednomyślnie jako wymagające dostawy przez sideloading, sklep trzeciej strony, albo skompromitowany/sfałszowany kanał aktualizacji, ponieważ nie działa jako zdalny atak zero-click.
+      payload: '// installed as an ''update'' via a compromised distribution channel;
+
+        // PackageManager sees the same signing certificate and approves it,
+
+        // no new permission prompts shown since it''s treated as the same app'
+    - name: ANDROIDOS_JANUS.A -- documented in-the-wild instance
+      sev: medium
+      description:
+        en: 'One research pass found Trend Micro''s report of a real Google Play app (originally a "junk cleaner," later updated to a "news app") using the Janus technique for dynamic code loading, detected as ANDROIDOS_JANUS.A. Flagged with appropriate caution: this specific finding was corroborated only through search indexing (the primary Trend Micro page returned a 403 on direct fetch this session), and the other two research passes found no confirmed, well-sourced in-the-wild campaign -- GuardSquare itself stated at disclosure they had not observed exploitation in the wild.'
+        pl: 'Jedno przejście badawcze znalazło raport Trend Micro o prawdziwej apce Google Play (pierwotnie "czyściciel śmieci", później zaktualizowanej do "apki z wiadomościami") używającej techniki Janus do dynamicznego ładowania kodu, wykrytej jako ANDROIDOS_JANUS.A. Oflagowane z odpowiednią ostrożnością: to konkretne ustalenie było skorporowane tylko przez indeksowanie wyszukiwania (pierwotna strona Trend Micro zwróciła 403 przy bezpośrednim pobraniu w tej sesji), a pozostałe dwa przejścia badawcze nie znalazły żadnej potwierdzonej, dobrze źródłowanej kampanii w warunkach rzeczywistych -- samo GuardSquare stwierdziło przy ujawnieniu że nie zaobserwowało eksploatacji w warunkach rzeczywistych.'
+      payload: '// no reproducible payload -- documented as a real Play-distributed
+
+        // app using the technique for dynamic code loading, not a mass campaign'
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'Confirmed unanimously: the fix is not a code-level check an app can add -- it''s a build-time signing-scheme choice. An app shipping v1-only signing has no way to defend itself against this at runtime.'
+      pl: 'Potwierdzone jednomyślnie: naprawa to nie sprawdzenie na poziomie kodu które apka może dodać -- to wybór schematu podpisywania na etapie builda. Apka wysyłająca podpisywanie tylko-v1 nie ma sposobu by bronić się przed tym w czasie wykonania.'
+    languages:
+    - label: Bash -- APK signing configuration
+      lang: bash
+      vulnerable: "# VULNERABLE: v1-only signing (or v1 as the only scheme a\n# pre-Nougat-compatible device can verify) -- v1's signature\n# ignores any bytes prepended before the ZIP entries\napksigner sign --v1-signing-enabled true \\\n              --v2-signing-enabled false \\\n              --ks release.keystore app-unsigned.apk"
+      safe: "# SAFE: sign with v2+ (v1 can stay enabled only for pre-Nougat\n# compatibility, but v2/v3 hashes the ENTIRE file from offset 0,\n# so any prepended byte invalidates the whole signature)\napksigner sign --v1-signing-enabled true \\\n              --v2-signing-enabled true \\\n              --v3-signing-enabled true \\\n              --ks release.keystore app-unsigned.apk\n\n# verify:\napksigner verify --verbose --print-certs app.apk\n# \"Verified using v2 scheme (APK Signature Scheme v2): true\""
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: check the app''s actual signing scheme via the official tool, then determine whether the target device/scenario would still accept v1-only.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: sprawdź faktyczny schemat podpisywania apki oficjalnym narzędziem, następnie określ czy docelowe urządzenie/scenariusz wciąż akceptowałoby tylko-v1.'
+    steps:
+    - title:
+        en: Check which signature schemes the APK actually uses
+        pl: Sprawdź jakich schematów podpisu apka faktycznie używa
+      description:
+        en: Run apksigner verify --verbose --print-certs -- an app showing v1 = true and v2/v3 = false is in the exact vulnerable configuration this entry documents. Per MASTG-TEST-0224, which explicitly names CVE-2017-13156 as its rationale.
+        pl: Uruchom apksigner verify --verbose --print-certs -- apka pokazująca v1 = true i v2/v3 = false jest w dokładnie tej podatnej konfiguracji którą dokumentuje ten wpis. Zgodnie z MASTG-TEST-0224, które jawnie nazywa CVE-2017-13156 jako swoje uzasadnienie.
+    - title:
+        en: Structurally scan the file head for a DEX-before-ZIP mismatch
+        pl: Strukturalnie skanuj początek pliku pod kątem niedopasowania DEX-przed-ZIP
+      description:
+        en: A normal APK begins with the ZIP local-file-header magic (PK\x03\x04). A Janus-crafted file begins with the DEX magic instead -- a direct, tool-independent way to detect a suspected crafted file.
+        pl: Zwykły APK zaczyna się od bajtów magicznych ZIP local-file-header (PK\x03\x04). Plik spreparowany metodą Janus zaczyna się zamiast tego od magicznych bajtów DEX -- bezpośredni, niezależny od narzędzia sposób wykrycia podejrzanego spreparowanego pliku.
+    - title:
+        en: Determine whether the deployment scenario still accepts v1-only
+        pl: Określ czy scenariusz wdrożenia wciąż akceptuje tylko-v1
+      description:
+        en: 'Confirmed unanimously: this is a function of the target device''s Android version (pre-7.0 devices have no v2 verification path at all) and the app''s minSdkVersion-driven signing configuration, not of when the malicious file was crafted -- a fresh Janus file built today still works against a qualifying target.'
+        pl: 'Potwierdzone jednomyślnie: to funkcja wersji Android urządzenia docelowego (urządzenia przed 7.0 nie mają w ogóle ścieżki weryfikacji v2) i konfiguracji podpisywania sterowanej przez minSdkVersion apki, nie czasu kiedy złośliwy plik został spreparowany -- świeży plik Janus zbudowany dzisiaj wciąż działa przeciwko kwalifikującemu się celowi.'
+    - title:
+        en: Confirm the distribution channel, not just the file, is trusted
+        pl: Potwierdź że kanał dystrybucji, nie tylko plik, jest zaufany
+      description:
+        en: Since this only works as an update-hijack, not a remote exploit, confirm whether the update path being tested (sideload, third-party store, or the app's own update mechanism) validates anything beyond the signature check Janus is designed to survive.
+        pl: Ponieważ to działa tylko jako przejęcie aktualizacji, nie zdalny exploit, potwierdź czy testowana ścieżka aktualizacji (sideload, sklep trzeciej strony, albo własny mechanizm aktualizacji apki) waliduje cokolwiek poza sprawdzeniem podpisu które Janus jest zaprojektowany by przetrwać.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes converged on the same top fix and, critically, the same residual-risk caveat: v1 backward-compatibility signing reopens the exact gap v2 closes, on any device that still only understands v1.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej najwyższej naprawie i, kluczowo, na tym samym zastrzeżeniu rezydualnego ryzyka: podpisywanie v1 dla wstecznej kompatybilności ponownie otwiera dokładnie tę lukę którą zamyka v2, na dowolnym urządzeniu które wciąż rozumie tylko v1.'
+    items:
+    - rank: 1
+      eff: 90
+      kind: primary
+      label:
+        en: APK Signature Scheme v2+ (introduced Android 7.0 / Nougat / API 24)
+        pl: Schemat Podpisu APK v2+ (wprowadzony Android 7.0 / Nougat / API 24)
+      note:
+        en: 'Confirmed unanimously and precisely: v2 inserts an APK Signing Block immediately before the ZIP Central Directory and hashes essentially the entire file from offset 0 -- covering the ZIP entries, the signing block itself, the Central Directory, and the End-of-Central-Directory. Any prepended byte changes the hash and invalidates the whole signature, structurally closing the Janus gap. v3 (Android 9, key rotation) and v4 (Android 11, streaming/incremental installs via fs-verity) both inherit this whole-file coverage as a superset, but are functionally orthogonal additions, not distinct Janus-specific fixes.'
+        pl: 'Potwierdzone jednomyślnie i precyzyjnie: v2 wstawia Blok Podpisywania APK bezpośrednio przed Centralnym Katalogiem ZIP i haszuje zasadniczo cały plik od offsetu 0 -- pokrywając wpisy ZIP, sam blok podpisywania, Centralny Katalog, i End-of-Central-Directory. Dowolny poprzedzający bajt zmienia hash i unieważnia cały podpis, strukturalnie zamykając lukę Janus. v3 (Android 9, rotacja kluczy) i v4 (Android 11, instalacje strumieniowe/przyrostowe przez fs-verity) oba dziedziczą to pokrycie całego pliku jako nadzbiór, ale są funkcjonalnie ortogonalnymi dodatkami, nie odrębnymi naprawami specyficznymi dla Janus.'
+    - rank: 2
+      eff: 60
+      kind: strong
+      label:
+        en: Google Play App Signing + v2+ requirement for API 30+ targets
+        pl: Google Play App Signing + wymóg v2+ dla celów API 30+
+      note:
+        en: 'Confirmed directionally by all three research passes: Play requires v2+ signing for apps targeting Android 11 (API 30) and above, and Play App Signing re-signs delivered artifacts with modern schemes, making Play-distributed apps tamper-evident via v2 regardless of the receiving device''s OS version. Caveat, confirmed unanimously: this protects only the Play delivery channel -- it does nothing for apps installed from sideloading, third-party stores, or any distribution path outside Play''s own re-signing.'
+        pl: 'Potwierdzone kierunkowo przez wszystkie trzy przejścia badawcze: Play wymaga podpisywania v2+ dla apek celujących w Android 11 (API 30) i wyżej, a Play App Signing ponownie podpisuje dostarczane artefakty nowoczesnymi schematami, czyniąc apki dystrybuowane przez Play widoczne-przy-manipulacji przez v2 niezależnie od wersji systemu operacyjnego odbierającego urządzenia. Zastrzeżenie, potwierdzone jednomyślnie: to chroni tylko kanał dostawy Play -- nic nie robi dla apek instalowanych przez sideloading, sklepy trzeciej strony, albo dowolną ścieżkę dystrybucji poza własnym ponownym podpisywaniem Play.'
+    - rank: 3
+      eff: 25
+      kind: weak
+      label:
+        en: Device OS patch level (December 2017 / 2017-12-05)
+        pl: Poziom łatki systemu operacyjnego (grudzień 2017 / 2017-12-05)
+      note:
+        en: 'The runtime-level fix that closes the DEX-loading behavior on patched devices. Critical caveat, confirmed unanimously across all research passes: this is not a permanent historical fix -- any device that never received or can no longer receive this patch level (pre-Nougat devices, abandoned/EOL devices) remains exploitable against a freshly-crafted Janus file today, regardless of the file''s crafting date.'
+        pl: 'Naprawa na poziomie środowiska wykonawczego która zamyka zachowanie ładowania DEX na załatanych urządzeniach. Krytyczne zastrzeżenie, potwierdzone jednomyślnie we wszystkich przejściach badawczych: to nie trwała historyczna naprawa -- dowolne urządzenie które nigdy nie otrzymało albo nie może już otrzymać tego poziomu łatki (urządzenia przed Nougat, porzucone/EOL urządzenia) pozostaje eksploatowalne przeciwko świeżo spreparowanemu plikowi Janus dzisiaj, niezależnie od daty spreparowania pliku.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: The clearest available evidence is the CVE itself, precisely verified against the Android Security Bulletin by all three research passes -- alongside GuardSquare's own honest disclosure-time statement that they had not observed exploitation in the wild.
+      pl: Najjaśniejszym dostępnym dowodem jest samo CVE, precyzyjnie zweryfikowane względem Android Security Bulletin przez wszystkie trzy przejścia badawcze -- obok własnego uczciwego stwierdzenia GuardSquare w chwili ujawnienia że nie zaobserwowało eksploatacji w warunkach rzeczywistych.
+    items:
+    - org: CVE-2017-13156 -- Android Security Bulletin, December 2017
+      year: 2017
+      impact: Elevation of privilege in the Android system (art component); allows an attacker's code, once loaded via the Janus technique, to inherit an existing trusted app's UID, granted permissions, and private data access
+      cost: 'CVSS 3.0: 7.8 High (AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H); CVSS 2.0: 7.2 High; affected AOSP versions 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2, 8.0 (Android ID A-64211847); patched at the 2017-12-05 security patch level'
+      description:
+        en: Confirmed identically by all three research passes, cross-verified against the Android Security Bulletin directly and NVD (via mirrors when NVD's own site returned errors). Notably, all three research passes independently found and flagged that Google's own bulletin text does not use the name "Janus" at all -- it is GuardSquare's naming, not an official Google designation, described in the bulletin only as a generic elevation-of-privilege issue.
+        pl: Potwierdzone identycznie przez wszystkie trzy przejścia badawcze, skrzyżowo zweryfikowane bezpośrednio względem Android Security Bulletin i NVD (przez zwierciadła gdy sama strona NVD zwracała błędy). Godne uwagi, wszystkie trzy przejścia badawcze niezależnie znalazły i oflagowały że tekst własnego biuletynu Google w ogóle nie używa nazwy "Janus" -- to nazewnictwo GuardSquare, nie oficjalne oznaczenie Google, opisane w biuletynie tylko jako ogólna kwestia eskalacji uprawnień.
+    - org: Public Metasploit module -- exploit/android/local/janus
+      year: 2017
+      impact: A public, working exploitation module exists (Rapid7's Metasploit Framework), making the Janus technique practically reproducible for security testing rather than purely theoretical
+      cost: Confirmed by two of three research passes as a real, indexed Metasploit module; no confirmed large-scale in-the-wild campaign built on it
+      description:
+        en: 'Balances the honest picture: GuardSquare stated at disclosure they had not seen exploitation in the wild, and two of three research passes found no well-sourced record of significant real-world abuse beyond a single Trend Micro-reported instance (ANDROIDOS_JANUS.A) that could not be independently corroborated this session. Present this technique as responsibly disclosed and practically reproducible via public tooling, not as a technique with documented mass exploitation.'
+        pl: 'Równoważy uczciwy obraz: GuardSquare stwierdziło przy ujawnieniu że nie widziało eksploatacji w warunkach rzeczywistych, a dwa z trzech przejść badawczych nie znalazły dobrze źródłowanego zapisu znaczącego nadużycia w warunkach rzeczywistych poza pojedynczym przypadkiem zgłoszonym przez Trend Micro (ANDROIDOS_JANUS.A) który nie mógł być niezależnie skorporowany w tej sesji. Przedstaw tę technikę jako odpowiedzialnie ujawnioną i praktycznie odtwarzalną przez publiczne narzędzia, nie jako technikę z udokumentowaną masową eksploatacją.'
+    inlineSources:
+    - label: Android Security Bulletin -- December 2017
+      url: https://source.android.com/docs/security/bulletin/2017-12-01
+    - label: GuardSquare -- Janus disclosure
+      url: https://www.guardsquare.com/blog/new-android-vulnerability-allows-attackers-to-modify-apps-without-affecting-their-signatures-guardsquare
+    - label: Rapid7 -- exploit/android/local/janus
+      url: https://www.rapid7.com/db/modules/exploit/android/local/janus/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on the same official Android tool and its exact output format for identifying vulnerable signing configurations.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na tym samym oficjalnym narzędziu Android i dokładnym formacie jego wyjścia do identyfikacji podatnych konfiguracji podpisywania.
+    sast:
+    - - apksigner verify --verbose --print-certs app.apk
+      - Reports which signature schemes verified (v1/v2/v3/v4); an APK showing v1=true with v2/v3=false is in the exact vulnerable configuration this entry documents. Part of the official Android SDK build-tools.
+    - - Scan the file's first bytes for DEX magic (dex\n035) instead of ZIP magic (PK\x03\x04)
+      - A direct, tool-independent structural signal that a file has been Janus-crafted
+    dast:
+    - - MASTG-TEST-0224 -- Usage of Insecure Signature Version
+      - Confirmed by all three research passes to explicitly name CVE-2017-13156 as its rationale; methodology reads minSdkVersion from the manifest and runs apksigner verify to confirm v2/v3 are enabled (MASVS-RESILIENCE, currently in tests-beta)
+    note:
+      en: <strong>Key signal:</strong> this is a build-configuration check, not a runtime behavior to fuzz -- a single apksigner verify run definitively tells you whether an app is in the vulnerable v1-only configuration.
+      pl: <strong>Kluczowy sygnał:</strong> to sprawdzenie konfiguracji builda, nie zachowanie w czasie wykonania do fuzzowania -- pojedyncze uruchomienie apksigner verify definitywnie mówi czy apka jest w podatnej konfiguracji tylko-v1.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: All three research passes independently confirmed CWE-347 as a defensible, mapping-allowed primary, while two of three independently argued CWE-354 captures the specific Janus root cause more precisely -- and all three flagged the same discrepancy in NVD's own assigned CWE.
+      pl: Wszystkie trzy przejścia badawcze niezależnie potwierdziły CWE-347 jako obronne, dozwolone-do-mapowania główne, podczas gdy dwa z trzech niezależnie argumentowały że CWE-354 precyzyjniej oddaje konkretną przyczynę źródłową Janus -- i wszystkie trzy oflagowały tę samą rozbieżność we własnym przypisanym CWE NVD.
+    items:
+    - std: CWE (MITRE)
+      items:
+      - CWE-347 -- Improper Verification of Cryptographic Signature (primary, unanimous across all three research passes, verified by direct fetch as Base-level and mapping-ALLOWED). Matches the existing catalog stub.
+      - 'CWE-354 -- Improper Validation of Integrity Check Value (secondary, independently proposed by two of three research passes as the more precise fit): the v1 signature is cryptographically valid and correctly verified against the bytes it enumerates -- the failure is that its coverage scope does not extend to the prepended, executed bytes, which is arguably an integrity-check scope gap rather than a broken signature check.'
+      - NVD's own assigned CWE for CVE-2017-13156 is CWE-434 (Unrestricted Upload of File with Dangerous Type) -- independently flagged by all three research passes as a poor conceptual fit (Janus has no file-upload-endpoint component). Documented here transparently rather than adopted, consistent with this catalog's practice of flagging authoritative-source mapping quirks rather than silently following them.
+    - std: OWASP
+      items:
+      - MASTG-TEST-0224 -- "Usage of Insecure Signature Version" (MASVS-RESILIENCE, currently in tests-beta per the live URL) -- confirmed by all three research passes to explicitly name CVE-2017-13156 as its rationale for flagging v1-only signing.
+      - MASTG-KNOW-0003 -- "App Signing" and MASTG-BEST-0006 -- "Use Up-to-Date APK Signing Schemes," both filed under MASVS-CODE (build/release configuration) -- confirmed by two of three research passes. Legacy MASTG-TEST-0038 ("Making Sure that the App is Properly Signed") was filed under the older MASVS-RESILIENCE category, illustrating the same MASTG v1-to-v2 test-numbering migration this catalog has flagged in prior entries.
+    inlineSources:
+    - label: CWE-347 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/347.html
+    - label: CWE-354 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/354.html
+    - label: OWASP MASTG-TEST-0224
+      url: https://mas.owasp.org/MASTG/tests-beta/android/MASVS-RESILIENCE/MASTG-TEST-0224/
+    - label: OWASP MASTG-KNOW-0003 -- App Signing
+      url: https://mas.owasp.org/MASTG/knowledge/android/MASVS-CODE/MASTG-KNOW-0003/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If a Janus-crafted update is suspected or confirmed against a shipped app, work this list top to bottom.
+      pl: Po podejrzeniu albo potwierdzeniu spreparowanej metodą Janus aktualizacji przeciwko wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: Run apksigner verify --verbose against the app's shipped artifact to confirm whether it currently relies on v1-only signing -- this is the root exposure to close first
+      pl: Uruchom apksigner verify --verbose przeciwko wysłanemu artefaktowi apki by potwierdzić czy obecnie polega na podpisywaniu tylko-v1 -- to podstawowa ekspozycja do zamknięcia w pierwszej kolejności
+    - en: If a suspicious update was installed, inspect the installed APK's first bytes for a DEX magic header preceding the ZIP magic -- direct structural confirmation of the Janus technique
+      pl: Jeśli podejrzana aktualizacja została zainstalowana, zbadaj pierwsze bajty zainstalowanego APK pod kątem nagłówka magicznego DEX poprzedzającego magiczny ZIP -- bezpośrednie strukturalne potwierdzenie techniki Janus
+    - en: Re-sign and re-ship the app with v2+ signing enabled, keeping v1 only if genuine pre-Nougat device support is required -- and understand that choice reopens this exact exposure for any device that falls back to v1 verification
+      pl: Ponownie podpisz i wyślij apkę z włączonym podpisywaniem v2+, zachowując v1 tylko jeśli faktycznie wymagane jest wsparcie urządzeń przed Nougat -- i zrozum że ten wybór ponownie otwiera dokładnie tę ekspozycję dla dowolnego urządzenia które wraca do weryfikacji v1
+    - en: For apps distributed outside Google Play (sideloading, third-party stores, direct-download update mechanisms), verify the distribution channel itself performs no signature-scope assumptions weaker than v2 -- Play's own v2+ enforcement does not protect off-Play channels
+      pl: Dla apek dystrybuowanych poza Google Play (sideloading, sklepy trzeciej strony, mechanizmy aktualizacji bezpośredniego pobierania), zweryfikuj czy sam kanał dystrybucji nie wykonuje żadnych założeń zakresu podpisu słabszych niż v2 -- własne egzekwowanie v2+ Play nie chroni kanałów poza Play
+    - en: If compromise is confirmed, treat it as full compromise of the legitimate app's trust context -- rotate any credentials or tokens the affected app had access to, since the injected code inherited the app's existing UID and permission grants with no new user consent
+      pl: Jeśli kompromitacja jest potwierdzona, traktuj to jako pełną kompromitację kontekstu zaufania legalnej apki -- rotuj wszelkie dane uwierzytelniające albo tokeny do których dotknięta apka miała dostęp, ponieważ wstrzyknięty kod odziedziczył istniejące UID i przyznania uprawnień apki bez żadnej nowej zgody użytkownika
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: GuardSquare -- New Android vulnerability allows attackers to modify apps without affecting their signatures
+      url: https://www.guardsquare.com/blog/new-android-vulnerability-allows-attackers-to-modify-apps-without-affecting-their-signatures-guardsquare
+    - label: Android Security Bulletin -- December 2017
+      url: https://source.android.com/docs/security/bulletin/2017-12-01
+    - label: Android -- APK Signature Scheme v2
+      url: https://source.android.com/docs/security/features/apksigning/v2
+    - label: Android -- APK Signature Scheme v4
+      url: https://source.android.com/docs/security/features/apksigning/v4
+    - label: CWE-347 -- Improper Verification of Cryptographic Signature
+      url: https://cwe.mitre.org/data/definitions/347.html
+    - label: CWE-354 -- Improper Validation of Integrity Check Value
+      url: https://cwe.mitre.org/data/definitions/354.html
+    - label: OWASP MASTG-TEST-0224 -- Usage of Insecure Signature Version
+      url: https://mas.owasp.org/MASTG/tests-beta/android/MASVS-RESILIENCE/MASTG-TEST-0224/
+    - label: Android -- apksigner tool reference
+      url: https://developer.android.com/tools/apksigner
+    - label: Rapid7 -- exploit/android/local/janus
+      url: https://www.rapid7.com/db/modules/exploit/android/local/janus/

@@ -1,0 +1,128 @@
+threatId: '15.23'
+title:
+  en: Janus (Android APK signature bypass) -- knowledge check
+  pl: Janus (Obejście podpisu APK Android) -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: Why can a single file be simultaneously a valid, correctly-signed APK and a valid DEX file, per GuardSquare's original disclosure?
+    pl: Dlaczego pojedynczy plik może być jednocześnie ważnym, poprawnie podpisanym APK i ważnym plikiem DEX, według oryginalnego ujawnienia GuardSquare?
+  choices:
+  - id: a
+    label:
+      en: ZIP/APK is parsed backward from an End-of-Central-Directory record at the file's tail, so prepended bytes don't disrupt it, while DEX is identified by magic bytes at the file's start -- so a malicious DEX prepended to a signed APK is valid as both, read from opposite ends
+      pl: ZIP/APK jest parsowany wstecz od rekordu End-of-Central-Directory na końcu pliku, więc poprzedzające bajty go nie zakłócają, podczas gdy DEX jest identyfikowany przez bajty magiczne na początku pliku -- więc złośliwy DEX poprzedzający podpisany APK jest ważny jako oba, czytany z przeciwnych końców
+  - id: b
+    label:
+      en: Android does not actually check APK signatures at all during installation
+      pl: Android w ogóle nie sprawdza podpisów APK podczas instalacji
+  - id: c
+    label:
+      en: DEX and ZIP are the same file format internally
+      pl: DEX i ZIP to wewnętrznie ten sam format pliku
+  - id: d
+    label:
+      en: The attacker needs root access to craft the file
+      pl: Atakujący potrzebuje dostępu root by spreparować plik
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three research passes fetched GuardSquare''s disclosure directly and confirmed this exact asymmetry with matching verbatim quotes: the v1/JAR signature scheme ''only takes into account the zip entries. It ignores any extra bytes.'' No root access is needed -- Janus is a file-crafting technique, not a privilege-escalation exploit at the crafting stage.'
+    pl: 'Wszystkie trzy przejścia badawcze pobrały bezpośrednio ujawnienie GuardSquare i potwierdziły dokładnie tę asymetrię pasującymi dosłownymi cytatami: schemat podpisu v1/JAR ''bierze pod uwagę tylko wpisy zip. Ignoruje wszelkie dodatkowe bajty.'' Żaden dostęp root nie jest potrzebny -- Janus to technika preparowania pliku, nie exploit eskalacji uprawnień na etapie preparowania.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: 'A defender reasons: ''Janus was patched in December 2017, so any Janus-crafted file built today should be harmless against a current, up-to-date device.'' Is this reasoning sound as a blanket statement?'
+    pl: 'Obrońca rozumuje: ''Janus zostało załatane w grudniu 2017, więc dowolny plik spreparowany metodą Janus zbudowany dzisiaj powinien być nieszkodliwy przeciwko aktualnemu, w pełni zaktualizowanemu urządzeniu''. Czy to rozumowanie jest solidne jako ogólne stwierdzenie?'
+  isVulnerable: true
+  cwe: CWE-347
+  explanation:
+    en: The reasoning is correct only for patched, current devices -- but confirmed unanimously across all three research passes, the exposure is a function of the DEVICE's Android version and patch level plus the APP's chosen signing scheme, not the crafting date of the malicious file. A fresh Janus file built today still works against any device running Android below 7.0 (no v2 verification path exists at all) or against any app still shipping v1-only signing that such a device accepts. Framing this as purely historical is the exact myth this entry corrects.
+    pl: Rozumowanie jest poprawne tylko dla załatanych, aktualnych urządzeń -- ale potwierdzone jednomyślnie we wszystkich trzech przejściach badawczych, ekspozycja jest funkcją wersji Android urządzenia i poziomu łatki plus wybranego schematu podpisywania apki, nie daty spreparowania złośliwego pliku. Świeży plik Janus zbudowany dzisiaj wciąż działa przeciwko dowolnemu urządzeniu działającemu na Android poniżej 7.0 (nie istnieje w ogóle ścieżka weryfikacji v2) albo przeciwko dowolnej apce wciąż wysyłającej podpisywanie tylko-v1 które takie urządzenie akceptuje. Ramowanie tego jako czysto historycznego to dokładnie mit który koryguje ten wpis.
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: All three research passes independently fetched NVD's own machine-readable record for CVE-2017-13156 and found something worth flagging. What was it?
+    pl: Wszystkie trzy przejścia badawcze niezależnie pobrały własny odczytywalny maszynowo rekord NVD dla CVE-2017-13156 i znalazły coś wartego oflagowania. Co to było?
+  choices:
+  - id: a
+    label:
+      en: NVD assigns CWE-434 (Unrestricted Upload of File with Dangerous Type) to this CVE -- a poor conceptual fit, since Janus has no file-upload-endpoint component
+      pl: NVD przypisuje CWE-434 (Unrestricted Upload of File with Dangerous Type) do tego CVE -- słabe dopasowanie koncepcyjne, ponieważ Janus nie ma żadnego komponentu punktu końcowego przesyłania plików
+  - id: b
+    label:
+      en: NVD has no record of CVE-2017-13156 at all
+      pl: NVD nie ma żadnego rekordu CVE-2017-13156
+  - id: c
+    label:
+      en: NVD rates the CVE as Low severity
+      pl: NVD ocenia CVE jako niskie zagrożenie
+  - id: d
+    label:
+      en: NVD attributes the discovery to Google rather than GuardSquare
+      pl: NVD przypisuje odkrycie Google zamiast GuardSquare
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Confirmed independently and identically by all three research passes. This entry documents the discrepancy transparently rather than adopting NVD's CWE-434, keeping CWE-347 as primary (per unanimous agreement it is defensible and mapping-allowed) with CWE-354 noted as a more precise secondary. The CVE is rated High (CVSS 7.8), not Low, and the discovery is correctly and consistently attributed to GuardSquare across all sources.
+    pl: Potwierdzone niezależnie i identycznie przez wszystkie trzy przejścia badawcze. Ten wpis dokumentuje rozbieżność przejrzyście zamiast przyjąć CWE-434 NVD, zachowując CWE-347 jako główne (zgodnie z jednomyślną zgodą że jest obronne i dozwolone-do-mapowania) z CWE-354 odnotowanym jako precyzyjniejsze drugorzędne. CVE jest ocenione jako High (CVSS 7.8), nie Low, a odkrycie jest poprawnie i spójnie przypisane GuardSquare we wszystkich źródłach.
+- id: q4
+  type: pick-the-fix
+  prompt:
+    en: Which apksigner configuration actually closes the Janus gap, per all three research passes' verified explanation of how APK Signature Scheme v2 works?
+    pl: Która konfiguracja apksigner faktycznie zamyka lukę Janus, zgodnie ze zweryfikowanym wyjaśnieniem wszystkich trzech przejść badawczych jak działa Schemat Podpisu APK v2?
+  variants:
+  - id: v1
+    lang: bash
+    code: "apksigner sign --v1-signing-enabled true \\\n              --v2-signing-enabled false \\\n              --ks release.keystore app-unsigned.apk"
+  - id: v2
+    lang: bash
+    code: '# no signing scheme flags set explicitly --
+
+      # relying on whatever the build tool''s old default was'
+  - id: v3
+    lang: bash
+    code: "apksigner sign --v1-signing-enabled true \\\n              --v2-signing-enabled true \\\n              --v3-signing-enabled true \\\n              --ks release.keystore app-unsigned.apk"
+  correctVariantId: v3
+  explanation:
+    en: v3 is the only variant that enables v2/v3 signing, which -- confirmed unanimously -- hashes essentially the entire file from offset 0 via the APK Signing Block, so any prepended byte invalidates the whole signature. v1 explicitly disables v2, leaving the app in the exact vulnerable configuration this entry documents. v2 (unspecified defaults) is not a safe assumption to make -- always verify the actual result with apksigner verify rather than trusting an unstated default.
+    pl: v3 to jedyny wariant który włącza podpisywanie v2/v3, co -- potwierdzone jednomyślnie -- haszuje zasadniczo cały plik od offsetu 0 przez Blok Podpisywania APK, więc dowolny poprzedzający bajt unieważnia cały podpis. v1 jawnie wyłącza v2, pozostawiając apkę w dokładnie tej podatnej konfiguracji którą dokumentuje ten wpis. v2 (nieokreślone domyślne) to nie bezpieczne założenie -- zawsze zweryfikuj faktyczny wynik przez apksigner verify zamiast ufać niewypowiedzianej wartości domyślnej.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: A team argues 'our app is only distributed through Google Play, so Janus doesn't apply to us at all.' What is the accurate, nuanced correction all three research passes converged on?
+    pl: Zespół argumentuje 'nasza apka jest dystrybuowana tylko przez Google Play, więc Janus nas w ogóle nie dotyczy'. Jaka jest dokładna, zniuansowana korekta na której zbiegły się wszystkie trzy przejścia badawcze?
+  choices:
+  - id: a
+    label:
+      en: True for the Play delivery channel itself (Play requires v2+ for API 30+ targets and re-signs via Play App Signing), but this protects only that channel -- it says nothing about whether the app's own build still ships v1-only signing that could be exploited if the app is ever sideloaded, forked, or redistributed off-Play
+      pl: Prawdziwe dla samego kanału dostawy Play (Play wymaga v2+ dla celów API 30+ i ponownie podpisuje przez Play App Signing), ale to chroni tylko ten kanał -- nic nie mówi o tym czy własny build apki wciąż wysyła podpisywanie tylko-v1 które mogłoby zostać wykorzystane gdyby apka kiedykolwiek była sideloadowana, forkowana, albo redystrybuowana poza Play
+  - id: b
+    label:
+      en: Completely true -- Google Play makes Janus entirely impossible under all circumstances
+      pl: Całkowicie prawdziwe -- Google Play czyni Janus całkowicie niemożliwym w każdych okolicznościach
+  - id: c
+    label:
+      en: Completely false -- Google Play has no signing requirements at all
+      pl: Całkowicie fałszywe -- Google Play w ogóle nie ma żadnych wymogów podpisywania
+  - id: d
+    label:
+      en: Irrelevant -- Janus only ever worked as a fresh install, never as an update, so Play's update mechanism was never a factor
+      pl: Nieistotne -- Janus zawsze działał tylko jako świeża instalacja, nigdy jako aktualizacja, więc mechanizm aktualizacji Play nigdy nie był czynnikiem
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'Confirmed unanimously: Play''s v2+ requirement and Play App Signing protect the Play channel specifically, but this is a distribution-channel control, not a property of the app''s own build configuration. Janus is fundamentally an update-hijack technique (confirmed unanimously as the dangerous case), which is exactly why the app''s own signing scheme still matters for any distribution path outside Play''s re-signing.'
+    pl: 'Potwierdzone jednomyślnie: wymóg v2+ Play i Play App Signing chronią konkretnie kanał Play, ale to kontrola kanału dystrybucji, nie właściwość własnej konfiguracji builda apki. Janus jest fundamentalnie techniką przejęcia aktualizacji (potwierdzone jednomyślnie jako niebezpieczny przypadek), co jest dokładnie dlaczego własny schemat podpisywania apki wciąż ma znaczenie dla dowolnej ścieżki dystrybucji poza ponownym podpisywaniem Play.'
+- id: q6
+  type: vuln-or-not
+  prompt:
+    en: A reviewer notes that the v1 signature on a Janus-crafted file is genuinely, cryptographically valid -- the signing math is not broken, and the checked bytes really were signed by the legitimate developer. The reviewer concludes this means the signature verification process itself functioned correctly and nothing here is actually a defect. Is this conclusion correct?
+    pl: Recenzent zauważa że podpis v1 na pliku spreparowanym metodą Janus jest naprawdę, kryptograficznie ważny -- matematyka podpisu nie jest złamana, a sprawdzone bajty naprawdę zostały podpisane przez legalnego dewelopera. Recenzent wnioskuje że oznacza to iż sam proces weryfikacji podpisu zadziałał poprawnie i nic tutaj tak naprawdę nie jest defektem. Czy ten wniosek jest poprawny?
+  isVulnerable: true
+  cwe: CWE-354
+  explanation:
+    en: 'No. This is precisely the nuance two of three research passes raised independently to justify CWE-354 as a secondary mapping alongside CWE-347: the cryptographic math is indeed correct and the enumerated bytes genuinely were signed -- but the defect is that the signature''s coverage SCOPE does not extend to the prepended bytes that actually execute. A check can be cryptographically flawless and still fail to guarantee what the reviewer actually cares about: that the executed code matches what was signed. Valid signature does not equal untampered executable.'
+    pl: 'Nie. To dokładnie niuans który dwa z trzech przejść badawczych podniosły niezależnie by uzasadnić CWE-354 jako drugorzędne mapowanie obok CWE-347: matematyka kryptograficzna jest rzeczywiście poprawna a wyliczone bajty naprawdę zostały podpisane -- ale defekt polega na tym że ZAKRES pokrycia podpisu nie rozciąga się na poprzedzające bajty które faktycznie się wykonują. Sprawdzenie może być kryptograficznie bezbłędne i wciąż nie gwarantować tego na czym recenzentowi faktycznie zależy: że wykonywany kod pasuje do tego co zostało podpisane. Ważny podpis nie równa się niezmanipulowanemu wykonywalnemu.'
