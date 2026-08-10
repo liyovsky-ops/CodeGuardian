@@ -458,22 +458,33 @@ threats:
 - id: '15.22'
   name: iOS URL Scheme Hijacking
   severity: Medium
-  difficulty: Unknown
+  difficulty: Medium
   confidence: POSSIBLE
   cwe:
   - CWE-939
-  desc: '[TŁUMACZENIE OCZEKUJĄCE] iOS custom URL schemes are claimed first-come/first-served with no ownership verification, so a malicious app can register the same scheme (e.g. a bank''s) and be launched instead of the legitimate app, intercepting OAuth callbacks/tokens or phishing credentials passed via the URL. Mitigated by Universal Links (domain-verified) rather than custom schemes.
+  - CWE-940
+  desc: 'Niestandardowe schematy URL iOS są zajmowane na zasadzie kto pierwszy bez weryfikacji własności, więc złośliwa apka może zarejestrować ten sam schemat co legalna apka (np. banku) i zostać uruchomiona zamiast prawdziwej apki, przechwytując callback OAuth/SSO albo tokeny przekazywane przez URL. Łagodzone przez Universal Links (zweryfikowane domenowo) zamiast schematów niestandardowych; nawet PKCE nie chroni przed wariantem ASWebAuthenticationSession gdzie atakujący sam inicjuje przepływ OAuth.
 
     '
-  desc_en: iOS custom URL schemes are claimed first-come/first-served with no ownership verification, so a malicious app can register the same scheme (e.g. a bank's) and be launched instead of the legitimate app, intercepting OAuth callbacks/tokens or phishing credentials passed via the URL. Mitigated by Universal Links (domain-verified) rather than custom schemes.
-  lang: unknown
-  vuln: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  desc_en: iOS custom URL schemes are claimed first-come/first-served with no ownership verification, so a malicious app can register the same scheme (e.g. a bank's) and be launched instead of the legitimate app, intercepting OAuth callbacks/tokens or phishing credentials passed via the URL. Mitigated by Universal Links (domain-verified) rather than custom schemes; even PKCE does not protect against the ASWebAuthenticationSession variant where the attacker originates the OAuth flow itself.
+  lang: swift
+  vuln: 'let redirectURI = "com.legitbank.app://oauth/callback"
+
+    // custom scheme -- RFC 8252 SS8.1: "indeterminate as to which
+
+    // app will receive the authorization code"
 
     '
-  safe: '# Przykład kodu w przygotowaniu (osobny etap wzbogacania karty)
+  safe: 'let redirectURI = "https://legitbank.com/oauth/callback"
+
+    // Universal Link, verified via apple-app-site-association --
+
+    // RFC 8252 SS7.2: identity guaranteed to the authorization server
+
+    // by the operating system; still pair with PKCE for defense-in-depth
 
     '
-  note_en: 'Source: Documented by FireEye/Trend Micro iOS URL scheme research and Apple''s Universal Links guidance. NOTE: round-1 has a cross-platform ''Insecure Deep Link / Custom URL Scheme Handling'' entry; this is the specific iOS scheme-collision facet.'
+  note_en: 'Source: RFC 8252 (OAuth 2.0 for Native Apps); CWE-939/CWE-940 (MITRE); OWASP MASTG-TEST-0075/0070, MASTG-KNOW-0079 (Scheme Collision); Google''s own OAuth native-app docs deprecating custom schemes; Evan Connelly''s ASWebAuthenticationSession PKCE-bypass research.'
 - id: '15.23'
   name: Janus (Android APK signature bypass)
   severity: High

@@ -55,6 +55,7 @@ export const LEARNING_PATH = [
   '15.19', // Insecure Biometric Authentication Implementation
   '15.20', // Sensitive Data Leakage via Clipboard / Screenshots / Logs
   '15.21', // Cloak & Dagger (Android overlay + accessibility attack)
+  '15.22', // iOS URL Scheme Hijacking
   '1.2', // NoSQL Injection
   '1.6', // Server-Side Template Injection
   '1.4', // LDAP Injection

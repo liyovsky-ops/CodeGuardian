@@ -1,0 +1,332 @@
+meta:
+  id: mobileiosurlschemehijack
+  threatId: '15.22'
+  severity: High
+  color: '#1e3a8a'
+  colorRgb: 30,58,138
+  cwe: CWE-939
+  cvss: N/A (technique class; no CVE exists for the generic collision mechanism, confirmed by all three research passes -- see incidents for named vendor/researcher evidence instead)
+  standard: OWASP MASVS-PLATFORM (MASTG-TEST-0075 Testing Custom URL Schemes / MASTG-TEST-0070 Testing Universal Links; MASTG-KNOW-0079 explicitly includes a "Scheme Collision" subsection)
+hero:
+  titleMain: 'iOS URL Scheme '
+  titleGrad: Hijacking
+  titleTail: ''
+  topbar: iOS URL Scheme Hijacking -- Registration Collision & OAuth Callback Interception
+  lead:
+    en: 'This catalog''s 15.16 entry already covers general deep-link handling and parameter validation across both platforms; this entry is scoped narrowly to a different, iOS-specific root cause all three research passes confirmed identically: custom URL schemes declared via CFBundleURLTypes/CFBundleURLSchemes in Info.plist are claimed on a first-come basis with no central registry and no ownership verification -- any app, including a malicious one, can register the exact same scheme string as a legitimate app. RFC 8252 (OAuth 2.0 for Native Apps) states the consequence precisely, quoted identically by all three research passes: "multiple apps can typically register the same scheme, which makes it indeterminate as to which app will receive the authorization code." Apple''s own guidance frames the outcome as undefined; empirically, iOS 11+ behaves closer to first-installed-wins per MITRE ATT&CK T1635.001 -- but critically, unlike Android''s chooser dialog, iOS shows no disambiguation picker to warn the user at all. The standard, RFC-endorsed fix is domain-verified Universal Links (an apple-app-site-association file that only the true domain owner can host), which all three research passes confirm cannot be claimed by another app without controlling the domain. A finding independently and identically surfaced by all three research passes deserves particular emphasis: security researcher Evan Connelly demonstrated a modern variant using ASWebAuthenticationSession where the attacker''s own app originates the OAuth flow and therefore controls both the PKCE code_challenge and code_verifier -- meaning PKCE, which RFC 8252 mandates specifically to mitigate authorization-code interception, provides no protection against this particular attack path. One research pass also found that Google''s own native-app OAuth documentation now states plainly: "Custom URI schemes are no longer supported due to the risk of app impersonation."'
+    pl: 'Wpis 15.16 tego katalogu obejmuje już ogólną obsługę deep linków i walidację parametrów na obu platformach; ten wpis jest zawężony konkretnie do innej, specyficznej dla iOS przyczyny źródłowej którą wszystkie trzy przejścia badawcze potwierdziły identycznie: niestandardowe schematy URL zadeklarowane przez CFBundleURLTypes/CFBundleURLSchemes w Info.plist są zajmowane na zasadzie kto pierwszy, bez centralnego rejestru i bez weryfikacji własności -- dowolna apka, włącznie ze złośliwą, może zarejestrować dokładnie ten sam ciąg schematu co legalna apka. RFC 8252 (OAuth 2.0 for Native Apps) stwierdza konsekwencję precyzyjnie, cytowaną identycznie przez wszystkie trzy przejścia badawcze: "wiele apek może zazwyczaj zarejestrować ten sam schemat, co czyni nieokreślonym która apka otrzyma kod autoryzacji". Własne wytyczne Apple ramują wynik jako niezdefiniowany; empirycznie, iOS 11+ zachowuje się bliżej zasady kto-zainstalowany-pierwszy-wygrywa według MITRE ATT&CK T1635.001 -- ale kluczowo, w przeciwieństwie do okna wyboru Android, iOS w ogóle nie pokazuje okna dezambiguacji ostrzegającego użytkownika. Standardową, popieraną przez RFC naprawą są zweryfikowane domenowo Universal Links (plik apple-app-site-association który może hostować tylko prawdziwy właściciel domeny), co wszystkie trzy przejścia badawcze potwierdzają jako niemożliwe do przejęcia przez inną apkę bez kontroli nad domeną. Ustalenie niezależnie i identycznie ujawnione przez wszystkie trzy przejścia badawcze zasługuje na szczególne podkreślenie: badacz bezpieczeństwa Evan Connelly zademonstrował współczesny wariant używający ASWebAuthenticationSession gdzie własna apka atakującego inicjuje przepływ OAuth i dlatego kontroluje zarówno code_challenge jak i code_verifier PKCE -- co oznacza że PKCE, które RFC 8252 nakazuje konkretnie by łagodzić przechwycenie kodu autoryzacji, nie zapewnia żadnej ochrony przeciw tej konkretnej ścieżce ataku. Jedno przejście badawcze znalazło też że własna dokumentacja OAuth dla apek natywnych Google stwierdza wprost: "Niestandardowe schematy URI nie są już wspierane ze względu na ryzyko podszywania się pod apkę".'
+  metrics:
+  - k: '0'
+    v:
+      en: disambiguation UI -- unlike Android's app chooser, iOS shows no picker or warning when two apps claim the same scheme
+      pl: interfejsu dezambiguacji -- w przeciwieństwie do wyboru apki Android, iOS nie pokazuje okna wyboru ani ostrzeżenia gdy dwie apki roszczą sobie ten sam schemat
+  - k: '"indeterminate"'
+    v:
+      en: RFC 8252's own word for which app receives an OAuth authorization code when schemes collide
+      pl: własne słowo RFC 8252 na to która apka otrzyma kod autoryzacji OAuth gdy schematy kolidują
+  - k: PKCE bypass
+    v:
+      en: 'confirmed identically by all three research passes: the ASWebAuthenticationSession variant defeats PKCE since the attacker''s app holds both halves of the challenge'
+      pl: 'potwierdzone identycznie przez wszystkie trzy przejścia badawcze: wariant ASWebAuthenticationSession pokonuje PKCE ponieważ apka atakującego posiada obie połowy wyzwania'
+  - k: Google
+    v:
+      en: 'own native-app OAuth docs: "Custom URI schemes are no longer supported due to the risk of app impersonation"'
+      pl: 'własna dokumentacja OAuth apek natywnych: "Niestandardowe schematy URI nie są już wspierane ze względu na ryzyko podszywania się pod apkę"'
+  sources:
+  - label: RFC 8252 -- OAuth 2.0 for Native Apps
+    url: https://datatracker.ietf.org/doc/html/rfc8252
+  - label: CWE-939 -- Improper Authorization in Handler for Custom URL Scheme
+    url: https://cwe.mitre.org/data/definitions/939.html
+  - label: OWASP MASTG-KNOW-0079 -- Custom URL Schemes (Scheme Collision)
+    url: https://mas.owasp.org/MASTG/knowledge/ios/MASVS-PLATFORM/MASTG-KNOW-0079/
+  - label: Evan Connelly -- iOS URL Scheme Hijacking Revamped
+    url: https://evanconnelly.com/post/ios-oauth/
+sectionOrder:
+- overview
+- types
+- code
+- method
+- defense
+- incidents
+- tools
+- compliance
+- ir
+- sources
+nav:
+- id: overview
+  en: Overview
+  pl: Przegląd
+- id: types
+  en: Attack types
+  pl: Typy ataków
+- id: code
+  en: Vuln vs Secure
+  pl: Podatny vs Bezpieczny
+- id: method
+  en: Methodology
+  pl: Metodyka
+- id: defense
+  en: Defense layers
+  pl: Warstwy obrony
+- id: incidents
+  en: Real incidents
+  pl: Incydenty
+- id: tools
+  en: SAST / DAST
+  pl: SAST / DAST
+- id: compliance
+  en: Compliance
+  pl: Zgodność
+- id: ir
+  en: Incident response
+  pl: Reagowanie
+- id: sources
+  en: Sources
+  pl: Źródła
+sections:
+  attacks:
+    title:
+      en: Attack types
+      pl: Typy ataków
+    lead:
+      en: The classic direct-collision attack and the modern researcher-demonstrated variant that survives even PKCE, confirmed identically across all three research passes.
+      pl: Klasyczny bezpośredni atak kolizji i współczesny wariant zademonstrowany przez badacza który przetrwa nawet PKCE, potwierdzony identycznie we wszystkich trzech przejściach badawczych.
+    items:
+    - name: Direct scheme-registration collision
+      sev: high
+      description:
+        en: A malicious app declares the identical CFBundleURLSchemes string as a target app (e.g. a bank's) in its own Info.plist. When the scheme is invoked -- including as an OAuth redirect URI -- iOS may route the callback to the malicious app instead of the legitimate one, since there is no central registry, no ownership verification, and no user-facing disambiguation picker.
+        pl: Złośliwa apka deklaruje identyczny ciąg CFBundleURLSchemes co apka docelowa (np. banku) we własnym Info.plist. Gdy schemat jest wywoływany -- w tym jako URI przekierowania OAuth -- iOS może skierować callback do złośliwej apki zamiast legalnej, ponieważ nie istnieje centralny rejestr, weryfikacja własności, ani interfejs dezambiguacji dla użytkownika.
+      payload: "<!-- attacker's Info.plist -->\n<key>CFBundleURLTypes</key>\n<array><dict>\n  <key>CFBundleURLSchemes</key>\n  <array><string>com.legitbank.app</string></array>\n</dict></array>"
+    - name: App-in-the-middle SDK/scheme spoofing (Trend Micro, 2019)
+      sev: high
+      description:
+        en: A fake app registers a popular SDK's scheme (e.g. a chat app's login scheme) so that a third-party app's "Login with X" flow queries the fake app for the login token instead of the real one, letting the attacker harvest credentials/tokens under the guise of a legitimate SSO integration.
+        pl: Fałszywa apka rejestruje schemat popularnego SDK (np. schemat logowania apki czatu) tak by przepływ "Zaloguj się przez X" apki trzeciej strony odpytywał fałszywą apkę o token logowania zamiast prawdziwej, pozwalając atakującemu zebrać dane uwierzytelniające/tokeny pod pozorem legalnej integracji SSO.
+      payload: '// fake app registers the exact scheme a target SDK expects,
+
+        // e.g. "wechat://" -- then responds to login queries with a
+
+        // forged login-token response instead of forwarding to the real app'
+    - name: ASWebAuthenticationSession-based OAuth interception (defeats PKCE)
+      sev: high
+      description:
+        en: The attacker's own app opens an ASWebAuthenticationSession with the target's redirect scheme set as the session's callbackURLScheme, then drives an OAuth flow (often forcing prompt=none for a silent, invisible completion) against the real authorization server. Because the attacker's app is the one that initiated the flow, it holds both the PKCE code_challenge and code_verifier -- confirmed identically by all three research passes to make PKCE ineffective here, unlike in the simpler direct-collision case.
+        pl: Własna apka atakującego otwiera ASWebAuthenticationSession z ustawionym schematem przekierowania celu jako callbackURLScheme sesji, następnie napędza przepływ OAuth (często wymuszając prompt=none dla cichego, niewidocznego zakończenia) przeciwko prawdziwemu serwerowi autoryzacji. Ponieważ apka atakującego jest tą która zainicjowała przepływ, posiada zarówno code_challenge jak i code_verifier PKCE -- potwierdzone identycznie przez wszystkie trzy przejścia badawcze jako czyniące PKCE nieskutecznym tutaj, w przeciwieństwie do prostszego przypadku bezpośredniej kolizji.
+      payload: "let session = ASWebAuthenticationSession(\n    url: authorizationURL,\n    callbackURLScheme: \"com.legitbank.app\"  // the VICTIM's scheme\n) { callbackURL, error in\n    // attacker's own app receives the redirect + auth code here,\n    // and since it generated its own code_verifier, PKCE does not block it\n}"
+  code:
+    title:
+      en: Vulnerable vs Secure
+      pl: Podatny vs Bezpieczny
+    lead:
+      en: 'Confirmed unanimously: a custom-scheme OAuth redirect can never be structurally protected against collision -- the only real fix is switching the redirect URI to a domain-verified Universal Link.'
+      pl: 'Potwierdzone jednomyślnie: przekierowanie OAuth przez schemat niestandardowy nigdy nie może być strukturalnie chronione przed kolizją -- jedyną prawdziwą naprawą jest przełączenie URI przekierowania na zweryfikowany domenowo Universal Link.'
+    languages:
+    - label: Swift -- OAuth redirect URI
+      lang: swift
+      vulnerable: "// VULNERABLE: custom-scheme redirect URI -- RFC 8252 §8.1:\n// \"indeterminate as to which app will receive the authorization code\"\nlet redirectURI = \"com.legitbank.app://oauth/callback\"\nlet session = ASWebAuthenticationSession(\n    url: authorizationURL(redirectURI: redirectURI),\n    callbackURLScheme: \"com.legitbank.app\"\n) { callbackURL, error in\n    guard let code = extractCode(from: callbackURL) else { return }\n    exchangeCodeForToken(code)  // whoever received the callback controls this\n}"
+      safe: "// SAFER: claimed HTTPS redirect URI (Universal Link), domain-verified\n// via apple-app-site-association -- RFC 8252 §7.2 \"guaranteed to the\n// authorization server by the operating system\". Still pair with PKCE\n// for defense-in-depth against non-scheme interception vectors.\nlet redirectURI = \"https://legitbank.com/oauth/callback\"  // AASA-verified domain\nlet (codeVerifier, codeChallenge) = generatePKCEPair()\nlet session = ASWebAuthenticationSession(\n    url: authorizationURL(redirectURI: redirectURI, codeChallenge: codeChallenge),\n    callbackURLScheme: nil  // Universal Link handled via continue userActivity, not a scheme\n) { _, _ in }\n// received in application(_:continue:restorationHandler:) once AASA validates ownership"
+  method:
+    title:
+      en: Attack methodology
+      pl: Metodyka ataku
+    lead:
+      en: 'All three research passes converged on the same review sequence: enumerate the scheme, confirm it''s not domain-verified, then test both the direct-collision and the ASWebAuthenticationSession variants separately, since PKCE defeats only the first.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej sekwencji przeglądu: wylicz schemat, potwierdź że nie jest zweryfikowany domenowo, następnie przetestuj osobno wariant bezpośredniej kolizji i wariant ASWebAuthenticationSession, ponieważ PKCE pokonuje tylko pierwszy.'
+    steps:
+    - title:
+        en: Enumerate the app's registered custom schemes
+        pl: Wylicz zarejestrowane niestandardowe schematy apki
+      description:
+        en: Extract Info.plist from the IPA and read CFBundleURLTypes/CFBundleURLSchemes (plutil -p Info.plist, or grep/PlistBuddy). Confirm whether the OAuth redirect_uri uses a custom scheme rather than an https:// Universal Link. Per MASTG-TEST-0075.
+        pl: Wyodrębnij Info.plist z IPA i odczytaj CFBundleURLTypes/CFBundleURLSchemes (plutil -p Info.plist, albo grep/PlistBuddy). Potwierdź czy redirect_uri OAuth używa schematu niestandardowego zamiast Universal Link https://. Zgodnie z MASTG-TEST-0075.
+    - title:
+        en: Test the direct-collision variant
+        pl: Przetestuj wariant bezpośredniej kolizji
+      description:
+        en: Build a second test app declaring the identical scheme string, install both, and observe which app receives the invocation -- vary install order to confirm the empirical first-installed-wins behavior noted by MITRE ATT&CK T1635.001, while remembering Apple's own docs describe the outcome as undefined.
+        pl: Zbuduj drugą testową apkę deklarującą identyczny ciąg schematu, zainstaluj obie, i zaobserwuj która apka otrzymuje wywołanie -- zmieniaj kolejność instalacji by potwierdzić empiryczne zachowanie kto-zainstalowany-pierwszy-wygrywa odnotowane przez MITRE ATT&CK T1635.001, pamiętając że własna dokumentacja Apple opisuje wynik jako niezdefiniowany.
+    - title:
+        en: Test the ASWebAuthenticationSession variant separately
+        pl: Przetestuj osobno wariant ASWebAuthenticationSession
+      description:
+        en: Confirm whether PKCE alone was relied upon as the fix -- if the redirect_uri is still a custom scheme, build a harness that opens an ASWebAuthenticationSession with the target's scheme as callbackURLScheme and drives the flow, per Evan Connelly's documented technique. If the callback lands in the test harness, PKCE did not prevent it, since the harness generated its own code_verifier.
+        pl: Potwierdź czy samo PKCE było traktowane jako naprawa -- jeśli redirect_uri wciąż jest schematem niestandardowym, zbuduj uprząż która otwiera ASWebAuthenticationSession ze schematem celu jako callbackURLScheme i napędza przepływ, zgodnie z udokumentowaną techniką Evana Connelly'ego. Jeśli callback trafia do uprzęży testowej, PKCE tego nie zapobiegło, ponieważ uprząż wygenerowała własny code_verifier.
+    - title:
+        en: Verify the Universal Link fallback doesn't reintroduce the scheme
+        pl: Zweryfikuj że fallback Universal Link nie przywraca schematu
+      description:
+        en: Confirm the app doesn't silently fall back to a custom-scheme redirect when Universal Links fail to resolve (app not installed, AASA validation failure, user-disabled) -- a fallback that reopens the exact collision this entry documents.
+        pl: Potwierdź że apka po cichu nie wraca do przekierowania przez schemat niestandardowy gdy Universal Links nie rozwiążą się (apka niezainstalowana, awaria walidacji AASA, wyłączone przez użytkownika) -- fallback który ponownie otwiera dokładnie tę kolizję którą dokumentuje ten wpis.
+  defenses:
+    title:
+      en: Defense layers, ranked
+      pl: Warstwy obrony wg skuteczności
+    lead:
+      en: 'All three research passes converged on the same top control -- domain-verified Universal Links -- and, critically, on the same sophisticated caveat: PKCE, mandatory per RFC 8252, is not sufficient on its own against the modern interception variant.'
+      pl: 'Wszystkie trzy przejścia badawcze zbiegły się na tej samej najwyższej kontroli -- zweryfikowanych domenowo Universal Links -- i, kluczowo, na tym samym wyrafinowanym zastrzeżeniu: PKCE, obowiązkowe według RFC 8252, nie wystarcza samo w sobie przeciw współczesnemu wariantowi przechwytywania.'
+    items:
+    - rank: 1
+      eff: 80
+      kind: primary
+      label:
+        en: Universal Links (apple-app-site-association) instead of custom-scheme redirect URIs
+        pl: Universal Links (apple-app-site-association) zamiast URI przekierowania przez schemat niestandardowy
+      note:
+        en: 'RFC 8252 §7.2''s recommended fix: an https:// redirect URI verified against the domain''s apple-app-site-association file, so "the identity of the destination app is guaranteed to the authorization server by the operating system." Confirmed unanimously that another app cannot claim it without controlling the domain. Critical caveat, confirmed unanimously: apps that also keep a custom-scheme fallback for compatibility when Universal Links fail to resolve (app not installed, AASA failure) reopen the exact collision risk this entry documents.'
+        pl: 'Zalecana naprawa RFC 8252 §7.2: URI przekierowania https:// zweryfikowany względem pliku apple-app-site-association domeny, tak by "tożsamość docelowej apki była gwarantowana serwerowi autoryzacji przez system operacyjny". Potwierdzone jednomyślnie że inna apka nie może go przejąć bez kontroli nad domeną. Krytyczne zastrzeżenie, potwierdzone jednomyślnie: apki które wciąż zachowują fallback przez schemat niestandardowy dla kompatybilności gdy Universal Links nie rozwiążą się (apka niezainstalowana, awaria AASA) ponownie otwierają dokładnie to ryzyko kolizji które dokumentuje ten wpis.'
+    - rank: 2
+      eff: 45
+      kind: strong
+      label:
+        en: PKCE (RFC 7636) -- mandatory, but not sufficient alone
+        pl: PKCE (RFC 7636) -- obowiązkowe, ale niewystarczające samo w sobie
+      note:
+        en: 'RFC 8252 §6 mandates PKCE for all public native app clients, and it genuinely stops a passive interceptor from exchanging a stolen authorization code, since it cannot produce the matching code_verifier. Critical caveat, confirmed identically and independently by all three research passes: this protection collapses in the ASWebAuthenticationSession variant, where the attacker''s own app originates the OAuth flow and therefore generates and holds both the code_challenge and code_verifier themselves -- PKCE provides no benefit when the attacker is the client, not merely an eavesdropper on the redirect.'
+        pl: 'RFC 8252 §6 nakazuje PKCE dla wszystkich publicznych klientów apek natywnych, i naprawdę zatrzymuje pasywnego przechwytującego przed wymianą skradzionego kodu autoryzacji, ponieważ nie może wyprodukować pasującego code_verifier. Krytyczne zastrzeżenie, potwierdzone identycznie i niezależnie przez wszystkie trzy przejścia badawcze: ta ochrona zawodzi w wariancie ASWebAuthenticationSession, gdzie własna apka atakującego inicjuje przepływ OAuth i dlatego sama generuje i posiada zarówno code_challenge jak i code_verifier -- PKCE nie daje żadnej korzyści gdy atakujący jest klientem, nie tylko podsłuchującym przekierowanie.'
+    - rank: 3
+      eff: 25
+      kind: weak
+      label:
+        en: state / nonce parameters
+        pl: parametry state / nonce
+      note:
+        en: 'Confirmed unanimously as the weakest layer here: state defends against CSRF and nonce (OIDC) binds an ID token to a session, but neither prevents an attacker who actually receives the redirect from reading the authorization code or token in the first place. Defense-in-depth only, not a mitigation for interception itself.'
+        pl: 'Potwierdzone jednomyślnie jako najsłabsza warstwa tutaj: state broni przed CSRF a nonce (OIDC) wiąże token ID z sesją, ale żadne z nich nie zapobiega atakującemu który faktycznie otrzymuje przekierowanie przed odczytaniem kodu autoryzacji albo tokena w pierwszej kolejności. Tylko obrona w głąb, nie łagodzenie samego przechwytywania.'
+    - rank: 4
+      eff: 30
+      kind: weak
+      label:
+        en: Explicit consent screen (avoid prompt=none)
+        pl: Jawny ekran zgody (unikaj prompt=none)
+      note:
+        en: 'Confirmed by one research pass as recommended specifically against the silent-completion ASWebAuthenticationSession variant, which typically forces prompt=none for an invisible attack. Forcing a visible consent step gives the user a chance to notice something is wrong. Caveat: adds UX friction and does not fix the underlying channel -- it is a mitigation, not a structural fix.'
+        pl: 'Potwierdzone przez jedno przejście badawcze jako zalecane konkretnie przeciw wariantowi cichego zakończenia ASWebAuthenticationSession, który typowo wymusza prompt=none dla niewidocznego ataku. Wymuszenie widocznego kroku zgody daje użytkownikowi szansę zauważenia że coś jest nie tak. Zastrzeżenie: dodaje tarcie UX i nie naprawia podstawowego kanału -- to złagodzenie, nie strukturalna naprawa.'
+  incidents:
+    title:
+      en: Real-world incidents
+      pl: Rzeczywiste incydenty
+    lead:
+      en: No CVE exists for the generic collision mechanism -- confirmed independently by all three research passes -- so the strongest evidence is named vendor research, a documented technique-catalog entry, and one major OAuth provider's own explicit deprecation notice.
+      pl: Nie istnieje CVE dla ogólnego mechanizmu kolizji -- potwierdzone niezależnie przez wszystkie trzy przejścia badawcze -- więc najsilniejszym dowodem jest nazwane badanie dostawcy, udokumentowany wpis katalogu technik, i własne jawne powiadomienie o wycofaniu jednego z głównych dostawców OAuth.
+    items:
+    - org: Trend Micro -- "app-in-the-middle" scheme spoofing
+      year: 2019
+      impact: Demonstrated a fake WeChat app registering the real wechat:// scheme so that Chinese retailer Suning's "Login with WeChat" flow queried the fake app for the login token instead of the real one
+      cost: No CVE assigned (vendor research, not a patched vulnerability); also demonstrated against line://, fb://, and fb-messenger:// schemes
+      description:
+        en: 'Directly verified by fetch of the primary vendor coverage by one research pass. A concrete, named illustration of the SDK-login variant of this attack class: the victim isn''t the redirected OAuth flow itself but a third-party app''s SSO integration trusting whichever app answers on the expected scheme.'
+        pl: 'Bezpośrednio zweryfikowane pobraniem pierwotnego pokrycia dostawcy przez jedno przejście badawcze. Konkretna, nazwana ilustracja wariantu logowania SDK tej klasy ataku: ofiarą nie jest sam przekierowany przepływ OAuth ale integracja SSO apki trzeciej strony ufająca dowolnej apce która odpowie na oczekiwanym schemacie.'
+    - org: Google -- native-app OAuth documentation
+      year: 2022
+      impact: Google's own developer documentation for OAuth 2.0 in native apps states plainly that custom URI schemes are no longer supported, citing the exact risk this entry documents
+      cost: 'Direct quote, verified by fetch: "Custom URI schemes are no longer supported due to the risk of app impersonation" -- part of the same migration that also deprecated loopback-IP redirects (new clients blocked 2022-03-14, existing clients 2022-10-21)'
+      description:
+        en: Found and verified by one research pass directly against Google's live documentation -- the strongest available evidence that a major OAuth identity provider treats this not as a theoretical risk but as significant enough to break backward compatibility over. Provider-specific, not a platform-wide enforcement, but a clear signal of industry direction.
+        pl: Znalezione i zweryfikowane przez jedno przejście badawcze bezpośrednio na żywej dokumentacji Google -- najsilniejszy dostępny dowód że główny dostawca tożsamości OAuth traktuje to nie jako teoretyczne ryzyko ale jako wystarczająco znaczące by złamać wsteczną kompatybilność. Specyficzne dla dostawcy, nie egzekwowanie na poziomie platformy, ale jasny sygnał kierunku branży.
+    - org: 'MITRE ATT&CK T1635.001 -- "Steal Application Access Token: URI Hijacking"'
+      year: 2021
+      impact: 'A formally catalogued adversary technique covering exactly this mechanism: iOS custom-scheme collision leading to interception of OAuth authorization codes or tokens'
+      cost: Technique-catalog entry, not a CVE; confirmed by two of three research passes citing Trend Micro's research as its supporting evidence
+      description:
+        en: While not a specific incident, this confirms the technique class is formally recognized in the industry's standard adversary-technique taxonomy, cited independently by two research passes -- useful for threat-modeling and detection-engineering audiences using ATT&CK-aligned tooling.
+        pl: Choć nie jest konkretnym incydentem, to potwierdza że klasa techniki jest formalnie uznana w standardowej taksonomii technik przeciwnika branży, cytowana niezależnie przez dwa przejścia badawcze -- użyteczne dla odbiorców modelowania zagrożeń i inżynierii detekcji używających narzędzi zgodnych z ATT&CK.
+    inlineSources:
+    - label: Trend Micro via The Hacker News -- iOS URL scheme app-in-the-middle
+      url: https://thehackernews.com/2019/07/ios-custom-url-scheme.html
+    - label: Google -- OAuth 2.0 for native apps (custom scheme deprecation)
+      url: https://developers.google.com/identity/protocols/oauth2/native-app
+    - label: MITRE ATT&CK T1635.001
+      url: https://attack.mitre.org/techniques/T1635/001/
+  tools:
+    title:
+      en: Detection tooling
+      pl: Narzędzia wykrywania
+    lead:
+      en: All three research passes converged on identical MASTG test IDs, and two independently noted the MASTG's knowledge page for custom schemes carries a dedicated "Scheme Collision" subsection -- an unusually precise match to this entry's exact scope.
+      pl: Wszystkie trzy przejścia badawcze zbiegły się na identycznych ID testów MASTG, a dwa niezależnie zauważyły że strona wiedzy MASTG o schematach niestandardowych zawiera dedykowaną podsekcję "Scheme Collision" -- niezwykle precyzyjne dopasowanie do dokładnego zakresu tego wpisu.
+    sast:
+    - - plutil -p Info.plist (or PlistBuddy/grep on an extracted IPA)
+      - Enumerates CFBundleURLTypes/CFBundleURLSchemes; flags whether OAuth redirect_uri values use a custom scheme rather than an https:// Universal Link
+    dast:
+    - - MASTG-TEST-0075 -- Testing Custom URL Schemes
+      - Static + dynamic methodology for scheme registration and handler validation (MASVS-PLATFORM); note the MASTG is mid-migration to a v2 numbering scheme, so this ID may later shift
+    - - MASTG-TEST-0070 -- Testing Universal Links
+      - Confirms the app actually receives links via continue userActivity rather than a scheme-based fallback
+    - - Install a second test app declaring the identical scheme
+      - Direct collision reproduction -- observe which app receives the invocation and whether install order changes the outcome
+    - - ASWebAuthenticationSession test harness with the target's scheme as callbackURLScheme
+      - Reproduces Evan Connelly's documented PKCE-bypassing variant -- confirms whether the app's OAuth flow is vulnerable to attacker-originated session capture
+    note:
+      en: <strong>Key signal:</strong> confirming PKCE is implemented is not sufficient evidence the OAuth flow is protected -- test the ASWebAuthenticationSession variant separately, since PKCE only stops a passive interceptor, not an attacker who originates the flow itself.
+      pl: <strong>Kluczowy sygnał:</strong> potwierdzenie że PKCE jest zaimplementowane to niewystarczający dowód że przepływ OAuth jest chroniony -- przetestuj osobno wariant ASWebAuthenticationSession, ponieważ PKCE zatrzymuje tylko pasywnego przechwytującego, nie atakującego który sam inicjuje przepływ.
+  compliance:
+    title:
+      en: Compliance quick-reference
+      pl: Szybka zgodność
+    lead:
+      en: 'A rare case of clean three-way CWE consensus in this catalog''s research process: all three research passes independently converged on the identical primary/secondary CWE pair, verified directly against MITRE.'
+      pl: 'Rzadki przypadek czystego trójstronnego konsensusu CWE w procesie badawczym tego katalogu: wszystkie trzy przejścia badawcze niezależnie zbiegły się na identycznej parze głównego/drugorzędnego CWE, zweryfikowanej bezpośrednio względem MITRE.'
+    items:
+    - std: CWE (MITRE)
+      items:
+      - 'CWE-939 -- Improper Authorization in Handler for Custom URL Scheme (primary, unanimous, verified by direct fetch as Base-level and mapping-ALLOWED). MITRE''s own extended description explicitly names iOS: "the only method to do inter-application communication."'
+      - CWE-940 -- Improper Verification of Source of a Communication Channel (secondary, unanimous -- all three research passes independently converged on this as the more precise fit for the "wrong app receives the message" angle specifically; it is also CWE-939's own direct parent per MITRE's relationship graph).
+      - 'CWE-284 (Improper Access Control) and CWE-346 (Origin Validation Error) were independently evaluated and set aside: CWE-284 is a Pillar-level entry MITRE explicitly discourages for direct mapping, and CWE-346 is a Class-level entry MITRE recommends reviewing its children for instead -- both point back to CWE-940 as the tighter choice.'
+    - std: OWASP
+      items:
+      - MASVS-PLATFORM (confirmed unanimously, consistent with this catalog's 15.16 deep-link entry).
+      - MASTG-TEST-0075 -- "Testing Custom URL Schemes," and MASTG-TEST-0070 -- "Testing Universal Links" (both confirmed identically by all three research passes). MASTG-KNOW-0079 ("Custom URL Schemes") carries a dedicated Scheme Collision subsection, confirmed by two of three research passes as directly on-point for this entry.
+      - IETF RFC 8252 (OAuth 2.0 for Native Apps) -- §7.1/§7.2 (private-use vs. claimed-HTTPS redirect URIs) and §6/§8.1 (PKCE mandate and its rationale) -- confirmed with identical quotes by all three research passes as the authoritative standards source for this entry's mechanism and fix.
+    inlineSources:
+    - label: CWE-939 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/939.html
+    - label: CWE-940 (MITRE)
+      url: https://cwe.mitre.org/data/definitions/940.html
+    - label: RFC 8252
+      url: https://datatracker.ietf.org/doc/html/rfc8252
+    - label: OWASP MASTG-KNOW-0079
+      url: https://mas.owasp.org/MASTG/knowledge/ios/MASVS-PLATFORM/MASTG-KNOW-0079/
+  ir:
+    title:
+      en: Incident response checklist
+      pl: Lista kontrolna reagowania
+    lead:
+      en: If scheme-collision OAuth interception is confirmed against a shipped app, work this list top to bottom.
+      pl: Po potwierdzeniu przechwytywania OAuth przez kolizję schematu przeciwko wysłanej apce, przejdź tę listę od góry.
+    steps:
+    - en: Identify which variant applies -- passive direct-collision interception (mitigated by PKCE) or attacker-originated ASWebAuthenticationSession interception (NOT mitigated by PKCE) -- since the remediation priority differs
+      pl: Zidentyfikuj który wariant ma zastosowanie -- pasywne przechwytywanie bezpośredniej kolizji (łagodzone przez PKCE) albo przechwytywanie ASWebAuthenticationSession inicjowane przez atakującego (NIEŁagodzone przez PKCE) -- ponieważ priorytet naprawy się różni
+    - en: Revoke any authorization codes or tokens that may have been issued during the compromise window, and force re-authentication for affected accounts
+      pl: Odwołaj wszelkie kody autoryzacji albo tokeny które mogły zostać wydane podczas okna kompromitacji, i wymuś ponowne uwierzytelnienie dla dotkniętych kont
+    - en: Migrate the redirect_uri from a custom scheme to a domain-verified Universal Link (apple-app-site-association) as the structural fix, not merely adding or re-verifying PKCE
+      pl: Zmigruj redirect_uri ze schematu niestandardowego do zweryfikowanego domenowo Universal Link (apple-app-site-association) jako strukturalną naprawę, nie tylko dodanie albo ponowną weryfikację PKCE
+    - en: Audit for any remaining custom-scheme fallback path that activates when the Universal Link fails to resolve, and remove or tightly scope it -- a lingering fallback reopens the exact collision this entry documents
+      pl: Zaudytuj wszelkie pozostałe ścieżki fallback przez schemat niestandardowy które aktywują się gdy Universal Link nie rozwiąże się, i usuń je albo ściśle ogranicz -- utrzymujący się fallback ponownie otwiera dokładnie tę kolizję którą dokumentuje ten wpis
+    - en: If the app integrates third-party SSO (per the Trend Micro incident pattern), confirm the SDK's login flow validates the responding app's identity rather than trusting whichever app answers on the expected scheme
+      pl: Jeśli apka integruje SSO trzeciej strony (zgodnie ze wzorcem incydentu Trend Micro), potwierdź że przepływ logowania SDK weryfikuje tożsamość odpowiadającej apki zamiast ufać dowolnej apce która odpowie na oczekiwanym schemacie
+  sources:
+    title:
+      en: Sources
+      pl: Źródła
+    items:
+    - label: RFC 8252 -- OAuth 2.0 for Native Apps
+      url: https://datatracker.ietf.org/doc/html/rfc8252
+    - label: RFC 7636 -- Proof Key for Code Exchange (PKCE)
+      url: https://datatracker.ietf.org/doc/html/rfc7636
+    - label: RFC 7595 -- Guidelines and Registration Procedures for URI Schemes
+      url: https://datatracker.ietf.org/doc/html/rfc7595
+    - label: CWE-939 -- Improper Authorization in Handler for Custom URL Scheme
+      url: https://cwe.mitre.org/data/definitions/939.html
+    - label: CWE-940 -- Improper Verification of Source of a Communication Channel
+      url: https://cwe.mitre.org/data/definitions/940.html
+    - label: OWASP MASTG-TEST-0075 -- Testing Custom URL Schemes
+      url: https://mas.owasp.org/MASTG/tests/ios/MASVS-PLATFORM/MASTG-TEST-0075/
+    - label: OWASP MASTG-TEST-0070 -- Testing Universal Links
+      url: https://mas.owasp.org/MASTG/tests/ios/MASVS-PLATFORM/MASTG-TEST-0070/
+    - label: Evan Connelly -- iOS URL Scheme Hijacking Revamped
+      url: https://evanconnelly.com/post/ios-oauth/
+    - label: Google -- OAuth 2.0 for native apps
+      url: https://developers.google.com/identity/protocols/oauth2/native-app
+    - label: 'MITRE ATT&CK T1635.001 -- Steal Application Access Token: URI Hijacking'
+      url: https://attack.mitre.org/techniques/T1635/001/

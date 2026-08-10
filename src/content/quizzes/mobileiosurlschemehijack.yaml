@@ -1,0 +1,140 @@
+threatId: '15.22'
+title:
+  en: iOS URL Scheme Hijacking -- knowledge check
+  pl: iOS URL Scheme Hijacking -- sprawdzian wiedzy
+passScore: 80
+questions:
+- id: q1
+  type: multiple-choice
+  prompt:
+    en: This catalog's 15.16 entry already covers general deep-link handling. What is the narrow, distinct root cause 15.22 focuses on instead?
+    pl: Wpis 15.16 tego katalogu obejmuje już ogólną obsługę deep linków. Jaka jest wąska, odrębna przyczyna źródłowa na której skupia się zamiast tego 15.22?
+  choices:
+  - id: a
+    label:
+      en: iOS custom URL schemes are claimed with no central registry or ownership verification, so a malicious app can register the identical scheme string as a legitimate app and potentially intercept what's routed to it
+      pl: Niestandardowe schematy URL iOS są zajmowane bez centralnego rejestru czy weryfikacji własności, więc złośliwa apka może zarejestrować identyczny ciąg schematu co legalna apka i potencjalnie przechwycić co jest do niego kierowane
+  - id: b
+    label:
+      en: Deep links can contain SQL injection payloads in their query parameters
+      pl: Deep linki mogą zawierać ładunki SQL injection w swoich parametrach zapytania
+  - id: c
+    label:
+      en: Android intent-filters are vulnerable to the same registration issue as iOS
+      pl: Filtry intencji Android są podatne na ten sam problem rejestracji co iOS
+  - id: d
+    label:
+      en: Universal Links cannot be verified via HTTPS
+      pl: Universal Links nie mogą być zweryfikowane przez HTTPS
+  correctChoiceIds:
+  - a
+  explanation:
+    en: 'All three research passes confirmed this exact scope: CFBundleURLTypes/CFBundleURLSchemes registration in Info.plist has no central registry or ownership verification. This is orthogonal to 15.16''s concern about validating the data carried inside a deep link once received -- 15.22 asks whether a different app can claim to BE the recipient in the first place. Universal Links ARE HTTPS-verified, which is exactly why they''re the fix.'
+    pl: 'Wszystkie trzy przejścia badawcze potwierdziły dokładnie ten zakres: rejestracja CFBundleURLTypes/CFBundleURLSchemes w Info.plist nie ma centralnego rejestru ani weryfikacji własności. To jest ortogonalne do troski 15.16 o walidację danych niesionych wewnątrz deep linka po otrzymaniu -- 15.22 pyta czy inna apka może twierdzić że JEST odbiorcą w pierwszej kolejności. Universal Links SĄ zweryfikowane przez HTTPS, dokładnie dlatego są naprawą.'
+- id: q2
+  type: vuln-or-not
+  prompt:
+    en: An iOS app implements PKCE (RFC 7636) for its OAuth flow and uses a custom-scheme redirect URI. A security reviewer concludes the app is now fully protected against OAuth callback interception via scheme collision. Is this conclusion correct?
+    pl: Apka iOS implementuje PKCE (RFC 7636) dla swojego przepływu OAuth i używa URI przekierowania przez schemat niestandardowy. Recenzent bezpieczeństwa wnioskuje że apka jest teraz w pełni chroniona przed przechwytywaniem callback OAuth przez kolizję schematu. Czy ten wniosek jest poprawny?
+  isVulnerable: true
+  cwe: CWE-939
+  explanation:
+    en: 'No. Confirmed identically and independently by all three research passes: PKCE stops a passive interceptor from exchanging a stolen authorization code, but researcher Evan Connelly demonstrated an ASWebAuthenticationSession-based variant where the attacker''s own app originates the OAuth flow and therefore generates and holds both the code_challenge and code_verifier itself. PKCE provides no protection when the attacker is the client, not merely an eavesdropper. The structural fix is still migrating to a domain-verified Universal Link redirect URI.'
+    pl: 'Nie. Potwierdzone identycznie i niezależnie przez wszystkie trzy przejścia badawcze: PKCE zatrzymuje pasywnego przechwytującego przed wymianą skradzionego kodu autoryzacji, ale badacz Evan Connelly zademonstrował wariant oparty na ASWebAuthenticationSession gdzie własna apka atakującego inicjuje przepływ OAuth i dlatego sama generuje i posiada zarówno code_challenge jak i code_verifier. PKCE nie daje żadnej ochrony gdy atakujący jest klientem, nie tylko podsłuchującym. Strukturalną naprawą wciąż jest migracja do URI przekierowania Universal Link zweryfikowanego domenowo.'
+- id: q3
+  type: multiple-choice
+  prompt:
+    en: All three research passes independently proposed the same CWE mapping pair for this entry, an unusually clean consensus. What did they converge on?
+    pl: Wszystkie trzy przejścia badawcze niezależnie zaproponowały tę samą parę mapowania CWE dla tego wpisu, niezwykle czysty konsensus. Na czym się zbiegły?
+  choices:
+  - id: a
+    label:
+      en: CWE-939 (Improper Authorization in Handler for Custom URL Scheme) primary, with CWE-940 (Improper Verification of Source of a Communication Channel) -- its own direct parent -- as the precise secondary
+      pl: CWE-939 (Improper Authorization in Handler for Custom URL Scheme) główny, z CWE-940 (Improper Verification of Source of a Communication Channel) -- jego własnym bezpośrednim rodzicem -- jako precyzyjny drugorzędny
+  - id: b
+    label:
+      en: CWE-284 (Improper Access Control) as the sole mapping
+      pl: CWE-284 (Improper Access Control) jako jedyne mapowanie
+  - id: c
+    label:
+      en: CWE-79 (Cross-Site Scripting) as the primary mapping
+      pl: CWE-79 (Cross-Site Scripting) jako główne mapowanie
+  - id: d
+    label:
+      en: No CWE mapping was found to be defensible for this technique
+      pl: Nie znaleziono żadnego obronnego mapowania CWE dla tej techniki
+  correctChoiceIds:
+  - a
+  explanation:
+    en: CWE-939 was verified by direct fetch as Base-level and mapping-ALLOWED, with MITRE's own extended description explicitly naming iOS as relying exclusively on custom-scheme handlers for inter-app communication. CWE-940 is CWE-939's own parent in MITRE's relationship graph and captures the 'wrong app receives the message' angle precisely. CWE-284 was independently evaluated and set aside as a Pillar-level entry MITRE discourages for direct mapping.
+    pl: CWE-939 zostało zweryfikowane bezpośrednim pobraniem jako poziom Base i mapowanie-DOZWOLONE, z własnym rozszerzonym opisem MITRE jawnie nazywającym iOS jako polegający wyłącznie na obsłudze schematów niestandardowych dla komunikacji między apkami. CWE-940 to własny rodzic CWE-939 w grafie relacji MITRE i precyzyjnie oddaje kąt 'zła apka otrzymuje wiadomość'. CWE-284 zostało niezależnie ocenione i odłożone jako wpis poziomu Pillar który MITRE odradza dla bezpośredniego mapowania.
+- id: q4
+  type: pick-the-fix
+  prompt:
+    en: Which OAuth redirect URI configuration actually eliminates the scheme-collision risk this entry documents, per RFC 8252's own recommendation?
+    pl: Która konfiguracja URI przekierowania OAuth faktycznie eliminuje ryzyko kolizji schematu które dokumentuje ten wpis, zgodnie z własną rekomendacją RFC 8252?
+  variants:
+  - id: v1
+    lang: text
+    code: 'redirect_uri = "com.legitbank.app://oauth/callback"
+
+      // custom scheme -- RFC 8252 §8.1: "indeterminate as to which
+
+      // app will receive the authorization code"'
+  - id: v2
+    lang: text
+    code: 'redirect_uri = "com.legitbank.app-v2-secret-random-string://oauth/callback"
+
+      // still a custom scheme, just a longer/less-guessable one --
+
+      // trivially extractable from the app''s own shipped Info.plist'
+  - id: v3
+    lang: text
+    code: 'redirect_uri = "https://legitbank.com/oauth/callback"
+
+      // Universal Link, verified via apple-app-site-association --
+
+      // RFC 8252 §7.2: "identity of the destination app is guaranteed
+
+      // to the authorization server by the operating system"'
+  correctVariantId: v3
+  explanation:
+    en: v3 is the only variant using a claimed HTTPS redirect URI (Universal Link), which all three research passes confirmed cannot be claimed by another app without controlling the domain. v1 is the vulnerable baseline. v2 illustrates the confirmed myth that a longer or less-guessable scheme string provides security through obscurity -- it does not, since the scheme is declared in plaintext in the app's own Info.plist and is trivially extracted by any attacker who downloads the IPA.
+    pl: v3 to jedyny wariant używający zajętego URI przekierowania HTTPS (Universal Link), które wszystkie trzy przejścia badawcze potwierdziły jako niemożliwe do przejęcia przez inną apkę bez kontroli nad domeną. v1 to podatna linia bazowa. v2 ilustruje potwierdzony mit że dłuższy albo trudniejszy do odgadnięcia ciąg schematu zapewnia bezpieczeństwo przez niejawność -- nie zapewnia, ponieważ schemat jest zadeklarowany jawnie w Info.plist własnej apki i jest trywialnie wyodrębniany przez dowolnego atakującego który pobierze IPA.
+- id: q5
+  type: multiple-choice
+  prompt:
+    en: One research pass found that a major OAuth identity provider now explicitly deprecates custom-scheme redirect URIs. Which provider, and what did they cite as the reason?
+    pl: Jedno przejście badawcze znalazło że główny dostawca tożsamości OAuth teraz jawnie wycofuje URI przekierowania przez schemat niestandardowy. Który dostawca, i co podali jako przyczynę?
+  choices:
+  - id: a
+    label:
+      en: Google -- "Custom URI schemes are no longer supported due to the risk of app impersonation"
+      pl: Google -- "Niestandardowe schematy URI nie są już wspierane ze względu na ryzyko podszywania się pod apkę"
+  - id: b
+    label:
+      en: Apple -- custom schemes were removed from iOS entirely in a recent update
+      pl: Apple -- schematy niestandardowe zostały całkowicie usunięte z iOS w niedawnej aktualizacji
+  - id: c
+    label:
+      en: Facebook -- custom schemes were deprecated due to battery consumption concerns
+      pl: Facebook -- schematy niestandardowe zostały wycofane ze względu na obawy o zużycie baterii
+  - id: d
+    label:
+      en: No major provider has taken any public position on this
+      pl: Żaden główny dostawca nie zajął żadnego publicznego stanowiska w tej sprawie
+  correctChoiceIds:
+  - a
+  explanation:
+    en: Verified by direct fetch of Google's own native-app OAuth documentation. This is part of the same migration that also deprecated loopback-IP redirects, and is the strongest available evidence that a major OAuth identity provider treats this collision risk as significant enough to break backward compatibility over -- though it is provider-specific guidance, not an iOS platform-wide enforcement.
+    pl: Zweryfikowane bezpośrednim pobraniem własnej dokumentacji OAuth apek natywnych Google. To część tej samej migracji która wycofała też przekierowania loopback-IP, i najsilniejszy dostępny dowód że główny dostawca tożsamości OAuth traktuje to ryzyko kolizji jako wystarczająco znaczące by złamać wsteczną kompatybilność -- choć to wytyczne specyficzne dla dostawcy, nie egzekwowanie na poziomie platformy iOS.
+- id: q6
+  type: vuln-or-not
+  prompt:
+    en: A developer migrates their app's OAuth redirect URI to a Universal Link, but keeps the old custom-scheme redirect URI registered and functional as a fallback for cases where the Universal Link fails to resolve. Is this fallback a residual risk worth flagging?
+    pl: Deweloper migruje URI przekierowania OAuth swojej apki do Universal Link, ale zachowuje stary URI przekierowania przez schemat niestandardowy jako zarejestrowany i funkcjonalny fallback dla przypadków gdy Universal Link nie rozwiąże się. Czy ten fallback to rezydualne ryzyko warte oflagowania?
+  isVulnerable: true
+  cwe: CWE-939
+  explanation:
+    en: 'Yes. Confirmed unanimously across all three research passes: a lingering custom-scheme fallback reopens the exact collision risk the Universal Link migration was meant to close. Universal Links themselves fail to resolve under several documented conditions (app not installed, AASA validation failure, user has disabled them for that domain), and if the fallback path still uses the old collision-prone scheme, an attacker only needs to trigger one of those fallback conditions to route the OAuth callback through the vulnerable channel again.'
+    pl: 'Tak. Potwierdzone jednomyślnie we wszystkich trzech przejściach badawczych: utrzymujący się fallback przez schemat niestandardowy ponownie otwiera dokładnie to ryzyko kolizji które migracja do Universal Link miała zamknąć. Same Universal Links zawodzą w rozwiązywaniu w kilku udokumentowanych warunkach (apka niezainstalowana, awaria walidacji AASA, użytkownik wyłączył je dla tej domeny), a jeśli ścieżka fallback wciąż używa starego, podatnego na kolizję schematu, atakujący musi tylko wywołać jeden z tych warunków fallback by ponownie skierować callback OAuth przez podatny kanał.'
